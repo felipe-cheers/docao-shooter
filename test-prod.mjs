@@ -13,7 +13,7 @@ async function client(name, query = '') {
   page.on('pageerror', (e) => errors.push(`[${name}] [pageerror] ${e.message}`));
   await page.addInitScript((n) => { localStorage.setItem('docao.name', n); localStorage.setItem('docao.primary', '0'); }, name);
   const qs = [sq, query].filter(Boolean).join('&');
-  await page.goto(`${SITE}${qs ? '?' + qs : ''}`, { waitUntil: 'load' }); await page.waitForTimeout(1500);
+  await page.goto(`${SITE}${qs ? '?' + qs : ''}`, { waitUntil: 'load', timeout: 90000 }); await page.waitForTimeout(1500);
   return page;
 }
 const G = (page, fn, arg) => page.evaluate(fn, arg);
