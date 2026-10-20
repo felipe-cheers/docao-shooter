@@ -6,6 +6,9 @@ import './costumes.js';
 import { MAPS, getMap } from './maps.js';
 import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js';
 import { buildNav } from './nav.js';
+import { Net, createRoom, roomInfo } from './net.js';
+import { SEND_HZ, INTERP_DELAY } from './config.js';
+import { KILL_LIMIT, TIME_LIMIT, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, PISTOL, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 
 const V3 = THREE.Vector3;
 const $ = (id) => document.getElementById(id);
@@ -13,32 +16,9 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------- Constantes ----------------
-const KILL_LIMIT = 20, TIME_LIMIT = 300, RESPAWN_TIME = 3, INVULN = 2;
+// ---------------- Constantes (regras em shared/rules.js) ----------------
 const BASE_FOV = 75, ADS_TIME = 0.15, ADS_SPEED = 0.6; // mira (Shift)
-const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, RADIUS = 0.42, HEIGHT = 2.0, EYE = 1.6;
 const COLORS = { skin: 0xF7A531, snout: 0xF58A6E, cheek: 0xFF7FA0, hoof: 0x7a4535, outline: 0x2a1410, red: 0xe63946, cyan: 0x7DF9FF };
-
-// Armas. Primárias (escolhidas no menu): 0 Fuzil, 1 Calibre 12, 2 Sniper, 3 Bazuca. Secundária de todos: 4 Pistolinha.
-const WEAPONS = [
-  { key: 'rifle', name: 'Fuzil Pururuca', short: 'Fuzil Pururuca', chip: 'Fuzil', mag: 30, reserve: 120, dmg: 20, headMul: 2, rate: 0.1, auto: true, pellets: 1, spread: 0.01, reload: 1.6, range: 140, recoil: 0.018, adsFov: 40, adsSpread: 0.12, flashZ: -0.76,
-    desc: 'Automático · 30/120 · 20 dano' },
-  { key: 'shotgun', name: 'Escopeta Chiqueiro · Calibre 12', short: 'Calibre 12', chip: 'Calibre 12', mag: 8, reserve: 32, dmg: 15, headMul: 1.5, rate: 0.8, auto: false, pellets: 8, spread: 0.06, reload: 0.45, shellReload: true, reloadStart: 0.25, range: 45, recoil: 0.07, adsFov: 55, adsSpread: 0.6, flashZ: -0.86,
-    falloff: [7, 30, 0.3], pump: true, desc: 'Calibre 12 · pump · 8/32 · forte de perto' },
-  { key: 'sniper', name: 'Sniper Torresmo', short: 'Sniper Torresmo', chip: 'Sniper', mag: 5, reserve: 20, dmg: 115, headMul: 250 / 115, rate: 1.4, auto: false, pellets: 1, spread: 0.08, reload: 2.4, range: 220, recoil: 0.06, adsFov: 15, adsSpread: 0, flashZ: -1.1,
-    scope: true, bolt: true, beam: true, desc: 'Ferrolho · 5/20 · 1 tiro mata · Shift = luneta' },
-  { key: 'bazooka', name: 'Bazuca do Chiqueiro', short: 'Bazuca', chip: 'Bazuca', mag: 1, reserve: 4, dmg: 0, headMul: 1, rate: 0.6, auto: false, pellets: 0, spread: 0.004, reload: 2.5, range: 0, recoil: 0.09, adsFov: 55, adsSpread: 0.5, flashZ: -0.9,
-    rocket: { speed: 24, radius: 5, maxDmg: 120, selfMul: 0.4, knock: 11, lift: 13 }, desc: 'Foguete · 1/4 · dano em área · rocket jump' },
-  { key: 'pistol', name: 'Pistolinha Leitão', short: 'Pistolinha', chip: 'Pistola', mag: 12, reserve: 60, dmg: 25, headMul: 2, rate: 0.16, auto: false, pellets: 1, spread: 0.007, reload: 1.1, range: 110, recoil: 0.03, adsFov: 50, adsSpread: 0.4, flashZ: -0.42,
-    desc: 'Semiautomática · 12/60 · 25 dano' },
-];
-const PRIMARIES = [0, 1, 2, 3], PISTOL = 4, W_NADE = -1;
-
-// Copo Bomba (granada)
-const NADE = { max: 3, spawnWith: 1, fuse: 2.5, charge: 1.2, radius: 6, maxDmg: 130, selfMul: 0.4, grav: -20, r: 0.14, pickupRespawn: 20, knock: 14, lift: 7 };
-const WEAPON_SHORT = (i) => (i === W_NADE ? 'Copo Bomba' : WEAPONS[i].short);
-const BOT_DEFS = [
-  { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' },
-];
 
 // ---------------- Renderer / cenas ----------------
 const canvas = $('game');
@@ -222,10 +202,10 @@ const distVol = (p) => clamp(1 - p.distanceTo(player.pos) / 60, 0.05, 1);
 
 // ---------------- Entidades ----------------
 let gameTime = 0, state = 'menu', hadLock = false, entities = [], player = null, sens = 1.4;
+let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
 const keys = {}; let mouseDown = false, firedThisPress = false;
 
-const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b'];
 function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
   const skin = getSkin(skinId);
   const e = { name, isPlayer, skinId: skin.id, float: !!skin.float, floatPh: Math.random() * 6, nextWisp: 0, shirt: (skin.shirt && skin.shirt.color) || '#d8261c', tag, pos: new V3(), vel: new V3(), yaw: 0, pitch: 0, onGround: false, hp: 100, alive: true,
@@ -298,6 +278,7 @@ function updatePickups(dt) {
   for (const p of pickups) {
     if (!p.active) { if (gameTime >= p.respawnAt) { p.active = true; p.mesh.visible = true; } continue; }
     p.mesh.rotation.y += dt * 1.6; p.mesh.position.y = p.baseY + Math.sin(gameTime * 3 + p.pos.x) * 0.12;
+    if (online) continue; // online: o servidor decide quem pegou
     for (const e of entities) {
       if (!e.alive) continue;
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z;
@@ -353,6 +334,7 @@ function nadeBlocked(x, y, z) {
 function throwGrenade(e, origin, vel) {
   if (e.nades <= 0) return null;
   e.nades--;
+  if (online && e.isPlayer) { netEv(['n', v3a(origin), v3a(vel)]); sfx.toss(1); return null; } // o copo aparece quando o servidor confirmar
   const mesh = makeCup(1.15); scene.add(mesh);
   const gnd = { owner: e, pos: origin.clone(), vel: vel.clone(), explodeAt: gameTime + NADE.fuse, mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 };
   grenades.push(gnd); sfx.toss(e.isPlayer ? 1 : distVol(e.pos)); return gnd;
@@ -377,15 +359,20 @@ function updateGrenades(dt) {
     stepNade(n.pos, n.vel, dt, () => { if (gameTime - n.lastBounce > 0.12) { sfx.bounce(distVol(n.pos)); n.lastBounce = gameTime; } n.spin.multiplyScalar(0.6); });
     n.mesh.position.copy(n.pos).y -= 0.1; n.mesh.rotation.x += n.spin.x * dt; n.mesh.rotation.y += n.spin.y * dt; n.mesh.rotation.z += n.spin.z * dt;
     const left = n.explodeAt - gameTime; n.mesh.scale.setScalar(1.15 * (left < 0.6 ? 1 + Math.sin(gameTime * 40) * 0.08 : 1));
+    if (n.net) { if (left < -1.5) { scene.remove(n.mesh); grenades.splice(i, 1); } continue; } // online: explode quando o servidor mandar
     if (left <= 0) { explode(n); scene.remove(n.mesh); grenades.splice(i, 1); }
   }
 }
 function explode(n) { blast(n.pos.clone(), n.owner, { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE }); }
 // explosão genérica (Copo Bomba e foguete da bazuca)
-function blast(c, owner, o) {
+function blastFx(c, radius) {
   explosions++;
   sfx.boom(player ? clamp(1 - c.distanceTo(player.pos) / 70, 0.15, 1) : 1);
   if (player) shake = Math.max(shake, clamp(1 - c.distanceTo(player.pos) / 16, 0, 1) * 0.6);
+  burst(c, radius);
+}
+function blast(c, owner, o) {
+  blastFx(c, o.radius); // som, tremida, confete (conta a explosão)
   for (const e of entities) {
     if (!e.alive) continue;
     const tc = center(e, 0.6); const d = tc.distanceTo(c); if (d > o.radius) continue;
@@ -397,7 +384,6 @@ function blast(c, owner, o) {
     const dmg = o.maxDmg * (0.2 + 0.8 * k) * (e === owner ? o.selfMul : 1);
     damage(e, dmg, owner, o.wIdx, false);
   }
-  burst(c, o.radius);
 }
 // partículas: confete vermelho/ciano + espuma + gotas âmbar + clarão + onda
 const confGeo = new THREE.PlaneGeometry(0.12, 0.07), foamGeo = new THREE.SphereGeometry(0.16, 8, 6), dropGeo = new THREE.SphereGeometry(0.05, 6, 5);
@@ -476,6 +462,7 @@ function wisp(p) { // rastro do fantasminha
 const rockets = []; const smokeGeo = new THREE.SphereGeometry(0.14, 8, 6);
 function launchRocket(e, origin, dir) {
   const R = WEAPONS[3].rocket;
+  if (online && e.isPlayer) { netEv(['r', v3a(origin), v3a(dir), +(performance.now() / 1000).toFixed(3)]); return null; } // o servidor cria o foguete
   const near = wallDistance(origin, dir, 0.7); // colado na parede/chão: explode na hora
   if (near) { blast(near.point.clone().addScaledVector(dir, -0.12), e, { ...R, wIdx: 3 }); return null; }
   const start = origin.clone().addScaledVector(dir, 0.6);
@@ -487,6 +474,10 @@ function updateRockets(dt) {
   const R = WEAPONS[3].rocket;
   for (let i = rockets.length - 1; i >= 0; i--) {
     const r = rockets[i]; const step = R.speed * dt; let hitT = null;
+    if (r.net) { // online: só visual, quem explode é o servidor
+      if (gameTime - r.born > 6.5) { scene.remove(r.mesh); rockets.splice(i, 1); continue; }
+      r.pos.addScaledVector(r.dir, step); r.mesh.position.copy(r.pos); r.mesh.children[0].rotation.z += dt * 10; rocketSmoke(r, R); continue;
+    }
     const wh = wallDistance(r.pos, r.dir, step + 0.1); if (wh) hitT = wh.distance;
     for (const e of entities) {
       if (!e.alive || (e === r.owner && gameTime - r.born < 0.3)) continue;
@@ -497,7 +488,13 @@ function updateRockets(dt) {
       scene.remove(r.mesh); rockets.splice(i, 1); continue;
     }
     r.pos.addScaledVector(r.dir, step); r.mesh.position.copy(r.pos); r.mesh.children[0].rotation.z += dt * 10;
+    rocketSmoke(r, R);
+  }
+}
+function rocketSmoke(r, R) {
+  {
     if (gameTime - r.born < 0.06) r.nextSmoke = gameTime; // sem fumaça colada na cara de quem atirou
+    if (gameTime - r.nextSmoke > 0.5) r.nextSmoke = gameTime; // relógio sincronizado com o servidor pode pular
     while (r.nextSmoke <= gameTime) { // rastro de fumaça
       const m = new THREE.Mesh(smokeGeo, new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? 0xf2efe8 : 0xd9d4cc, transparent: true, depthWrite: false }));
       m.position.copy(r.pos).addScaledVector(r.dir, -0.35 - (gameTime - r.nextSmoke) * R.speed); scene.add(m); // espalha ao longo do caminho
@@ -510,9 +507,9 @@ function updateRockets(dt) {
 // ---------------- Combate ----------------
 function fire(shooter, origin, dir, wIdx, spread, muzzle) {
   const w = WEAPONS[wIdx]; const res = { hit: false, kill: false };
-  const hitsBy = new Map();
+  const hitsBy = new Map(), dirs = [];
   for (let p = 0; p < w.pellets; p++) {
-    const d = dir.clone(); d.x += (Math.random() - 0.5) * 2 * spread; d.y += (Math.random() - 0.5) * 2 * spread; d.z += (Math.random() - 0.5) * 2 * spread; d.normalize();
+    const d = dir.clone(); d.x += (Math.random() - 0.5) * 2 * spread; d.y += (Math.random() - 0.5) * 2 * spread; d.z += (Math.random() - 0.5) * 2 * spread; d.normalize(); dirs.push(d);
     const wh = wallDistance(origin, d, w.range); const wallD = wh ? wh.distance : w.range;
     let best = null;
     for (const e of entities) {
@@ -531,6 +528,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle) {
       puff(end, 0xff9fb0);
     } else if (wh) puff(end);
   }
+  if (online && shooter.isPlayer) { netEv(['f', v3a(origin), dirs.map(v3a), wIdx, +(performance.now() / 1000).toFixed(3)]); return res; } // dano: servidor
   for (const [e, h] of hitsBy) { res.hit = true; if (damage(e, h.dmg, shooter, wIdx, h.head)) res.kill = true; }
   return res;
 }
@@ -559,6 +557,7 @@ function startReload(e) {
   const w = WEAPONS[e.weapon];
   if (e.reloadEnd > gameTime || e.mag[e.weapon] >= w.mag || e.reserve[e.weapon] <= 0) return;
   e.reloadStartT = gameTime;
+  if (online && e.isPlayer) netEv(['rl', e.weapon]);
   if (w.shellReload) e.reloadEnd = gameTime + w.reloadStart + w.reload; // Calibre 12: cartucho por cartucho
   else { e.reloadEnd = gameTime + w.reload; if (e.isPlayer) sfx.reload(); }
 }
@@ -597,8 +596,9 @@ function addKillFeed(a, t, wIdx, head) {
 function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function boardHtml() {
   const rows = [...entities].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
-  return `<table><tr><th>#</th><th style="text-align:left">Docão</th><th>Abates</th><th>Mortes</th><th>K/D</th></tr>${rows.map((e, i) =>
-    `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i + 1}</td><td style="text-align:left"><span class="dot" style="background:${e.shirt}"></span>${escapeHtml(e.name)}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${(e.kills / Math.max(1, e.deaths)).toFixed(2)}</td></tr>`).join('')}</table>`;
+  const pg = (e) => (online ? `<td>${e.bot ? 'bot' : (e.isPlayer ? online.net.ping : e.ping || 0) + ' ms'}</td>` : '');
+  return `<table><tr><th>#</th><th style="text-align:left">Docão</th><th>Abates</th><th>Mortes</th><th>K/D</th>${online ? '<th>Ping</th>' : ''}</tr>${rows.map((e, i) =>
+    `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i + 1}</td><td style="text-align:left"><span class="dot" style="background:${e.shirt}"></span>${escapeHtml(e.name)}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${(e.kills / Math.max(1, e.deaths)).toFixed(2)}</td>${pg(e)}</tr>`).join('')}</table>`;
 }
 function updateHud(dt) {
   const p = player, w = WEAPONS[p.weapon];
@@ -758,7 +758,7 @@ function updatePlayer(dt) {
   if (!p.alive) {
     if (p.charging) { p.charging = false; arcLine.visible = arcMark.visible = false; }
     camera.position.set(p.pos.x, p.pos.y + 0.4, p.pos.z); camera.rotation.set(-0.3, p.yaw, 0.25);
-    if (gameTime >= p.respawnAt) respawn(p);
+    if (!online && gameTime >= p.respawnAt) respawn(p);
     updateAds(dt, false);
     return;
   }
@@ -814,9 +814,10 @@ function updateBot(b, dt) {
     const k = Math.min(1, (gameTime - b.deathAt) / 0.15);
     m.group.scale.set(1 + 0.45 * k, 1 - 0.85 * k, 1 + 0.45 * k); // carimbado!
     if (gameTime - b.deathAt > 2.2) m.group.visible = false;
-    if (gameTime >= b.respawnAt) respawn(b);
+    if (!b.remote && gameTime >= b.respawnAt) respawn(b);
     return;
   }
+  if (b.remote) { interpRemote(b); animateBot(b, dt); return; } // online: posição vem do servidor
   if (b.frozen) { m.group.position.copy(b.pos); m.group.rotation.y = b.yaw; return; } // usado só em testes
   finishReload(b);
   b.think -= dt;
@@ -871,7 +872,10 @@ function updateBot(b, dt) {
   else b.stuck = Math.max(0, b.stuck - dt);
   let d = desiredYaw - b.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); b.yaw += d * Math.min(1, dt * 9);
   for (const i of b.slots) if (b.reserve[i] < WEAPONS[i].mag && !(WEAPONS[i].rocket && b.reserve[i] > 0)) b.reserve[i] = WEAPONS[i].reserve; // bots nunca ficam totalmente sem bala
-  // visual
+  animateBot(b, dt);
+}
+function animateBot(b, dt) { // visual: andar, flutuar, piscar ao levar dano, bolha de proteção, pose de recarga
+  const m = b.model;
   const speed = Math.hypot(b.vel.x, b.vel.z); b.walk += dt * speed * 2.2; b.travel = (b.travel || 0) + speed * dt;
   if (b.float) { // Fantasminha: flutua de leve e deixa um rastro fraquinho
     m.group.position.set(b.pos.x, b.pos.y + 0.14 + Math.sin(gameTime * 2.6 + b.floatPh) * 0.07, b.pos.z);
@@ -904,7 +908,6 @@ function steer(b, goal) {
 }
 
 // escolha de arma dos bots pelo alcance: Calibre 12 de perto, Sniper de longe, Bazuca a média distância, pistola no resto
-const BOT_RANGE = [14, 4.5, 26, 14, 10];
 function botWeapon(b, i) { return b.mag[i] > 0 || b.reserve[i] > 0; }
 function botWeaponFor(b, dist) {
   const pr = b.primary; if (!botWeapon(b, pr)) return PISTOL;
@@ -952,6 +955,7 @@ function primChip(i, keyHint, onPick) {
 function setPrimary(i) {
   selectedPrimary = i; try { localStorage.setItem('docao.primary', String(i)); } catch (e) { /* sem storage */ }
   if (player) player.nextPrimary = i;
+  if (online) netEv(['pr', i]);
   document.querySelectorAll('.primchip').forEach((c) => c.classList.toggle('active', +c.dataset.i === i));
 }
 function buildPrimaryPickers() {
@@ -1068,19 +1072,20 @@ function endGame() {
   $('winner').textContent = rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0].name} venceu!`;
   $('finalboard').innerHTML = boardHtml();
   const nm = MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length]; $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
+  ['againBtn', 'nextMapBtn'].forEach((id) => $(id).classList.remove('hidden')); $('overWait').classList.add('hidden');
   $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden');
 }
 function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; arcLine.visible = arcMark.visible = false; } $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
+  if (online) leaveOnline();
   state = 'menu'; clearBots(); if (selectedMap !== 'random') loadMap(selectedMap); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
   ['pause', 'gameover', 'hud'].forEach((id) => $(id).classList.add('hidden')); $('menu').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
 }
 function lockPointer() { try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* sem pointer lock */ } }
 
-$('playBtn').onclick = () => startGame(); $('againBtn').onclick = () => startGame(currentMap.id); $('menuBtn').onclick = toMenu;
-$('nextMapBtn').onclick = () => startGame(MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length].id);
+$('playBtn').onclick = () => startGame(); $('menuBtn').onclick = toMenu;
 $('resumeBtn').onclick = resume; $('quitBtn').onclick = toMenu;
 $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); e.stopPropagation(); });
 
@@ -1124,12 +1129,13 @@ const clock = new THREE.Clock(); let menuT = 0;
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), 0.05);
-  if (state === 'playing') {
+  if (state === 'playing' || (online && state === 'paused' && player)) { // online o jogo não pausa
     gameTime += dt;
-    updatePlayer(dt);
+    if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
+    if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
     updatePickups(dt); updateGrenades(dt); updateRockets(dt); updateParticles(dt); updateEffects(dt); updateFP(dt); updateHud(dt);
-    if (gameTime >= TIME_LIMIT) endGame();
+    if (!online && gameTime >= TIME_LIMIT) endGame();
   } else if (state === 'menu') {
     menuT += dt * 0.25;
     const sp = showcase.position; camera.position.set(sp.x, showBaseY + 1.25, sp.z + 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
@@ -1143,7 +1149,241 @@ function loop() {
 }
 loop();
 
+
+// ============================================================
+//  Online (Cloudflare Worker + Durable Object — ver server/ e net.js)
+//  O servidor manda em acertos, dano, abates, placar, renascimento, pickups, Copo Bomba/foguetes e tempo.
+//  Este cliente: move o próprio Docão (predição local), envia estado + eventos de tiro a SEND_HZ,
+//  e desenha os outros com interpolação (INTERP_DELAY atrás do último pacote).
+// ============================================================
+const v3a = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
+const a3v = (a) => new V3(a[0], a[1], a[2]);
+function netEv(ev) { if (online) online.evq.push(ev); }
+function profile() {
+  const name = ($('nameInput').value || 'Docão').trim().slice(0, 14) || 'Docão';
+  try { localStorage.setItem('docao.name', name); } catch (e) { /* sem storage */ }
+  return { name, skin: selectedSkin, primary: selectedPrimary };
+}
+try { const n = localStorage.getItem('docao.name'); if (n) $('nameInput').value = n; } catch (e) { /* sem storage */ }
+const roomLink = (code) => { const u = new URL(location.href); u.search = ''; const sv = new URLSearchParams(location.search).get('server'); if (sv) u.searchParams.set('server', sv); u.searchParams.set('sala', code); return u.toString(); };
+
+function joinRoom(code) {
+  code = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z]{4}$/.test(code)) { $('onlineErr').textContent = 'O código tem 4 letras'; return; }
+  if (online) leaveOnline(true);
+  initAudio();
+  online = { code, myId: 0, hostId: 0, ents: new Map(), evq: [], sendAcc: 0, cfg: null, lobby: null, inMatch: false, status: 'connecting' };
+  online.net = new Net(code, profile(), { onMessage: onNetMessage, onStatus: onNetStatus });
+  history.replaceState(null, '', roomLink(code));
+  $('lobbyCode').textContent = code; $('shareLink').value = roomLink(code);
+  $('lobbyPlayers').innerHTML = ''; $('lobbyStatus').textContent = 'Conectando…'; $('lobbyInfo').textContent = '';
+  $('hostCtl').classList.add('hidden'); $('lobbyWait').classList.add('hidden');
+  ['menu', 'onlineModal', 'gameover', 'pause'].forEach((id) => $(id).classList.add('hidden')); $('lobby').classList.remove('hidden');
+}
+function leaveOnline(silent) {
+  const o = online; if (!o) return; online = null; o.net.close();
+  const u = new URL(location.href); u.searchParams.delete('sala'); history.replaceState(null, '', u.toString());
+  $('lobby').classList.add('hidden'); $('netbar').classList.add('hidden');
+  if (!silent && state !== 'menu') toMenu(); else if (!silent) $('menu').classList.remove('hidden');
+}
+function onNetStatus(st, detail) {
+  if (!online) return; online.status = st;
+  const txt = st === 'reconnecting' ? 'Reconectando…' : st === 'connecting' ? 'Conectando…' : st === 'error' ? (detail || 'Erro de conexão') : '';
+  $('lobbyStatus').textContent = txt; $('netStatus').textContent = st === 'open' ? '' : ' · ' + txt;
+  if (st === 'error') {
+    if (state === 'playing' || state === 'paused' || state === 'over') { const msg = txt; leaveOnline(); flashMenuErr(msg); }
+    else { $('lobbyStatus').textContent = txt; }
+  }
+}
+function flashMenuErr(msg) { $('onlineErr').textContent = msg; $('onlineModal').classList.remove('hidden'); $('menu').classList.add('hidden'); }
+function onNetMessage(m) {
+  const o = online; if (!o) return;
+  switch (m.t) {
+    case 'welcome': o.myId = m.id; o.hostId = m.hostId; o.cfg = m.cfg; break;
+    case 'lobby': o.lobby = m; o.hostId = m.hostId; o.cfg = m.cfg; renderLobby(); break;
+    case 'start': startOnlineMatch(m); break;
+    case 's': if (o.inMatch) applySnapshot(m); break;
+    case 'p': if (o.inMatch) for (const ev of m.ev) personalEvent(ev); break;
+    case 'end': if (o.inMatch) onlineEnd(m); break;
+    default: break;
+  }
+}
+// ---------- lobby ----------
+function fillMapSelect(sel, value) {
+  if (!sel.options.length) { for (const m of MAPS) sel.add(new Option(m.name, m.id)); sel.add(new Option('Aleatório', 'random')); }
+  if (value) sel.value = value;
+}
+function renderLobby() {
+  const o = online, L = o.lobby; if (!L) return;
+  const isHost = o.myId === o.hostId, cfg = L.cfg;
+  const mapName = cfg.map === 'random' ? 'Aleatório' : getMap(cfg.map).name;
+  $('lobbyInfo').textContent = `${mapName} · até ${cfg.max} jogadores · bots: ${cfg.fillBots ? 'sim' : 'não'}${L.state === 'playing' ? ' · partida em andamento' : ''}`;
+  const rows = L.players.filter((p) => !p.bot);
+  $('lobbyPlayers').innerHTML = `<table><tr><th style="text-align:left">Jogadores (${rows.length}/${cfg.max})</th><th>Ping</th></tr>${rows.map((p) =>
+    `<tr class="${p.id === o.myId ? 'me' : ''}"><td style="text-align:left"><span class="dot" style="background:${(getSkin(p.skin).shirt || {}).color || '#d8261c'}"></span>${escapeHtml(p.name)}${p.id === L.hostId ? '<span class="host">★ anfitrião</span>' : ''}</td><td>${p.id === o.myId ? o.net.ping : p.ping} ms</td></tr>`).join('')}</table>`;
+  $('hostCtl').classList.toggle('hidden', !isHost); $('lobbyWait').classList.toggle('hidden', isHost || L.state !== 'lobby');
+  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; }
+  if (state === 'over') { const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h); }
+}
+const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1' });
+['lobbyMap', 'lobbyMax', 'lobbyBots'].forEach((id) => ($(id).onchange = sendCfg));
+$('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
+$('leaveLobby').onclick = () => leaveOnline();
+$('copyLink').onclick = async () => { const v = $('shareLink').value; try { await navigator.clipboard.writeText(v); $('copyLink').textContent = 'Copiado!'; } catch (e) { $('shareLink').select(); } setTimeout(() => ($('copyLink').textContent = 'Copiar link'), 1500); };
+// ---------- menu online ----------
+function onlineTab(create) { $('tabCreate').classList.toggle('active', create); $('tabJoin').classList.toggle('active', !create); $('paneCreate').classList.toggle('hidden', !create); $('paneJoin').classList.toggle('hidden', create); }
+$('onlineBtn').onclick = () => { fillMapSelect($('roomMap'), selectedMap); $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
+$('onlineClose').onclick = () => { $('onlineModal').classList.add('hidden'); $('menu').classList.remove('hidden'); };
+$('tabCreate').onclick = () => onlineTab(true); $('tabJoin').onclick = () => { onlineTab(false); $('joinCode').focus(); };
+$('createBtn').onclick = async () => {
+  const b = $('createBtn'); b.disabled = true; $('onlineErr').textContent = 'Criando sala…';
+  try { const code = await createRoom({ map: $('roomMap').value, max: +$('roomMax').value, fillBots: $('roomBots').value === '1' }); $('onlineErr').textContent = ''; joinRoom(code); }
+  catch (e) { $('onlineErr').textContent = 'Não deu pra criar a sala: ' + (e.message || 'servidor fora do ar'); }
+  b.disabled = false;
+};
+$('joinBtn').onclick = async () => {
+  const code = $('joinCode').value.trim().toUpperCase(); if (!/^[A-Z]{4}$/.test(code)) { $('onlineErr').textContent = 'O código tem 4 letras'; return; }
+  $('onlineErr').textContent = 'Procurando sala…';
+  try { const info = await roomInfo(code); if (!info.exists) { $('onlineErr').textContent = 'Sala não encontrada'; return; } if (info.players >= info.max) { $('onlineErr').textContent = 'Sala cheia'; return; } $('onlineErr').textContent = ''; joinRoom(code); }
+  catch (e) { $('onlineErr').textContent = 'Servidor fora do ar'; }
+};
+$('joinCode').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') $('joinBtn').click(); });
+// ---------- partida ----------
+function remoteEnt(info) {
+  const o = online; if (info.id === o.myId || o.ents.has(info.id)) return o.ents.get(info.id);
+  const e = makeEntity(info.name, false, info.skin, info.tag || '#ffffff');
+  Object.assign(e, { remote: true, netId: info.id, bot: !!info.bot, buf: [], kills: info.kills || 0, deaths: info.deaths || 0, alive: false, primary: info.primary || 0, ping: 0 });
+  e.model.group.visible = false; setWeapon(e, info.w || 0); e.slots = [e.primary, PISTOL];
+  o.ents.set(info.id, e); entities.push(e); return e;
+}
+function removeEnt(id) {
+  const o = online, e = o.ents.get(id); if (!e || e === player) return;
+  scene.remove(e.model.group); o.ents.delete(id); entities = entities.filter((x) => x !== e);
+}
+function startOnlineMatch(m) {
+  const o = online;
+  if (o.inMatch && o.mapId === m.map && state !== 'over' && player) { // reconexão no meio da partida: só ressincroniza
+    for (const info of m.ents) if (!o.ents.has(info.id) && info.id !== o.myId) remoteEnt(info);
+    return;
+  }
+  resetAds(); loadMap(m.map); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear();
+  const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
+  player = makeEntity(me.name, true, me.skin, '#ffd27a'); player.netId = o.myId; player.sq = 0; player.alive = false; player.respawnAt = Infinity;
+  player.kills = me.kills || 0; player.deaths = me.deaths || 0;
+  player.primary = player.nextPrimary = selectedPrimary; player.slots = [selectedPrimary, PISTOL]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
+  entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin);
+  for (const info of m.ents) remoteEnt(info);
+  pickups.forEach((p, i) => { p.active = !!(m.pk ? m.pk[i] : 1); p.mesh.visible = p.active; });
+  showcase.visible = false; $('killfeed').innerHTML = ''; flashMsg(`Mapa: ${currentMap.name}`);
+  ['menu', 'gameover', 'pause', 'lobby', 'onlineModal'].forEach((id) => $(id).classList.add('hidden')); $('hud').classList.remove('hidden');
+  $('netbar').classList.remove('hidden'); $('netRoom').textContent = 'Sala ' + o.code;
+  camera.clearViewOffset(); state = 'playing'; lockPointer();
+}
+function netTick(dt) {
+  const o = online; if (!o || !o.inMatch || !player) return;
+  o.sendAcc += dt; if (o.sendAcc < 1 / SEND_HZ) return; o.sendAcc = 0;
+  const p = player, msg = { t: 'u', sq: p.sq, y: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping };
+  if (p.alive) { msg.p = v3a(p.pos); msg.v = v3a(p.vel); }
+  if (o.evq.length) { msg.ev = o.evq; o.evq = []; }
+  o.net.send(msg);
+  $('netPing').textContent = o.net.ping + ' ms';
+}
+function interpRemote(e) {
+  const B = e.buf; if (!B.length) return;
+  const rt = performance.now() / 1000 - INTERP_DELAY;
+  while (B.length > 2 && B[1].t <= rt) B.shift();
+  let a = B[0], b = B[1] || B[0];
+  const k = b === a ? 1 : clamp((rt - a.t) / (b.t - a.t), 0, 1.2); // extrapola no máximo 20% se o pacote atrasar
+  const nx = a.x + (b.x - a.x) * k, ny = a.y + (b.y - a.y) * k, nz = a.z + (b.z - a.z) * k;
+  const span = Math.max(1e-3, b.t - a.t); e.vel.set((b.x - a.x) / span, (b.y - a.y) / span, (b.z - a.z) / span);
+  e.pos.set(nx, ny, nz);
+  let dy = b.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw = a.yaw + dy * Math.min(1, k);
+}
+function applySnapshot(s) {
+  const o = online, now = performance.now() / 1000;
+  if (Math.abs(gameTime - s.T) > 0.25) gameTime = s.T; else gameTime += (s.T - gameTime) * 0.1;
+  for (const ev of s.ev) netEvent(ev);
+  for (const [id, x, y, z, yaw, pitch, w, fl, hp, ping] of s.e) {
+    const e = o.ents.get(id); if (!e) continue;
+    e.ping = ping; e.hp = hp; e.onGround = !!(fl & 4);
+    if (e === player) continue;
+    const alive = !!(fl & 1);
+    if (alive && !e.alive) { e.alive = true; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = []; e.pos.set(x, y, z); }
+    else if (!alive && e.alive) { e.alive = false; e.deathAt = gameTime; }
+    if (w !== e.weapon) setWeapon(e, w);
+    e.invulnUntil = fl & 2 ? gameTime + 0.15 : 0; e.reloadEnd = fl & 8 ? gameTime + 0.15 : 0;
+    e.buf.push({ t: now, x, y, z, yaw });
+    if (e.buf.length > 30) e.buf.shift();
+  }
+}
+const entOf = (id) => (online ? online.ents.get(id) : null);
+function remoteMuzzle(e) { return center(e, 1.3).add(new V3(Math.sin(e.yaw) * 1.0, -0.25, Math.cos(e.yaw) * 1.0)); }
+function netEvent(ev) {
+  const o = online, k = ev[0];
+  if (k === 'sh') {
+    const [, sid, w, , ends] = ev; if (sid === o.myId) return; const e = entOf(sid); if (!e) return; const W = WEAPONS[w];
+    const vol = distVol(e.pos) * 0.7; sfx[W.key](vol); if (W.pump) sfx.pump(vol * 0.7, 0.3); if (W.bolt) sfx.bolt(vol * 0.7, 0.3);
+    e.invulnUntil = 0; const mz = remoteMuzzle(e);
+    ends.slice(0, 4).forEach(([x, y, z, hit]) => { const end = new V3(x, y, z); tracer(mz, end, !!W.beam); puff(end, hit ? 0xff9fb0 : 0xffffff); });
+  } else if (k === 'h') {
+    const [, tid, aid, hp, head] = ev; const t = entOf(tid), a = entOf(aid); if (!t) return;
+    t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
+    if (t === player) { hurtFlash(); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
+    if (aid === o.myId && t !== player) { hitMarker(hp <= 0); sfx.hit(); }
+  } else if (k === 'k') {
+    const [, aid, tid, w, head, aK, tD] = ev; const a = entOf(aid), t = entOf(tid); if (!t) return;
+    if (a) a.kills = aK; t.deaths = tD; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.lastAttacker = a || null;
+    addKillFeed(a, t, w, head); sfx.die(t === player ? 1 : distVol(t.pos)); if (a === player && t !== player) sfx.kill();
+    if (t === player) { const st = $('stamp'); st.classList.remove('show'); void st.offsetWidth; st.classList.add('show'); player.charging = false; arcLine.visible = arcMark.visible = false; }
+  } else if (k === 'sp') {
+    const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
+    e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN;
+    e.primary = prim; e.slots = [prim, PISTOL]; e.mag = WEAPONS.map((x) => x.mag); e.reserve = WEAPONS.map((x) => x.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.nades = NADE.spawnWith; setWeapon(e, prim);
+    if (e === player) { player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; player.onGround = true; $('stamp').classList.remove('show'); }
+    else { e.yaw = yaw; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = [{ t: performance.now() / 1000 - INTERP_DELAY, x: pos[0], y: pos[1], z: pos[2], yaw }]; }
+  } else if (k === 'pk') { const p = pickups[ev[1]]; if (p) { p.active = !!ev[2]; p.mesh.visible = p.active; } }
+  else if (k === 'nd') {
+    const [, pid, oid, op, vel] = ev; const mesh = makeCup(1.15); scene.add(mesh); const owner = entOf(oid);
+    grenades.push({ net: true, pid, owner, pos: a3v(op), vel: a3v(vel), explodeAt: gameTime + NADE.fuse, mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 });
+    if (oid !== o.myId && owner) sfx.toss(distVol(owner.pos));
+  } else if (k === 'rk') {
+    const [, pid, oid, pos, dir] = ev; const start = a3v(pos), d = a3v(dir);
+    const mesh = makeRocket(1.5); scene.add(mesh); mesh.position.copy(start); mesh.lookAt(start.clone().add(d));
+    rockets.push({ net: true, pid, owner: entOf(oid), pos: start, dir: d, mesh, born: gameTime, nextSmoke: 0 });
+  } else if (k === 'bm') {
+    const [, pid, kind, c] = ev;
+    const list = kind === 'n' ? grenades : rockets; const i = list.findIndex((x) => x.pid === pid && pid); if (i >= 0) { scene.remove(list[i].mesh); list.splice(i, 1); }
+    blastFx(a3v(c), kind === 'n' ? NADE.radius : WEAPONS[3].rocket.radius);
+  } else if (k === 'j') { remoteEnt(ev[1]); }
+  else if (k === 'l') { removeEnt(ev[1]); }
+}
+function personalEvent(ev) {
+  const p = player; if (!p) return;
+  if (ev[0] === 'pos') { p.pos.set(ev[1][0], ev[1][1], ev[1][2]); p.vel.set(0, 0, 0); }
+  else if (ev[0] === 'kn') { const [x, y, z] = ev[1]; p.vel.x += x; p.vel.z += z; p.vel.y = Math.max(p.vel.y, y); p.onGround = false; lastKnock = gameTime; }
+  else if (ev[0] === 'got') {
+    const [, type, hp, nades] = ev; sfx.pickup(); p.hp = hp; p.nades = nades; if (type === 'ammo') refillAmmo(p);
+    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})` : p.primary === 3 ? `Munição! +1 foguete (${p.reserve[3]}/${WEAPONS[3].reserve})` : 'Munição cheia!');
+  }
+}
+function onlineEnd(m) {
+  const o = online; resetAds(); state = 'over'; mouseDown = false; o.endMsg = m;
+  if (document.pointerLockElement) document.exitPointerLock();
+  for (const [id, , k, d] of m.board) { const e = entOf(id); if (e) { e.kills = k; e.deaths = d; } }
+  const w = m.board[0]; $('winner').textContent = w && w[0] === o.myId ? 'Você venceu! 🏆' : `${w ? w[1] : '???'} venceu!`;
+  $('finalboard').innerHTML = boardHtml();
+  $('overMap').innerHTML = `Mapa: <b>${escapeHtml(getMap(m.map).name)}</b> · próximo: <b>${escapeHtml(getMap(m.next).name)}</b>`;
+  $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden'); renderLobby();
+  const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h);
+}
+// botões do fim de jogo: offline como antes; online só o anfitrião reinicia
+$('againBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.mapId }) : startGame(currentMap.id));
+$('nextMapBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.endMsg ? online.endMsg.next : 'random' }) : startGame(MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length].id));
+// link ?sala=ABCD entra direto
+{ const sala = new URLSearchParams(location.search).get('sala'); if (sala) joinRoom(sala); }
+
 // ganchos para testes automatizados
 window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
-  MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; } };
+  MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
+  get online() { return online; }, joinRoom, leaveOnline, netEv };

@@ -6,7 +6,7 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
-await page.goto('http://localhost:8123/', { waitUntil: 'load' });
+await page.goto(process.env.SITE || 'http://localhost:8123/', { waitUntil: 'load' });
 await page.waitForFunction(() => window.__thumbsReady, null, { timeout: 120000 });
 const ev = (f, a) => page.evaluate(f, a);
 const waitGame = async (sec) => { const t0 = await ev(() => window.__docao.time); await page.waitForFunction((t) => window.__docao.time >= t, t0 + sec, { timeout: 60000, polling: 16 }); };

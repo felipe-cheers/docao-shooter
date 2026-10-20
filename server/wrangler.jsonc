@@ -1,0 +1,14 @@
+{
+  // Docão Shooter — servidor online. Deploy: `npx wrangler deploy` nesta pasta.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "docao-shooter-server",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+  },
+  // plano grátis: Durable Objects precisam ser SQLite-backed
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "observability": { "enabled": true }
+}

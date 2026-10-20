@@ -20,6 +20,7 @@
     <div id="timer">5:00</div>
     <div id="leader"></div>
   </div>
+  <div id="netbar" class="hidden"><span id="netRoom"></span> · <span id="netPing">-- ms</span><span id="netStatus"></span></div>
   <div id="score">Abates: 0 · Mortes: 0 · K/D: 0.00</div>
   <div id="killfeed"></div>
   <div id="centermsg"></div>
@@ -66,7 +67,7 @@
         <input id="sens" type="range" min="0.5" max="3" step="0.1" value="1.4">
       </label>
     </div>
-    <button id="playBtn">JOGAR</button>
+    <div class="playrow"><button id="playBtn">JOGAR OFFLINE <small>(bots)</small></button><button id="onlineBtn" class="online">JOGAR ONLINE</button></div>
     <div class="controls">
       <b>Controles</b>
       <div>WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom</div>
@@ -86,6 +87,47 @@
   </div>
 </div>
 
+<div id="onlineModal" class="overlay hidden">
+  <div class="panel">
+    <h2>Jogar online</h2>
+    <div class="otabs"><button id="tabCreate" class="otab active">Criar sala</button><button id="tabJoin" class="otab">Entrar na sala</button></div>
+    <div id="paneCreate">
+      <label>Mapa<select id="roomMap"></select></label>
+      <div class="row">
+        <label>Máx. jogadores<select id="roomMax"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option><option>8</option></select></label>
+        <label>Completar com bots<select id="roomBots"><option value="1" selected>Sim</option><option value="0">Não</option></select></label>
+      </div>
+      <button id="createBtn">CRIAR SALA</button>
+    </div>
+    <div id="paneJoin" class="hidden">
+      <label>Código da sala<input id="joinCode" maxlength="4" placeholder="ABCD" autocomplete="off" spellcheck="false"></label>
+      <button id="joinBtn">ENTRAR</button>
+    </div>
+    <div id="onlineErr" class="err"></div>
+    <button id="onlineClose" class="secondary">VOLTAR</button>
+  </div>
+</div>
+
+<div id="lobby" class="overlay hidden">
+  <div class="panel">
+    <h2>Sala <span id="lobbyCode" class="code">----</span></h2>
+    <div class="share"><input id="shareLink" readonly><button id="copyLink" class="small">Copiar link</button></div>
+    <div id="lobbyInfo" class="sub"></div>
+    <div id="lobbyPlayers" class="board"></div>
+    <div id="hostCtl">
+      <div class="row">
+        <label>Mapa<select id="lobbyMap"></select></label>
+        <label>Máx.<select id="lobbyMax"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+        <label>Bots<select id="lobbyBots"><option value="1">Sim</option><option value="0">Não</option></select></label>
+      </div>
+      <button id="startOnline">INICIAR PARTIDA</button>
+    </div>
+    <div id="lobbyWait" class="sub">Aguardando o anfitrião iniciar a partida…</div>
+    <div id="lobbyStatus" class="err"></div>
+    <button id="leaveLobby" class="secondary">SAIR DA SALA</button>
+  </div>
+</div>
+
 <div id="pause" class="overlay hidden">
   <div class="panel small">
     <h2>Pausado</h2>
@@ -101,6 +143,7 @@
     <div id="overMap" class="overmap"></div>
     <button id="againBtn">JOGAR DE NOVO</button>
     <button id="nextMapBtn">PRÓXIMO MAPA ▸</button>
+    <div id="overWait" class="sub hidden">Aguardando o anfitrião…</div>
     <button id="menuBtn" class="secondary">MENU</button>
   </div>
 </div>
