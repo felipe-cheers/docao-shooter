@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Docão render</title>
+<style>html,body{margin:0;background:#ffe9c4;overflow:hidden}</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script></head>
+<body><script type="module">
+import * as THREE from 'three';
+import { makeDocao } from './docao.js';
+import './costumes.js';
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') || 600), H = +(q.get('h') || 800);
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(q.get('bg') || '#ffe9c4');
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb07040, 1.7));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2); sun.position.set(2, 4, 5); scene.add(sun);
+const d = makeDocao(q.get('skin') || 'classico', { withGun: q.get('gun') === '1', pose: q.get('pose') || 'idle' });
+d.group.rotation.y = +(q.get('rot') || 0); scene.add(d.group);
+if (q.get('debug') === 'skull') d.head.children.forEach((c, i) => { if (i > 0) c.visible = false; });
+const framing = q.get('frame') || 'body';
+const cam = new THREE.PerspectiveCamera(framing === 'face' ? 24 : 30, W / H, 0.1, 50);
+if (framing === 'face') { cam.position.set(0, 1.55, 4.2); cam.lookAt(0, 1.45, 0); } else { cam.position.set(0, 1.25, 5.6); cam.lookAt(0, 1.05, 0); }
+r.render(scene, cam); window.__done = true;
+</script></body></html>

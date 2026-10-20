@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Docão Shooter</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="hitmarker"></div>
+  <div id="vignette"></div>
+  <div id="adsvig"></div>
+  <div id="scope" class="hidden"><div class="lens"></div><div class="hair h"></div><div class="hair v"></div><div class="dot"></div></div>
+  <div id="topbar">
+    <div id="timer">5:00</div>
+    <div id="leader"></div>
+  </div>
+  <div id="score">Abates: 0 · Mortes: 0 · K/D: 0.00</div>
+  <div id="killfeed"></div>
+  <div id="centermsg"></div>
+  <div id="stamp">CARIMBADO!</div>
+  <div id="bottomleft">
+    <div class="label">VIDA</div>
+    <div id="hpbar"><div id="hpfill"></div><span id="hptext">100</span></div>
+  </div>
+  <div id="bottomright">
+    <div id="nades"><span class="nlabel">3 · Copo Bomba [Q]</span><span id="nade0" class="cupicon"></span><span id="nade1" class="cupicon"></span><span id="nade2" class="cupicon"></span></div>
+    <div id="slots"><span id="slot1" class="slot active">1 Fuzil</span><span id="slot2" class="slot">2 Pistola</span></div>
+    <div id="wname">Fuzil Pururuca</div>
+    <div id="ammo"><span id="mag">30</span><span id="reserve"> / 120</span></div>
+    <div id="reloadmsg"></div>
+  </div>
+  <div id="powermeter" class="hidden"><div id="powertext">Força do arremesso</div><div id="powerbar"><div id="powerfill"></div></div></div>
+  <div id="deathpick" class="hidden"><div class="dl">Arma primária no próximo renascimento:</div><div id="deathList"></div></div>
+  <div id="tabboard" class="board hidden"></div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="panel">
+    <h1>Docão <span>Shooter</span></h1>
+    <p class="sub">Tiroteio na Fazendinha Cheers</p>
+    <label>Seu nome<input id="nameInput" maxlength="14" value="Docão"></label>
+    <div class="skinpick">
+      <div class="label2">Skin do Docão <span id="skinIdx"></span></div>
+      <div class="skinrow"><button id="skinPrev" class="arrow">◀</button><div id="skinName">Clássico</div><button id="skinNext" class="arrow">▶</button></div>
+      <div id="skinList"></div>
+    </div>
+    <div class="primpick">
+      <div class="label2">Arma primária <span>+ Pistolinha Leitão sempre na secundária</span></div>
+      <div id="primList"></div>
+    </div>
+    <div class="mappick">
+      <div class="label2">Mapa</div>
+      <button id="mapBtn" class="mapcard current" title="Escolher mapa"><span class="thumb"></span><span class="mtxt"><b id="mapName">Arena da Fazendinha</b><small id="mapDesc"></small></span><span class="mchange">trocar ▸</span></button>
+    </div>
+    <div class="row">
+      <label>Bots
+        <select id="botCount"><option>4</option><option selected>5</option><option>6</option></select>
+      </label>
+      <label>Sensibilidade
+        <input id="sens" type="range" min="0.5" max="3" step="0.1" value="1.4">
+      </label>
+    </div>
+    <button id="playBtn">JOGAR</button>
+    <div class="controls">
+      <b>Controles</b>
+      <div>WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom</div>
+      <div>Clique atirar · R recarregar · 1 primária / 2 pistola (ou rodinha)</div>
+      <div>Segure Q (ou 3): Copo Bomba · solte para arremessar</div>
+      <div>Tab placar · Esc pausar</div>
+      <div class="rules">Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos</div>
+    </div>
+  </div>
+</div>
+
+<div id="mapModal" class="overlay hidden">
+  <div class="panel wide">
+    <h2>Escolha o mapa</h2>
+    <div id="mapGrid"></div>
+    <button id="mapClose" class="secondary">VOLTAR</button>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="panel small">
+    <h2>Pausado</h2>
+    <button id="resumeBtn">CONTINUAR</button>
+    <button id="quitBtn" class="secondary">SAIR PRO MENU</button>
+  </div>
+</div>
+
+<div id="gameover" class="overlay hidden">
+  <div class="panel">
+    <h2 id="winner">Fim de jogo!</h2>
+    <div id="finalboard" class="board"></div>
+    <div id="overMap" class="overmap"></div>
+    <button id="againBtn">JOGAR DE NOVO</button>
+    <button id="nextMapBtn">PRÓXIMO MAPA ▸</button>
+    <button id="menuBtn" class="secondary">MENU</button>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
