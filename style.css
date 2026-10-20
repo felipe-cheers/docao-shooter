@@ -118,3 +118,20 @@ button.mapcard .mchange{color:#7DF9FF;font-weight:bold;font-size:13px;white-spac
 .overmap{margin:10px 0 0;color:#cfe;font-size:14px}.overmap b{color:#7DF9FF}
 #nextMapBtn{background:#2b8a9a}#nextMapBtn:hover{background:#35a5b8}
 button.mapcard .thumb.rnd{display:flex;align-items:center;justify-content:center;font-family:"Arial Black",Impact,sans-serif;font-size:34px;color:#7DF9FF;background:repeating-linear-gradient(45deg,#26304f 0 12px,#31406a 12px 24px)}
+
+/* ---------- Online ---------- */
+.playrow{display:flex;gap:12px}.playrow button{flex:1;font-size:21px}
+.playrow button small{font-size:13px;opacity:.85}
+button.online{background:#2a9d8f}button.online:hover{background:#34b5a5}
+.otabs{display:flex;gap:8px;margin-bottom:10px}
+button.otab{margin:0;font-size:16px;padding:8px;background:#3a4a7a;box-shadow:0 3px 0 #2a1410}
+button.otab.active{background:#e63946;outline:3px solid #ffd27a;outline-offset:1px}
+#joinCode{text-transform:uppercase;font-family:"Arial Black",Impact,sans-serif;font-size:32px;letter-spacing:10px;text-align:center}
+.err{color:#ff7b7b;font-weight:bold;min-height:20px;margin-top:8px}
+.code{font-family:"Arial Black",Impact,sans-serif;color:#ffd27a;letter-spacing:6px;background:#26304f;border:3px solid #2a1410;border-radius:12px;padding:0 12px}
+.share{display:flex;gap:8px;align-items:center;margin:8px 0}.share input{flex:1;font-size:13px;margin:0}
+button.small{width:auto;margin:0;padding:8px 12px;font-size:14px;border-width:3px;box-shadow:0 3px 0 #2a1410;white-space:nowrap}
+#lobbyPlayers .host{color:#ffd27a;font-size:12px;margin-left:6px}
+#lobbyPlayers .bot{color:#9fd0ff;font-size:12px;margin-left:6px}
+#netbar{position:fixed;top:52px;left:16px;font-weight:bold;font-size:14px;background:rgba(0,0,0,.4);padding:4px 10px;border-radius:8px}
+#netStatus{color:#ff9f6b;margin-left:8px}

@@ -14,6 +14,63 @@ python3 -m http.server 8123
 ## Controles
 WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom (luneta no Sniper) · Clique atirar · R recarregar · 1 primária / 2 pistola (ou rodinha) · Segure Q (ou 3): Copo Bomba, solte para arremessar · Morto: 1–4 escolhe a primária do próximo renascimento · Tab placar · Esc (ou P) pausar
 
+## Online (multiplayer) 🌐
+
+No menu: **JOGAR OFFLINE (bots)** funciona como sempre; **JOGAR ONLINE** abre:
+- **Criar sala** — mapa (ou Aleatório), máximo de jogadores (2–8) e "completar com bots" (sim/não). Gera um **código de 4 letras**.
+- **Entrar na sala** — digite o código. Ou abra o link de convite `https://…/?sala=ABCD` (entra direto no lobby).
+- No lobby o **anfitrião** (★) troca mapa/máximo/bots e clica **INICIAR PARTIDA**. No fim, só o anfitrião escolhe "jogar de novo" / "próximo mapa".
+- Durante a partida: ping no canto (Sala ABCD · 35 ms), placar (Tab) com ping de cada um, kill feed do servidor. Esc não pausa o jogo online (só solta o mouse).
+- Caiu a conexão? O cliente reconecta sozinho (até 10 tentativas) e volta com o mesmo jogador/placar (token na `sessionStorage`; a vaga fica guardada 30 s).
+
+### Arquitetura
+- **Servidor:** `server/` — Cloudflare Worker + **Durable Object `Room`** (SQLite-backed, plano grátis). Um objeto por código de sala (`idFromName(código)`).
+  - `POST /api/rooms` cria sala · `GET /api/rooms/ABCD` consulta · `GET /ws/ABCD?name=&skin=&primary=&token=` (WebSocket) · `GET /health`.
+  - **WebSocket Hibernation API** (`ctx.acceptWebSocket`): no lobby o objeto pode hibernar sem custo; config e jogadores são restaurados dos anexos dos sockets + storage.
+    `ping`→`pong` é resposta automática (`setWebSocketAutoResponse`): não acorda o objeto e não conta como requisição.
+  - Sala vazia: alarme de 2 min apaga tudo (`storage.deleteAll()`).
+- **Servidor autoritativo** (`server/src/game.js`, sem DOM/Three.js): acertos, dano, abates, placar, renascimento (escolha de spawn),
+  pickups, Copo Bomba e foguetes (física + explosão + empurrão), tempo de partida e fim de partida. Usa os mesmos módulos do cliente:
+  `maps.js` (dados), `nav.js` (grafo dos bots), `shared/rules.js` (armas/constantes) e `shared/physics.js` (colisão — o teste confere que as caixas são idênticas às do `world.js` em todos os mapas).
+- **Cliente** (`net.js` + seção Online do `main.js`): move o próprio Docão localmente (sem atraso) e manda a ~20 Hz posição, velocidade, mira, arma e
+  eventos (`f` tiro com origem + direções de cada bago, `r` foguete, `n` Copo Bomba, `rl` recarga, `pr` primária). Os outros Docões são desenhados com
+  **interpolação de 100 ms**, com skin, nome, arma, pose de recarga, bolha de proteção e animação de andar.
+- **Tiro:** hitscan **no servidor** contra a cópia dele das posições, com **compensação de lag "lite"** (volta no tempo `ping/2 + 100 ms`, máx. 300 ms).
+  O cliente só diz de onde e pra onde atirou; dano/abate vêm do servidor.
+- **Anti-cheat básico:** velocidade máxima por pacote (folga para empurrão de explosão/rocket jump), dentro do mapa e fora das paredes (senão o servidor devolve o jogador pra última posição válida);
+  cadência por arma (relógio do cliente + checagem de que ele não anda mais rápido que o do servidor), **munição/pente/recarga contados no servidor**,
+  origem do tiro perto do olho, Copo Bomba só se tiver e com velocidade máxima.
+- **Bots online:** simulados **no servidor** (mesma IA dos bots offline: alvo por visão, faixa de distância por arma, strafe, Copo Bomba, A* no grafo de navegação).
+  Ocupam as vagas livres; quando alguém entra no meio da partida um bot sai. Custo medido: ~0,05 ms por tick com 7 bots.
+- **Loop:** 20 Hz. Os ticks rodam "de carona" nas mensagens dos clientes (cada mensagem é uma invocação com o próprio limite de CPU) e um `setInterval`
+  completa os buracos — se nenhum cliente mandar nada por 1 s, a simulação para (nunca acumula CPU numa invocação só).
+
+### Configuração do cliente
+`config.js`: `SERVER_URL` (padrão `wss://docao-shooter-server.valentimm.workers.dev`). Dá pra trocar pela URL: `?server=ws://127.0.0.1:8787`.
+Também `?hz=10` muda a taxa de envio (padrão 20/s).
+
+### Deploy do servidor
+```
+cd server
+npm install
+npx wrangler login          # uma vez
+npx wrangler deploy         # publica docao-shooter-server.<subdomínio>.workers.dev
+```
+Se o subdomínio/nome mudar, ajuste `SERVER_URL` em `config.js`. Para gerar o bundle sem publicar: `npx wrangler deploy --dry-run --outdir dist` → `server/dist/index.js`.
+Config (`server/wrangler.jsonc`): Durable Object `Room`, binding `ROOMS`, migração `v1` com `new_sqlite_classes: ["Room"]`.
+O site (Vercel) não precisa de nada: `.vercelignore` deixa `server/` e os testes de fora.
+
+**Limites do plano grátis (estimativa):** cada mensagem recebida por WebSocket conta 1/20 de requisição (100 mil/dia). 8 humanos a 20 Hz ≈ 8 req/s → ~3,5 h de partida cheia por dia;
+2 humanos ≈ 14 h/dia. Mensagens enviadas pelo servidor não contam. Se precisar economizar, use `?hz=10` (ou mude `SEND_HZ`).
+
+### Testar online localmente
+```
+cd server && npx wrangler dev --port 8787 --var ALLOW_TEST:1     # ALLOW_TEST só para o teste automatizado (aceita teleporte)
+python3 -m http.server 8124                                       # na raiz do jogo
+node test-online.mjs http://localhost:8124/ ws://127.0.0.1:8787
+```
+Para jogar em duas abas: `http://localhost:8124/?server=ws://127.0.0.1:8787`.
+
 ## Mira com zoom (Shift)
 
 - **Segure Shift** para mirar; solte para voltar ao normal. Shift não faz mais nada no jogo (não há corrida).

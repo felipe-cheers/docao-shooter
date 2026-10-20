@@ -1,3 +1,8 @@
 node_modules/
 package-lock.json
 .vercel
+
+# servidor online
+server/node_modules/
+server/dist/
+server/.wrangler/

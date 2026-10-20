@@ -4,7 +4,7 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
-await page.goto('http://localhost:8123/', { waitUntil: 'load' });
+await page.goto(process.env.SITE || 'http://localhost:8123/', { waitUntil: 'load' });
 await page.waitForTimeout(2500);
 await page.screenshot({ path: 'screenshots/01-menu.png' });
 await page.click('#skinNext'); await page.waitForTimeout(600);

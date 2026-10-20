@@ -1,0 +1,6 @@
+# Vercel serve só o site estático; o servidor online (Cloudflare Worker) e os testes ficam de fora
+server/
+node_modules/
+*.mjs
+render.html
+screenshots/

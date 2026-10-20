@@ -1,0 +1,142 @@
+// ============================================================
+//  Docão Shooter — servidor online (Cloudflare Worker + Durable Object com SQLite).
+//  Rotas:
+//    POST /api/rooms            {map, max, fillBots}  → {code}   (cria sala com código de 4 letras)
+//    GET  /api/rooms/ABCD       → {exists, players, max, state, map}
+//    GET  /ws/ABCD?name=&skin=&primary=&token=   (upgrade WebSocket → Durable Object "Room" da sala)
+//    GET  /health
+//  Um Durable Object por sala (idFromName(código)). WebSocket Hibernation API: no lobby o objeto
+//  pode hibernar; durante a partida um setInterval de 20 Hz roda a simulação (game.js).
+//  "ping" → "pong" é respondido automaticamente (setWebSocketAutoResponse), sem acordar o objeto nem contar como requisição.
+// ============================================================
+import { DurableObject } from 'cloudflare:workers';
+import { Game } from './game.js';
+
+const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I/O pra não confundir
+const CODE_RE = /^[A-Z]{4}$/;
+const EMPTY_TTL = 120 * 1000; // sala vazia some depois de 2 min
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+const newCode = () => Array.from({ length: 4 }, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
+
+export default {
+  async fetch(req, env) {
+    const url = new URL(req.url);
+    if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+    if (url.pathname === '/' || url.pathname === '/health') return json({ ok: true, name: 'docao-shooter-server' });
+    if (url.pathname === '/api/rooms' && req.method === 'POST') {
+      let body = {}; try { body = await req.json(); } catch (e) { /* corpo vazio */ }
+      for (let i = 0; i < 12; i++) {
+        const code = newCode(); const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+        const r = await stub.fetch('https://room/init', { method: 'POST', body: JSON.stringify({ ...body, code }) });
+        if (r.status === 200) return json({ code });
+      }
+      return json({ error: 'Não deu pra gerar um código de sala' }, 503);
+    }
+    const m = url.pathname.match(/^\/(api\/rooms|ws)\/([A-Za-z]{4})\/?$/);
+    if (m) {
+      const code = m[2].toUpperCase(); const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+      if (m[1] === 'ws') {
+        if (req.headers.get('Upgrade') !== 'websocket') return json({ error: 'Esperado WebSocket' }, 426);
+        return stub.fetch(new Request('https://room/ws' + url.search, req));
+      }
+      const r = await stub.fetch('https://room/info'); return json(await r.json(), r.status);
+    }
+    return json({ error: 'Não encontrado' }, 404);
+  },
+};
+
+export class Room extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.game = null; this.loop = null;
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
+    this.ctx.blockConcurrencyWhile(async () => {
+      const saved = await this.ctx.storage.get('room');
+      if (saved) this.restore(saved);
+    });
+  }
+  // recria o jogo depois de hibernar (lobby/fim de partida): config + jogadores ainda conectados
+  restore(saved) {
+    this.game = this.makeGame({ ...saved.cfg, test: this.env.ALLOW_TEST === '1' }); this.game.nextId = saved.nextId || 1;
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment(); if (!a) continue;
+      const e = this.game.makeEnt({ name: a.name, skin: a.skin, primary: a.primary, bot: false });
+      this.game.ents.delete(e.id); e.id = a.id; e.token = a.token; this.game.ents.set(e.id, e);
+      this.game.nextId = Math.max(this.game.nextId, a.id + 1);
+    }
+    this.game.hostId = this.game.ents.has(saved.hostId) ? saved.hostId : (this.game.humans()[0] || {}).id || 0;
+    this.game.mapId = saved.mapId || null;
+  }
+  makeGame(cfg) {
+    const self = this;
+    return new Game(cfg, {
+      send(id, o) { const ws = self.sockets().find((w) => (w.deserializeAttachment() || {}).id === id); if (ws) self.safeSend(ws, JSON.stringify(o)); },
+      broadcast(o) { const s = JSON.stringify(o); for (const ws of self.sockets()) self.safeSend(ws, s); },
+      startLoop() { self.lastMsg = Date.now(); if (!self.loop) self.loop = setInterval(() => self.maybeTick(true), 50); },
+      stopLoop() { if (self.loop) { clearInterval(self.loop); self.loop = null; } self.persist(); },
+      saveCfg() { self.persist(); },
+    });
+  }
+  // A simulação roda a 20 Hz "pegando carona" nas mensagens dos clientes (cada mensagem é uma invocação com o
+  // próprio orçamento de CPU). O setInterval só completa os buracos e para de simular se nenhum cliente
+  // mandou nada há 1 s (aba em segundo plano), pra nunca acumular CPU numa invocação só.
+  maybeTick(fromTimer) {
+    if (!this.loop || !this.game) return; const now = Date.now();
+    if (now - (this.lastTick || 0) < 45 || (fromTimer && now - (this.lastMsg || 0) > 1000)) return;
+    this.lastTick = now; try { this.game.tick(); } catch (e) { console.error('tick', e && e.stack); }
+  }
+  sockets() { return this.ctx.getWebSockets().filter((w) => w.readyState === 1 && w.deserializeAttachment()); }
+  safeSend(ws, s) { try { ws.send(s); } catch (e) { /* socket fechando */ } }
+  persist() { if (this.game) this.ctx.storage.put('room', { cfg: this.game.cfg, nextId: this.game.nextId, hostId: this.game.hostId, mapId: this.game.mapId }); }
+
+  async fetch(req) {
+    const url = new URL(req.url);
+    if (url.pathname === '/init') {
+      if (this.game) return new Response('exists', { status: 409 });
+      const b = await req.json();
+      this.game = this.makeGame({ test: this.env.ALLOW_TEST === '1', code: b.code, map: typeof b.map === 'string' ? b.map : 'arena', max: b.max, fillBots: b.fillBots !== false });
+      this.persist(); await this.ctx.storage.setAlarm(Date.now() + EMPTY_TTL); // ninguém entrou? some
+      return new Response('ok');
+    }
+    if (url.pathname === '/info') {
+      if (!this.game) return Response.json({ exists: false }, { status: 404 });
+      const g = this.game; return Response.json({ exists: true, code: g.cfg.code, players: g.humans().length, max: g.cfg.max, state: g.state, map: g.mapId || g.cfg.map });
+    }
+    if (url.pathname === '/ws') {
+      const pair = new WebSocketPair(); const [client, server] = Object.values(pair);
+      this.ctx.acceptWebSocket(server);
+      const fail = (msg) => { server.send(JSON.stringify({ t: 'error', msg })); server.close(4000, msg.slice(0, 60)); return new Response(null, { status: 101, webSocket: client }); };
+      if (!this.game) return fail('Sala não encontrada');
+      const q = url.searchParams;
+      const r = this.game.join({ name: q.get('name'), skin: q.get('skin'), primary: parseInt(q.get('primary')), token: q.get('token') });
+      if (r.error) return fail(r.error);
+      const e = r.ent;
+      for (const old of this.ctx.getWebSockets()) { const a = old.deserializeAttachment(); if (old !== server && a && a.id === e.id) { old.serializeAttachment(null); try { old.close(4001, 'Reconectado em outra aba'); } catch (x) { /* já fechado */ } } }
+      server.serializeAttachment({ id: e.id, token: e.token, name: e.name, skin: e.skin, primary: e.primary });
+      await this.ctx.storage.deleteAlarm();
+      this.game.welcome(e); this.persist();
+      return new Response(null, { status: 101, webSocket: client });
+    }
+    return new Response('not found', { status: 404 });
+  }
+  async webSocketMessage(ws, msg) {
+    const a = ws.deserializeAttachment(); if (!a || !this.game || typeof msg !== 'string' || msg.length > 8192) return;
+    let m; try { m = JSON.parse(msg); } catch (e) { return; }
+    this.lastMsg = Date.now(); this.game.onMessage(a.id, m); this.maybeTick(false);
+    if (m.t === 'prof') { const e = this.game.ents.get(a.id); if (e) ws.serializeAttachment({ ...a, name: e.name, skin: e.skin, primary: e.nextPrimary }); }
+  }
+  async webSocketClose(ws) { this.drop(ws); }
+  async webSocketError(ws) { this.drop(ws); }
+  drop(ws) {
+    const a = ws.deserializeAttachment(); if (!a) return; ws.serializeAttachment(null);
+    try { ws.close(1000, 'bye'); } catch (e) { /* já fechado */ }
+    if (this.game) this.game.leave(a.id);
+    if (!this.sockets().length) { this.ctx.storage.setAlarm(Date.now() + EMPTY_TTL); this.persist(); }
+  }
+  async alarm() {
+    if (this.sockets().length) return;
+    if (this.loop) { clearInterval(this.loop); this.loop = null; }
+    this.game = null; await this.ctx.storage.deleteAll(); // sala vazia: limpa tudo
+  }
+}
