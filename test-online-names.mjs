@@ -67,8 +67,8 @@ for (let i = 0; i < 6 && !killed; i++) { // re-mira e atira em rajadas (proteÃ§Ã
   await G(A, () => { const g = window.__docao, p = g.player, t = g.entities.find((e) => !e.isPlayer); const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, h = t.pos.y + 1.1 - (p.pos.y + 1.6); p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2(h, Math.hypot(dx, dz)); });
   await A.mouse.move(640, 360); await A.mouse.down(); killed = await until(B, () => !window.__docao.player.alive, 2500); await A.mouse.up();
 }
-ok(killed, 'A carimbou o B');
-const line = `Matheus carimbou ${want}`;
+ok(killed, 'A pururucou o B');
+const line = `Matheus pururucou ${want}`;
 ok(await until(A, (l) => (window.__feedLog || []).some((x) => x.includes(l)), 3000, line), `kill feed do A: "${line}"`);
 ok(await until(B, (l) => (window.__feedLog || []).some((x) => x.includes(l)), 3000, line), 'kill feed do B igual');
 await G(B, () => document.getElementById('tabboard').classList.remove('hidden')); await wait(300);

@@ -627,11 +627,20 @@ let hitTimer = 0, hurtLevel = 0, msgTimer = 0;
 function hitMarker(isKill) { const h = $('hitmarker'); h.classList.toggle('kill', isKill); h.style.transition = 'none'; h.style.opacity = 1; hitTimer = 0.12; }
 function hurtFlash() { hurtLevel = 1; }
 function flashMsg(t) { $('centermsg').textContent = t; msgTimer = 1.5; }
+const KILL_PHRASES = [
+  (a, t) => `${a} pururucou ${t}`, (a, t) => `${a} pururucou ${t}`, (a, t) => `${a} pururucou ${t}`,
+  (a, t) => `${a} fritou ${t}`, (a, t) => `${a} transformou ${t} em torresmo`, (a, t) => `${a} mandou ${t} pra chapa`,
+  (a, t) => `${a} defumou ${t}`, (a, t) => `${a} fez ${t} virar bacon`, (a, t) => `${a} serviu ${t} no café da manhã`,
+  (a, t) => `${a} botou ${t} no espeto`, (a, t) => `${a} temperou ${t} com chumbo`,
+];
+const SELF_PHRASES = [(t) => `${t} se pururucou`, (t) => `${t} virou bacon sozinho`, (t) => `${t} se jogou na frigideira`, (t) => `${t} fritou no próprio óleo`];
+const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 function addKillFeed(a, t, wIdx, head) {
   const div = document.createElement('div'); div.className = 'kf';
   const nm = (e) => `<b class="${e.isPlayer ? 'me' : ''}">${escapeHtml(e.name)}</b>`;
-  div.innerHTML = a && a !== t ? `${nm(a)} carimbou ${nm(t)} <i>[${WEAPON_SHORT(wIdx)}${head ? ' · na cabeça!' : ''}]</i>` : `${nm(t)} se carimbou`;
-  { const L = (window.__feedLog ||= []); L.push(div.textContent); if (L.length > 20) L.shift(); } // log p/ testes
+  div.innerHTML = a && a !== t ? `${pick(KILL_PHRASES)(nm(a), nm(t))} <i>[${WEAPON_SHORT(wIdx)}${head ? ' · direto no focinho!' : ''}]</i>` : pick(SELF_PHRASES)(nm(t));
+  // log canônico p/ testes (o texto exibido varia)
+  { const L = (window.__feedLog ||= []); L.push(a && a !== t ? `${a.name} pururucou ${t.name} [${WEAPON_SHORT(wIdx)}]` : `${t.name} se pururucou`); if (L.length > 20) L.shift(); }
   const kf = $('killfeed'); kf.prepend(div); while (kf.children.length > 6) kf.lastChild.remove();
   setTimeout(() => div.remove(), 6000);
 }
@@ -663,7 +672,7 @@ function updateHud(dt) {
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
-  if (!p.alive) cm.textContent = `Você foi carimbado por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'} · renascendo em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s`;
+  if (!p.alive) cm.textContent = `Você foi pururucado por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'} · renascendo em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s`;
   else if (msgTimer > 0) msgTimer -= dt; // mensagem (ex.: "Mapa: …") tem prioridade
   else if (gameTime < p.invulnUntil) cm.textContent = 'PROTEGIDO';
   else cm.textContent = '';
