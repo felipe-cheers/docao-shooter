@@ -390,7 +390,20 @@ export function makeDocao(skinOrId, opts = {}) {
     const ps = new THREE.Group(); ps.position.set(0.0, 0.9, 0.55); g.add(ps);
     mesh(new THREE.BoxGeometry(0.07, 0.08, 0.26), toon('#ff9fb6'), ps, 0.01);
     mesh(new THREE.BoxGeometry(0.06, 0.15, 0.08), toon('#3b3f4a'), ps, 0.01).position.set(0, -0.1, -0.06);
-    guns.push(r, sg, sn, bz, ps); for (const o of [sg, sn, bz, ps]) o.visible = false;
+    // canhão e carabina ficam aqui (não vêm de sniper-view: aquele arquivo importa este)
+    const cn = new THREE.Group(); cn.position.copy(r.position); g.add(cn);
+    mesh(new THREE.BoxGeometry(0.16, 0.16, 0.95), toon('#1a1c22'), cn, 0.01).position.z = 0.08;
+    const cnb = mesh(new THREE.CylinderGeometry(0.04, 0.044, 0.8, 10), toon('#111318'), cn, 0.008); cnb.position.set(0, 0.02, 0.92); cnb.rotation.x = Math.PI / 2;
+    const cnm = mesh(new THREE.CylinderGeometry(0.08, 0.044, 0.14, 12), toon('#111318'), cn, 0.008); cnm.position.set(0, 0.02, 1.34); cnm.rotation.x = Math.PI / 2;
+    const cns = mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.48, 12), toon('#2a2d35'), cn, 0.008); cns.position.set(0, 0.2, 0.12); cns.rotation.x = Math.PI / 2;
+    const cnl = mesh(new THREE.CylinderGeometry(0.074, 0.074, 0.045, 14), basic('#f0a020'), cn, 0); cnl.rotation.x = Math.PI / 2; cnl.position.set(0, 0.2, 0.38);
+    const cb = new THREE.Group(); cb.position.copy(r.position); g.add(cb);
+    mesh(new THREE.BoxGeometry(0.07, 0.08, 0.44), toon('#d7b07a'), cb, 0.01).position.z = -0.06;
+    mesh(new THREE.BoxGeometry(0.062, 0.1, 0.18), toon('#c9956a'), cb, 0.008).position.set(0, -0.01, -0.28);
+    const cbb = mesh(new THREE.CylinderGeometry(0.015, 0.016, 0.36, 8), toon('#5c4a32'), cb, 0.008); cbb.position.set(0, 0.012, 0.34); cbb.rotation.x = Math.PI / 2;
+    const cbs = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.13, 10), toon('#2a2d35'), cb, 0.008); cbs.position.set(0, 0.078, -0.02); cbs.rotation.x = Math.PI / 2;
+    const cbl = mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 10), basic('#f4fbff'), cb, 0); cbl.rotation.x = Math.PI / 2; cbl.position.set(0, 0.078, 0.05);
+    guns.push(r, sg, sn, bz, ps, cn, cb); for (const o of [sg, sn, bz, ps, cn, cb]) o.visible = false;
   }
   setPose({ arms }, pose);
 
