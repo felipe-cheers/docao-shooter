@@ -4,8 +4,8 @@
 import { MAPS, getMap } from '../maps.js';
 import { buildNav } from '../nav.js';
 import { mapSolids, createPhysics } from '../shared/physics.js';
-import { SPEED, JUMP } from '../shared/rules.js';
-let seed = 12345; const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+import { SPEED, JUMP, RADIUS, STEP, HEIGHT } from '../shared/rules.js';
+let seed = +(process.env.SEED || 12345); const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
 const DT = 1 / 60, ids = process.argv.slice(2);
 const clone = (e) => ({ pos: { ...e.pos }, vel: { ...e.vel }, onGround: e.onGround });
 function step(P, e, wx, wz, jump) {
@@ -15,6 +15,9 @@ function step(P, e, wx, wz, jump) {
   P.moveEntity(e, DT);
 }
 function run(P, e, wx, wz, secs, jump = false) { for (let i = 0; i < secs * 60; i++) step(P, e, wx, wz, jump && i === 0); return e; }
+// corpo realmente dentro de uma caixa (folga de 2 cm nos pés e na cabeça; degraus ≤ STEP não contam). Independe da versão da física.
+const inside = (P, p) => P.solidsAt(p.x, p.z).some((s) => p.x + RADIUS - 0.02 > s.min.x && p.x - RADIUS + 0.02 < s.max.x && p.z + RADIUS - 0.02 > s.min.z && p.z - RADIUS + 0.02 < s.max.z
+  && p.y + 0.02 < P.topAt(s, Math.max(s.min.x, Math.min(s.max.x, p.x)), Math.max(s.min.z, Math.min(s.max.z, p.z))) - STEP && p.y + HEIGHT - 0.02 > s.min.y);
 const DIRS = [...Array(8)].map((_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
 const total = { runs: 0, trapped: 0, snag: 0, embed: 0, frames: 0 };
 console.log('mapa'.padEnd(22), 'execuções  presos  engasgos  quadros-dentro-da-caixa');
@@ -34,15 +37,15 @@ for (const m of MAPS) {
     for (let i = 0; i < 180; i++) {
       const t = turn && i > 90 ? Math.PI / 4 : 0, wx = wx0 * Math.cos(t) - wz0 * Math.sin(t), wz = wx0 * Math.sin(t) + wz0 * Math.cos(t);
       step(P, e, wx, wz, i === jumpAt); r.frames++;
-      if (P.collides(e.pos.x, e.pos.y + 0.05, e.pos.z)) emb++;
+      if (inside(P, e.pos)) { emb++; if (process.env.DEBUG2 && emb === 1 && r.embed < 400) { const ov = P.solidsAt(e.pos.x, e.pos.z).filter((b) => e.pos.x + 0.42 > b.min.x && e.pos.x - 0.42 < b.max.x && e.pos.z + 0.42 > b.min.z && e.pos.z - 0.42 < b.max.z).map((b) => [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z, b.ramp ? 'ramp' : ''].map((v) => (typeof v === 'number' ? +v.toFixed(2) : v)).join(',')); console.log('  DENTRO', m.id, i, [e.pos.x, e.pos.y, e.pos.z].map((v) => v.toFixed(2)).join(','), 'vy', e.vel.y.toFixed(2), '|', ov.join(' | ')); } }
       if (i % 30 === 29) { // janela de 0,5 s
         const mx = e.pos.x - last.x, mz = e.pos.z - last.z; last = { ...e.pos };
         if (Math.hypot(mx, mz) < 0.05 && !trapped) {
           // preso: nenhuma das 8 direções (nem pulando) tira o Docão do lugar
           let best = 0; for (const [ax, az] of DIRS) for (const j of [false, true]) { const c = run(P, clone(e), ax, az, 0.5, j); best = Math.max(best, Math.hypot(c.pos.x - e.pos.x, c.pos.z - e.pos.z)); }
           if (best < 0.1) { trapped = true; if (process.env.DEBUG && r.trapped < 3) { const ov = P.solidsAt(e.pos.x, e.pos.z).filter((b) => e.pos.x + 0.42 > b.min.x && e.pos.x - 0.42 < b.max.x && e.pos.z + 0.42 > b.min.z && e.pos.z - 0.42 < b.max.z).map((b) => [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z, b.ramp ? 'ramp' : ''].map((v) => (typeof v === 'number' ? +v.toFixed(2) : v)).join(',')); console.log('  PRESO', m.id, 'pos', [e.pos.x, e.pos.y, e.pos.z].map((v) => v.toFixed(2)).join(','), 'vy', e.vel.y.toFixed(2), 'g', e.onGround, 'ground', P.groundAt(e.pos.x, e.pos.z, e.pos.y).toFixed(2), '| caixas:', ov.join(' | ')); } }
-          // engasgo: apertando na diagonal não anda, mas só o componente x (ou z) da mesma direção anda → não está deslizando
-          else if (Math.abs(wx) > 0.3 && Math.abs(wz) > 0.3) for (const [ax, az] of [[Math.sign(wx), 0], [0, Math.sign(wz)]]) { const c = run(P, clone(e), ax, az, 0.5); if ((c.pos.x - e.pos.x) * ax + (c.pos.z - e.pos.z) * az > 0.4) snag = true; }
+          // engasgo: apertando na diagonal continua sem andar (mais 0,5 s), mas só o componente x (ou z) da mesma direção anda → não está deslizando
+          else if (Math.abs(wx) > 0.3 && Math.abs(wz) > 0.3 && (() => { const c = run(P, clone(e), wx, wz, 0.5); return Math.hypot(c.pos.x - e.pos.x, c.pos.z - e.pos.z) < 0.05; })()) for (const [ax, az] of [[Math.sign(wx), 0], [0, Math.sign(wz)]]) { const c = run(P, clone(e), ax, az, 0.5); if ((c.pos.x - e.pos.x) * ax + (c.pos.z - e.pos.z) * az > 0.4) { snag = true; if (process.env.DEBUG) console.log('  ENGASGO', m.id, [e.pos.x, e.pos.y, e.pos.z].map((v) => v.toFixed(2)).join(','), 'wish', wx.toFixed(2), wz.toFixed(2), 'eixo', ax, az, 'vy', e.vel.y.toFixed(2), 'g', e.onGround, 'v', e.vel.x.toFixed(2), e.vel.z.toFixed(2), 'cx', P.collides(e.pos.x + Math.sign(wx) * 0.05, e.pos.y, e.pos.z), 'cz', P.collides(e.pos.x, e.pos.y, e.pos.z + Math.sign(wz) * 0.05), 'i', i); } }
         }
       }
     }

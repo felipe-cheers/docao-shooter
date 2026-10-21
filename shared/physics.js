@@ -47,32 +47,73 @@ export function createPhysics(solids, size) {
     t = clamp(t, 0, 1); if (s.ramp.dir < 0) t = 1 - t;
     return s.min.y + t * (s.max.y - s.min.y);
   }
-  function collides(x, y, z) {
-    for (const s of solidsAt(x, z)) if (x + RADIUS > s.min.x && x - RADIUS < s.max.x && z + RADIUS > s.min.z && z - RADIUS < s.max.z) {
-      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (y < top - STEP && y + HEIGHT > s.min.y) return true;
+  // Corpo do Docão: cilindro-caixa de raio RADIUS (pés em y, cabeça em y + HEIGHT).
+  // overlapping(): o corpo cruza alguma caixa que não dá pra subir (topo acima de pés + STEP)?
+  const over = (s, x, z, r = RADIUS) => x + r > s.min.x && x - r < s.max.x && z + r > s.min.z && z - r < s.max.z;
+  function overlapping(x, y, z) {
+    for (const s of solidsAt(x, z)) if (over(s, x, z)) {
+      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (y < top - STEP && y + HEIGHT > s.min.y) return s;
     }
-    return false;
+    return null;
   }
-  function groundAt(x, z, y) {
-    let g = 0; const m = RADIUS * 0.6;
-    for (const s of solidsAt(x, z)) if (x > s.min.x - m && x < s.max.x + m && z > s.min.z - m && z < s.max.z + m) {
+  // chão sob o corpo: mesma pegada (RADIUS) da colisão — antes era 60% do raio, e quem saía de uma borda
+  // caía "dentro" da lateral da caixa (parede, rampa, telhado) e ficava preso. r menor só pra objetos pontuais.
+  function groundAt(x, z, y, r = RADIUS * 0.6) {
+    let g = 0;
+    for (const s of solidsAt(x, z)) if (over(s, x, z, r)) {
       const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (top <= y + STEP && top > g) g = top;
     }
     return g;
   }
-  function ceilingAt(x, z, headY) {
-    let c = Infinity; const r = RADIUS * 0.9;
-    for (const s of solidsAt(x, z)) if (x + r > s.min.x && x - r < s.max.x && z + r > s.min.z && z - r < s.max.z && s.min.y >= headY - 0.25 && s.min.y < c) c = s.min.y;
+  // bloqueia se o corpo cruza uma caixa OU se o degrau/rampa levaria a cabeça pra dentro de uma viga, verga de porta ou laje
+  function collides(x, y, z) {
+    if (overlapping(x, y, z)) return true;
+    const g = groundAt(x, z, y, RADIUS); return g > y + 1e-4 && !!overlapping(x, g, z);
+  }
+  function ceilingAt(x, z, headY, r = RADIUS * 0.9) {
+    let c = Infinity;
+    for (const s of solidsAt(x, z)) if (over(s, x, z, r) && s.min.y >= headY - 0.25 && s.min.y < c) c = s.min.y;
     return c;
   }
+  // tira o corpo de dentro de uma caixa (sobreposição por arredondamento, empurrão, queda na quina…): menor empurrão
+  // horizontal (ou pra baixo, se a cabeça entrou numa viga e há espaço) que deixa o corpo livre. Até 3 caixas por vez.
+  const EPS = 1e-3;
+  function depenetrate(e) {
+    for (let it = 0; it < 3; it++) {
+      const s = overlapping(e.pos.x, e.pos.y, e.pos.z); if (!s) return true;
+      const { x, y, z } = e.pos, c = [
+        [s.min.x - RADIUS - EPS - x, 0, 0], [s.max.x + RADIUS + EPS - x, 0, 0],
+        [0, 0, s.min.z - RADIUS - EPS - z], [0, 0, s.max.z + RADIUS + EPS - z],
+      ];
+      if (s.min.y > y + STEP) c.push([0, s.min.y - HEIGHT - EPS - y, 0]); // cabeça na viga: desce
+      c.sort((a, b) => Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[2]) - Math.abs(b[0]) - Math.abs(b[1]) - Math.abs(b[2]));
+      let moved = false;
+      for (const [dx, dy, dz] of c) {
+        if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 1.2) break;
+        const nx = x + dx, ny = y + dy, nz = z + dz;
+        if (Math.abs(nx) > hx - RADIUS || Math.abs(nz) > hz - RADIUS || ny < groundAt(nx, nz, ny, RADIUS) - 1e-4) continue;
+        if (!overlapping(nx, ny, nz)) { e.pos.x = nx; e.pos.y = ny; e.pos.z = nz; return true; }
+        if (!moved) { e.pos.x = nx; e.pos.y = ny; e.pos.z = nz; moved = true; break; } // saiu desta, tenta a próxima caixa
+      }
+      if (!moved) return false;
+    }
+    return !overlapping(e.pos.x, e.pos.y, e.pos.z);
+  }
   const [hx, hz] = size;
-  function moveEntity(e, dt) { // mesmo algoritmo do cliente (main.js)
+  // Movimento (mesmo código no cliente e no servidor): eixo a eixo (x, depois z) = desliza em paredes e quinas;
+  // sub-passos ≤ 0,25 m (empurrões fortes não atravessam parede fina); se já estiver dentro de algo, sai primeiro.
+  function moveEntity(e, dt) {
     let blocked = false;
-    const nx = e.pos.x + e.vel.x * dt; if (!collides(nx, e.pos.y, e.pos.z)) e.pos.x = nx; else { blocked = true; e.vel.x = 0; }
-    const nz = e.pos.z + e.vel.z * dt; if (!collides(e.pos.x, e.pos.y, nz)) e.pos.z = nz; else { blocked = true; e.vel.z = 0; }
+    const free = depenetrate(e);
+    const dx = e.vel.x * dt, dz = e.vel.z * dt, n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dz)) / 0.25));
+    for (let i = 0; i < n; i++) {
+      const nx = e.pos.x + dx / n; if (!free || !collides(nx, e.pos.y, e.pos.z)) e.pos.x = nx; else { blocked = true; e.vel.x = 0; }
+      const nz = e.pos.z + dz / n; if (!free || !collides(e.pos.x, e.pos.y, nz)) e.pos.z = nz; else { blocked = true; e.vel.z = 0; }
+      if (blocked) break;
+    }
     e.vel.y += GRAV * dt; let ny = e.pos.y + e.vel.y * dt;
-    if (e.vel.y > 0) { const c = ceilingAt(e.pos.x, e.pos.z, e.pos.y + HEIGHT); if (ny + HEIGHT > c) { ny = Math.max(e.pos.y, c - HEIGHT); e.vel.y = 0; } }
-    const g = groundAt(e.pos.x, e.pos.z, e.pos.y);
+    if (e.vel.y > 0) { const c = ceilingAt(e.pos.x, e.pos.z, e.pos.y + HEIGHT, RADIUS); if (ny + HEIGHT > c) { ny = Math.max(e.pos.y, c - HEIGHT); e.vel.y = 0; e.bonk = true; } }
+    const g = groundAt(e.pos.x, e.pos.z, e.pos.y, RADIUS);
     if (ny <= g) { e.pos.y = g; e.vel.y = 0; e.onGround = true; }
     else if (e.onGround && e.vel.y <= 0 && ny - g < STEP) { e.pos.y = g; e.vel.y = 0; }
     else { e.pos.y = ny; e.onGround = false; }
@@ -123,7 +164,7 @@ export function createPhysics(solids, size) {
     if (ny <= g) { pos.y = g; vel.y = Math.abs(vel.y) > 1.2 ? -vel.y * 0.42 : 0; vel.x *= 0.72; vel.z *= 0.72; return true; }
     pos.y = ny; return false;
   }
-  return { solids, solidsAt, topAt, collides, groundAt, ceilingAt, moveEntity, rayWorld, losClear, nadeBlocked, stepNade };
+  return { solids, solidsAt, topAt, collides, overlapping, depenetrate, groundAt, ceilingAt, moveEntity, rayWorld, losClear, nadeBlocked, stepNade };
 }
 
 export function raySphere(o, d, c, r) {
