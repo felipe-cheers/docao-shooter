@@ -4,6 +4,14 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5.6 (21/10/2026)
+- **Correção: Docão preso na parede** em todos os mapas. Quem saía da borda de um telhado, caixa ou rampa caía "dentro" da lateral dela, e quem subia escada/rampa debaixo de viga ou verga de porta enfiava a cabeça nela. Daí nenhuma direção funcionava.
+  - O chão agora usa a mesma largura do corpo, então você para na borda em vez de afundar na parede.
+  - Degrau e rampa só sobem se a cabeça couber.
+  - Se por algum motivo o Docão ficar dentro de alguma coisa, ele é empurrado pra fora na hora (sem atravessar parede).
+  - Empurrões fortes (explosão) não atravessam mais parede fina.
+- O jogo e o servidor usam exatamente a mesma física agora, então no online o servidor não te "puxa de volta" quando você encosta no teto ou numa parede.
+
 ## v1.5.5 (21/10/2026)
 - **Captura bem mais demorada na Dominação:** sozinho na zona agora leva **25 s**, e cada aliado a mais tira 1 s: 2 → 24 s, 3 → 23 s… até **16 s com 10**. Neutralizar o progresso do outro time vai na mesma velocidade.
 - Zona vazia continua perdendo 10% por segundo (zera em até 10 s).

@@ -219,6 +219,7 @@ Toda a geometria, os nomes e a arte são originais (nada copiado dos jogos citad
   - Alguns telhados ficam fora do alcance de propósito (quarteirões maciços, celeiro do meio, galinheiro, palácio).
 - Novo mapa: copie um bloco em `maps.js`, ajuste `boxes`/`props`/`spawns`/`pickups` e rode:
   - `node test-map-audit.mjs [ids]` (sem navegador): andares no grafo, nós altos e cobertos, "sem campo aberto", linha longa de Sniper, exposição, spawns e itens alcançáveis, zonas da Dominação, e uma partida simulada no servidor em que os bots precisam subir e descer andares. Com `DUMP=/tmp/audit` dá pra gerar a planta: `python3 tools/planta.py /tmp/audit/<id>.json planta.png`.
+  - `node tools/stuck-repro.mjs [ids]` (sem navegador): anda com o Docão em 8 direções a partir de ~140 pontos de cada mapa (paredes, quinas, portas, bordas, escadas, pulos) e conta quem fica **preso**, quem **não desliza** na parede e quantos quadros o corpo fica **dentro** de uma caixa. Tem que dar 0 / 0 / 0.
   - `node test-maps.mjs` (navegador): carrega, bots andam, escadas, telhados e lajes; falha se algum item falhar.
   - `node tools/screenshots-mapas.mjs`: gera `screenshots/18-mapa-<id>-{visao-geral,predio,telhado}.png` (câmera livre via `window.__cam`).
 
