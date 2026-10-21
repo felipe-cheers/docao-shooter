@@ -965,7 +965,7 @@ function updatePlayer(dt) {
   if (w.melee) { // faca: clique = golpe (segurando repete), botão direito = estocada
     const rLatched = !rightDown && rightLatch && performance.now() - rightLatch < 250;
     if (!p.charging && gameTime >= p.nextFire && p.switchEnd <= gameTime && (rightDown || rLatched || mouseDown || latched)) {
-      const kind = rightDown || rLatched ? 'stab' : 'slash'; firedThisPress = true; clickLatch = 0; rightLatch = 0;
+      const kind = rightDown || rLatched ? 'stab' : 'slash'; if (kind === 'stab') rightFired = true; else firedThisPress = true; clickLatch = 0; rightLatch = 0;
       fp.knifeT = 0; fp.knifeKind = kind;
       knifeAttack(p, kind, camera.position.clone(), new V3(0, 0, -1).applyQuaternion(camera.quaternion));
     }
@@ -1362,12 +1362,12 @@ canvas.addEventListener('mousedown', (e) => {
   if (state !== 'playing') return;
   if (!$('teamPick').classList.contains('hidden')) return; // escolhendo time
   if (e.button === 0 && (document.pointerLockElement || !deathUnlock)) { mouseDown = true; firedThisPress = false; }
-  if (e.button === 2 && (document.pointerLockElement || !deathUnlock)) rightDown = true;
+  if (e.button === 2 && (document.pointerLockElement || !deathUnlock)) { rightDown = true; rightFired = false; }
   if (!document.pointerLockElement) lockPointer();
 });
-let clickLatch = 0, rightDown = false, rightLatch = 0; // clique mais curto que um frame ainda dispara (máquinas lentas)
+let clickLatch = 0, rightDown = false, rightLatch = 0, rightFired = false; // clique mais curto que um frame ainda dispara (máquinas lentas)
 canvas.addEventListener('contextmenu', (e) => e.preventDefault()); // botão direito = estocada da faca
-document.addEventListener('mouseup', (e) => { if (e.button === 0) { if (mouseDown && !firedThisPress) clickLatch = performance.now(); mouseDown = false; } if (e.button === 2) { if (rightDown && player && player.weapon === KNIFE && gameTime < player.nextFire + 0.25) rightLatch = performance.now(); rightDown = false; } });
+document.addEventListener('mouseup', (e) => { if (e.button === 0) { if (mouseDown && !firedThisPress) clickLatch = performance.now(); mouseDown = false; } if (e.button === 2) { if (rightDown && !rightFired && player && player.weapon === KNIFE) rightLatch = performance.now(); rightDown = false; } });
 document.addEventListener('wheel', (e) => { // rodinha: primária → pistola → faca (e volta)
   if (state !== 'playing' || !player || !player.alive) return;
   const S = player.slots, i = Math.max(0, S.indexOf(player.weapon)), n = S.length; switchWeapon(player, S[(i + (e.deltaY < 0 ? n - 1 : 1)) % n]);
