@@ -15,7 +15,7 @@ import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/phys
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
-export const MAX_PLAYERS = 8;
+export const MAX_PLAYERS = 10;
 const RS_SAFETY = 60; // s: cliente antigo que nunca manda 'rs' renasce sozinho depois disso
 const PENDING_WAIT = 60; // s de relógio de parede pra escolher o time ao entrar no meio; depois vai no Automático
 const TICK = 0.05, HIST = 1.0, DC_GRACE = 30;
@@ -122,7 +122,7 @@ export class Game {
       bots = bots.filter((x) => x !== b); this.ents.delete(b.id); this.events.push(['l', b.id]);
     }
     if (this.teamMode) { // rebalanceia bots se um time ficou 2+ maior
-      for (let i = 0; i < 8; i++) { const c = tc(), big = c[0] > c[1] ? 0 : 1; if (c[big] - c[1 - big] < 2) break; const b = bots.find((x) => x.team === big); if (!b) break; b.team = 1 - big; this.events.push(['tm', b.id, b.team]); }
+      for (let i = 0; i < MAX_PLAYERS; i++) { const c = tc(), big = c[0] > c[1] ? 0 : 1; if (c[big] - c[1 - big] < 2) break; const b = bots.find((x) => x.team === big); if (!b) break; b.team = 1 - big; this.events.push(['tm', b.id, b.team]); }
     }
     const used = new Set(this.live().map((b) => b.name)); // bot não pega nome de humano
     while (bots.length < want) {

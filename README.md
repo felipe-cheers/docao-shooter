@@ -17,7 +17,7 @@ WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoo
 ## Online (multiplayer) 🌐
 
 No menu: **JOGAR OFFLINE (bots)** funciona como sempre; **JOGAR ONLINE** abre:
-- **Criar sala** — mapa (ou Aleatório), máximo de jogadores (2–8) e "completar com bots" (sim/não). Gera um **código de 4 letras**.
+- **Criar sala** — mapa (ou Aleatório), máximo de jogadores (2–10) e "completar com bots" (sim/não). Gera um **código de 4 letras**.
 - **Entrar na sala** — digite o código. Ou abra o link de convite `https://…/?sala=ABCD` (entra direto no lobby).
 - No lobby o **anfitrião** (★) troca mapa/máximo/bots e clica **INICIAR PARTIDA**. No fim, só o anfitrião escolhe "jogar de novo" / "próximo mapa".
 - Durante a partida: ping no canto (Sala ABCD · 35 ms), placar (Tab) com ping de cada um, kill feed do servidor. Esc não pausa o jogo online (só solta o mouse).
@@ -239,7 +239,7 @@ Escolha o modo no menu (offline) ou ao criar a sala (online; o anfitrião pode t
     Automático = time com menos gente. Uma escolha é **recusada se deixaria aquele time com 2+ humanos a mais** que o outro; aí você vai pro Automático e aparece um aviso.
     Trocar de time no meio da partida conta como morte (sem pontuar pra ninguém) e você renasce no time novo.
   - Bots completam os dois times (e são remanejados se um time ficar 2+ maior), vão pra zona, contestam e só miram em inimigos.
-- **Placar ao vivo** sempre no canto superior esquerdo (até 8 linhas, você destacado; na Dominação com o placar dos times).
+- **Placar ao vivo** sempre no canto superior esquerdo (até 10 linhas, você destacado; na Dominação com o placar dos times).
 
 ## Explosões (Bazuca e Copo Bomba)
 Regra única em `shared/combat.js` (cliente offline e servidor):

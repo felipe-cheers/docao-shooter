@@ -4,6 +4,9 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5.3 (21/10/2026)
+- **Salas online com até 10 jogadores:** ao criar a sala ou no lobby, o máximo agora vai até **10** (com bots completando, se quiser). Dois bots novos, **Coxinha** e **Pururuca**, e o placar do canto mostra até 10 linhas.
+
 ## v1.5.2 — Skins novas (21/10/2026)
 Agora são **17 skins**. Chegaram três novas no fim da lista:
 - **Boi Caprichoso:** chifrinhos brancos, túnica azul com estrela branca no peito, franja nos ombros e saiote de fitas azuis e brancas.
