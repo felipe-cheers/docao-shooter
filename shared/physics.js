@@ -82,21 +82,23 @@ export function createPhysics(solids, size) {
   function depenetrate(e) {
     for (let it = 0; it < 3; it++) {
       const s = overlapping(e.pos.x, e.pos.y, e.pos.z); if (!s) return true;
-      const { x, y, z } = e.pos, c = [
+      const { x, y, z } = e.pos, top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)), c = [
         [s.min.x - RADIUS - EPS - x, 0, 0], [s.max.x + RADIUS + EPS - x, 0, 0],
         [0, 0, s.min.z - RADIUS - EPS - z], [0, 0, s.max.z + RADIUS + EPS - z],
-      ];
-      if (s.min.y > y + STEP) c.push([0, s.min.y - HEIGHT - EPS - y, 0]); // cabeça na viga: desce
+      ].filter((d) => Math.abs(d[0]) + Math.abs(d[2]) <= RADIUS + 0.06); // só empurrão curto: nunca atravessa parede
+      if (top - y <= 1) c.push([0, top - y + EPS, 0]); // afundou pouco num degrau/rampa/caixa: sobe nela
+      if (s.min.y > y + STEP && y - (s.min.y - HEIGHT - EPS) <= 0.5) c.push([0, s.min.y - HEIGHT - EPS - y, 0]); // cabeça na viga: desce
       c.sort((a, b) => Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[2]) - Math.abs(b[0]) - Math.abs(b[1]) - Math.abs(b[2]));
-      let moved = false;
+      let ok = false;
       for (const [dx, dy, dz] of c) {
-        if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 1.2) break;
-        const nx = x + dx, ny = y + dy, nz = z + dz;
-        if (Math.abs(nx) > hx - RADIUS || Math.abs(nz) > hz - RADIUS || ny < groundAt(nx, nz, ny, RADIUS) - 1e-4) continue;
-        if (!overlapping(nx, ny, nz)) { e.pos.x = nx; e.pos.y = ny; e.pos.z = nz; return true; }
-        if (!moved) { e.pos.x = nx; e.pos.y = ny; e.pos.z = nz; moved = true; break; } // saiu desta, tenta a próxima caixa
+        const nx = x + dx, nz = z + dz; let ny = y + dy;
+        if (Math.abs(nx) > hx - RADIUS || Math.abs(nz) > hz - RADIUS) continue;
+        const g = groundAt(nx, nz, ny, RADIUS); if (g > ny) ny = g; // degrau/rampa no lugar novo: sobe nele (groundAt só acha até STEP acima)
+        if (ny < groundAt(nx, nz, ny, RADIUS) - 1e-4) continue;
+        const o = overlapping(nx, ny, nz); if (o === s) continue;
+        e.pos.x = nx; e.pos.y = ny; e.pos.z = nz; ok = true; if (!o) return true; break; // saiu desta caixa; se caiu em outra, tenta de novo
       }
-      if (!moved) return false;
+      if (!ok) return false;
     }
     return !overlapping(e.pos.x, e.pos.y, e.pos.z);
   }
