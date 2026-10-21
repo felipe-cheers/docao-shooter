@@ -638,7 +638,7 @@ function switchWeapon(e, idx) {
   if (idx === e.weapon || !e.alive) return;
   if (e.weapon !== KNIFE) e.prevWeapon = e.weapon;
   setWeapon(e, idx); e.reloadEnd = 0; e.switchEnd = gameTime + (idx === KNIFE ? MELEE.draw : idx === PISTOL ? 0.28 : 0.4);
-  if (e.isPlayer) { fp.actionT = 0; if (idx === KNIFE) { fp.knifeDrawT = MELEE.draw + 0.1; sfx.knifeDraw(0.8); } }
+  if (e.isPlayer) { fp.actionT = 0; if (idx === KNIFE) { fp.knifeDrawT = MELEE.draw + 0.1; sfx.knifeDraw(0.8); rightStale = rightDown; } } // mirando (botão direito segurado) e trocou pra faca: só estoca num clique novo
 }
 // troca rápida (V): faca ↔ última arma
 function quickKnife(e) { switchWeapon(e, e.weapon === KNIFE ? (e.slots.includes(e.prevWeapon) && e.prevWeapon !== KNIFE ? e.prevWeapon : e.slots[0]) : KNIFE); }
@@ -985,8 +985,9 @@ function updatePlayer(dt) {
   const latched = !mouseDown && clickLatch && performance.now() - clickLatch < 250;
   if (w.melee) { // faca: clique = golpe (segurando repete), botão direito = estocada
     const rLatched = !rightDown && rightLatch && performance.now() - rightLatch < 250;
-    if (!p.charging && gameTime >= p.nextFire && p.switchEnd <= gameTime && (rightDown || rLatched || mouseDown || latched)) {
-      const kind = rightDown || rLatched ? 'stab' : 'slash'; if (kind === 'stab') rightFired = true; else firedThisPress = true; clickLatch = 0; rightLatch = 0;
+    const rHeld = rightDown && !rightStale;
+    if (!p.charging && gameTime >= p.nextFire && p.switchEnd <= gameTime && (rHeld || rLatched || mouseDown || latched)) {
+      const kind = rHeld || rLatched ? 'stab' : 'slash'; if (kind === 'stab') rightFired = true; else firedThisPress = true; clickLatch = 0; rightLatch = 0;
       fp.knifeT = 0; fp.knifeKind = kind;
       knifeAttack(p, kind, camera.position.clone(), new V3(0, 0, -1).applyQuaternion(camera.quaternion));
     }
@@ -1387,15 +1388,15 @@ canvas.addEventListener('mousedown', (e) => {
   if (!$('teamPick').classList.contains('hidden')) return; // escolhendo time
   if (e.button === 2) e.preventDefault(); // senão o navegador solta o mouse ao abrir o menu
   if (e.button === 0 && (document.pointerLockElement || !deathUnlock)) { mouseDown = true; firedThisPress = false; }
-  if (e.button === 2 && (document.pointerLockElement || !deathUnlock)) { rightDown = true; rightFired = false; }
+  if (e.button === 2 && (document.pointerLockElement || !deathUnlock)) { rightDown = true; rightFired = false; rightStale = false; }
   if (!document.pointerLockElement) lockPointer();
 });
 // botão direito: mira (ADS) nas armas de fogo; com a faca na mão vira a estocada
-let clickLatch = 0, rightDown = false, rightLatch = 0, rightFired = false; // clique mais curto que um frame ainda dispara (máquinas lentas)
+let clickLatch = 0, rightDown = false, rightLatch = 0, rightFired = false, rightStale = false; // clique mais curto que um frame ainda dispara (máquinas lentas)
 document.addEventListener('contextmenu', (e) => { if (state === 'playing' || document.pointerLockElement) e.preventDefault(); });
 document.addEventListener('mouseup', (e) => {
   if (e.button === 0) { if (mouseDown && !firedThisPress) clickLatch = performance.now(); mouseDown = false; }
-  if (e.button === 2) { if (rightDown && !rightFired && player && player.weapon === KNIFE) rightLatch = performance.now(); rightDown = false; }
+  if (e.button === 2) { if (rightDown && !rightFired && !rightStale && player && player.weapon === KNIFE) rightLatch = performance.now(); rightDown = false; rightStale = false; }
 });
 document.addEventListener('wheel', (e) => { // rodinha: primária → pistola → faca (e volta)
   if (state !== 'playing' || !player || !player.alive) return;
