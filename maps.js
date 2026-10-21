@@ -79,7 +79,7 @@ export function slab(x0, z0, x1, z1, y, th, c, holes = []) {
 //  roof: true = laje no topo (y = floors·H) com mureta; roofHoles/roofGaps: vãos na laje/mureta (escada pro telhado)
 //  inner: paredes internas [{ axis: 'x'|'z', s0, s1, line, f, ops: [{ a, b, k }] }]
 export function building(x0, z0, x1, z1, o) {
-  const { col, floors = 2, H = 3.5, t = 0.5, ops = [], stairs = [], roof = true, parapet = 1.0, roofGaps = [], inner = [], noWall = [] } = o, out = [];
+  const { col, floors = 2, H = 3.5, t = 0.5, ops = [], stairs = [], roof = true, parapet = 1.0, roofGaps = [], inner = [], noWall = [], floorHoles = {} } = o, out = [];
   const opening = (op, f) => {
     if (op.k === 'win') return win(op.a, op.b, op.lo ?? 1.0, op.hi ?? 2.2);
     if (op.k === 'wide') return { a: op.a, b: op.b, y0: 0, y1: H - 0.3 };
@@ -94,7 +94,7 @@ export function building(x0, z0, x1, z1, o) {
     if (!noWall.includes('s' + f)) out.push(...wallX(x0, x1, z1 - t / 2, t, h, col.wall, of('s'), y));
     if (!noWall.includes('w' + f)) out.push(...wallZ(z0 + t, z1 - t, x0 + t / 2, t, h, col.wall2 || col.wall, of('w'), y));
     if (!noWall.includes('e' + f)) out.push(...wallZ(z0 + t, z1 - t, x1 - t / 2, t, h, col.wall2 || col.wall, of('e'), y));
-    if (f > 0) out.push(...slab(x0 + t, z0 + t, x1 - t, z1 - t, y, 0.3, col.floor, stairs.filter((st) => st.f === f - 1).map((st) => st.r)));
+    if (f > 0) out.push(...slab(x0 + t, z0 + t, x1 - t, z1 - t, y, 0.3, col.floor, [...stairs.filter((st) => st.f === f - 1).map((st) => st.r), ...(floorHoles[f] || [])]));
     if (f > 0 && col.trim) out.push(B(x0 - 0.12, z0 - 0.12, x1 + 0.12, z0 + 0.1, 0.22, col.trim, y - 0.3), B(x0 - 0.12, z1 - 0.1, x1 + 0.12, z1 + 0.12, 0.22, col.trim, y - 0.3));
   }
   for (const w of inner) { const y = (w.f ?? 0) * H, ops2 = (w.ops || []).map((q) => opening(q)); out.push(...(w.axis === 'x' ? wallX(w.s0, w.s1, w.line, 0.3, H - 0.3, col.inner || col.wall, ops2, y) : wallZ(w.s0, w.s1, w.line, 0.3, H - 0.3, col.inner || col.wall, ops2, y))); }
@@ -243,42 +243,53 @@ export const MAPS = [];
   });
 }
 
-// ---------- 3) Celeiro Industrial (galpão de 2 andares + telhado + pátio com silos) ----------
+// ---------- 3) Celeiro Industrial (estilo Rust/Office: galpão com mezanino e escritórios, ponte pro pátio de contêineres, telhado) ----------
 {
-  const barn = '#c0392b', barn2 = '#a93226', metal = '#7f8c8d', floor = '#b08a5a', roofC = '#5d6d7e', cont = ['#2e86c1', '#28b463', '#d68910', '#7DF9FF'], boxes = [];
-  // paredes do galpão (portas no térreo)
-  boxes.push(...wallX(-18, 18, -14.5, 1, 7, barn));
-  boxes.push(...wallX(-18, 18, 14.5, 1, 7, barn, [door(-10, -6, 3.2), door(4, 8, 3.2)]));
-  boxes.push(...wallZ(-14, 14, -18.5, 1, 7, barn2, [door(-2, 2, 3.2)]));
-  boxes.push(...wallZ(-14, 14, 18.5, 1, 7, barn2, [door(4, 8, 3.2)]));
-  // mezanino (2º andar interno) + rampa interna + guarda-corpo
-  boxes.push(B(-18, -14, -4, 14, 0.3, floor, 3.2), R(-4, -13, 6, -9, 0, 3.5, 'x', -1, metal));
-  boxes.push(B(-4.4, -9, -4, 14, 1.0, metal, 3.5));
-  // telhado (metade oeste, com beiral ao norte) + rampa externa pro telhado
-  boxes.push(B(-19, -21, 0, 15, 0.4, roofC, 7), R(0, -21, 12, -16, 0, 7.4, 'x', -1, metal));
-  boxes.push(B(-18.5, -20.5, -17.5, -19.5, 7, metal), B(-1.5, -20.5, -0.5, -19.5, 7, metal));
-  boxes.push(B(-19, -21.3, 0, -21, 0.8, metal, 7.4), B(-19.3, -21, -19, 15, 0.8, metal, 7.4)); // mureta do telhado
-  // caixas dentro (embaixo do mezanino e no pátio interno)
-  boxes.push(B(-14, 4, -11, 7, 1.6, '#9c6b3a'), B(-9, -6, -6, -3, 1.6, '#9c6b3a'), B(-15, -11, -12, -8, 1.2, '#b07a45'));
-  boxes.push(B(4, -2, 10, 0.5, 2.6, cont[0]), B(10, 6, 14, 12, 2.6, cont[1]), B(2, 8, 5, 11, 1.4, '#9c6b3a'), B(13, -12, 17, -8, 2.6, cont[2]));
-  boxes.push(B(-14, -13, -10, -12, 1.0, metal, 3.5), B(-16, 8, -13, 11, 1.4, '#9c6b3a', 3.5)); // cobertura no mezanino
-  // pátio sul: contêineres empilhados
-  boxes.push(B(-10, 22, -4, 24.5, 2.6, cont[1]), B(-9, 22, -5, 24.5, 2.6, cont[3], 2.6), B(6, 28, 12, 30.5, 2.6, cont[2]), B(-18, 32, -12, 34.5, 2.6, cont[0]));
-  boxes.push(B(16, 34, 22, 36.5, 2.6, cont[1]), B(-30, 4, -27.5, 10, 2.6, cont[2]), B(27, -6, 29.5, 0, 2.6, cont[0]), B(-32, -30, -26, -27.5, 2.6, cont[3]));
-  boxes.push(B(24, -32, 26.5, -26, 2.6, cont[1]), B(2, 36, 5, 39, 1.5, '#9c6b3a'), B(-24, 20, -21, 23, 1.5, '#b07a45'));
+  const metal = '#7f8c8d', cont = ['#2e86c1', '#28b463', '#d68910', '#c0392b', '#7DF9FF'], boxes = [], H = 3.6;
+  const col = { wall: '#c0392b', wall2: '#a93226', inner: '#e8d5b0', floor: '#b08a5a', roof: '#5d6d7e', roof2: '#4d5d6e', stair: '#7f8c8d', trim: '#f4f1ea' };
+  const K = (x, z, ax, c, y0 = 0) => boxes.push(ax === 'z' ? B(x - 1.2, z - 3, x + 1.2, z + 3, 2.6, c, y0) : B(x - 3, z - 1.2, x + 3, z + 1.2, 2.6, c, y0));
+  const C = (x, z, s = 1.6, h = 1.6, c = '#9c6b3a', y0 = 0) => boxes.push(crate(x, z, s, h, c, y0));
+  // galpão: térreo alto com vão central, mezanino em volta, escritórios no lado oeste do mezanino
+  boxes.push(...building(-22, -16, 14, 16, { col, floors: 2, H, floorHoles: { 1: [[-12, -10, 8.5, 10]] },
+    ops: [{ s: 'w', a: -2, b: 2, k: 'wide' }, { s: 'e', a: -2, b: 2, k: 'wide' }, { s: 'n', a: -18, b: -16 }, { s: 'n', a: 6, b: 8 }, { s: 's', a: -18, b: -16 }, { s: 's', a: 8, b: 10 },
+      { s: 'e', a: -1, b: 1, f: 1 }, { s: 'n', a: -8, b: -2, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -4, b: 2, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: -14, b: -9, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: 8, b: 13, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: -1, b: 1, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-4, -15.4, 2, -13.4], axis: 'x', dir: 1 }, { f: 0, r: [-2, 13.4, 4, 15.4], axis: 'x', dir: -1 }, { f: 1, r: [5.5, -15.4, 11.5, -13.4], axis: 'x', dir: 1 }],
+    inner: [{ axis: 'x', s0: -21.5, s1: -12, line: -5, f: 1, ops: [{ a: -14.8, b: -13 }] }, { axis: 'x', s0: -21.5, s1: -12, line: 5, f: 1, ops: [{ a: -14.8, b: -13 }] }] }));
+  // guarda-corpo do vão (com uma passagem pra pular lá de cima)
+  boxes.push(B(-12, -10.15, 8.5, -10, 1.0, metal, H), B(-12, 10, -2, 10.15, 1.0, metal, H), B(0.5, 10, 8.5, 10.15, 1.0, metal, H), B(8.5, -10, 8.65, 10, 1.0, metal, H));
+  boxes.push(...wallZ(-10, 10, -12.1, 0.2, 1.0, metal, [{ a: -1.5, b: 1.5, y0: 0, y1: 2 }], H));
+  // térreo: estantes e empilhadeira (cobertura no vão)
+  boxes.push(B(-8, -6, -6.8, 0, 2.6, '#d68910'), B(3, 1, 4.2, 7, 2.6, '#d68910'), B(-10, 4, -6, 5.2, 2.6, '#d68910'), B(1, -7, 6, -5.8, 2.6, '#d68910'), C(-2, 3, 1.6, 1.2), C(5, -2, 1.4, 1.4, '#7DF9FF'));
+  boxes.push(C(-19, -12, 1.4, 1.2, '#b08a5a', H), C(-19, 12, 1.4, 1.2, '#b08a5a', H), C(-14, 0, 1.2, 1.0, '#b08a5a', H), C(11, 8, 1.4, 1.2, '#7f8c8d', H), C(-2, -12.5, 1.4, 1.0, '#7f8c8d', H));
+  // telhado: casas de máquina e caixas d'água
+  boxes.push(B(-18, -6, -14, -2, 2.0, '#95a5a6', 2 * H), B(-6, 4, -2, 8, 1.6, '#95a5a6', 2 * H), B(4, -6, 8, -3, 1.2, '#95a5a6', 2 * H), C(0, 11, 1.6, 1.2, '#95a5a6', 2 * H), C(-14, 12, 1.6, 1.4, '#95a5a6', 2 * H), B(-8, -9, -4, -6.5, 1.5, '#bdc3c7', 2 * H), B(-1, -1, 3, 1.5, 1.5, '#bdc3c7', 2 * H), B(-11, 1, -9, 5, 1.3, '#95a5a6', 2 * H), C(6, 7, 1.6, 1.4, '#95a5a6', 2 * H), C(-20, 4, 1.4, 1.2, '#95a5a6', 2 * H), C(9, -10, 1.4, 1.2, '#95a5a6', 2 * H));
+  // ponte do mezanino até a torre de contêineres do pátio leste
+  boxes.push(B(14, -1, 20, 1, 0.3, metal, H - 0.3), B(14, -1.15, 20, -1, 1.0, metal, H), B(14, 1, 20, 1.15, 1.0, metal, H), B(20, -3, 26, 3, H, cont[0]), R(26, -1.5, 31, 1.5, 0, H, 'x', -1, metal), B(20, -3, 26, -2.85, 1.0, metal, H));
+  // pátio de contêineres (leste): corredores, pilhas com rampa
+  K(20, -12, 'z', cont[1]); K(20, 12, 'z', cont[2]); K(30, -20, 'z', cont[3]); K(30, 8, 'z', cont[4]); boxes.push(B(28.8, 5, 31.2, 8, 2.6, cont[0], 2.6)); K(36, -6, 'z', cont[2]); K(36, 34, 'z', cont[1]);
+  boxes.push(R(28.8, 11, 31.2, 15.5, 0, 2.6, 'z', -1, metal));
+  K(26, -34, 'x', cont[4]); K(18, 34, 'x', cont[3]); K(34, -10 + 22, 'x', cont[1]); K(22, 22, 'z', cont[0]);
+  // pátio oeste: guarita de 2 andares, plataforma de carga, silos
+  boxes.push(...building(-38, -36, -28, -26, { col: { ...col, wall: '#e8d5b0', wall2: '#d9c49c' }, floors: 2,
+    ops: [{ s: 'e', a: -32, b: -30 }, { s: 's', a: -35, b: -33 }, { s: 'e', a: -35, b: -32, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -32, b: -29, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-36.5, -35.5, -30.5, -33.6], axis: 'x', dir: 1 }, { f: 1, r: [-36.5, -28.4, -30.5, -26.5], axis: 'x', dir: 1 }] }));
+  boxes.push(B(-30, 2, -22, 12, 1.2, '#95a5a6'), R(-34, 4, -30, 8, 0, 1.2, 'x', 1, metal), C(-27, 6, 1.6, 1.6, '#9c6b3a', 1.2), K(-34, -12, 'z', cont[3]), K(-28, -8 + 30, 'x', cont[2]), C(-36, 0, 1.6, 1.4), C(-26, -20, 1.6, 1.6));
+  // norte e sul: docas, caixotes
+  K(-12, -26, 'x', cont[1]); K(2, -30, 'x', cont[4]); K(12, -24, 'x', cont[2]); C(-22, -30, 2, 1.6); C(-6, -36, 1.6, 1.2); C(6, -38, 2, 2); C(-16, -22, 1.4, 1.2); C(16, -32, 1.6, 1.6); C(-30, -14, 1.4, 1.2); C(38, 24 - 50, 1.4, 1.4);
+  K(-10, 26, 'x', cont[0]); K(4, 30, 'x', cont[3]); C(-20, 34, 2, 1.6); C(10, 22, 1.6, 1.4); C(-4, 37, 1.6, 1.2); C(-14, 20, 1.4, 1.2); C(0, 21, 1.4, 1.4); C(28, 38, 1.4, 1.4);
   MAPS.push({
-    id: 'celeiro-industrial', name: 'Celeiro Industrial', desc: 'Galpão de dois andares com mezanino, telhado acessível por rampa e pátio com silos.',
+    id: 'celeiro-industrial', name: 'Celeiro Industrial', desc: 'Estilo Rust/Office: galpão com vão central, mezanino e escritórios, ponte até a torre de contêineres, telhado com casas de máquina e guarita de dois andares.',
     size: [40, 42], wallH: 7, wallColor: ['#8e9ea0', '#7f8c8d'],
     palette: { sky: '#b9d3e8', fog: ['#c8d4dc', 45, 130], hemi: ['#ffffff', '#7a7f70', 1.7], sun: ['#fff6e6', 2.0], ground: '#8f9a8a', tiles: ['#a3aaa0', '#9aa198', 84, 14], clouds: true },
-    boxes, props: [{ t: 'silo', x: -28, z: 26, r: 4, h: 11, c: '#bdc3c7' }, { t: 'silo', x: 28, z: 24, r: 4, h: 12, c: '#d0d3d4' }, { t: 'silo', x: 32, z: -30, r: 3, h: 9, c: '#bdc3c7' },
-      { t: 'truck', x: 14, z: 22, c: '#e63946' }, { t: 'sign', x: 0, y: 5.4, z: 15.05, w: 8, h: 2, rot: 0, text: 'CELEIRO C!', bg: '#7a1f17', fg: '#ffe7b0' },
-      { t: 'hay', x: -32, z: 34 }, { t: 'hay', x: -34, z: 34 }, { t: 'hay', x: 34, z: 10 }],
-    spawns: [[-10, 36], [10, 38], [30, 36], [-30, -34], [20, -34], [36, -12], [-12, -4, 3.5], [10, 3], [-34, 18], [0, -26]],
-    pickups: [['health', -12, 10], ['health', -10, -6, 7.4], ['health', 0, 28], ['health', 32, -16],
-      ['ammo', -14, 10, 3.5], ['ammo', 28, -30], ['ammo', -22, 36], ['ammo', 8, 4],
-      ['grenade', 6, 4], ['grenade', -32, 0], ['grenade', 34, 20], ['grenade', -6, 10, 7.4], ['grenade', -8, -10, 3.5]],
-    showcase: [2, 0, 34], view: [3, 0, 13, 0.75, 0.08],
-    test: { stairs: { from: [7.5, 0, -11], to: [-8, 3.5, -11], level: 3.5 }, under: { from: [-16.5, 0, 11], to: [-16.5, 0, -11], ceil: 3.2 }, roof: { from: [12.5, 0, -18.5], to: [-6, 7.4, -18.5], level: 7.4 } },
+    ...fin(boxes), props: [{ t: 'silo', x: -28, z: 30, r: 4, h: 11, c: '#bdc3c7' }, { t: 'silo', x: 28, z: 25, r: 3.5, h: 12, c: '#d0d3d4' }, { t: 'silo', x: 34, z: -30, r: 3, h: 9, c: '#bdc3c7' },
+      { t: 'truck', x: 14, z: 38, c: '#e63946' }, { t: 'truck', x: -6, z: -20, c: '#2f80ed' }, { t: 'sign', x: -4, y: 5.4, z: 16.05, w: 8, h: 2, rot: 0, text: 'CELEIRO C!', bg: '#7a1f17', fg: '#ffe7b0' },
+      { t: 'hay', x: -34, z: 38 }, { t: 'hay', x: -36, z: 38 }, { t: 'hay', x: 38, z: 0 }],
+    spawns: [[-12, 38], [8, 33], [24, 38], [-30, 40], [-24, -39], [-8, -40], [12, -36], [24, -26], [37, -20], [-37, 18], [-17, 0, H], [-34, -30, H]],
+    pickups: [['health', -2, 0], ['health', -16, -10, H], ['health', 0, 34], ['health', 0, -34], ['health', 30, 9.5, 2.6],
+      ['ammo', -16, 10, H], ['ammo', 23, 0, H], ['ammo', -10, 0, 2 * H], ['ammo', -26, 4, 1.2], ['ammo', 34, 0], ['ammo', -34, -32, H],
+      ['grenade', 10, 0], ['grenade', 0, -13, H], ['grenade', -30, -20], ['grenade', 30, 30], ['grenade', 26, -26]],
+    showcase: [2, 0, 34], view: [3, 0, 13, 0.75, 0.08], openMax: 7,
+    test: { stairs: { from: [-3.6, 0, -14.4], to: [3.5, H, -14.4], level: H }, under: { from: [-18, 0, -8], to: [-18, 0, 8], ceil: 3.3 }, roof: { from: [5.8, H, -14.4], to: [12.6, 2 * H, -14.4], level: 2 * H } },
   });
 }
 
