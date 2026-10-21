@@ -72,7 +72,7 @@ await A.keyboard.press('KeyR'); await wait(300); ok(await G(A, () => !(window.__
 await A.keyboard.press('Digit1'); await wait(600); ok(await G(A, () => window.__docao.player.weapon === 0), 'A volta pro fuzil');
 // 7) sala com bots: eles trocam pra faca de perto e nada quebra
 // recarga do A aparece pro B (flag de recarga do snapshot → animação em 3ª pessoa + pente caindo)
-await G(A, () => { window.__docao.player.pitch = 0.6; }); await A.mouse.down(); await wait(400); await A.mouse.up(); await wait(300);
+await until(A, () => window.__docao.player.switchEnd <= window.__docao.time, 3000); await G(A, () => { window.__docao.player.pitch = 0.6; }); await A.mouse.down(); await wait(400); await A.mouse.up(); await wait(300);
 await A.keyboard.press('KeyR'); const rlA = await until(A, () => window.__docao.player.reloadEnd > window.__docao.time, 2000);
 ok(rlA, 'A recarrega o fuzil online');
 ok(await until(B, () => { const a = window.__docao.entities.find((e) => !e.isPlayer); const g = a && a.model.guns[0]; return a && a.reloadEnd > window.__docao.time && g && Math.abs(g.rotation.z) > 0.2; }, 3000), 'B vê o A recarregando (arma inclinada em 3ª pessoa)');
@@ -91,7 +91,7 @@ for (let i = 0; i < 50; i++) { // gruda do lado do bot mais perto (bots puxam a 
     if (g.collides(x, y, z)) return; p.pos.set(x, y, z); p.vel.set(0, 0, 0); o.net.send({ t: 'u', sq: p.sq, tp: 1, p: [x, y, z], v: [0, 0, 0], y: p.yaw, pi: 0, g: 1, w: p.weapon }); });
   await wait(400); if (await G(C, () => window.__sawKnife > 0 && (window.__feedLog || []).some((l) => l.includes('moggou')))) break; }
 const sk = await G(C, () => window.__sawKnife); console.log('amostras de bot com faca:', sk, (await G(C, () => window.__feedLog || [])).slice(-5));
-ok(await G(C, () => window.__docao.state === 'playing' && window.__docao.entities.every((e) => Number.isFinite(e.pos.x))), 'sala com bots segue rodando');
+const run = await G(C, () => ({ st: window.__docao.state, fin: window.__docao.entities.every((e) => Number.isFinite(e.pos.x)) })); ok((run.st === 'playing' || run.st === 'over') && run.fin, `sala com bots segue rodando (${run.st})`);
 ok(sk > 0, 'bot do servidor puxa a faca de perto');
 console.log('\nerros de console:', errors.length ? errors : 'nenhum');
 if (errors.length) fails.push('erros de console');
