@@ -12,7 +12,7 @@ python3 -m http.server 8123
 (Precisa ser servido por HTTP por causa dos módulos ES; funciona offline, o Three.js está em `vendor/`.)
 
 ## Controles
-WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas três snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a **estocada** · R recarregar · **1** primária / **2** pistola / **3** faca (ou rodinha) · **V** troca rápida faca ↔ última arma · Segure **Q**: Copo Bomba, solte para arremessar · **4** fumaça · **5** atordoamento · **F** rádio do "Fim da chapa" (quando o prêmio estiver pronto) · Morto: **1–6** escolhe a primária do próximo renascimento (1 Fuzil, 2 Calibre 12, 3 Sniper Torresmo, 4 Canhão do Barril, 5 Carabina da Granja, 6 Bazuca) · Tab placar · Esc (ou P) pausar
+WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas três snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a **estocada** · R recarregar · **1** primária / **2** pistola / **3** faca (ou rodinha) · **V** troca rápida faca ↔ última arma · Segure **Q**: Copo Bomba, solte para arremessar · **4** fumaça · **5** atordoamento · **F** rádio do "Fim da chapa" (quando o prêmio estiver pronto) · Morto: **1–6** escolhe a primária do próximo renascimento (1 Fuzil, 2 Calibre 12, 3 Sniper Torresmo, 4 Canhão do Barril, 5 Carabina da Granja, 6 Bazuca), **Espaço/Enter** ou o botão **RENASCER** (liberado após 5 s) pra voltar · Tab placar · Esc (ou P) pausar
 
 ## Online (multiplayer) 🌐
 
@@ -256,7 +256,9 @@ Vale para as três (Sniper Torresmo, Canhão do Barril e Carabina da Granja), re
 
 ## Tela de morte
 Os cartões de arma são **clicáveis** (as teclas 1–6 continuam valendo), e dá pra marcar “renascer com a pistola na mão”. A faca aparece com a tecla **V** como **sempre equipada** (não precisa escolher).
-Ao morrer o mouse é solto (sem pausar); clique na tela ou em **VOLTAR AO JOGO** para mirar de novo.
+**Renascimento: 5 s + botão.** Depois de morrer roda uma contagem de 5 s (`RESPAWN_TIME` em `shared/rules.js`) no botão **Renascer em 4.2s**; quando chega a zero ele vira **RENASCER** e você só volta ao clicar nele (ou apertar **Espaço**/**Enter**). Ao clicar, o mouse já trava de novo pra mirar.
+Ao morrer o mouse é solto (sem pausar) pra dar pra clicar nos cartões. Bots continuam renascendo sozinhos após 5 s.
+Online quem decide é o servidor: ele só renasce um humano depois dos 5 s **e** do pedido do botão (`{t:'rs'}`). No começo da partida, no Próximo mapa, ao entrar no meio e ao trocar de time ninguém precisa clicar. Rede de segurança: cliente antigo (sem o botão) renasce sozinho depois de 60 s.
 
 ## Morte = BACON 🥓
 Quando qualquer Docão morre (você, outro jogador ou bot), ele dá um "pop" (achata), some numa nuvem de fumaça e vira uma **tira de bacon** ondulada (carne vermelha/rosada com listras de gordura, cel-shading com contorno). O bacon pula, quica no chão chiando (som WebAudio + faíscas de gordura), fica ~3 s e encolhe.

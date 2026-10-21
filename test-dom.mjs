@@ -124,7 +124,7 @@ await page.click('#game'); await wait(300);
 ok(await G(() => !!document.pointerLockElement), 'clique trava o mouse de novo');
 await G(() => { window.__docao.player.invulnUntil = 0; window.__docao.kill(window.__docao.player); }); await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 6000); // câmera do bacon (1,1 s de jogo) antes dos cartões
 await page.keyboard.press('Digit3'); ok(await G(() => window.__docao.selectedPrimary === 2), 'atalho de teclado (3) continua valendo');
-await page.click('#deathBack'); await wait(300); ok(await G(() => !!document.pointerLockElement), 'botão VOLTAR AO JOGO trava o mouse');
+await page.waitForFunction(() => !document.getElementById('respawnBtn').disabled, null, { timeout: 8000 }); await page.click('#respawnBtn'); await wait(300); ok(await G(() => !!document.pointerLockElement), 'botão RENASCER trava o mouse');
 // ---- placar no mata-mata também
 await G(() => window.__docao.endGame()); await page.click('#menuBtn'); await wait(500);
 await page.selectOption('#modeSel', 'dm'); await page.click('#playBtn'); await wait(1500);

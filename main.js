@@ -849,7 +849,7 @@ function updateHud(dt) {
   const smokeN = $('smokeN'), stunN = $('stunN');
   if (smokeN) smokeN.textContent = p.smokeNades || 0;
   if (stunN) stunN.textContent = p.stunNades || 0;
-  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); } crossEl.style.visibility = p.alive ? '' : 'hidden';
+  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT) - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
   $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
@@ -859,7 +859,7 @@ function updateHud(dt) {
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
-  if (!p.alive) cm.textContent = `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''} · renascendo em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s`;
+  if (!p.alive) cm.textContent = `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''} · ${respawnReady(p) ? (rsSent ? 'renascendo...' : 'clique em RENASCER (ou Espaço)') : Number.isFinite(p.respawnAt) ? `renasce em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'aguarde...'}`;
   else if (msgTimer > 0) msgTimer -= dt; // mensagem (ex.: "Mapa: …") tem prioridade
   else if (gameTime < p.invulnUntil) cm.textContent = 'PROTEGIDO';
   else cm.textContent = '';
@@ -1103,7 +1103,7 @@ function updatePlayer(dt) {
   if (!p.alive) {
     if (p.charging) { p.charging = false; arcLine.visible = arcMark.visible = false; }
     deathFx(p); deathCam(p, dt);
-    if (!online && gameTime >= p.respawnAt) respawn(p);
+    // humano não renasce sozinho: espera RESPAWN_TIME e o clique em RENASCER (ou Espaço/Enter) — ver requestRespawn()
     updateAds(dt, false);
     return;
   }
@@ -1565,6 +1565,7 @@ document.addEventListener('keydown', (e) => {
   keys[e.code] = true;
   if (state === 'playing' && player) {
     if (e.code === 'KeyR') startReload(player);
+    if (!player.alive && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat && requestRespawn()) keys[e.code] = false; // Espaço não vira pulo ao renascer
     if (!player.alive && /^Digit[1-6]$/.test(e.code)) { const pick = PRIMARIES[+e.code.slice(5) - 1]; if (pick != null) setPrimary(pick); } // escolha na tela de morte
     else {
       if (e.code === 'Digit1') switchWeapon(player, player.slots[0]);
@@ -1745,9 +1746,22 @@ buildDeathSec();
   b.querySelector('small').textContent = 'Sempre equipada ✓ · clique golpe · botão direito estocada · pelas costas mata'; $('deathMelee').appendChild(b);
 }
 document.querySelectorAll('#deathList .primchip').forEach((c) => { const f = c.onclick; c.onclick = (ev) => { ev.stopPropagation(); f(ev); spawnHold = 'primary'; buildDeathSec(); }; });
-$('deathBack').onclick = (ev) => { ev.stopPropagation(); lockPointer(); };
-function onPlayerDeath() { resetRewards(); if (document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; }
-function onPlayerRespawn() { deathCamState.on = false; if (ghost) ghost.model.group.visible = false; if (!document.pointerLockElement && deathUnlock && state === 'playing') flashMsg('Clique pra voltar a mirar'); }
+// botão RENASCER: só libera depois de RESPAWN_TIME; online pede ao servidor ({t:'rs'}), que é quem decide
+let rsSent = false;
+const respawnReady = (p) => !!p && !p.alive && Number.isFinite(p.respawnAt) && gameTime >= p.respawnAt;
+function updateRespawnBtn(p) {
+  const b = $('respawnBtn'), ok = respawnReady(p) && !rsSent;
+  const txt = rsSent ? 'Renascendo...' : ok ? 'RENASCER (Espaço)' : Number.isFinite(p.respawnAt) ? `Renascer em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'Aguarde...';
+  if (b.disabled === ok) b.disabled = !ok; if (b.textContent !== txt) b.textContent = txt; b.classList.toggle('ready', ok);
+}
+function requestRespawn() {
+  const p = player; if (state !== 'playing' || !respawnReady(p) || rsSent) return false;
+  if (online) { rsSent = true; online.net.send({ t: 'rs' }); } else respawn(p);
+  lockPointer(); return true;
+}
+$('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
+function onPlayerDeath() { rsSent = false; resetRewards(); if (document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; }
+function onPlayerRespawn() { rsSent = false; deathCamState.on = false; if (ghost) ghost.model.group.visible = false; if (!document.pointerLockElement && deathUnlock && state === 'playing') flashMsg('Clique pra voltar a mirar'); }
 
 // ============================================================
 //  Online (Cloudflare Worker + Durable Object — ver server/ e net.js)

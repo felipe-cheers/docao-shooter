@@ -4,6 +4,10 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5.1 (21/10/2026)
+- **Renascimento agora leva 5 s e tem botão:** depois de morrer o botão mostra a contagem ("Renascer em 4.2s") e, liberado, você volta clicando em **RENASCER** (ou Espaço/Enter). Dá tempo de escolher a arma com calma.
+- Bots continuam renascendo sozinhos; no online vale o mesmo (o servidor só te traz de volta quando você clica).
+
 ## v1.5 — "Churrasco Moggado" (21/10/2026)
 - **Faca de churrasqueiro:** nova arma no **slot 3** (tecla 3, rodinha ou **V** pra troca rápida; no cartão da tela de morte o atalho é **V**).
   - **Clique esquerdo:** golpe (segurando, repete).

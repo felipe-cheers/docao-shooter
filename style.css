@@ -233,7 +233,10 @@ button.teambtn small{display:block;font-size:11px;font-family:"Trebuchet MS",Ari
 #deathpick .dl small{color:#cfe;font-weight:normal}
 #deathSec{display:flex;gap:8px;justify-content:center;margin:0}
 #deathSec button.primchip{max-width:220px}
-#deathBack{margin:8px auto 0;display:block}
+#respawnBtn{margin:10px auto 2px;display:block;width:min(420px,90%);padding:10px 14px;font-size:24px;background:#3a4a7a;opacity:.75;cursor:not-allowed}
+#respawnBtn.ready{background:#e63946;opacity:1;cursor:pointer;animation:rsPulse 1s ease-in-out infinite}
+#respawnBtn:disabled:active{transform:none;box-shadow:0 5px 0 #2a1410}
+@keyframes rsPulse{0%,100%{box-shadow:0 5px 0 #2a1410,0 0 0 0 rgba(255,210,122,.0)}50%{box-shadow:0 5px 0 #2a1410,0 0 18px 4px rgba(255,210,122,.75)}}
 /* tela de morte: ancorada embaixo e compacta (6 primárias + pistola + faca cabem em 720p) */
 #deathpick{top:auto;bottom:12px;width:min(1000px,96vw);max-height:calc(100vh - 24px);overflow-y:auto;background:rgba(20,24,44,.72);border-radius:16px;padding:8px 10px}
 #deathList{display:grid;grid-template-columns:repeat(6,1fr);max-width:none}

@@ -16,6 +16,7 @@ import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
 export const MAX_PLAYERS = 8;
+const RS_SAFETY = 60; // s: cliente antigo que nunca manda 'rs' renasce sozinho depois disso
 const PENDING_WAIT = 60; // s de relógio de parede pra escolher o time ao entrar no meio; depois vai no Automático
 const TICK = 0.05, HIST = 1.0, DC_GRACE = 30;
 const TICK_DT = (g) => clamp(g.T - (g.lastZoneT ?? g.T), 0, 0.25) + (g.lastZoneT = g.T, 0);
@@ -75,7 +76,7 @@ export class Game {
     if (this.state === 'lobby') this.sendLobby();
     else {
       this.io.send(e.id, this.startMsg());
-      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + PENDING_WAIT : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 60 s (depois vai no Automático)
+      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.needRs = false; if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + PENDING_WAIT : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 60 s (depois vai no Automático)
       if (this.state === 'over') this.io.send(e.id, this.endMsg());
     }
     this.sendLobby();
@@ -143,7 +144,7 @@ export class Game {
     this.nades = []; this.rockets = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     for (const e of this.ents.values()) {
-      e.kills = 0; e.deaths = 0; e.alive = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1;
+      e.kills = 0; e.deaths = 0; e.alive = false; e.needRs = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1;
       // this.T e o relógio do cliente voltam a 0 na partida nova: zera cadência/anti speed-hack, senão os tiros da partida anterior
       // (lastShot/lastCt/lastMelee no futuro) fazem o servidor rejeitar todo tiro no "Próximo mapa"/"Jogar de novo" (sem dano)
       e.lastShot = WEAPONS.map(() => -9); e.lastCt = []; e.maxOff = undefined; e.lastMeleeCt = undefined; e.lastMeleeT = undefined; e.lastMeleeRate = 0; e.lastKnock = -9;
@@ -186,6 +187,7 @@ export class Game {
     const isHost = id === this.hostId;
     switch (m.t) {
       case 'u': this.onUpdate(e, m); break;
+      case 'rs': if (this.state === 'playing' && !e.alive) e.rsReq = true; break; // botão Renascer
       case 'prof': if (typeof m.name === 'string' && this.state !== 'playing') e.name = this.freeName(m.name, e); // nome só muda fora da partida (as plaquinhas são criadas no início)
          if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; if (PRIMARIES.includes(m.primary)) e.nextPrimary = m.primary; if (this.state === 'lobby') e.primary = e.nextPrimary; this.sendLobby(); break;
       case 'cfg': if (!isHost) return;
@@ -347,7 +349,7 @@ export class Game {
     return false;
   }
   kill(t, a, w, head, back = false) {
-    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + RESPAWN_TIME;
+    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + RESPAWN_TIME; if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
     if (a && a !== t) a.kills++;
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
@@ -407,7 +409,7 @@ export class Game {
     return best;
   }
   spawn(e, silent = false) {
-    const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.hp = 100; e.alive = true; e.invulnUntil = this.T + INVULN; e.sq++;
+    const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.hp = 100; e.alive = true; e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
     if (e.bot && Math.random() < 0.3) e.nextPrimary = pick(PRIMARIES);
     e.primary = e.nextPrimary; e.slots = [e.primary, PISTOL, KNIFE]; e.weapon = e.primary; e.knifeMode = false; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.nades = NADE.spawnWith;
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
@@ -443,7 +445,7 @@ export class Game {
     this.T = t - this.t0; this.purge();
     while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot) this.updateBot(e, h); this.stepProjectiles(h); }
     for (const e of this.ents.values()) {
-      if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
+      if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.needRs && !e.rsReq && this.T < e.respawnAt + RS_SAFETY) && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
       if (e.bot) this.pushHist(e);
       if (!e.bot && e.alive) this.progressReload(e);
     }
