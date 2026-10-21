@@ -184,44 +184,62 @@ export const MAPS = [];
   });
 }
 
-// ---------- 2) Duas Pocilgas (duas praças-alvo, corredor longo, portas no meio, passarela) ----------
+// ---------- 2) Duas Pocilgas (estilo Dust2: túneis do B, meio com portas, catwalk pro A, longo com portões) ----------
 {
-  const sand = '#d8b077', wall = '#c99a5b', wall2 = '#b98b4e', crate = '#9c6b3a', crate2 = '#b07a45', plat = '#e0c08a', boxes = [];
-  // quarteirões que formam os corredores
-  boxes.push(B(-26, -8, -10, 22, 6, wall), B(10, -8, 26, 22, 6, wall), B(-40, -8, -34, 22, 6, wall2), B(34, -8, 40, 22, 6, wall2));
-  // túnel do B com teto (dá pra andar por baixo)
-  boxes.push(B(-34, 4, -26, 16, 0.4, wall2, 3.4));
-  // portas do corredor longo e portas do meio
-  boxes.push(...wallX(26, 34, 14, 1, 6, wall2, [door(28.5, 31.5, 3.2)]));
-  boxes.push(...wallX(-10, 10, -12, 1, 6, wall2, [door(-2, 2, 3.2)]));
-  // praça A elevada + rampas (do longo, da passarela, do CT)
-  boxes.push(B(18, -34, 38, -14, 1.2, plat), R(26, -14, 34, -9, 0, 1.2, 'z', -1, plat), R(14, -32, 18, -25, 0, 1.2, 'x', 1, plat));
-  boxes.push(B(10, -20, 18, -14, 1.2, plat), R(6, -20, 10, -14, 0, 1.2, 'x', 1, plat)); // passarela
-  // praça B: plataforma do fundo + rampa
-  boxes.push(B(-38, -34, -28, -26, 1.2, plat), R(-28, -34, -23, -26, 0, 1.2, 'x', -1, plat));
-  boxes.push(...wallZ(-34, -18, -14, 1, 4, wall2, [door(-24, -20, 3)])); // muro entre B e CT com passagem
-  // caixotes de cobertura
-  const C = (x, z, s = 2, h = 2, c = crate, y0 = 0) => boxes.push(B(x - s / 2, z - s / 2, x + s / 2, z + s / 2, h, c, y0));
-  C(26, -24, 2, 2, crate, 1.2); C(28, -24, 2, 2, crate2, 1.2); C(27, -24, 1.6, 1.4, crate, 3.2); C(32, -18, 2, 2, crate2, 1.2); C(22, -30, 2.4, 1.6, crate, 1.2); C(36, -30, 2, 3, crate2, 1.2);
-  C(-30, -20, 2.4, 2, crate); C(-22, -28, 2, 2, crate2); C(-20, -18, 4, 1.4, '#a65a3a'); C(-32, -30, 2, 2, crate, 1.2);
-  C(0, 4, 2, 2, crate); C(-6, 14, 2, 1.4, crate2); C(6, -4, 1.6, 1.6, crate);
-  C(30, 2, 2, 2, crate); C(30, -4, 1.6, 1.2, crate2); C(-30, -2, 2, 2, crate); C(-30, 20, 1.6, 1.6, crate2);
-  C(-8, 30, 2.2, 1.6, crate); C(8, 28, 2.2, 2, crate2); C(-24, 28, 3, 1.2, crate); C(24, 30, 2, 2, crate); C(0, -24, 3, 1.4, crate2); C(-8, -30, 2, 2, crate); C(8, -30, 2, 2, crate2);
+  const sand = '#d8b077', wall = '#c99a5b', wall2 = '#b98b4e', cr = '#9c6b3a', cr2 = '#b07a45', boxes = [];
+  const casa = { wall: '#e2c18a', wall2: '#d6b47a', inner: '#efd6a8', floor: '#c9a46a', roof: '#a0522d', roof2: '#8b4513', stair: '#9c6b3a', trim: '#fff4e0' };
+  const C = (x, z, s = 2, h = 2, c = cr, y0 = 0) => boxes.push(crate(x, z, s, h, c, y0));
+  // túneis do B (lado oeste, coberto, com parede no meio em zigue-zague)
+  boxes.push(...building(-36, 2, -16, 18, { col: { ...casa, wall: '#b98b4e', wall2: '#a97b40', roof: '#8b6a3e' }, floors: 1, H: 3.4, parapet: 0,
+    ops: [{ s: 's', a: -33, b: -30.5 }, { s: 's', a: -22, b: -19.5 }, { s: 'n', a: -33, b: -30 }, { s: 'e', a: 8, b: 10.5 }],
+    inner: [{ axis: 'z', s0: 2.5, s1: 17.5, line: -26, ops: [{ a: 4, b: 6 }, { a: 13, b: 15 }] }] }));
+  // túnel de baixo: corredor coberto ligando os túneis ao meio
+  boxes.push(B(-16, -4, -5, 7.5, 6, wall), B(-16, 11, -5, 22, 6, wall), B(-16, 7.5, -5, 11, 0.4, wall2, 3.4), { wp: [-10, 0, 9.2] }, { wp: [-6, 0, 9.2] }, { wp: [-14, 0, 9.2] });
+  // meio: portas do meio, caixote "xbox"
+  boxes.push(...wallX(-5, 5, -12, 1, 6, wall2, [door(-1.8, 1.8, 3.4)]), B(-16, -12, -5, -4, 6, wall), C(0, -3, 2, 1.6, cr2), C(-3.5, 14, 1.6, 1.4));
+  // casa do meio (2 andares; janelas pro meio e pro longo)
+  boxes.push(...building(5, 6, 22, 22, { col: casa, floors: 2,
+    ops: [{ s: 'w', a: 13, b: 15 }, { s: 'e', a: 9, b: 11 }, { s: 's', a: 9, b: 11 }, { s: 'w', a: 9, b: 12, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 15, b: 19, f: 1, k: 'win', lo: 0.9 }, { s: 'n', a: 10, b: 14, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [7, 19, 13.5, 21.5], axis: 'x', dir: 1 }, { f: 1, r: [14, 19, 20.2, 21.5], axis: 'x', dir: 1 }],
+    inner: [{ axis: 'z', s0: 6.5, s1: 18.5, line: 15, ops: [{ a: 11.5, b: 13.3 }] }] }));
+  boxes.push(C(19.5, 8.5, 1.4, 1.2, cr2, 7), C(8, 8.5, 1.4, 1.2, cr, 7));
+  // catwalk / curto: rampa do meio até a passarela alta que desce no A
+  boxes.push(B(5, -12, 22, -6, 6, wall), R(5.5, -2, 10, 2, 0, 2.2, 'x', 1, cr2), B(10, -2.5, 19, 2.5, 2.2, wall2), B(10, -2.5, 19, -2.2, 0.9, wall, 2.2), R(19, -2.5, 22.5, 2.5, 0, 2.2, 'x', -1, cr2));
+  boxes.push(B(5, 2.5, 10, 6, 2.2, wall2), B(10, 2.5, 22, 3, 2.2, wall));
+  // longo: portões e muro
+  boxes.push(...wallX(22, 40, 4, 1, 6, wall2, [door(28.5, 31.5, 3.4)]), B(22, 5, 23, 22, 6, wall), C(34, 8, 2, 2), C(37, 15, 2, 1.4, cr2), C(26, 18, 1.6, 1.6), B(36, -8, 40, -4, 1.6, cr));
+  // A: plataforma com caixotes, casa do A (2 andares, janela pra plataforma, terraço)
+  boxes.push(B(22, -26, 36, -12, 1.2, '#e0c08a'), R(28, -12, 32, -8, 0, 1.2, 'z', -1, '#e0c08a'), C(26, -18, 2, 2, cr, 1.2), C(31, -22, 2, 1.4, cr2, 1.2), C(33.5, -15, 1.6, 1.6, cr, 1.2), C(24, -14, 1.4, 1.2, cr2, 1.2));
+  boxes.push(...building(22, -35, 36, -26, { col: casa, floors: 2,
+    ops: [{ s: 'w', a: -31, b: -29 }, { s: 's', a: 25, b: 27, f: 0 }, { s: 's', a: 31, b: 35, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: 23, b: 27, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [29, -34.5, 35, -32.6], axis: 'x', dir: 1 }, { f: 1, r: [23, -34.5, 29, -32.6], axis: 'x', dir: -1 }] }));
+  // CT: casa com janela olhando o meio inteiro (linha de Sniper)
+  boxes.push(...building(-5, -35, 6, -27, { col: casa, floors: 2,
+    ops: [{ s: 'e', a: -32, b: -30 }, { s: 'w', a: -32, b: -30 }, { s: 's', a: -2, b: 2, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-3.2, -34.5, 2.8, -32.6], axis: 'x', dir: 1 }] }));
+  boxes.push(C(10, -18, 2, 1.6), C(14, -26, 2, 2, cr2), C(-10, -21, 1.6, 1.4), C(8, -31, 1.4, 1.2));
+  // B: janela do B (prédio de 2 andares entre B e CT), caixotes e plataforma
+  boxes.push(...building(-17, -31, -7, -16, { col: casa, floors: 2,
+    ops: [{ s: 'w', a: -26, b: -24 }, { s: 'e', a: -21, b: -19 }, { s: 'w', a: -21, b: -17.5, f: 1, k: 'win', lo: 0.9 }, { s: 'n', a: -15, b: -11, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -13, b: -10, k: 'win' }],
+    stairs: [{ f: 0, r: [-15.2, -30.5, -9.2, -28.6], axis: 'x', dir: 1 }, { f: 1, r: [-15.2, -18.4, -9.2, -16.5], axis: 'x', dir: 1 }] }));
+  boxes.push(B(-34, -32, -26, -24, 1.2, '#e0c08a'), R(-26, -32, -23, -28, 0, 1.2, 'x', -1, '#e0c08a'), C(-31, -27, 2, 2, cr, 1.2), C(-28.5, -30.5, 1.6, 1.4, cr2, 1.2), C(-22, -12, 2, 2), C(-30, -14, 2, 1.6, cr2), C(-24, -4, 1.6, 1.2), C(-34, -6, 2, 2), C(-20, -24, 1.4, 1.2, cr2), B(-39, -14.4, -34, -13.6, 1.3, wall2), C(-27, -7, 1.6, 1.4, cr2), C(-19, -3, 2, 2), C(-36, 0, 1.6, 1.2), B(-30, -21, -29.2, -17, 1.3, wall2));
+  // base do T: caixotes e muretas
+  boxes.push(C(-26, 25, 2, 1.6), C(-12, 28, 1.6, 1.4, cr2), C(8, 26, 2, 2), C(18, 31, 1.6, 1.2, cr2), C(30, 26, 2, 1.6), C(-34, 30, 1.6, 1.6), B(-6, 30, 6, 30.8, 1.2, wall2), C(-3, 23, 1.4, 1.2), C(36, 33, 1.4, 1.4), C(-18, 25, 1.6, 1.2), C(25, 24, 1.4, 1.4, cr2), C(13, 31, 1.4, 1.2));
   MAPS.push({
-    id: 'duas-pocilgas', name: 'Duas Pocilgas', desc: 'Duas praças em disputa, corredor longo, portas no meio e passarela. Areia e caixotes.',
+    id: 'duas-pocilgas', name: 'Duas Pocilgas', desc: 'Estilo Dust2: túneis cobertos até o B, meio com portas e linha de Sniper, catwalk alto pro A, longo com portões e casas de dois andares.',
     size: [40, 36], wallH: 6, wallColor: [wall2, wall],
     palette: { sky: '#a9d6f5', fog: ['#ead9b6', 45, 120], hemi: ['#fff4e0', '#a58a5a', 1.5], sun: ['#fff0d0', 2.4], ground: sand, tiles: ['#e2c18a', '#d6b47a', 80, 20], clouds: true },
-    boxes, props: [{ t: 'sign', x: 0, y: 4.6, z: -11.45, w: 5, h: 1.2, rot: 0, text: 'MEIO', bg: '#7a4a1c', fg: '#ffe7b0' },
-      { t: 'sign', x: 30, y: 4.8, z: 14.55, w: 5, h: 1.2, rot: Math.PI, text: 'LONGO', bg: '#7a4a1c', fg: '#ffe7b0' },
-      { t: 'sign', x: 28, y: 3.2, z: -33.9, w: 4, h: 2, rot: 0, text: 'A', bg: '#e63946', fg: '#fff' },
-      { t: 'sign', x: -33, y: 3.2, z: -33.9, w: 4, h: 2, rot: 0, text: 'B', bg: '#e63946', fg: '#fff' },
-      { t: 'keg', x: -18, z: -32 }, { t: 'keg', x: -16.8, z: -32 }, { t: 'keg', x: 16, z: 32 }],
-    spawns: [[-8, 31], [0, 33], [8, 31], [-20, 31], [20, 31], [-6, -30], [0, -32], [6, -30], [-4, -20], [14, -28]],
-    pickups: [['health', 0, 31], ['health', 0, -29], ['health', 30, 6], ['health', -30, 8],
-      ['ammo', 30, -24, 1.2], ['ammo', -26, -24], ['ammo', 0, 0], ['ammo', -30, 20],
-      ['grenade', 0, -18], ['grenade', 14, -17, 1.2], ['grenade', 30, 18], ['grenade', -20, -30]],
-    showcase: [0, 0, 30], view: [3, 0, 25, 0.1, -0.03],
-    test: { stairs: { from: [4.5, 0, -17], to: [14, 1.2, -17], level: 1.2 }, under: { from: [-30, 0, 1.5], to: [-30, 0, 18], ceil: 3.4 } },
+    ...fin(boxes), props: [{ t: 'sign', x: 0, y: 4.6, z: -11.45, w: 5, h: 1.2, rot: 0, text: 'MEIO', bg: '#7a4a1c', fg: '#ffe7b0' },
+      { t: 'sign', x: 30, y: 4.8, z: 4.55, w: 5, h: 1.2, rot: Math.PI, text: 'LONGO', bg: '#7a4a1c', fg: '#ffe7b0' },
+      { t: 'sign', x: 39.9, y: 3.2, z: -18, w: 4, h: 2, rot: -Math.PI / 2, text: 'A', bg: '#e63946', fg: '#fff' },
+      { t: 'sign', x: -39.9, y: 3.2, z: -20, w: 4, h: 2, rot: Math.PI / 2, text: 'B', bg: '#e63946', fg: '#fff' },
+      { t: 'keg', x: -18, z: -34 }, { t: 'keg', x: -16.8, z: -34 }, { t: 'keg', x: 16, z: 33 }],
+    spawns: [[-8, 33], [0, 33.5], [8, 33], [-20, 31], [20, 29], [30, 32], [-30, 24], [-3, -24], [6, -24], [14, -31], [-22, -34], [18, -20], [-1, -30, 3.5]],
+    pickups: [['health', 0, 26], ['health', 0, -22], ['health', 30, 8], ['health', -30, 10], ['health', 12, 14, 3.5],
+      ['ammo', 30, -18, 1.2], ['ammo', -26, -18], ['ammo', 0, 3], ['ammo', -20, 14], ['ammo', 15, 0, 2.2], ['ammo', 30, -30, 3.5],
+      ['grenade', 0, -18], ['grenade', -12, -24, 3.5], ['grenade', 32, 18], ['grenade', -10, 9.2], ['grenade', 18, 9, 7]],
+    showcase: [0, 0, 30], view: [3, 0, 25, 0.1, -0.03], openMax: 7, expMax: 0.3,
+    test: { stairs: { from: [7.4, 0, 20.2], to: [14.5, 3.5, 20.2], level: 3.5 }, roof: { from: [14.4, 3.5, 20.2], to: [21, 7.0, 20.2], level: 7.0 }, under: { from: [-34, 0, 16], to: [-28, 0, 16], ceil: 3.2 } },
   });
 }
 
