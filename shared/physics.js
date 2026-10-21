@@ -50,9 +50,10 @@ export function createPhysics(solids, size) {
   // Corpo do Docão: cilindro-caixa de raio RADIUS (pés em y, cabeça em y + HEIGHT).
   // overlapping(): o corpo cruza alguma caixa que não dá pra subir (topo acima de pés + STEP)?
   const over = (s, x, z, r = RADIUS) => x + r > s.min.x && x - r < s.max.x && z + r > s.min.z && z - r < s.max.z;
-  function overlapping(x, y, z) {
-    for (const s of solidsAt(x, z)) if (over(s, x, z)) {
-      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (y < top - STEP && y + HEIGHT > s.min.y) return s;
+  // tol: folga (m) no raio, nos pés e na cabeça — o servidor usa uma folguinha pra validar a posição que o cliente manda
+  function overlapping(x, y, z, tol = 0) {
+    for (const s of solidsAt(x, z)) if (over(s, x, z, RADIUS - tol)) {
+      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (y + tol < top - STEP && y + HEIGHT - tol > s.min.y) return s;
     }
     return null;
   }

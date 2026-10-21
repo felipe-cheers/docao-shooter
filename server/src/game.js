@@ -227,7 +227,7 @@ export class Game {
         const [hx, hz] = this.map.size;
         const inside = Math.abs(p.x) <= hx && Math.abs(p.z) <= hz && p.y >= -0.5 && p.y < 45;
         if (this.test && m.tp) { e.pos = p; e.lastKnock = this.T; }
-        else if (horiz > maxH || !inside || this.P.collides(p.x, p.y + 0.05, p.z) || (p.y - e.pos.y > (knocked ? 12 : 3.2) * Math.max(dt, 0.25) + 1)) {
+        else if (horiz > maxH || !inside || this.P.overlapping(p.x, p.y, p.z, 0.03) || (p.y - e.pos.y > (knocked ? 12 : 3.2) * Math.max(dt, 0.25) + 1)) {
           e.badMoves = (e.badMoves || 0) + 1; this.toMe(e, ['pos', arr3(e.pos)]); // anti-cheat: devolve pra última posição válida
         } else { e.pos = p; if (v) e.vel = { x: clamp(v.x, -40, 40), y: clamp(v.y, -60, 40), z: clamp(v.z, -40, 40) }; }
         e.lastUpd = t;

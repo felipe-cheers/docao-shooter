@@ -16,6 +16,7 @@ import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, a
 import { Net, createRoom, roomInfo } from './net.js';
 import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
+import { createPhysics } from './shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
@@ -84,67 +85,16 @@ function nameSprite(text, color = '#ffffff') {
 
 // ---------------- Mapa (dados em maps.js, construção em world.js) ----------------
 let solids = [], worldMeshes = [], SPAWNS = [], nav = null, currentMap = null, worldGroup = null, mapBounds = [36, 36];
-const GRID = 4, solidGrid = new Map(), NO_SOLIDS = [];
-const gkey = (ix, iz) => ix * 100003 + iz;
-function indexSolids() { // broadphase: grade 4 m (com folga) para colisão rápida
-  solidGrid.clear();
-  for (const s of solids) {
-    for (let ix = Math.floor((s.min.x - 1) / GRID); ix <= Math.floor((s.max.x + 1) / GRID); ix++)
-      for (let iz = Math.floor((s.min.z - 1) / GRID); iz <= Math.floor((s.max.z + 1) / GRID); iz++) { const k = gkey(ix, iz); if (!solidGrid.has(k)) solidGrid.set(k, []); solidGrid.get(k).push(s); }
-  }
-}
-const solidsAt = (x, z) => solidGrid.get(gkey(Math.floor(x / GRID), Math.floor(z / GRID))) || NO_SOLIDS;
-function topAt(s, x, z) {
-  if (!s.ramp) return s.max.y;
-  let t = s.ramp.axis === 'x' ? (x - s.min.x) / (s.max.x - s.min.x) : (z - s.min.z) / (s.max.z - s.min.z);
-  t = clamp(t, 0, 1); if (s.ramp.dir < 0) t = 1 - t;
-  return s.min.y + t * (s.max.y - s.min.y);
-}
-
-// ---------------- Física ----------------
+// Física/colisão: a MESMA implementação do servidor (shared/physics.js) — a predição online bate com o servidor.
+let PHYS = createPhysics([], mapBounds);
+function indexSolids() { PHYS = createPhysics(solids, mapBounds); } // broadphase em grade 4 m + movimento compartilhado
+const solidsAt = (x, z) => PHYS.solidsAt(x, z);
+const topAt = (s, x, z) => PHYS.topAt(s, x, z);
 // AABB completo: só bloqueia se o corpo (pés..cabeça) cruza a caixa; dá pra andar debaixo de lajes e 2º andar
-function collides(x, y, z) {
-  for (const s of solidsAt(x, z)) {
-    if (x + RADIUS > s.min.x && x - RADIUS < s.max.x && z + RADIUS > s.min.z && z - RADIUS < s.max.z) {
-      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z));
-      if (y < top - STEP && y + HEIGHT > s.min.y) return true;
-    }
-  }
-  return false;
-}
-function groundAt(x, z, y) {
-  let g = 0; const m = RADIUS * 0.6;
-  for (const s of solidsAt(x, z)) {
-    if (x > s.min.x - m && x < s.max.x + m && z > s.min.z - m && z < s.max.z + m) {
-      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z));
-      if (top <= y + STEP && top > g) g = top;
-    }
-  }
-  return g;
-}
-// teto: menor base de caixa acima da cabeça
-function ceilingAt(x, z, headY) {
-  let c = Infinity; const r = RADIUS * 0.9;
-  for (const s of solidsAt(x, z)) if (x + r > s.min.x && x - r < s.max.x && z + r > s.min.z && z - r < s.max.z && s.min.y >= headY - 0.25 && s.min.y < c) c = s.min.y;
-  return c;
-}
-function moveEntity(e, dt) {
-  let blocked = false;
-  const nx = e.pos.x + e.vel.x * dt;
-  if (!collides(nx, e.pos.y, e.pos.z)) e.pos.x = nx; else { blocked = true; e.vel.x = 0; }
-  const nz = e.pos.z + e.vel.z * dt;
-  if (!collides(e.pos.x, e.pos.y, nz)) e.pos.z = nz; else { blocked = true; e.vel.z = 0; }
-  e.vel.y += GRAV * dt;
-  let ny = e.pos.y + e.vel.y * dt;
-  if (e.vel.y > 0) { const c = ceilingAt(e.pos.x, e.pos.z, e.pos.y + HEIGHT); if (ny + HEIGHT > c) { ny = Math.max(e.pos.y, c - HEIGHT); e.vel.y = 0; e.bonk = true; } }
-  const g = groundAt(e.pos.x, e.pos.z, e.pos.y);
-  if (ny <= g) { e.pos.y = g; e.vel.y = 0; e.onGround = true; }
-  else if (e.onGround && e.vel.y <= 0 && ny - g < STEP) { e.pos.y = g; e.vel.y = 0; }
-  else { e.pos.y = ny; e.onGround = false; }
-  // segurança: nunca sai dos limites do mapa
-  const [hx, hz] = mapBounds; e.pos.x = clamp(e.pos.x, -hx + RADIUS, hx - RADIUS); e.pos.z = clamp(e.pos.z, -hz + RADIUS, hz - RADIUS);
-  return blocked;
-}
+const collides = (x, y, z) => PHYS.collides(x, y, z);
+const groundAt = (x, z, y) => PHYS.groundAt(x, z, y);
+const ceilingAt = (x, z, headY) => PHYS.ceilingAt(x, z, headY);
+const moveEntity = (e, dt) => PHYS.moveEntity(e, dt);
 
 const raycaster = new THREE.Raycaster();
 function wallDistance(o, d, far) {
@@ -1411,7 +1361,7 @@ function loadMap(id) {
   if (worldGroup) { scene.remove(worldGroup); disposeWorld(worldGroup); }
   for (const p of pickups) scene.remove(p.mesh); pickups.length = 0;
   const w = buildWorld(map); worldGroup = w.group; scene.add(worldGroup);
-  solids = w.solids; worldMeshes = w.meshes; indexSolids(); mapBounds = map.size;
+  solids = w.solids; worldMeshes = w.meshes; mapBounds = map.size; indexSolids();
   applyPalette(scene, hemi, sun, map); fpHemi.intensity = map.palette.stars ? 1.25 : 1.8;
   SPAWNS = map.spawns.map(([x, z, y = 0]) => new V3(x, groundAt(x, z, y + 0.3), z));
   for (const [t, x, z, y] of map.pickups) makePickup(t, x, z, y || 0);
