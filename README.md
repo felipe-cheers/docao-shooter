@@ -12,7 +12,7 @@ python3 -m http.server 8123
 (Precisa ser servido por HTTP por causa dos módulos ES; funciona offline, o Three.js está em `vendor/`.)
 
 ## Controles
-WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a estocada · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V troca rápida faca ↔ arma · Segure Q: Copo Bomba, solte para arremessar · Morto: 1–6 escolhe a primária do próximo renascimento · Tab placar · Esc (ou P) pausar
+WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas três snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a **estocada** · R recarregar · **1** primária / **2** pistola / **3** faca (ou rodinha) · **V** troca rápida faca ↔ última arma · Segure **Q**: Copo Bomba, solte para arremessar · **4** fumaça · **5** atordoamento · **F** rádio do "Fim da chapa" (quando o prêmio estiver pronto) · Morto: **1–6** escolhe a primária do próximo renascimento (1 Fuzil, 2 Calibre 12, 3 Sniper Torresmo, 4 Canhão do Barril, 5 Carabina da Granja, 6 Bazuca) · Tab placar · Esc (ou P) pausar
 
 ## Online (multiplayer) 🌐
 
@@ -73,43 +73,55 @@ node test-online-idle.mjs http://localhost:8124/ ws://127.0.0.1:8787  # sala par
 ```
 Para jogar em duas abas: `http://localhost:8124/?server=ws://127.0.0.1:8787`.
 
-## Mira com zoom (Shift)
+## Mira com zoom (Shift ou botão direito)
 
-- **Segure Shift** para mirar; solte para voltar ao normal. Shift não faz mais nada no jogo (não há corrida).
-- O zoom entra suave em ~0,15 s: FOV 75° → **40°** Fuzil Pururuca, **55°** Calibre 12, **15°** Sniper Torresmo (luneta), **55°** Bazuca do Chiqueiro, **50°** Pistolinha Leitão.
-- Mirando: sensibilidade do mouse cai na proporção do FOV, dispersão bem menor (fuzil ~12% da normal, Calibre 12 ~60%, pistola ~40%), andar a 60% da velocidade, arma vai para o centro/levantada, vinheta suave nas bordas e mira menor.
-- **Recarregar ou trocar de arma cancela o zoom**; se Shift continuar pressionado, o zoom volta sozinho quando termina.
-- Dá para segurar Q (Copo Bomba) junto com Shift normalmente. Bots não são afetados.
+- **Segure Shift ou o botão direito** para mirar; solte para voltar ao normal. Com a **faca** na mão não há mira: o botão direito vira estocada.
+- O zoom entra suave em ~0,15 s: FOV 75° → **40°** Fuzil Pururuca, **55°** Calibre 12, **13°** Sniper Torresmo, **8°** Canhão do Barril, **24°** Carabina da Granja (as três com luneta), **55°** Bazuca do Chiqueiro, **50°** Pistolinha Leitão.
+- Mirando: sensibilidade do mouse cai na proporção do FOV (dá pra ajustar a da mira no menu), dispersão bem menor (fuzil 12% da normal, Calibre 12 60%, Bazuca 50%, pistola 40%; snipers: ver "Snipers (precisão)"), andar a 60% da velocidade, arma vai para o centro/levantada, vinheta suave nas bordas e mira menor.
+- **Recarregar, trocar de arma ou puxar o ferrolho cancela o zoom/luneta**; se o botão continuar pressionado, o zoom volta sozinho quando termina.
+- Dá para segurar Q (Copo Bomba) junto com a mira normalmente. Bots não são afetados.
 
-## Armas e loadout (estilo "uma primária + pistola")
+## Armas e loadout (estilo "uma primária + pistola + faca")
 
-Escolha **uma arma primária** no menu (ao lado das skins; fica salva no navegador). Morreu? Na tela de morte aperte **1–4**
-(ou clique) para trocar a primária — vale no próximo renascimento. Todo mundo leva a **Pistolinha Leitão** como secundária
-, a **Faca de churrasqueiro** (sempre equipada) e o **Copo Bomba** (tecla Q). **1** = primária, **2** = pistola, **3** = faca, a rodinha gira entre as três e **V** alterna faca ↔ última arma.
+Escolha **uma arma primária** no menu (ao lado das skins; fica salva no navegador). Morreu? Na tela de morte aperte **1–6**
+(ou clique no cartão) para trocar a primária — vale no próximo renascimento. Todo mundo leva a **Pistolinha Leitão** como secundária,
+a **Faca de churrasqueiro** (sempre equipada), o **Copo Bomba** (tecla Q), **1 fumaça** (4) e **1 atordoamento** (5) a cada vida.
+**1** = primária, **2** = pistola, **3** = faca, a rodinha gira entre as três e **V** alterna faca ↔ última arma.
+Todo Docão tem **100 de vida** (e 2 s de proteção ao renascer). Valores em `shared/rules.js` (`WEAPONS`, `MELEE`, `NADE`), os mesmos no cliente e no servidor.
 
-| Arma | Tipo | Pente/reserva | Dano | Cadência | Recarga | Zoom |
+| Arma | Tipo | Pente/reserva | Dano (cabeça) | Cadência | Recarga | Zoom |
 |---|---|---|---|---|---|---|
-| **Fuzil Pururuca** | automático | 30/120 | 20 (cabeça 40) | 0,1 s | 1,6 s | 40° |
-| **Escopeta Chiqueiro · Calibre 12** | pump, 8 bagos | 8/32 | 8×15 de perto (cabeça ×1,5), cai até 30% a 30 m | 0,8 s (pump) | cartucho a cartucho (0,45 s cada) — **atirar interrompe** | 55° |
-| **Sniper Torresmo** | ferrolho | 5/20 | 115 corpo / 250 cabeça (1 tiro mata) | 1,4 s (ferrolho) | 2,4 s | **luneta 15°** |
-| **Bazuca do Chiqueiro** | foguete lento (24 m/s) com fumaça | 1/4 | até 120 em área (raio 5 m), 40% em si mesmo, empurrão | — | 2,5 s | 55° |
-| **Pistolinha Leitão** (secundária) | semiautomática | 12/60 | 25 (cabeça 50) | 0,16 s | 1,1 s | 50° |
+| **Fuzil Pururuca** | automático | 30/120 | 20 (cabeça ×2 = 40) | 0,1 s | 1,6 s | 40° |
+| **Escopeta Chiqueiro · Calibre 12** | pump, 8 bagos | 8/32 | 8×15 (cabeça ×1,5); dano cheio até 7 m, cai até 30% a 30 m | 0,8 s (pump) | 0,25 s pra começar + 0,45 s por cartucho — **atirar interrompe** | 55° |
+| **Sniper Torresmo** | ferrolho médio | 5/20 | 100 corpo (1 tiro mata) / ×1,5 = 150 cabeça | 1,15 s (ferrolho) | 2,3 s | **luneta 13°** |
+| **Canhão do Barril** | ferrolho lento, pesado | 3/6 | 180 em qualquer lugar (cabeça ×1, mata sempre) | 1,85 s (ferrolho) | 3,1 s | **luneta 8°** |
+| **Carabina da Granja** | ferrolho rápido | 10/40 | 55 corpo (2 tiros) / ×2,2 = 121 cabeça (mata) | 0,58 s (ferrolho) | 1,9 s | **luneta 24°** |
+| **Bazuca do Chiqueiro** | foguete lento (24 m/s) com fumaça | 1/4 | até 120 em área (raio 5 m), 40% em si mesmo, empurrão | 0,6 s | 2,5 s | 55° |
+| **Pistolinha Leitão** (secundária) | semiautomática | 12/60 | 25 (cabeça ×2 = 50) | 0,16 s | 1,1 s | 50° |
+| **Faca de churrasqueiro** (sempre) | corpo a corpo | — | golpe 40 · estocada 75 · **pelas costas mata** | golpe 0,42 s · estocada 1 s | — | — |
+| **Copo Bomba** (Q) | granada | máx. 3 (nasce com 1) | até 130 em área (raio 6 m), 40% em si mesmo | — | — | — |
 
-- **Sniper:** sem mira e andando é muito impreciso; com a luneta (Shift) **parado** é perfeito (andando com luneta, quase).
-  A luneta é um overlay preto com retícula e a arma some da tela. Tiro alto com rastro grosso.
+Alcance máximo do tiro: Fuzil 140 m, Calibre 12 45 m, Sniper Torresmo 220 m, Canhão do Barril 260 m, Carabina da Granja 180 m, Pistolinha 110 m.
+
+- **Snipers (Torresmo, Canhão, Carabina):** sem mira e andando são imprecisas; com a luneta **parado** são perfeitas (ver "Snipers (precisão)").
+  Cada uma tem a sua luneta (overlay preto com retícula própria) e a arma some da tela. Tiro alto com rastro grosso. Depois de cada tiro o ferrolho fecha a luneta até terminar.
+  - **Torresmo:** a do meio, 1 tiro no corpo mata.
+  - **Canhão do Barril:** pouca bala e lento, mas mata com qualquer acerto; luneta mais forte.
+  - **Carabina da Granja:** rápida e com luneta mais aberta, mas precisa de 2 no corpo (ou 1 na cabeça).
 - **Bazuca:** o foguete tem ponta de focinho de porquinho e faixa “C!”; explode ao bater em parede, chão ou Docão.
   Atire no chão embaixo de você para um **rocket jump** (~2,5 m de altura, perde ~40 de vida).
 - **Caixas de munição** enchem a reserva da primária e da pistola; para a bazuca dão só **+1 foguete** (munição escassa).
-- **Bots** recebem uma primária aleatória (às vezes trocam ao renascer) + pistola e escolhem pela distância:
-  Calibre 12 de perto (<14 m), Sniper de longe (≥9 m, com atraso extra de ~0,8 s pra mirar e remira a cada tiro, mirando no corpo),
-  Bazuca a média distância (6–28 m, mira no pé com antecipação, nunca atira colado), pistola no resto.
-- Nomes no feed de abates: Fuzil Pururuca, Calibre 12, Sniper Torresmo, Bazuca, Pistolinha, Copo Bomba, Faca.
+- **Bots** recebem uma primária aleatória (às vezes trocam ao renascer) + pistola + faca e escolhem pela distância:
+  Calibre 12 de perto (<14 m); snipers de longe (Torresmo ≥ 9 m, Canhão ≥ 14 m, Carabina ≥ 6 m, com atraso extra pra mirar e remira a cada tiro, mirando no corpo);
+  Bazuca a média distância (6–28 m, mira no pé com antecipação, nunca atira colado); faca colada (< 3 m, ver abaixo); pistola no resto.
+- Nomes no feed de abates: Fuzil Pururuca, Calibre 12, Sniper Torresmo, Canhão do Barril, Carabina da Granja, Bazuca, Pistolinha, Copo Bomba, Faca.
+  Tiro na cabeça aparece como **“direto no focinho!”**.
 
 ## Faca de churrasqueiro 🔪 (slot 3, sempre equipada)
-- Índice da arma: `KNIFE = 7` (depois das snipers Canhão do Barril = 5 e Carabina da Granja = 6, do PR #1). Botão direito = mira (ADS) nas armas de fogo e estocada só com a faca na mão. Tecla 3 = faca (o Copo Bomba fica só no Q). Recarga animada também nas três snipers (ferrolho do modelo de `sniper-view.js` + mão + bala entrando).
+- **Tecla 3**, **V** (troca rápida) ou rodinha. Botão direito = mira (ADS) nas armas de fogo e **estocada só com a faca na mão**. Na tela de morte o cartão da faca aparece com a tecla **V** e "Sempre equipada ✓". Índice da arma: `KNIFE = 7` (depois das snipers Canhão do Barril = 5 e Carabina da Granja = 6).
 - Faca de churrasqueiro com lâmina de aço, cabo de madeira com rebites e logo **C!** vermelho (cel-shading com contorno). Modelo em 1ª pessoa (parada, sacar, golpe, estocada) e na mão do boneco em 3ª pessoa; sons WebAudio de golpe/acerto.
-- **Clique: golpe** — 40 de dano, alcance ~1,6 m, em cone, a cada 0,42 s. **Botão direito: estocada** — 75 de dano, ~1,8 m, cone mais estreito, recarga de 1 s.
-- **Pelas costas mata na hora** (qualquer golpe). Com a faca na mão você corre **15% mais rápido**. Sem munição, sem recarga, sem mira.
+- **Clique: golpe** — 40 de dano, alcance 1,6 m (até a superfície do corpo), cone com meia-abertura de ~36°, a cada 0,42 s (segurar o clique repete). **Botão direito: estocada** — 75 de dano, 1,8 m, cone mais estreito (~21°), a cada 1 s. Sem tiro na cabeça (dano igual em qualquer lugar).
+- **Pelas costas mata na hora** (qualquer golpe; 1000 de dano). Com a faca na mão você corre **15% mais rápido**. Sacar leva 0,2 s. Sem munição, sem recarga, sem mira. Atordoado não usa a faca. A nuke do "Fim da chapa" não conta como facada pelas costas.
 - Feed: **“X moggou Y [Faca]”** (frase fixa) e **“[Faca · pelas costas!]”**; quem morre vê **“Você foi moggado por X”** e o carimbo **MOGGADO!**. Na tela de morte o cartão da faca aparece como sempre equipado.
 - Regra única em `shared/melee.js` (alcance pelo ponto mais próximo do corpo, cone, linha de visão, pelas costas), usada offline e no servidor. Online é **autoritativo**: o cliente manda `['m', tipo, olho, direção, relógio, tempoRender]`; o servidor confere faca na mão, posição do olho, cadência (relógio do cliente + piso no relógio do servidor), volta no tempo (lag comp com posição **e** direção do alvo) e aplica o dano. Evento novo `['ml', id, tipo, acertou]` só pra animação/som (clientes antigos ignoram).
 - **Compatibilidade:** no evento de abate `'k'` o servidor manda a arma como Pistolinha (clientes antigos não conhecem a faca) e um campo extra `ev[7]` = 1 (faca) / 2 (pelas costas) que o cliente novo lê. Cliente antigo vê "pururucou [Pistolinha]" e o boneco sem arma na mão; não quebra. Faça o deploy do Worker antes do site.
@@ -134,6 +146,27 @@ Cada arma tem a sua, em 1ª e 3ª pessoa, com a mesma duração da recarga e cli
 - O HUD mostra 3 ícones de copo ao lado da munição. No feed de abates aparece como **[Copo Bomba]**.
 - Bots também pegam copos e arremessam em alvos a média distância.
 
+## Granadas táticas: fumaça (4) e atordoamento (5)
+Valores em `tactical-nades.js` (`SMOKE`, `STUN`). Você nasce com **1 de cada** por vida; o HUD mostra quantas restam. Arremesso reto na frente da mira (15 m/s, um pouco pra cima), quica no chão/paredes. **Só na partida com bots** (online aparece um aviso e nada é lançado).
+
+| Granada | Tecla | Estoura em | Raio | Duração | Efeito |
+|---|---|---|---|---|---|
+| **Fumaça** | 4 | 1,15 s | 5,6 m | 12 s | nuvem cinza que **tampa a visão**: quem está dentro vê tudo coberto, e os Docões atrás da fumaça somem da tela |
+| **Atordoamento** | 5 | 1,0 s | 7,2 m | 3,4 s | todo mundo no raio (inclusive você) fica **lento (35% da velocidade)**, com a tela ofuscada, e **não atira nem usa a faca**; bots perdem o alvo |
+
+Nenhuma das duas causa dano.
+
+## Prêmios por abates seguidos
+Contador de abates seguidos no centro, embaixo da tela (zera quando você morre). Os prêmios ficam na lateral direita, de baixo para cima; o número em cada ícone é quantos abates faltam.
+Depois do 7º o ciclo recomeça (o próximo prêmio é o de 3 de novo, no 10º abate). Os abates da nuke não contam pra sequência (os dos mísseis contam).
+
+| Abates | Prêmio | O que faz |
+|---|---|---|
+| **3** | **Olho da granja** (UAV) | minimapa no canto superior esquerdo por **10 s**, mostrando os inimigos; segue você e gira com a sua frente (não mostra a fazenda inteira) |
+| **5** | **Chuva de torresmo** (míssil pelo tablet) | o Docão puxa um tablet com a planta do mapa e você marca **3 lugares**; cai um míssil em cada (um a cada 0,42 s): raio 6,5 m, até **160** de dano, 15% em você mesmo, empurrão |
+| **7** | **Fim da chapa** (nuke) | o prêmio fica guardado; aperte **F** pra puxar o rádio, começa uma contagem de **5 s** e **todo mundo no mapa morre, menos você** |
+
+Os prêmios rodam no cliente: online o servidor ainda não aplica o dano dos mísseis nem da nuke.
 
 ## Mapas (7)
 Escolha no menu (cartão **Mapa** → grade com miniaturas aéreas, ou **Aleatório**: sorteia um mapa diferente a cada partida). A escolha fica salva no navegador. No fim da partida há **PRÓXIMO MAPA ▸** (segue a ordem da lista).
@@ -215,13 +248,14 @@ Regra única em `shared/combat.js` (cliente offline e servidor):
 - O foguete colide com o **casco** do Docão (cápsula + 0,15 m); **acerto direto = dano máximo** em quem foi atingido.
 - O anel/clarão da explosão tem o mesmo tamanho do raio de dano (5 m Bazuca, 6 m Copo Bomba).
 
-## Sniper Torresmo (precisão)
-- Com a **luneta aberta** (o overlay aparece) e **parado ou quase** (< 1,5 m/s): dispersão **zero**. Andando com luneta: 0,012; no ar: 0,02. Sem luneta: 0,025 parado, 0,045 andando.
-- O tiro sai **exatamente do centro da câmera**; a Sniper não desloca a mira com coice (só efeito visual).
+## Snipers (precisão)
+Vale para as três (Sniper Torresmo, Canhão do Barril e Carabina da Granja), regra `sniperSpread` em `shared/combat.js`:
+- Com a **luneta aberta** (o overlay aparece) e **parado ou quase** (< 1,5 m/s): dispersão **zero**. Andando com luneta: 0,012; no ar: 0,02. Sem luneta: 0,025 parado, 0,045 andando, 0,06 no ar.
+- O tiro sai **exatamente do centro da câmera**; as snipers não deslocam a mira com coice (só efeito visual).
 - Online, o cliente manda o tempo do servidor que estava vendo na tela (interpolação) e o servidor volta os alvos exatamente pra esse instante (até 400 ms), com a mesma altura de olho (1,6 m) do cliente.
 
 ## Tela de morte
-Os cartões de arma são **clicáveis** (as teclas 1–4 continuam valendo), e dá pra marcar “renascer com a pistola na mão”. A faca aparece como **corpo a corpo — sempre equipada**.
+Os cartões de arma são **clicáveis** (as teclas 1–6 continuam valendo), e dá pra marcar “renascer com a pistola na mão”. A faca aparece com a tecla **V** como **sempre equipada** (não precisa escolher).
 Ao morrer o mouse é solto (sem pausar); clique na tela ou em **VOLTAR AO JOGO** para mirar de novo.
 
 ## Morte = BACON 🥓
