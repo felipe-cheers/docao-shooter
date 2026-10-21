@@ -229,7 +229,7 @@ export const SKINS = [
     name: 'Docão Matheus',
     shirt: { color: '#1a1a1d', trim: '#0e0e10', sleeves: 'long', sleeveColor: '#1a1a1d', details: [{ type: 'hoodie', color: '#0e0e10', zip: '#a8acb2' }] },
     pants: '#121214',
-    eyes: { iris: '#3fae5a', ring: '#24753a' },
+    eyes: { iris: '#1f6b35', ring: '#0f3d1c' },
     parts: [
       { type: 'quiffHair', color: '#2e1c12', side: '#2a1b12' },
       { type: 'beard', color: '#43291a' },
