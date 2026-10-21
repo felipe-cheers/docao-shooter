@@ -7,10 +7,10 @@ const fails = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + '
 const r = await (await fetch(H + '/api/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ map: 'arena', max: 6, fillBots: true, mode: 'dom' }) })).json();
 ok(/^[A-Z]{4}$/.test(r.code), 'sala de Dominação criada: ' + r.code);
 const mk = (n) => new Promise((res) => { const ws = new WebSocket(`${W}/ws/${r.code}?name=${n}&skin=clube&primary=0`); ws.log = []; ws.onmessage = (e) => { if (e.data === 'pong') return; const m = JSON.parse(e.data); ws.log.push(m); if (m.t === 'welcome') { ws.cfg = m.cfg; ws.id = m.id; } if (m.t === 'teamOk') ws.teamOk = m; if (m.t === 'start') ws.start = m; if (m.t === 's') ws.snap = m; if (m.t === 'end') ws.end = m; }; ws.onopen = () => res(ws); });
-const a = await mk('Ana'); await sl(600); const b = await mk('Beto'); await sl(600);
+const a = await mk('Ana'); await sl(600);
 ok(a.cfg && a.cfg.mode === 'dom', 'servidor de produção conhece o modo (cfg.mode = dom) → bundle novo');
 const waitFor = async (f, ms = 8000) => { const t = Date.now(); while (Date.now() - t < ms && !f()) await sl(100); return f(); };
-a.send(JSON.stringify({ t: 'team', team: 0 })); await waitFor(() => a.teamOk); await sl(500); b.send(JSON.stringify({ t: 'team', team: 0 })); await waitFor(() => b.teamOk);
+a.send(JSON.stringify({ t: 'team', team: 0 })); await waitFor(() => a.teamOk); const b = await mk('Beto'); await sl(800); b.send(JSON.stringify({ t: 'team', team: 0 })); await waitFor(() => b.teamOk);
 ok(a.teamOk && a.teamOk.team === 0 && !a.teamOk.blocked, 'Ana escolheu Vermelho');
 ok(b.teamOk && b.teamOk.blocked && b.teamOk.team === 1, 'Beto pediu Vermelho com 1×0 → bloqueado, foi pro Azul');
 // como um cliente de verdade: manda a própria posição (vinda do servidor) a 10 Hz — o servidor só avança o mundo com mensagens de jogo
@@ -30,7 +30,7 @@ console.log('viu zona contestada:', sawCont);
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } }); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
 await page.addInitScript(() => localStorage.setItem('docao.name', 'Caio'));
-await page.goto(`${SITE}${SITE.includes('?') ? '&' : '?'}server=${encodeURIComponent(W)}&sala=${r.code}`, { waitUntil: 'load', timeout: 90000 });
+await page.goto(`${SITE}?${process.env.NOSERVER ? "" : "server=" + encodeURIComponent(W) + "&"}sala=${r.code}`, { waitUntil: 'load', timeout: 90000 });
 const until = async (fn, ms) => { const t = Date.now(); while (Date.now() - t < ms) { if (await page.evaluate(fn)) return true; await sl(200); } return false; };
 ok(await until(() => window.__docao.state === 'playing' && !document.getElementById('teamPick').classList.contains('hidden'), 30000), 'Caio entrou no meio: "Escolha seu time" antes de nascer');
 ok(await page.evaluate(() => !window.__docao.player.alive), 'Caio ainda não nasceu');
