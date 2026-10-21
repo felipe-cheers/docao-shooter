@@ -6,6 +6,10 @@ export const KILL_LIMIT = 20, TIME_LIMIT = 300, RESPAWN_TIME = 5, INVULN = 2;
 // duração da partida escolhida pelo anfitrião (minutos); 0 = padrão do modo (5 min Mata-mata, 7 min Dominação)
 export const TIME_OPTIONS = [0, 3, 5, 7, 10, 15, 20];
 export const normTime = (v) => { const n = Number(v); return TIME_OPTIONS.includes(n) ? n : 0; };
+// Bacon que cura: quem pisa no bacon de um Docão morto (menos o próprio morto) ganha +10 de vida e o bacon some.
+// life = tempo que o bacon fica visível no cliente (bacon.js: LINGER 3,0 + FADE 0,45 s); from = já virou bacon (MORPH 0,3 s).
+// radius/dy: igual aos pickups de vida (raio horizontal ~1,2 m, mesmo andar).
+export const BACON_ITEM = { heal: 10, radius: 1.2, dy: 1.0, from: 0.3, life: 3.45 };
 export const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, RADIUS = 0.42, HEIGHT = 2.0, EYE = 1.6;
 
 // Armas. Primárias (menu): 0 Fuzil, 1 Calibre 12, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Secundária: 4 Pistolinha.

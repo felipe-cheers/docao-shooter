@@ -9,7 +9,7 @@ import { MAPS, getMap } from '../../maps.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
-import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, BACON_ITEM, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
@@ -38,7 +38,7 @@ export class Game {
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
-    this.events = []; this.personal = new Map(); this.nades = []; this.rockets = []; this.pickups = []; this.projId = 1;
+    this.events = []; this.personal = new Map(); this.nades = []; this.rockets = []; this.pickups = []; this.bacons = []; this.projId = 1;
   }
   now() { return Date.now() / 1000; }
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
@@ -141,7 +141,7 @@ export class Game {
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
     this.nav = buildNav({ hx: map.size[0], hz: map.size[1], spacing: map.navSpacing || 2, collides: this.P.collides, groundAt: this.P.groundAt, solids, topAt: this.P.topAt, seeds: this.spawns.map((s) => [s.x, s.y, s.z]), extra: map.waypoints || [] });
     this.pickups = map.pickups.map(([type, x, z, y]) => ({ type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: true, respawnAt: 0 }));
-    this.nades = []; this.rockets = []; this.events = []; this.personal.clear();
+    this.nades = []; this.rockets = []; this.bacons = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     this.curLimit = this.cfgLimit;
     for (const e of this.ents.values()) {
@@ -357,6 +357,9 @@ export class Game {
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
     this.events.push(ev);
+    // vira bacon que cura: fica no chão onde morreu pelo mesmo tempo que o bacon aparece no cliente
+    this.bacons = this.bacons.filter((b) => b.id !== t.id);
+    this.bacons.push({ id: t.id, x: t.pos.x, y: this.P.groundAt(t.pos.x, t.pos.z, t.pos.y + 0.3), z: t.pos.z, born: this.T });
     if (a && a.kills >= KILL_LIMIT && !this.teamMode) this.pendingEnd = true;
   }
   blast(c, owner, o, direct = null) {
@@ -440,6 +443,20 @@ export class Game {
       }
     });
   }
+  // bacon que cura: quem pisar (vivo, menos o próprio morto, com vida < 100) ganha +10 e o bacon some; evento 'bc' pra todos
+  updateBacons() {
+    if (!this.bacons.length) return;
+    const R2 = BACON_ITEM.radius * BACON_ITEM.radius;
+    this.bacons = this.bacons.filter((b) => {
+      const age = this.T - b.born; if (age >= BACON_ITEM.life) return false; if (age < BACON_ITEM.from) return true;
+      for (const e of this.ents.values()) {
+        if (!e.alive || e.id === b.id || (!e.bot && !e.connected) || e.hp >= 100) continue;
+        const dx = e.pos.x - b.x, dz = e.pos.z - b.z; if (dx * dx + dz * dz > R2 || Math.abs(e.pos.y - b.y) >= BACON_ITEM.dy) continue;
+        e.hp = Math.min(100, e.hp + BACON_ITEM.heal); this.events.push(['bc', b.id, e.id, Math.round(e.hp)]); return false;
+      }
+      return true;
+    });
+  }
   toMe(e, ev) { if (e.bot) return; if (!this.personal.has(e.id)) this.personal.set(e.id, []); this.personal.get(e.id).push(ev); }
   // ---------- laço do servidor (20 Hz) ----------
   tick() {
@@ -452,7 +469,7 @@ export class Game {
       if (e.bot) this.pushHist(e);
       if (!e.bot && e.alive) this.progressReload(e);
     }
-    this.updatePickups();
+    this.updatePickups(); this.updateBacons();
     if (this.zone) this.updateZone(TICK_DT(this));
     const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
       (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0), Math.round(e.hp), e.ping]), ev: this.events };
@@ -533,9 +550,10 @@ export class Game {
       const near = (type, maxD) => this.pickups.filter((p) => p.active && p.type === type && dist(p.pos, b.pos) < maxD).sort((a, c) => dist(a.pos, b.pos) - dist(c.pos, b.pos))[0];
       const hp = b.hp < 45 ? near('health', 1e9) : null, np = !hp && b.nades < 2 ? near('grenade', 22) : null;
       const zg = this.zoneGoal(b);
-      if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
+      let bc = null; if (b.hp < 60) { let bd = 12; for (const x of this.bacons) { if (x.id === b.id || this.T - x.born < BACON_ITEM.from || Math.abs(x.y - b.pos.y) >= BACON_ITEM.dy) continue; const d = dist(x, b.pos); if (d < bd) { bd = d; bc = x; } } }
+      if (bc) goal = bc; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
       const gx = goal.x - b.pos.x, gz = goal.z - b.pos.z;
-      if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
+      if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5 && !(bc && Math.hypot(gx, gz) > 0.1)) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
       else { const st = this.steer(b, goal) || { x: gx / Math.hypot(gx, gz), z: gz / Math.hypot(gx, gz) }; mx = st.x; mz = st.z; desiredYaw = face(st.x, st.z); }
       if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5 && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
     }

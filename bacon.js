@@ -3,6 +3,7 @@
 // Barato: geometria e materiais compartilhados, objetos em pool (nada é criado/descartado durante a partida).
 import * as THREE from 'three';
 import { toon, outline } from './docao.js';
+import { BACON_ITEM } from './shared/rules.js';
 
 const V3 = THREE.Vector3;
 const L = 1.25, W = 0.34, T = 0.05; // comprimento, largura, espessura da tira
@@ -90,7 +91,7 @@ export function spawnBacon(e, kind, vol = 1) {
   const b = take(bacons); if (b.ent && b.ent.bacon === b) b.ent.bacon = null;
   b.on = true; b.t = 0; b.rest = false; b.bounces = 0; b.ent = e; e.bacon = b; b.nextSpark = 0; b.vol = vol;
   b.pos.set(e.pos.x, e.pos.y + 0.9, e.pos.z);
-  const a = Math.random() * Math.PI * 2; b.vel.set(Math.cos(a) * 1.1, 4.6 + Math.random() * 0.8, Math.sin(a) * 1.1);
+  const a = Math.random() * Math.PI * 2; b.vel.set(Math.cos(a) * 0.45, 4.6 + Math.random() * 0.8, Math.sin(a) * 0.45);
   b.spin.set((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 9); b.yaw = Math.random() * Math.PI * 2;
   b.grp.position.copy(b.pos); b.grp.rotation.set(0, b.yaw, 0); b.grp.scale.setScalar(0.01); b.grp.visible = false; b.mesh.visible = true;
   baconStats.spawned++; baconStats.byKind[kind] = (baconStats.byKind[kind] || 0) + 1; baconStats.last = { kind, name: e.name, at: performance.now() };
@@ -158,3 +159,12 @@ export function clearBacon() {
   baconStats.active = 0;
 }
 export const activeBacons = () => bacons.filter((b) => b.on);
+// bacon que dá pra comer: já virou bacon e ainda não sumiu
+export const edibleBacons = () => bacons.filter((b) => b.on && b.t >= BACON_ITEM.from && b.t < BACON_ITEM.life);
+// alguém comeu: some na hora com uma nuvem rosada e faíscas subindo
+export function eatBacon(b) {
+  if (!b || !b.on) return; const p = b.pos.clone();
+  b.on = false; b.grp.visible = false; if (b.ent && b.ent.bacon === b) b.ent.bacon = null; b.ent = null;
+  smoke(p, 7, 0xffc0cc); for (let i = 0; i < 8; i++) spark(p, 3.2);
+  baconStats.eaten = (baconStats.eaten || 0) + 1;
+}

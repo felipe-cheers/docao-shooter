@@ -12,7 +12,7 @@ import './costumes.js';
 import { MAPS, getMap } from './maps.js';
 import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js';
 import { buildNav } from './nav.js';
-import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, activeBacons, BACON } from './bacon.js';
+import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, activeBacons, edibleBacons, eatBacon, BACON } from './bacon.js';
 import { Net, createRoom, roomInfo } from './net.js';
 import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
@@ -20,6 +20,7 @@ import { createPhysics } from './shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
+import { BACON_ITEM } from './shared/rules.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 
 const V3 = THREE.Vector3;
@@ -154,6 +155,7 @@ const sfx = {
   kill: () => { tone('triangle', 700, 1400, 0.18, 0.3); tone('triangle', 1050, 2100, 0.2, 0.2, 0.06); },
   oink: (v = 1, p = 1) => { tone('sawtooth', 430 * p, 250 * p, 0.12, 0.18 * v); tone('sawtooth', 400 * p, 230 * p, 0.12, 0.15 * v, 0.14); },
   die: (v = 1) => tone('sawtooth', 520, 110, 0.55, 0.22 * v),
+  chomp: (v = 1) => { noise(0.06, 2400, 0.32 * v, 'bandpass'); noise(0.06, 1900, 0.26 * v, 'bandpass', 0.1); tone('sine', 520, 880, 0.1, 0.16 * v, 0.04); tone('triangle', 880, 1320, 0.12, 0.14 * v, 0.16); }, // nhac nhac + plim
   pickup: () => { tone('sine', 660, 660, 0.08, 0.2); tone('sine', 880, 880, 0.08, 0.2, 0.08); tone('sine', 1320, 1320, 0.12, 0.2, 0.16); },
   jump: () => tone('sine', 300, 600, 0.1, 0.06),
   boom: (v = 1) => { noise(1.1, 700, 1.4 * v); tone('sine', 110, 28, 0.8, 0.7 * v); noise(0.5, 3500, 0.25 * v, 'highpass', 0.12); noise(0.9, 6000, 0.12 * v, 'highpass', 0.3); tone('triangle', 900, 1600, 0.08, 0.12 * v, 0.05); },
@@ -275,6 +277,25 @@ function updatePickups(dt) {
       break;
     }
   }
+}
+
+// Bacon que cura (offline; online quem decide é o servidor, evento 'bc'): +10 de vida pra quem pisar, menos o próprio morto
+function baconNear(e, b) { const dx = e.pos.x - b.pos.x, dz = e.pos.z - b.pos.z; return dx * dx + dz * dz <= BACON_ITEM.radius * BACON_ITEM.radius && Math.abs(e.pos.y - b.pos.y) < BACON_ITEM.dy; }
+function updateBaconPickups() {
+  if (online) return;
+  for (const b of edibleBacons()) for (const e of entities) {
+    if (!e.alive || e === b.ent || e.hp >= 100 || !baconNear(e, b)) continue;
+    e.hp = Math.min(100, e.hp + BACON_ITEM.heal); baconEaten(b, e); break;
+  }
+}
+function baconEaten(b, e) { // efeito + som (todo mundo vê); aviso só pra quem comeu
+  if (b) { sfx.chomp(e && e.isPlayer ? 1 : distVol(b.pos)); eatBacon(b); }
+  if (e && e.isPlayer) flashMsg(`+${BACON_ITEM.heal} de vida (bacon!)`);
+}
+function nearBacon(b, maxD) { // bot com pouca vida: bacon dos outros por perto
+  let best = null, bd = maxD;
+  for (const x of edibleBacons()) { if (x.ent === b || Math.abs(x.pos.y - b.pos.y) >= BACON_ITEM.dy + 0.3) continue; const d = x.pos.distanceTo(b.pos); if (d < bd) { bd = d; best = x; } }
+  return best;
 }
 
 // ---------------- Efeitos ----------------
@@ -1170,12 +1191,12 @@ function updateBot(b, dt) {
     let goal = null;
     const hp = b.hp < 45 ? pickups.filter((p) => p.active && p.type === 'health').sort((a, c) => a.pos.distanceTo(b.pos) - c.pos.distanceTo(b.pos))[0] : null;
     const nadeP = !hp && b.nades < 2 ? pickups.filter((p) => p.active && p.type === 'grenade' && p.pos.distanceTo(b.pos) < 22).sort((a, c) => a.pos.distanceTo(b.pos) - c.pos.distanceTo(b.pos))[0] : null;
-    const zg = zoneGoal(b);
-    if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (zone) goal = b.pos; else if (hp) goal = hp.pos; else if (nadeP) goal = nadeP.pos;
+    const zg = zoneGoal(b), bc = b.hp < 60 ? nearBacon(b, 12) : null;
+    if (bc) goal = bc.pos; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (zone) goal = b.pos; else if (hp) goal = hp.pos; else if (nadeP) goal = nadeP.pos;
     else if (b.lastSeen && gameTime - b.lastSeenAt < 4) goal = b.lastSeen;
     else { if (!b.wp) b.wp = randomWaypoint(); goal = b.wp; }
     const to = goal.clone().sub(b.pos); to.y = 0;
-    if (to.length() < 1.5 && Math.abs(goal.y - b.pos.y) < 0.5) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
+    if (to.length() < 1.5 && Math.abs(goal.y - b.pos.y) < 0.5 && !bc) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
     else { const st = steer(b, goal) || to.normalize(); move.copy(st); desiredYaw = Math.atan2(st.x, st.z); }
     if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5) startReload(b);
   }
@@ -1552,7 +1573,7 @@ function loop() {
     if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateFP(dt); updateEffects(dt); updateHud(dt); updateRewards(dt);
+    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); updateFP(dt); updateEffects(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt);
     if (!online && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
@@ -1987,6 +2008,10 @@ function netEvent(ev) {
     for (const [id, c] of caps || []) { const e = entOf(id); if (e) e.caps = c; }
     onZoneCaptured(team, { x: nz[0], y: nz[1], z: nz[2] });
   } else if (k === 'tm') { const e = entOf(ev[1]); if (e) { applyTeam(e, ev[2]); if (e === player) refreshModeHud(); } }
+  else if (k === 'bc') { // bacon comido (servidor): [, morto, quem comeu, vida nova]
+    const [, did, eid, hp] = ev; const d = entOf(did), e = entOf(eid);
+    if (e && hp != null) e.hp = hp; baconEaten(d && d.bacon && d.bacon.on ? d.bacon : null, e);
+  }
   else if (k === 'j') { remoteEnt(ev[1]); }
   else if (k === 'l') { removeEnt(ev[1]); }
 }
