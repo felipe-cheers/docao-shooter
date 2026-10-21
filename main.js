@@ -1175,7 +1175,7 @@ function updateBot(b, dt) {
     else if (b.lastSeen && gameTime - b.lastSeenAt < 4) goal = b.lastSeen;
     else { if (!b.wp) b.wp = randomWaypoint(); goal = b.wp; }
     const to = goal.clone().sub(b.pos); to.y = 0;
-    if (to.length() < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
+    if (to.length() < 1.5 && Math.abs(goal.y - b.pos.y) < 0.5) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
     else { const st = steer(b, goal) || to.normalize(); move.copy(st); desiredYaw = Math.atan2(st.x, st.z); }
     if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5) startReload(b);
   }
