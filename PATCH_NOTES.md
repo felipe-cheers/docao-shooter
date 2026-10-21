@@ -4,6 +4,17 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5 — "Churrasco Moggado" (21/10/2026)
+- **Faca de churrasqueiro:** nova arma no **slot 3** (tecla 3, rodinha ou **V** pra troca rápida; no cartão da tela de morte o atalho é **V**).
+  - **Clique esquerdo:** golpe (segurando, repete).
+  - **Botão direito:** estocada, só com a faca na mão. Nas armas de fogo o botão direito continua sendo a mira.
+  - **Pelas costas mata na hora.**
+  - Kill feed novo: **"X moggou Y [Faca]"**, tela de morte com **MOGGADO!** e "Você foi moggado por [nome]".
+- **Animações de recarga** em todas as armas: pente caindo, cartuchos entrando, ferrolho das snipers, bazuca no ombro (também em 3ª pessoa).
+- Correção: as armas voltam a dar dano depois de **Próximo mapa** e **Jogar de novo** no online.
+- Correção: a skin do Docão volta a aparecer no menu logo no começo.
+- **Tela de morte compacta**, ancorada embaixo: todas as armas cabem mesmo em telas menores.
+
 ## v1.4 — "Pururucado" (21/10/2026)
 - **Kill feed novo:** "carimbou" virou **"pururucou"**, com frases engraçadas sorteadas a cada abate:
   *fritou, transformou em torresmo, mandou pra chapa, defumou, fez virar bacon, serviu no café da manhã, botou no espeto, temperou com chumbo…*
