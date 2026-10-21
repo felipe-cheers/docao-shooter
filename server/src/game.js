@@ -448,7 +448,11 @@ export class Game {
     if (!b.zoneOff || b.zoneOff.z !== z) { const a = rand(0, Math.PI * 2), r = rand(0, DOM.RADIUS * 0.5); b.zoneOff = { z, x: Math.cos(a) * r, zz: Math.sin(a) * r }; }
     return { x: z.x + b.zoneOff.x, y: z.y, z: z.z + b.zoneOff.zz };
   }
-  botWeaponFor(b, d) { const pr = b.primary; if (pr === 1) return d < 14 ? pr : PISTOL; if (pr === 2) return d >= 9 ? pr : PISTOL; if (pr === 3) return d >= 6 && d <= 28 ? pr : PISTOL; return pr; }
+  botWeaponFor(b, d) {
+    const pr = b.primary; if (pr === 1) return d < 14 ? pr : PISTOL;
+    if (WEAPONS[pr] && WEAPONS[pr].scope) { const min = pr === 5 ? 14 : pr === 6 ? 6 : 9; return d >= min ? pr : PISTOL; }
+    if (pr === 3) return d >= 6 && d <= 28 ? pr : PISTOL; return pr;
+  }
   updateBot(b, dt) {
     if (!b.alive) return;
     if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; b.reloadEnd = 0; }
@@ -480,7 +484,8 @@ export class Game {
       if (b.nades > 0 && d > 8 && d < 24 && this.T > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < 0.35) this.botThrow(b, t); else b.nextNade = this.T + rand(1.5, 3); }
       b.aim += dt;
       let diff = desiredYaw - b.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      if (b.aim > b.reaction + (b.weapon === 2 ? 0.8 : 0) && Math.abs(diff) < 0.35) this.botShoot(b, t, d);
+      const scopeWait = WEAPONS[b.weapon].scope ? (b.weapon === 5 ? 1.15 : b.weapon === 6 ? 0.45 : 0.8) : 0;
+      if (b.aim > b.reaction + scopeWait && Math.abs(diff) < 0.35) this.botShoot(b, t, d);
     } else {
       let goal = null;
       const near = (type, maxD) => this.pickups.filter((p) => p.active && p.type === type && dist(p.pos, b.pos) < maxD).sort((a, c) => dist(a.pos, b.pos) - dist(c.pos, b.pos))[0];
@@ -505,7 +510,7 @@ export class Game {
     if (this.T < b.nextFire || b.reloadEnd > this.T) return;
     if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
     if (w.rocket && d < 6) return;
-    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * [rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6)][b.weapon]; b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * ([rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6), 1.15, 1.05][b.weapon] || 1.2); b.invulnUntil = Math.min(b.invulnUntil, this.T);
     const o = center(b, 1.3), tMoving = Math.hypot(t.vel.x, t.vel.z) > 2 ? 1.5 : 1;
     if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + t.vel.x * lead + rand(-0.8, 0.8), y: t.pos.y + 0.25, z: t.pos.z + t.vel.z * lead + rand(-0.8, 0.8) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
     const aim = w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6)); aim.x += rand(-0.3, 0.3); aim.z += rand(-0.3, 0.3);

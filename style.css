@@ -13,6 +13,7 @@ label{display:block;margin:10px 0;font-weight:bold;color:#cfe}
 input,select{display:block;width:100%;margin-top:6px;padding:10px 12px;border-radius:12px;border:3px solid #2a1410;font-size:18px;font-weight:bold;background:#fff8ec;color:#2a1410}
 input[type=range]{padding:0;height:34px;background:none;border:none}
 .row{display:flex;gap:16px}.row label{flex:1}
+#menu .row label{min-width:0}
 button{margin-top:14px;width:100%;padding:14px;font-family:"Arial Black",Impact,sans-serif;font-size:24px;color:#fff;background:#e63946;border:4px solid #2a1410;border-radius:16px;box-shadow:0 5px 0 #2a1410;cursor:pointer}
 button:hover{background:#ff4d5a}button:active{transform:translateY(3px);box-shadow:0 2px 0 #2a1410}
 button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
@@ -21,10 +22,41 @@ button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
 #crosshair{position:fixed;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%)}
 #crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1.5px #2a1410}
 #crosshair:before{left:10px;top:0;width:2px;height:22px}#crosshair:after{top:10px;left:0;height:2px;width:22px}
-#hitmarker{position:fixed;left:50%;top:50%;width:30px;height:30px;transform:translate(-50%,-50%) rotate(45deg);opacity:0;transition:opacity .15s}
-#hitmarker:before,#hitmarker:after{content:"";position:absolute;background:#fff}
-#hitmarker:before{left:14px;top:0;width:3px;height:30px}#hitmarker:after{top:14px;left:0;height:3px;width:30px}
-#hitmarker.kill:before,#hitmarker.kill:after{background:#ff3b3b}
+/* hitmarker estilo CoD: quatro tracinhos em X, buraco no meio */
+#hitmarker{position:fixed;left:50%;top:50%;width:48px;height:48px;transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:8}
+#hitmarker i{position:absolute;left:50%;top:50%;width:10px;height:3px;margin:-1.5px 0 0 -5px;background:#fff;border-radius:1px;box-shadow:0 0 1px #000,0 0 2px rgba(0,0,0,.85);pointer-events:none}
+#hitmarker i:nth-child(1){transform:translate(-9px,-9px) rotate(45deg)}
+#hitmarker i:nth-child(2){transform:translate(9px,-9px) rotate(-45deg)}
+#hitmarker i:nth-child(3){transform:translate(-9px,9px) rotate(-45deg)}
+#hitmarker i:nth-child(4){transform:translate(9px,9px) rotate(45deg)}
+#hitmarker.show{opacity:1;animation:hitpop .14s ease-out}
+#hitmarker.kill i{width:14px;height:4px;margin:-2px 0 0 -7px;background:#ff3b3b}
+#hitmarker.kill i:nth-child(1){transform:translate(-12px,-12px) rotate(45deg)}
+#hitmarker.kill i:nth-child(2){transform:translate(12px,-12px) rotate(-45deg)}
+#hitmarker.kill i:nth-child(3){transform:translate(-12px,12px) rotate(-45deg)}
+#hitmarker.kill i:nth-child(4){transform:translate(12px,12px) rotate(45deg)}
+#hitmarker.head:after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;transform:translate(-50%,-50%);border-radius:50%;background:#ffd24a;box-shadow:0 0 6px #ffb703,0 0 0 1px rgba(0,0,0,.55);pointer-events:none}
+@keyframes hitpop{0%{transform:translate(-50%,-50%) scale(1.6)}100%{transform:translate(-50%,-50%) scale(1)}}
+#points{position:fixed;left:50%;top:calc(50% + 34px);width:0;height:0;pointer-events:none;z-index:8}
+#points .pop{position:absolute;left:0;top:0;font-family:"Arial Black",Impact,sans-serif;font-size:34px;line-height:1;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;text-shadow:0 2px 0 #000;white-space:nowrap;animation:pointfloat .7s ease-out forwards;pointer-events:none}
+#points .pop.kill{color:#ffe14a}
+#points .pop.head{color:#ffc107}
+@keyframes pointfloat{0%{opacity:1;transform:translate(-50%,0) scale(1.2)}65%{opacity:1;transform:translate(-50%,-26px) scale(1)}100%{opacity:0;transform:translate(-50%,-44px) scale(.96)}}
+#medals{position:fixed;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;z-index:8}
+#medals .medal{background:rgba(14,10,8,.9);border:2px solid #ffd27a;border-radius:10px;padding:8px 12px 7px;text-align:right;box-shadow:0 4px 0 rgba(0,0,0,.5);animation:medalslide 2.4s ease forwards}
+#medals .medal b{display:block;font-family:"Arial Black",Impact,sans-serif;font-size:15px;letter-spacing:.6px;text-transform:uppercase;color:#ffd27a;white-space:nowrap}
+#medals .medal small{display:block;margin-top:2px;font-size:12px;font-weight:bold;color:#ffe8c2}
+@keyframes medalslide{0%{opacity:0;transform:translateX(120%)}12%{opacity:1;transform:translateX(0)}78%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(36%)}}
+#streak{position:fixed;left:50%;top:18%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:9;opacity:0}
+#streak.show{animation:streakpop 1.6s ease forwards}
+#streak b{display:block;font-family:"Arial Black",Impact,sans-serif;line-height:.95;letter-spacing:.5px;text-transform:uppercase;color:#fff;-webkit-text-stroke:7px #2a1410;paint-order:stroke fill}
+#streak small{display:block;margin-top:4px;font-weight:bold;font-size:16px;color:#ffe8c2;text-shadow:0 2px 0 #000}
+#streak.s2 b{font-size:42px}
+#streak.s3 b{font-size:52px;color:#ffe14a}
+#streak.s4 b{font-size:60px;color:#ff9a3c}
+#streak.s5 b{font-size:68px;color:#ffd24a;text-shadow:0 0 18px #ffb703}
+#streak.s6 b{font-size:76px;color:#ff4b4b;text-shadow:0 0 22px #ff2a2a}
+@keyframes streakpop{0%{opacity:0;transform:translateX(-50%) scale(1.7)}14%{opacity:1;transform:translateX(-50%) scale(1)}72%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1.08)}}
 #vignette{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,80,120,0) 45%,rgba(255,40,80,.75) 100%)}
 #topbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);text-align:center}
 #timer{font-family:"Arial Black",Impact;font-size:30px;-webkit-text-stroke:1.5px #2a1410;color:#fff}
@@ -90,8 +122,8 @@ button.primchip.active small{color:#fff3d6}
 button.primchip kbd{font-family:inherit;color:#ffd27a;margin-right:4px}
 #deathpick{position:fixed;left:50%;top:calc(62% + 40px);transform:translateX(-50%);text-align:center}
 #deathpick .dl{font-weight:bold;color:#ffd27a;text-shadow:0 2px 0 #000;margin-bottom:6px;font-size:14px}
-#deathList{display:flex;gap:6px;justify-content:center}
-#deathList button.primchip{width:auto;min-width:118px}
+#deathList{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;max-width:960px}
+#deathList button.primchip{width:auto;min-width:96px}
 /* luneta do sniper */
 #scope{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(120,200,255,.06) 0,rgba(120,200,255,.06) 42vh,#050505 42.4vh)}
 #scope .lens{position:absolute;left:50%;top:50%;width:85vh;height:85vh;transform:translate(-50%,-50%);border-radius:50%;box-shadow:inset 0 0 6vh rgba(0,0,0,.85),0 0 0 6px #111}
@@ -99,6 +131,28 @@ button.primchip kbd{font-family:inherit;color:#ffd27a;margin-right:4px}
 #scope .hair.h{left:calc(50% - 42vh);width:84vh;top:50%;height:2px;margin-top:-1px}
 #scope .hair.v{top:8vh;height:84vh;left:50%;width:2px;margin-left:-1px}
 #scope .dot{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#e63946;box-shadow:0 0 4px #ff6b6b}
+/* Sniper Torresmo: círculo médio, cruz fina preta, mil-dot, lente ciano */
+#scope.torresmo{background:radial-gradient(circle at center,rgba(150,230,245,.12) 0,rgba(90,190,210,.07) 42vh,#05080a 42.45vh)}
+#scope.torresmo .lens{width:84vh;height:84vh;background:radial-gradient(circle at 50% 45%,rgba(170,235,245,.18),rgba(40,90,110,.1) 58%,rgba(0,0,0,.3));box-shadow:inset 0 0 8vh rgba(80,190,210,.32),inset 0 0 2vh rgba(0,0,0,.5),0 0 0 5px #0c1012}
+#scope.torresmo .hair{background:#111}
+#scope.torresmo .hair.h{height:1px;margin-top:0}
+#scope.torresmo .hair.v{width:1px;margin-left:0}
+#scope.torresmo .dot{width:4px;height:4px;margin:-2px 0 0 -2px;background:#111;box-shadow:none}
+#scope.torresmo:after{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border-radius:50%;background:transparent;pointer-events:none;box-shadow:0 -10vh 0 #141414,0 -20vh 0 #141414,0 -30vh 0 #141414,0 10vh 0 #141414,0 20vh 0 #141414,0 30vh 0 #141414,-10vh 0 0 #141414,-20vh 0 0 #141414,-30vh 0 0 #141414,10vh 0 0 #141414,20vh 0 0 #141414,30vh 0 0 #141414}
+/* Canhão do Barril: círculo menor, anel grosso, chevron âmbar, lente verde escura */
+#scope.canhao{background:radial-gradient(circle at center,rgba(16,34,14,.4) 0,rgba(8,22,10,.5) 34vh,#040604 34.5vh)}
+#scope.canhao .lens{width:68vh;height:68vh;background:radial-gradient(circle at 50% 42%,rgba(86,120,58,.38),rgba(8,20,10,.82) 72%);box-shadow:inset 0 0 0 10px #e09a1a,inset 0 0 0 14px #1a1208,inset 0 0 8vh rgba(0,0,0,.62)}
+#scope.canhao .hair,#scope.canhao .dot{display:none}
+#scope.canhao .lens:before,#scope.canhao .lens:after{content:"";position:absolute;top:50%;left:50%;width:20%;height:10px;background:linear-gradient(#ffc14d,#d4840f);border-radius:3px;box-shadow:0 0 8px rgba(240,160,32,.65)}
+#scope.canhao .lens:before{transform-origin:right center;transform:translate(-108%,-50%) rotate(-34deg)}
+#scope.canhao .lens:after{transform-origin:left center;transform:translate(8%,-50%) rotate(34deg)}
+/* Carabina da Granja: círculo maior, cruz fina clara, lente quente, máscara leve */
+#scope.carabina{background:radial-gradient(circle at center,rgba(255,214,170,.08) 0,rgba(255,196,140,.05) 52vh,rgba(12,8,6,.4) 53vh)}
+#scope.carabina .lens{width:104vh;height:104vh;background:radial-gradient(circle at 50% 48%,rgba(255,220,180,.16),rgba(255,170,110,.05) 62%,transparent 80%);box-shadow:inset 0 0 12vh rgba(255,186,120,.22)}
+#scope.carabina .hair{background:rgba(255,246,230,.92)}
+#scope.carabina .hair.h{left:calc(50% - 52vh);width:104vh;height:1px;margin-top:0}
+#scope.carabina .hair.v{top:calc(50% - 52vh);height:104vh;width:1px;margin-left:0}
+#scope.carabina .dot{width:3px;height:3px;margin:-1.5px 0 0 -1.5px;background:rgba(255,244,220,.95);box-shadow:0 0 4px rgba(255,200,140,.8)}
 /* ---- seletor de mapas ---- */
 .mappick{margin:12px 0 4px;text-align:left}
 button.mapcard{display:flex;align-items:center;gap:12px;margin:0;padding:8px;text-align:left;font-family:"Trebuchet MS",Arial,sans-serif;font-size:15px;background:#26304f;border:3px solid #2a1410;border-radius:14px;box-shadow:0 4px 0 #2a1410}
