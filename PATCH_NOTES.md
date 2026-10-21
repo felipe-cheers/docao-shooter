@@ -13,6 +13,7 @@ Jogue em **https://docao.mvalentim.dev**
 - **Animações de recarga** em todas as armas: pente caindo, cartuchos entrando, ferrolho das snipers, bazuca no ombro (também em 3ª pessoa).
 - Correção: as armas voltam a dar dano depois de **Próximo mapa** e **Jogar de novo** no online.
 - Correção: a skin do Docão volta a aparecer no menu logo no começo.
+- Correção: na **Vizinhança Cheers** a câmera do menu ficava dentro do ônibus e a skin não aparecia; agora ela procura um ângulo livre em qualquer mapa. A barra de prêmios por abate não aparece mais por cima do Docão no menu.
 - **Tela de morte compacta**, ancorada embaixo: todas as armas cabem mesmo em telas menores.
 
 ## v1.4 — "Pururucado" (21/10/2026)
