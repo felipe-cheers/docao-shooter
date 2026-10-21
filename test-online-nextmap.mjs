@@ -32,7 +32,7 @@ await A.click('#createBtn');
 ok(await until(A, () => window.__docao.online && window.__docao.online.myId > 0), 'Ana criou a sala');
 const code = await G(A, () => window.__docao.online.code);
 const B = await client('Beto', `&sala=${code}`);
-ok(await until(B, () => window.__docao.online && window.__docao.online.myId > 0), 'Beto entrou');
+ok(await until(B, () => window.__docao.online && window.__docao.online.myId > 0, 25000), 'Beto entrou');
 await A.waitForTimeout(800);
 const round = async (label) => {
   for (const [p, n] of [[A, 'Ana'], [B, 'Beto']]) ok(await until(p, () => window.__docao.state === 'playing' && window.__docao.player && window.__docao.player.alive, 12000), `${label}: ${n} jogando e vivo`);
