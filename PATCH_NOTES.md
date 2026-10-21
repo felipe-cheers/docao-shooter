@@ -4,6 +4,10 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5.4 (21/10/2026)
+- **Tempo da partida configurável:** ao criar a sala (e no lobby, só o anfitrião) tem o campo **Tempo**: Padrão, 3, 5, 7, 10, 15 ou 20 min. "Padrão" continua 5 min no Mata-mata e 7 min na Dominação. Quem não é anfitrião vê o tempo escolhido no lobby. Mudou no meio da partida? Vale a partir da próxima. O menu offline também ganhou o campo **Tempo**.
+- **Captura mais demorada na Dominação:** sozinho na zona leva **15 s** (antes 8 s); com 2 do time, 7,5 s; com 3 ou mais, 5 s.
+
 ## v1.5.3 (21/10/2026)
 - **Salas online com até 10 jogadores:** ao criar a sala ou no lobby, o máximo agora vai até **10** (com bots completando, se quiser). Dois bots novos, **Coxinha** e **Pururuca**, e o placar do canto mostra até 10 linhas.
 

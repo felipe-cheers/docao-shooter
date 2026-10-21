@@ -3,6 +3,9 @@
 //  Armas, Copo Bomba, física do Docão, tempos de partida e nomes dos bots.
 // ============================================================
 export const KILL_LIMIT = 20, TIME_LIMIT = 300, RESPAWN_TIME = 5, INVULN = 2;
+// duração da partida escolhida pelo anfitrião (minutos); 0 = padrão do modo (5 min Mata-mata, 7 min Dominação)
+export const TIME_OPTIONS = [0, 3, 5, 7, 10, 15, 20];
+export const normTime = (v) => { const n = Number(v); return TIME_OPTIONS.includes(n) ? n : 0; };
 export const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, RADIUS = 0.42, HEIGHT = 2.0, EYE = 1.6;
 
 // Armas. Primárias (menu): 0 Fuzil, 1 Calibre 12, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Secundária: 4 Pistolinha.

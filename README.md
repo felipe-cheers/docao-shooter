@@ -17,9 +17,9 @@ WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoo
 ## Online (multiplayer) 🌐
 
 No menu: **JOGAR OFFLINE (bots)** funciona como sempre; **JOGAR ONLINE** abre:
-- **Criar sala** — mapa (ou Aleatório), máximo de jogadores (2–10) e "completar com bots" (sim/não). Gera um **código de 4 letras**.
+- **Criar sala** — mapa (ou Aleatório), modo, máximo de jogadores (2–10), "completar com bots" (sim/não) e **tempo da partida** (Padrão, 3, 5, 7, 10, 15 ou 20 min; Padrão = 5 min no Mata-mata e 7 min na Dominação). Gera um **código de 4 letras**.
 - **Entrar na sala** — digite o código. Ou abra o link de convite `https://…/?sala=ABCD` (entra direto no lobby).
-- No lobby o **anfitrião** (★) troca mapa/máximo/bots e clica **INICIAR PARTIDA**. No fim, só o anfitrião escolhe "jogar de novo" / "próximo mapa".
+- No lobby o **anfitrião** (★) troca mapa/máximo/bots/modo/tempo e clica **INICIAR PARTIDA**. No fim, só o anfitrião escolhe "jogar de novo" / "próximo mapa".
 - Durante a partida: ping no canto (Sala ABCD · 35 ms), placar (Tab) com ping de cada um, kill feed do servidor. Esc não pausa o jogo online (só solta o mouse).
 - Caiu a conexão? O cliente reconecta sozinho (até 10 tentativas) e volta com o mesmo jogador/placar (token na `sessionStorage`; a vaga fica guardada 30 s).
 
@@ -225,13 +225,13 @@ Toda a geometria, os nomes e a arte são originais (nada copiado dos jogos citad
 ## Regras e modos
 Escolha o modo no menu (offline) ou ao criar a sala (online; o anfitrião pode trocar no lobby).
 
-- **Mata-mata** (todos contra todos): vence quem chegar a 20 abates ou quem liderar ao fim de 5 minutos.
+- **Mata-mata** (todos contra todos): vence quem chegar a 20 abates ou quem liderar ao fim do tempo (padrão 5 minutos; o anfitrião pode escolher 3–20 min, e o menu offline também tem o campo **Tempo**).
 - **Dominação** (times Vermelho × Azul): regras em `shared/domination.js`, as mesmas offline e no servidor.
   - Uma **zona de captura** (anel + coluna de luz, raio 4 m) aparece num ponto andável aleatório; barra de progresso no topo e seta na borda da tela quando ela está fora de vista.
-  - **Velocidade:** 1/8 por segundo por jogador dentro, até **3** contando (1 → 8 s, 2 → 4 s, 3+ → 2,7 s).
+  - **Velocidade:** 1/15 por segundo por jogador dentro, até **3** contando (1 → 15 s, 2 → 7,5 s, 3+ → 5 s).
   - **Contestada** (os dois times dentro): o progresso **para**. Time adversário sozinho primeiro **neutraliza** o progresso do outro, depois começa o seu.
   - **Vazia:** o progresso **decai** 0,1/s até zerar (zona volta a neutra).
-  - Cada captura = **1 ponto** pro time; a zona reaparece em outro lugar (≥ 18 m da anterior, quando dá). **Primeiro a 5 vence**; tempo limite 7 min (empate se igual).
+  - Cada captura = **1 ponto** pro time; a zona reaparece em outro lugar (≥ 18 m da anterior, quando dá). **Primeiro a 5 vence**; tempo limite 7 min no padrão ou o escolhido pelo anfitrião (empate se igual).
   - Placar individual na Dominação: abates + 2 × zonas capturadas.
   - **Sem fogo amigo** (tiro, Bazuca e Copo Bomba); dano da explosão em si mesmo continua (40%).
   - Contorno, anel no pé e plaquinha de nome na cor do time.

@@ -19,7 +19,7 @@ import { cleanName, NAME_MAX } from './shared/names.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
-import { KILL_LIMIT, TIME_LIMIT, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
+import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 
 const V3 = THREE.Vector3;
 const $ = (id) => document.getElementById(id);
@@ -851,7 +851,7 @@ function updateHud(dt) {
   if (stunN) stunN.textContent = p.stunNades || 0;
   { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
-  const left = Math.max(0, (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT) - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+  const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
   $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
   const lead = entities.reduce((a, b) => (b.kills > a.kills ? b : a));
   $('leader').textContent = teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
@@ -1479,7 +1479,7 @@ function startGame(mapId) {
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
   const n = parseInt($('botCount').value) || 5;
   for (let i = 0; i < n; i++) entities.push(makeEntity(BOT_DEFS[i].name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length]));
-  mode = $('modeSel').value === 'dom' ? 'dom' : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = [];
+  mode = $('modeSel').value === 'dom' ? 'dom' : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
   if (teamMode()) { // seu time (escolhido no menu ou automático); bots completam os dois lados
     applyTeam(player, menuTeam >= 0 ? menuTeam : Math.random() < 0.5 ? 0 : 1);
     for (const b of entities) if (!b.isPlayer) { const c = [0, 0]; for (const x of entities) if (x.team === 0 || x.team === 1) c[x.team]++; applyTeam(b, smallerTeam(c)); }
@@ -1597,7 +1597,7 @@ function loop() {
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
     updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateFP(dt); updateEffects(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt);
-    if (!online && gameTime >= (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT)) endGame();
+    if (!online && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
     menuT += dt * 0.25;
     const sp = showcase.position; camera.position.set(sp.x + Math.sin(showCamYaw) * 3.5, showBaseY + 1.25, sp.z + Math.cos(showCamYaw) * 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
@@ -1711,6 +1711,12 @@ function onZoneCaptured(team, next, capsList) {
 const scoreOf = (e) => (teamMode() ? e.kills + 2 * (e.caps || 0) : e.kills);
 // placar compacto no canto superior esquerdo (offline e online)
 let lbT = 0;
+// duração da partida: online vem do servidor (start.limit); offline do select "Tempo" (0 = padrão do modo)
+let offlineMinutes = 0;
+function matchLimit() {
+  if (online && online.limit) return online.limit;
+  return offlineMinutes ? offlineMinutes * 60 : teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT;
+}
 function updateLeaderboard(dt) {
   lbT -= dt; if (lbT > 0) return; lbT = 0.25;
   const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths).slice(0, 10);
@@ -1731,6 +1737,8 @@ let menuTeam = -1;
 function refreshMenuMode() { const dom = $('modeSel').value === 'dom'; $('menuTeam').classList.toggle('hidden', !dom); teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); }); }
 $('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); };
 try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm') $('modeSel').value = m; } catch (e) { /* */ }
+$('timeSel').onchange = () => { try { localStorage.setItem('docao.time', $('timeSel').value); } catch (e) { /* */ } };
+try { $('timeSel').value = String(normTime(localStorage.getItem('docao.time'))); } catch (e) { /* */ }
 refreshMenuMode();
 // tela de morte: primária e secundária clicáveis; solta o mouse ao morrer e trava de novo ao voltar
 let deathUnlock = false;
@@ -1856,7 +1864,7 @@ function renderLobby() {
   const o = online, L = o.lobby; if (!L) return;
   const isHost = o.myId === o.hostId, cfg = L.cfg;
   const mapName = cfg.map === 'random' ? 'Aleatório' : getMap(cfg.map).name;
-  $('lobbyInfo').textContent = `${mapName} · até ${cfg.max} jogadores · bots: ${cfg.fillBots ? 'sim' : 'não'}${L.state === 'playing' ? ' · partida em andamento' : ''}`;
+  $('lobbyInfo').textContent = `${mapName} · até ${cfg.max} jogadores · bots: ${cfg.fillBots ? 'sim' : 'não'} · ${cfg.time ? cfg.time + ' min' : 'tempo padrão'}${L.state === 'playing' ? ' · partida em andamento' : ''}`;
   const rows = L.players.filter((p) => !p.bot), dom = cfg.mode === 'dom';
   const counts = [0, 0]; for (const p of rows) if (p.team === 0 || p.team === 1) counts[p.team]++;
   $('lobbyTeam').classList.toggle('hidden', !dom);
@@ -1868,11 +1876,11 @@ function renderLobby() {
     $('lobbyName').disabled = $('lobbyNameBtn').disabled = inGame;
     $('lobbyNameMsg').textContent = me && me.name !== myName() ? `Na sala você aparece como “${me.name}”${inGame ? '' : ' (nome repetido ou ajustado)'}` : inGame ? 'Partida em andamento: o nome muda na próxima partida' : ''; }
   $('hostCtl').classList.toggle('hidden', !isHost); $('lobbyWait').classList.toggle('hidden', isHost || L.state !== 'lobby');
-  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; }
+  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); }
   if (state === 'over') { const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h); }
 }
-const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode: $('lobbyMode').value });
-['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyMode'].forEach((id) => ($(id).onchange = sendCfg));
+const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode: $('lobbyMode').value, time: +$('lobbyTime').value });
+['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyMode', 'lobbyTime'].forEach((id) => ($(id).onchange = sendCfg));
 $('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
 $('leaveLobby').onclick = () => leaveOnline();
 $('copyLink').onclick = async () => { const v = $('shareLink').value; try { await navigator.clipboard.writeText(v); $('copyLink').textContent = 'Copiado!'; } catch (e) { $('shareLink').select(); } setTimeout(() => ($('copyLink').textContent = 'Copiar link'), 1500); };
@@ -1883,7 +1891,7 @@ $('onlineClose').onclick = () => { $('onlineModal').classList.add('hidden'); $('
 $('tabCreate').onclick = () => onlineTab(true); $('tabJoin').onclick = () => { onlineTab(false); $('joinCode').focus(); };
 $('createBtn').onclick = async () => {
   const b = $('createBtn'); b.disabled = true; $('onlineErr').textContent = 'Criando sala…';
-  try { const code = await createRoom({ map: $('roomMap').value, max: +$('roomMax').value, fillBots: $('roomBots').value === '1', mode: $('roomMode').value }); $('onlineErr').textContent = ''; joinRoom(code); }
+  try { const code = await createRoom({ map: $('roomMap').value, max: +$('roomMax').value, fillBots: $('roomBots').value === '1', mode: $('roomMode').value, time: +$('roomTime').value }); $('onlineErr').textContent = ''; joinRoom(code); }
   catch (e) { $('onlineErr').textContent = 'Não deu pra criar a sala: ' + (e.message || 'servidor fora do ar'); }
   b.disabled = false;
 };
@@ -1913,7 +1921,7 @@ function startOnlineMatch(m) {
     return;
   }
   resetAds(); loadMap(m.map); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
-  mode = m.mode === 'dom' ? 'dom' : 'dm'; window.__capLog = [];
+  mode = m.mode === 'dom' ? 'dom' : 'dm'; window.__capLog = []; o.limit = m.limit > 0 ? m.limit : 0;
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
   const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
   player = makeEntity(me.name, true, me.skin, '#ffd27a'); player.netId = o.myId; player.sq = 0; player.alive = false; player.respawnAt = Infinity;

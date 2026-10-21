@@ -15,7 +15,7 @@
 export const TEAM_NAMES = ['Vermelho', 'Azul'];
 export const TEAM_COLORS = ['#ff4d4d', '#4da6ff'];
 export const TEAM_HEX = [0xff4d4d, 0x4da6ff], TEAM_DARK = [0x8a0f0f, 0x0f3f8a];
-export const DOM = { WIN_CAPS: 5, RADIUS: 4, HEIGHT: 2.6, RATE: 1 / 8, MAX_COUNT: 3, DECAY: 0.1, MIN_DIST: 18, TIME_LIMIT_DOM: 420 };
+export const DOM = { WIN_CAPS: 5, RADIUS: 4, HEIGHT: 2.6, RATE: 1 / 15, MAX_COUNT: 3, DECAY: 0.1, MIN_DIST: 18, TIME_LIMIT_DOM: 420 };
 export const MODES = { dm: 'Mata-mata', dom: 'Dominação' };
 
 // nó andável com chão em volta (≥ 6 nós do grafo dentro do raio, mesma altura) e longe da zona anterior

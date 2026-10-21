@@ -9,7 +9,7 @@ import { MAPS, getMap } from '../../maps.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
-import { KILL_LIMIT, TIME_LIMIT, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
@@ -34,7 +34,7 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y, z: p.z });
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm' };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm', time: normTime(cfg.time) };
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
@@ -143,6 +143,7 @@ export class Game {
     this.pickups = map.pickups.map(([type, x, z, y]) => ({ type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: true, respawnAt: 0 }));
     this.nades = []; this.rockets = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
+    this.curLimit = this.cfgLimit;
     for (const e of this.ents.values()) {
       e.kills = 0; e.deaths = 0; e.alive = false; e.needRs = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1;
       // this.T e o relógio do cliente voltam a 0 na partida nova: zera cadência/anti speed-hack, senão os tiros da partida anterior
@@ -167,7 +168,8 @@ export class Game {
     this.io.broadcast(this.startMsg()); this.sendLobby();
     this.io.startLoop();
   }
-  get timeLimit() { return this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; }
+  get cfgLimit() { return this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; }
+  get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
   startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
@@ -194,6 +196,7 @@ export class Game {
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
+        if (m.time !== undefined) this.cfg.time = normTime(m.time);
         if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); break;
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
