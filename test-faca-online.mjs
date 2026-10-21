@@ -69,7 +69,7 @@ ok(await until(B, () => document.body.innerText.includes('pelas costas'), 3000),
 await A.screenshot({ path: `${SHOTS}/20-faca-online-killfeed.png` });
 // 6) faca não tem munição nem recarga; volta pra arma e atira normal
 await A.keyboard.press('KeyR'); await wait(300); ok(await G(A, () => !(window.__docao.player.reloadEnd > window.__docao.time)), 'faca: R não recarrega');
-await A.keyboard.press('Digit1'); await wait(600); ok(await G(A, () => window.__docao.player.weapon === 0), 'A volta pro fuzil');
+await A.keyboard.press('Digit1'); ok(await until(A, () => window.__docao.player.weapon === 0, 3000), 'A volta pro fuzil');
 // 7) sala com bots: eles trocam pra faca de perto e nada quebra
 // recarga do A aparece pro B (flag de recarga do snapshot → animação em 3ª pessoa + pente caindo)
 await until(A, () => window.__docao.player.switchEnd <= window.__docao.time, 3000); await G(A, () => { window.__docao.player.pitch = 0.6; }); await A.mouse.down(); await wait(400); await A.mouse.up(); await wait(300);
