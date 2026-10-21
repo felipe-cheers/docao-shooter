@@ -1,0 +1,50 @@
+# 🐷 Docão Shooter — Patch Notes
+
+Jogue em **https://docao.mvalentim.dev**
+
+---
+
+## v1.4 — "Pururucado" (21/10/2026)
+- **Kill feed novo:** "carimbou" virou **"pururucou"**, com frases engraçadas sorteadas a cada abate:
+  *fritou, transformou em torresmo, mandou pra chapa, defumou, fez virar bacon, serviu no café da manhã, botou no espeto, temperou com chumbo…*
+- Tela de morte agora mostra **PURURUCADO!** e "Você foi pururucado por [nome]".
+- Suicídio: "se pururucou", "virou bacon sozinho", "se jogou na frigideira", "fritou no próprio óleo".
+- Tiro na cabeça: **"direto no focinho!"**
+
+## v1.3 — Bacon & Nomes (21/10/2026)
+- **Animação de morte:** o Docão estoura e vira **bacon** fritando no chão (com fumaça, brilho de gordura e chiado).
+- Câmera de morte em 3ª pessoa mostrando o seu bacon antes de escolher as armas.
+- **Nome do jogador:** campo no menu, na janela online e no lobby (botão "Trocar"). Fica salvo e aparece na plaquinha, no placar, no kill feed e na tela final. Nomes repetidos viram "Nome (2)".
+
+## v1.2 — Mapas v2 (21/10/2026)
+Os 7 mapas foram refeitos com construções de verdade: casas com interior, escadas, andares, telhados, becos, cobertura e corredores longos pra AWP. Bots sobem e descem andares.
+- **Duas Pocilgas** (estilo Dust2): túneis do B, portas do meio, catwalk, longo do A, casas de 2 andares.
+- **Mercadão** (estilo Mirage): palácio com sacada, apartamentos, conector, sala da janela, mercearia.
+- **Vizinhança Cheers** (estilo Nuketown): duas casas de 2 andares com varanda, telhado da garagem, quintais, ônibus.
+- **Celeiro Industrial** (estilo Rust/Office): galpão com mezanino, escritórios, ponte, contêineres, guarita, silos.
+- **Bar Cheers Noturno** (estilo Office): ala de 2 andares, VIP com sacada, terraço, banheiros, sinuca, palco do DJ.
+- **Arena da Fazendinha** (3 corredores): bases de 2 andares com terraço, celeiro com jirau, túnel do galinheiro.
+- **Torres Gêmeas do Barril** (mapa de sniper): torres de 3 níveis, ruínas, trincheira, ponte e casamata.
+- Correção: quem entra no meio da partida sempre escolhe o time antes de nascer.
+
+## v1.1 — Dominação (20/10/2026)
+- **Novo modo Dominação:** dois times (Vermelho × Azul). Zonas aparecem em pontos aleatórios; quanto mais gente do time dentro, mais rápido captura (até 3×). Zona disputada pausa. Primeiro time a **5 zonas** vence.
+- Seta na borda da tela com a **distância em metros** até a zona.
+- **Placar sempre visível** no canto superior esquerdo.
+- **Escolha de time** (Vermelho / Azul / Automático) antes da partida e ao entrar no meio.
+- **Tela de morte clicável:** escolha as armas com o mouse (teclas continuam funcionando).
+- **Explosões melhores:** bazuca e granada medem a distância até o corpo (não o centro) e pegam quem está meio escondido; foguete direto sempre acerta.
+- **AWP mais precisa:** dispersão zero com luneta parado, tiro sai exatamente do centro da mira.
+
+## v1.0 — Multiplayer online (20/10/2026)
+- **Jogar online com amigos** (grátis, servidor na Cloudflare): crie uma sala e mande o link `docao.mvalentim.dev/?sala=ABCD`.
+- Até 8 jogadores, bots completam a sala, o dono escolhe mapa e quantidade.
+- Servidor decide tiros, dano, granadas, foguetes, placar e respawn (com anti-cheat básico e compensação de lag).
+- Reconexão automática mantendo o placar.
+
+## v0.x — Lançamento
+- FPS do Docão inspirado no Shell Shockers, contra bots.
+- 14 skins: Clássico, Clube Cheers, Rei do Pop, Rapper da Hora, Bruxinho, Mestre do Kung Fu, Cabeludo, Pescador, Choquinho, Boné da Firma, Fantasminha, Esqueletão, Cavaleiro Galáctico e Nômade do Deserto.
+- Armas: fuzil, AWP, 12, bazooka e pistola (1 primária + 1 secundária).
+- **Granada Red Cup** com o logo Cheers: até 3 cargas, segure Q pra dosar a força.
+- Zoom no Shift.
