@@ -1,6 +1,8 @@
 // Docão Shooter — jogo original de tiro em primeira pessoa com o Docão (mascote Cheers).
 import * as THREE from 'three';
 import { makeDocao, makeFPArms, setPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife } from './docao.js';
+import { makeFPSniper, poseSniperBolt } from './sniper-view.js';
+import { resetFeedback, feedbackPoints, feedbackHit, feedbackKill, tickFeedback } from './feedback.js';
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
 import { MAPS, getMap } from './maps.js';
@@ -187,6 +189,8 @@ const sfx = {
   pump: (v = 1, d = 0) => { noise(0.05, 1800, 0.35 * v, 'bandpass', d); tone('square', 240, 180, 0.04, 0.08 * v, d); noise(0.05, 2600, 0.4 * v, 'bandpass', d + 0.17); tone('square', 320, 260, 0.04, 0.1 * v, d + 0.17); },
   shell: () => { tone('square', 620, 520, 0.03, 0.08); noise(0.04, 3000, 0.15, 'bandpass', 0.02); },
   sniper: (v = 1) => { noise(0.9, 1800, 1.3 * v); tone('sine', 140, 28, 0.7, 0.6 * v); noise(0.18, 7000, 0.5 * v, 'highpass'); noise(1.4, 500, 0.35 * v, 'lowpass', 0.15); },
+  canhao: (v = 1) => { noise(1.15, 700, 1.5 * v); tone('sine', 70, 22, 0.85, 0.75 * v); noise(0.22, 5000, 0.35 * v, 'highpass'); noise(1.6, 280, 0.45 * v, 'lowpass', 0.12); },
+  carabina: (v = 1) => { noise(0.35, 2400, 0.85 * v); tone('sine', 200, 55, 0.28, 0.4 * v); noise(0.08, 6000, 0.3 * v, 'highpass'); },
   bolt: (v = 1, d = 0) => { tone('square', 420, 380, 0.04, 0.1 * v, d); noise(0.06, 2400, 0.3 * v, 'bandpass', d + 0.12); noise(0.05, 3200, 0.3 * v, 'bandpass', d + 0.42); tone('square', 520, 480, 0.03, 0.1 * v, d + 0.55); },
   bazooka: (v = 1) => { noise(0.6, 900, 0.9 * v, 'bandpass'); tone('sawtooth', 180, 60, 0.4, 0.3 * v); noise(1.0, 2500, 0.2 * v, 'highpass', 0.05); },
   pistol: (v = 1) => { noise(0.08, 3600, 0.45 * v); tone('square', 330, 90, 0.06, 0.14 * v); },
@@ -209,6 +213,7 @@ const sfx = {
   knifeHit: (v = 1) => { noise(0.09, 700, 0.9 * v); tone('square', 170, 70, 0.09, 0.22 * v); tone('triangle', 2600, 1900, 0.06, 0.07 * v, 0.01); },
   knifeDraw: (v = 1) => { tone('triangle', 1700, 2900, 0.14, 0.06 * v); noise(0.12, 6500, 0.12 * v, 'highpass'); },
   pop: (v = 1) => { tone('sine', 820, 180, 0.12, 0.25 * v); noise(0.18, 1400, 0.35 * v, 'bandpass'); },
+  streak: (n = 2) => { const k = Math.min(Math.max(n, 2), 6); for (let i = 0; i < k - 1; i++) tone('square', 340 + i * 80, 520 + i * 90, 0.07, 0.11, i * 0.055); if (k >= 5) noise(0.18, 1600, 0.22, 'bandpass', 0.18); },
   sizzle: (v = 1, dur = 1.5) => { // bacon fritando: chiado agudo + estalinhos de gordura
     if (v < 0.03) return; noise(dur, 5200, 0.16 * v, 'highpass'); noise(dur * 0.7, 2600, 0.08 * v, 'bandpass', 0.05);
     const n = Math.round(6 + dur * 10); for (let i = 0; i < n; i++) noise(0.025, 2500 + Math.random() * 3500, (0.12 + Math.random() * 0.2) * v, 'bandpass', Math.random() * dur);
@@ -217,7 +222,12 @@ const sfx = {
 const distVol = (p) => clamp(1 - p.distanceTo(player.pos) / 60, 0.05, 1);
 
 // ---------------- Entidades ----------------
-let gameTime = 0, state = 'menu', hadLock = false, entities = [], player = null, sens = 1.4;
+let gameTime = 0, state = 'menu', hadLock = false, entities = [], player = null, sens = 1.4, sensAds = 1, revengeName = null;
+try {
+  const savedSens = localStorage.getItem('docao.sens'); if (savedSens) $('sens').value = savedSens;
+  const savedAds = localStorage.getItem('docao.sensAds'); if (savedAds) $('sensAds').value = savedAds;
+  sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
+} catch (e) { /* sem storage */ }
 let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação)
 let spawnHold = 'primary'; // arma na mão ao renascer (tela de morte)
 const teamMode = () => mode === 'dom';
@@ -588,7 +598,7 @@ function damage(t, amount, attacker, wIdx, head, back = false) {
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12;
   if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
-  if (attacker && attacker.isPlayer && attacker !== t) { hitMarker(t.hp <= 0); sfx.hit(); }
+  if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head }); sfx.hit(); }
   if (t.hp <= 0) { kill(t, attacker, wIdx, head, back); return true; }
   return false;
 }
@@ -598,8 +608,8 @@ function kill(t, a, wIdx, head, back = false) {
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head, back);
   sfx.die(t.isPlayer ? 1 : distVol(t.pos));
-  if (a && a.isPlayer) sfx.kill();
-  if (t.isPlayer) { showStamp(wIdx); onPlayerDeath(); }
+  if (a && a.isPlayer && a !== t) { sfx.kill(); notePlayerKill(t, head); }
+  if (t.isPlayer) { if (a && a !== t) revengeName = a.name; showStamp(wIdx); onPlayerDeath(); }
   if (a && a.kills >= KILL_LIMIT && !teamMode()) endGame();
 }
 
@@ -651,8 +661,15 @@ function knifeAttack(e, kind, eye, dir) { // offline (jogador e bots); online o 
 }
 
 // ---------------- HUD ----------------
-let hitTimer = 0, hurtLevel = 0, msgTimer = 0;
-function hitMarker(isKill) { const h = $('hitmarker'); h.classList.toggle('kill', isKill); h.style.transition = 'none'; h.style.opacity = 1; hitTimer = 0.12; }
+let hurtLevel = 0, msgTimer = 0;
+function notePlayerKill(victim, head) {
+  if (!player || !victim || victim === player) return;
+  const dist = player.pos.distanceTo(victim.pos);
+  const revenge = !!(revengeName && victim.name === revengeName);
+  if (revenge) revengeName = null;
+  const streak = feedbackKill({ head: !!head, dist, revenge });
+  if (streak >= 2) sfx.streak(streak);
+}
 function hurtFlash() { hurtLevel = 1; }
 function flashMsg(t) { $('centermsg').textContent = t; msgTimer = 1.5; }
 const KILL_PHRASES = [
@@ -695,11 +712,10 @@ function updateHud(dt) {
   $('deathpick').classList.toggle('hidden', p.alive || gameTime - p.deathAt < DEATHCAM_HOLD); crossEl.style.visibility = p.alive ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT) - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
-  $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)}`;
+  $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
   const lead = entities.reduce((a, b) => (b.kills > a.kills ? b : a));
   $('leader').textContent = teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
-  updateLeaderboard(dt);
-  if (hitTimer > 0) { hitTimer -= dt; if (hitTimer <= 0) { const h = $('hitmarker'); h.style.transition = ''; h.style.opacity = 0; } }
+  updateLeaderboard(dt); tickFeedback(dt);
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
@@ -738,22 +754,10 @@ const fp = (() => {
   add(new THREE.CylinderGeometry(0.024, 0.024, 0.018, 10), toon(0xd9a441), 0, 0, 0.04, sShell, 0.003).rotation.x = Math.PI / 2;
   add(new THREE.BoxGeometry(0.1, 0.085, 0.22), toon(0x9a6532), 0, 0, 0, pumpPart);
   for (const z of [-0.07, 0, 0.07]) add(new THREE.BoxGeometry(0.104, 0.012, 0.012), toon(0x5a3a1c), 0, 0.01, z, pumpPart, 0);
-  // Sniper Torresmo (ferrolho + luneta)
-  const sn = new THREE.Group(); root.add(sn);
-  add(new THREE.BoxGeometry(0.1, 0.12, 0.66), toon(0x5c7a3a), 0, 0, -0.08, sn);
-  add(new THREE.CylinderGeometry(0.022, 0.026, 0.62, 12), toon(0x22252c), 0, 0.015, -0.7, sn).rotation.x = Math.PI / 2;
-  add(new THREE.BoxGeometry(0.06, 0.05, 0.08), toon(0x22252c), 0, 0.015, -1.02, sn);
-  add(new THREE.BoxGeometry(0.1, 0.17, 0.34), toon(0x4a6a2e), 0, -0.035, 0.36, sn).rotation.x = -0.1;
-  add(new THREE.BoxGeometry(0.075, 0.2, 0.1), toon(COLORS.red), 0, -0.15, 0.1, sn).rotation.x = 0.25;
-  add(new THREE.CylinderGeometry(0.045, 0.045, 0.34, 14), toon(0x2a2d35), 0, 0.13, -0.08, sn).rotation.x = Math.PI / 2;
-  add(new THREE.CylinderGeometry(0.06, 0.047, 0.07, 14), toon(0x2a2d35), 0, 0.13, -0.27, sn).rotation.x = Math.PI / 2;
-  add(new THREE.CylinderGeometry(0.052, 0.047, 0.06, 14), toon(0x2a2d35), 0, 0.13, 0.11, sn).rotation.x = Math.PI / 2;
-  add(new THREE.CircleGeometry(0.05, 18), basic(COLORS.cyan), 0, 0.13, -0.306, sn, 0).rotation.y = Math.PI;
-  for (const z of [-0.16, 0.0]) add(new THREE.BoxGeometry(0.04, 0.07, 0.04), toon(0x22252c), 0, 0.075, z, sn, 0.004);
-  const boltPart = new THREE.Group(); boltPart.position.set(0.055, 0.03, 0.12); sn.add(boltPart);
-  add(new THREE.CylinderGeometry(0.012, 0.012, 0.09, 8), toon(0xc0c4cc), 0.045, 0, 0, boltPart, 0.004).rotation.z = Math.PI / 2;
-  add(new THREE.SphereGeometry(0.025, 10, 8), toon(COLORS.red), 0.095, 0, 0, boltPart, 0.004);
-  const sRound = new THREE.Group(); sn.add(sRound); sRound.visible = false; // bala sendo posta no ferrolho aberto
+  // Três snipers: a mão do ferrolho fica dentro de cada modelo (sniper-view.js)
+  const sn = makeFPSniper('torresmo'); root.add(sn);
+  // bala da recarga (vai pra sniper que estiver na mão: Torresmo, Canhão ou Carabina)
+  const sRound = new THREE.Group(); sn.add(sRound); sRound.visible = false;
   add(new THREE.CylinderGeometry(0.012, 0.012, 0.06, 8), toon(0xd9a441), 0, 0, 0, sRound, 0.003).rotation.x = Math.PI / 2;
   add(new THREE.ConeGeometry(0.012, 0.025, 8), toon(0xb87333), 0, 0, -0.042, sRound, 0.003).rotation.x = -Math.PI / 2;
   // Bazuca do Chiqueiro: tubo no ombro com faixas vermelhas, adesivo "C!" e foguete-focinho na boca
@@ -782,7 +786,9 @@ const fp = (() => {
   // Faca de churrasqueiro: rig próprio (faca + braço direito) que faz as animações de sacar/golpe/estocada
   const kr = new THREE.Group(); root.add(kr); const kpiv = new THREE.Group(); kpiv.position.set(0.02, -0.12, 0.06); kr.add(kpiv);
   const knife = makeKnife(1.55, 0.006); knife.rotation.set(0.42, 0.32, -0.55); kpiv.add(knife);
-  guns.push(r, s, sn, bz, ps, kr); for (const o of [s, sn, bz, ps, kr]) o.visible = false;
+  const snH = makeFPSniper('canhao'); root.add(snH);
+  const snL = makeFPSniper('carabina'); root.add(snL);
+  guns.push(r, s, sn, bz, ps, snH, snL, kr); for (const o of [s, sn, bz, ps, snH, snL, kr]) o.visible = false; // índice = arma (7 = faca)
   // braços (pose de fuzil, de pistola e de faca)
   let arms = makeFPArms(getSkin()), armsP = makeFPArms(getSkin(), 'pistol'), armsK = makeFPArms(getSkin(), 'knife'); root.add(arms, armsP); kr.add(armsK); armsP.visible = false; armsP.position.set(0, 0.07, -0.04);
   const setSkin = (id) => { root.remove(arms, armsP); kr.remove(armsK); arms = makeFPArms(getSkin(id)); armsP = makeFPArms(getSkin(id), 'pistol'); armsK = makeFPArms(getSkin(id), 'knife'); armsP.position.set(0, 0.07, -0.04); root.add(arms, armsP); kr.add(armsK); fpRef.arms = arms; fpRef.armsP = armsP; };
@@ -792,7 +798,7 @@ const fp = (() => {
   root.scale.setScalar(0.62);
   const cup = makeCup(0.55); cup.rotation.set(0.25, 0.4, 0.15); cup.visible = false; fpScene.add(cup);
   const hoofHint = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 10), toon(0xee9c22)); hoofHint.position.set(0.0, 0.07, 0.07); outline(hoofHint, 0.006); cup.add(hoofHint);
-  return { root, guns, flash, setSkin, cup, cupThrowT: 0, kick: 0, bob: 0, flashT: 0, pumpPart, boltPart, rocketTip, slide, fpRef, actionT: 0, actionLen: 1, shellT: 0, kr, kpiv, rMag, rCh, pMag, sShell, sRound, loadRocket, drops: [], reloadSeen: 0, knifeT: 9, knifeKind: 'slash', knifeDrawT: 0 };
+  return { root, guns, flash, setSkin, cup, cupThrowT: 0, kick: 0, bob: 0, flashT: 0, pumpPart, rocketTip, slide, fpRef, actionT: 0, actionLen: 1, shellT: 0, kr, kpiv, rMag, rCh, pMag, sShell, sRound, loadRocket, drops: [], reloadSeen: 0, knifeT: 9, knifeKind: 'slash', knifeDrawT: 0 };
 })();
 
 function updateFP(dt) {
@@ -801,7 +807,8 @@ function updateFP(dt) {
   fp.kick = Math.max(0, fp.kick - dt * 6);
   fp.guns.forEach((g, i) => (g.visible = i === p.weapon));
   const w = WEAPONS[p.weapon];
-  fp.fpRef.arms.visible = p.weapon !== PISTOL && p.weapon !== KNIFE; fp.fpRef.armsP.visible = p.weapon === PISTOL;
+  const bolting = !!(w.bolt && fp.actionT > 0);
+  fp.fpRef.arms.visible = p.weapon !== PISTOL && p.weapon !== KNIFE && !bolting; fp.fpRef.armsP.visible = p.weapon === PISTOL;
   if (p.weapon === KNIFE) knifeAnim(dt);
   let dip = 0, tilt = 0;
   // animações de ação: pump da Calibre 12, ferrolho do Sniper, ferrolho da pistola, foguete na boca da bazuca
@@ -809,7 +816,12 @@ function updateFP(dt) {
   const ak = fp.actionT > 0 ? 1 - fp.actionT / fp.actionLen : 0; // 0..1 ao longo da ação
   const cyc = ak > 0.25 && ak < 0.85 ? Math.sin((ak - 0.25) / 0.6 * Math.PI) : 0;
   fp.pumpPart.position.z = -0.36 + cyc * 0.14;
-  fp.boltPart.rotation.z = Math.min(1, cyc * 2) * 1.2; fp.boltPart.position.z = 0.12 + Math.max(0, cyc * 2 - 1) * 0.12;
+  fp.guns.forEach((g, i) => {
+    if (!g.userData.boltHand) return;
+    const active = i === p.weapon && w.bolt && fp.actionT > 0;
+    g.userData.boltHand.visible = active;
+    poseSniperBolt(g, active ? ak : 0);
+  });
   fp.slide.position.z = p.weapon === PISTOL ? fp.kick * 0.9 : 0;
   fp.rocketTip.visible = p.mag[3] > 0;
   const rl = fpReload(p, w, dt); dip = rl.dip; tilt = rl.tilt;
@@ -882,8 +894,12 @@ function fpReload(p, w, dt) {
   } else if (w.bolt) { // Sniper: ferrolho
     out.tilt = env * 0.35; out.dip = env * 0.15; out.yaw = -env * 0.1;
     const open = sstep(0.08, 0.16, k) * (1 - sstep(0.84, 0.92, k)), back = sstep(0.15, 0.24, k) * (1 - sstep(0.78, 0.86, k));
-    fp.boltPart.rotation.z = open * 1.2; fp.boltPart.position.z = 0.12 + back * 0.12;
-    for (const c of [0.4, 0.53, 0.66]) if (k > c - 0.12 && k < c) { const a = sstep(c - 0.12, c, k); fp.sRound.visible = true; fp.sRound.position.set(0.14 - 0.14 * a, -0.04 + 0.09 * a, 0.16 - 0.06 * a); }
+    // ferrolho do modelo da sniper na mão (sniper-view.js): abre e puxa (0→0,58), segura aberto enquanto entram as balas, empurra e fecha (0,58→1)
+    const g = fp.guns[i], ak = k < 0.78 ? 0.58 * sstep(0.06, 0.26, k) : 0.58 + 0.42 * sstep(0.78, 0.94, k);
+    if (g && g.userData.boltHand) { poseSniperBolt(g, ak); g.userData.boltHand.visible = true; fp.fpRef.arms.visible = false; out.boltHand = true; }
+    const rest = (g && g.userData.boltRest) || { x: 0.055, y: 0.03, z: 0.12 };
+    if (g && fp.sRound.parent !== g) g.add(fp.sRound);
+    for (const c of [0.4, 0.53, 0.66]) if (k > c - 0.12 && k < c) { const a = sstep(c - 0.12, c, k); fp.sRound.visible = true; fp.sRound.position.set(rest.x + 0.085 - 0.14 * a, rest.y - 0.07 + 0.09 * a, rest.z + 0.04 - 0.06 * a); }
   } else if (w.rocket) { // Bazuca: baixa do ombro e carrega pela boca
     out.dip = env * 0.55; out.pitch = env * 0.35; out.tilt = -env * 0.15;
     fp.rocketTip.visible = k > 0.8;
@@ -922,12 +938,16 @@ function updateAds(dt, want) {
   const target = WEAPONS[player ? player.weapon : 0].adsFov;
   const fov = BASE_FOV + (target - BASE_FOV) * e;
   if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
-  const sc = scoped(); $('scope').classList.toggle('hidden', !sc); crossEl.classList.toggle('hidden', sc);
+  const sc = scoped(); const scopeEl = $('scope');
+  scopeEl.classList.toggle('hidden', !sc); crossEl.classList.toggle('hidden', sc);
+  scopeEl.classList.remove('torresmo', 'canhao', 'carabina');
+  const scopeStyle = player && WEAPONS[player.weapon].scopeStyle;
+  if (scopeStyle) scopeEl.classList.add(scopeStyle);
   adsVig.style.opacity = sc ? 0 : e.toFixed(3);
   crossEl.style.transform = `translate(-50%,-50%) scale(${(1 - 0.45 * e).toFixed(3)})`;
   crossEl.classList.toggle('ads', e > 0.5);
 }
-const scoped = () => !!player && player.alive && WEAPONS[player.weapon].scope && ads > 0.85;
+const scoped = () => !!player && player.alive && WEAPONS[player.weapon].scope && ads > 0.85 && !(fp.actionT > 0 && WEAPONS[player.weapon].bolt);
 function resetAds() { $('scope').classList.add('hidden'); crossEl.classList.remove('hidden'); ads = 0; camera.fov = BASE_FOV; camera.updateProjectionMatrix(); adsVig.style.opacity = 0; crossEl.style.transform = ''; crossEl.classList.remove('ads'); }
 
 // ---------------- Jogador ----------------
@@ -941,8 +961,9 @@ function updatePlayer(dt) {
     updateAds(dt, false);
     return;
   }
-  // mira com zoom: segura Shift; cancela durante recarga/troca de arma
-  updateAds(dt, (keys.ShiftLeft || keys.ShiftRight) && p.reloadEnd <= gameTime && p.switchEnd <= gameTime && p.weapon !== KNIFE);
+  // mira com zoom: segura Shift ou o botão direito (com a faca o botão direito é a estocada). No ferrolho da sniper a luneta desce pra mão aparecer.
+  const bolting = fp.actionT > 0 && WEAPONS[p.weapon].bolt;
+  updateAds(dt, !bolting && p.weapon !== KNIFE && (keys.ShiftLeft || keys.ShiftRight || rightDown) && p.reloadEnd <= gameTime && p.switchEnd <= gameTime);
   fwd.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); right.set(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
   const wish = new V3();
   if (keys.KeyW || keys.ArrowUp) wish.add(fwd); if (keys.KeyS || keys.ArrowDown) wish.sub(fwd);
@@ -1044,7 +1065,8 @@ function updateBot(b, dt) {
     if (b.nades > 0 && dist > 8 && dist < 24 && gameTime > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < 0.35) botThrow(b, t); else b.nextNade = gameTime + rand(1.5, 3); }
     b.aim += dt;
     let diff = desiredYaw - b.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    const needAim = b.reaction + (b.weapon === 2 ? 0.8 : 0); // sniper: os bots demoram mais pra mirar (justo)
+    const scopeWait = WEAPONS[b.weapon].scope ? (b.weapon === 5 ? 1.15 : b.weapon === 6 ? 0.45 : 0.8) : 0;
+    const needAim = b.reaction + scopeWait; // sniper: os bots demoram mais pra mirar (justo)
     if (b.aim > needAim && Math.abs(diff) < 0.35) botShoot(b, t, dist);
   } else {
     let goal = null;
@@ -1147,11 +1169,11 @@ function botWeaponFor(b, dist) {
   if (b.knifeMode && dist < 7) return KNIFE; if (dist >= 7) b.knifeMode = false;
   const pr = b.primary; if (!botWeapon(b, pr)) return PISTOL;
   if (pr === 1) return dist < 14 ? pr : PISTOL;
-  if (pr === 2) return dist >= 9 ? pr : PISTOL;
+  if (WEAPONS[pr].scope) { const min = pr === 5 ? 14 : pr === 6 ? 6 : 9; return dist >= min ? pr : PISTOL; }
   if (pr === 3) return dist >= 6 && dist <= 28 ? pr : PISTOL;
   return pr;
 }
-const BOT_RATE = [() => rand(2.2, 3.4), () => 1.4, () => 1.6, () => 1, () => rand(1.8, 2.6), () => 1.5];
+const BOT_RATE = [() => rand(2.2, 3.4), () => 1.4, () => 1.6, () => 1, () => rand(1.8, 2.6), () => 1.15, () => 1.05, () => 1.5];
 function botShoot(b, t, dist = 10) {
   const w = WEAPONS[b.weapon];
   if (gameTime < b.nextFire || b.switchEnd > gameTime) return;
@@ -1164,7 +1186,7 @@ function botShoot(b, t, dist = 10) {
   if (b.mag[b.weapon] <= 0) { startReload(b); return; }
   if (w.rocket && dist < 6) return; // não se explode
   b.mag[b.weapon]--;
-  b.nextFire = gameTime + w.rate * BOT_RATE[b.weapon]();
+  b.nextFire = gameTime + w.rate * (BOT_RATE[b.weapon] || (() => 1.2))();
   const origin = center(b, 1.3);
   const tMoving = Math.hypot(t.vel.x, t.vel.z) > 2 ? 1.5 : 1;
   const muzzle = origin.clone().add(new V3(Math.sin(b.yaw) * 1.0, -0.25, Math.cos(b.yaw) * 1.0));
@@ -1224,7 +1246,7 @@ function buildSkinPicker() {
 buildSkinPicker(); setPreview(selectedSkin); buildPrimaryPickers();
 
 // ---------------- Mapas ----------------
-let navMs = 0, showBaseY = 3;
+let navMs = 0, showBaseY = 3, menuPreviewX = 0;
 function loadMap(id) {
   const map = getMap(id);
   if (currentMap === map && worldGroup) return map;
@@ -1291,7 +1313,9 @@ function startGame(mapId) {
   initAudio();
   loadMap(typeof mapId === 'string' ? mapId : pickMapForMatch());
   const name = myName(); saveName(name);
-  sens = parseFloat($('sens').value) || 1.4;
+  sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
+  try { localStorage.setItem('docao.sens', String(sens)); localStorage.setItem('docao.sensAds', String(sensAds)); } catch (e) { /* sem storage */ }
+  revengeName = null; resetFeedback();
   clearBots(); gameTime = 0;
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
   const n = parseInt($('botCount').value) || 5;
@@ -1314,7 +1338,7 @@ function startGame(mapId) {
 function endGame() {
   resetAds();
   if (state === 'over') return;
-  state = 'over'; mouseDown = false;
+  state = 'over'; mouseDown = false; rightDown = false;
   if (document.pointerLockElement) document.exitPointerLock();
   const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
   if (teamMode()) { const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1; setTeamWinner(w); }
@@ -1355,19 +1379,24 @@ document.addEventListener('pointerlockchange', () => {
 document.addEventListener('mousemove', (e) => {
   if (state !== 'playing' || document.pointerLockElement !== canvas || !player) return;
   if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return; // ignora saltos espúrios do pointer lock
-  const s = sens * (camera.fov / BASE_FOV); // sensibilidade proporcional ao zoom
+  const s = sens * (ads > 0.2 ? sensAds : 1) * (camera.fov / BASE_FOV); // mirando usa o slider "Mirando"; o zoom ainda deixa o mouse mais lento
   player.yaw -= e.movementX * 0.0015 * s; player.pitch = clamp(player.pitch - e.movementY * 0.0015 * s, -1.5, 1.5);
 });
 canvas.addEventListener('mousedown', (e) => {
   if (state !== 'playing') return;
   if (!$('teamPick').classList.contains('hidden')) return; // escolhendo time
+  if (e.button === 2) e.preventDefault(); // senão o navegador solta o mouse ao abrir o menu
   if (e.button === 0 && (document.pointerLockElement || !deathUnlock)) { mouseDown = true; firedThisPress = false; }
   if (e.button === 2 && (document.pointerLockElement || !deathUnlock)) { rightDown = true; rightFired = false; }
   if (!document.pointerLockElement) lockPointer();
 });
+// botão direito: mira (ADS) nas armas de fogo; com a faca na mão vira a estocada
 let clickLatch = 0, rightDown = false, rightLatch = 0, rightFired = false; // clique mais curto que um frame ainda dispara (máquinas lentas)
-canvas.addEventListener('contextmenu', (e) => e.preventDefault()); // botão direito = estocada da faca
-document.addEventListener('mouseup', (e) => { if (e.button === 0) { if (mouseDown && !firedThisPress) clickLatch = performance.now(); mouseDown = false; } if (e.button === 2) { if (rightDown && !rightFired && player && player.weapon === KNIFE) rightLatch = performance.now(); rightDown = false; } });
+document.addEventListener('contextmenu', (e) => { if (state === 'playing' || document.pointerLockElement) e.preventDefault(); });
+document.addEventListener('mouseup', (e) => {
+  if (e.button === 0) { if (mouseDown && !firedThisPress) clickLatch = performance.now(); mouseDown = false; }
+  if (e.button === 2) { if (rightDown && !rightFired && player && player.weapon === KNIFE) rightLatch = performance.now(); rightDown = false; }
+});
 document.addEventListener('wheel', (e) => { // rodinha: primária → pistola → faca (e volta)
   if (state !== 'playing' || !player || !player.alive) return;
   const S = player.slots, i = Math.max(0, S.indexOf(player.weapon)), n = S.length; switchWeapon(player, S[(i + (e.deltaY < 0 ? n - 1 : 1)) % n]);
@@ -1377,7 +1406,7 @@ document.addEventListener('keydown', (e) => {
   keys[e.code] = true;
   if (state === 'playing' && player) {
     if (e.code === 'KeyR') startReload(player);
-    if (!player.alive && /^Digit[1-4]$/.test(e.code)) setPrimary(PRIMARIES[+e.code.slice(5) - 1]); // escolha na tela de morte
+    if (!player.alive && /^Digit[1-6]$/.test(e.code)) { const pick = PRIMARIES[+e.code.slice(5) - 1]; if (pick != null) setPrimary(pick); } // escolha na tela de morte
     else {
       if (e.code === 'Digit1') switchWeapon(player, player.slots[0]);
       if (e.code === 'Digit2') switchWeapon(player, player.slots[1]);
@@ -1409,7 +1438,12 @@ function loop() {
   } else if (state === 'menu') {
     menuT += dt * 0.25;
     const sp = showcase.position; camera.position.set(sp.x, showBaseY + 1.25, sp.z + 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
-    if (!camera.view || !camera.view.enabled) camera.setViewOffset(innerWidth, innerHeight, -innerWidth * 0.22, 0, innerWidth, innerHeight);
+    // Docão da vitrine centralizado no espaço livre à direita do painel do menu (recalcula a cada frame: janela redimensionada,
+    // menu mais largo com as 6 primárias...). Antes era um deslocamento fixo de 22% e, em janelas menores, a skin ficava atrás do menu.
+    const pr = $('menu').classList.contains('hidden') ? null : $('menu').querySelector('.panel').getBoundingClientRect();
+    const free = pr ? innerWidth - pr.right : innerWidth, cx = pr && free >= 200 ? pr.right + free / 2 : innerWidth * 0.72;
+    const offX = innerWidth / 2 - cx; menuPreviewX = cx;
+    if (!camera.view || !camera.view.enabled || Math.abs(camera.view.offsetX - offX) > 0.5 || camera.view.fullWidth !== innerWidth || camera.view.fullHeight !== innerHeight) camera.setViewOffset(innerWidth, innerHeight, offX, 0, innerWidth, innerHeight);
     showcase.rotation.y += dt * 0.7; showcase.position.y = showBaseY + (getSkin(selectedSkin).float ? 0.1 + Math.sin(menuT * 10) * 0.06 : Math.abs(Math.sin(menuT * 6)) * 0.06);
     for (const p of pickups) p.mesh.rotation.y += dt;
   }
@@ -1536,7 +1570,7 @@ buildDeathSec();
 }
 document.querySelectorAll('#deathList .primchip').forEach((c) => { const f = c.onclick; c.onclick = (ev) => { ev.stopPropagation(); f(ev); spawnHold = 'primary'; buildDeathSec(); }; });
 $('deathBack').onclick = (ev) => { ev.stopPropagation(); lockPointer(); };
-function onPlayerDeath() { if (document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; }
+function onPlayerDeath() { if (document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; }
 function onPlayerRespawn() { deathCamState.on = false; if (ghost) ghost.model.group.visible = false; if (!document.pointerLockElement && deathUnlock && state === 'playing') flashMsg('Clique pra voltar a mirar'); }
 
 // ============================================================
@@ -1693,7 +1727,7 @@ function startOnlineMatch(m) {
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
   const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
   player = makeEntity(me.name, true, me.skin, '#ffd27a'); player.netId = o.myId; player.sq = 0; player.alive = false; player.respawnAt = Infinity;
-  player.kills = me.kills || 0; player.deaths = me.deaths || 0;
+  player.kills = me.kills || 0; player.deaths = me.deaths || 0; revengeName = null; resetFeedback();
   player.primary = player.nextPrimary = selectedPrimary; player.slots = [selectedPrimary, PISTOL, KNIFE]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
   entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin); player.caps = me.caps || 0; applyTeam(player, me.team ?? -1);
   for (const info of m.ents) remoteEnt(info);
@@ -1758,7 +1792,7 @@ function netEvent(ev) {
     const [, tid, aid, hp, head] = ev; const t = entOf(tid), a = entOf(aid); if (!t) return;
     t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
     if (t === player) { hurtFlash(); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
-    if (aid === o.myId && t !== player) { hitMarker(hp <= 0); sfx.hit(); }
+    if (aid === o.myId && t !== player) { if (hp > 0) feedbackHit({ head: !!head }); sfx.hit(); }
   } else if (k === 'ml') { // golpe de faca de alguém: animação + som (o dano vem nos eventos 'h'/'k')
     const [, id, kind, hit] = ev; const e = entOf(id); if (!e) return; const kn = MELEE_KINDS[kind] || 'slash';
     if (e === player) { if (hit) sfx.knifeHit(1); return; }
@@ -1768,8 +1802,9 @@ function netEvent(ev) {
     const [, aid, tid, w0, head, aK, tD, mk] = ev; const a = entOf(aid), t = entOf(tid); if (!t) return; const w = mk ? KNIFE : w0, back = mk === 2;
     if (a) a.kills = aK; t.deaths = tD; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.lastAttacker = a || null; t.killW = w; t.killBack = back;
     if (w === -2) { t.fxDeath = t.deathAt; return; } // trocou de time (sem bacon)
-    addKillFeed(a, t, w, head, back); sfx.die(t === player ? 1 : distVol(t.pos)); if (a === player && t !== player) sfx.kill();
-    if (t === player) { onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
+    addKillFeed(a, t, w, head, back); sfx.die(t === player ? 1 : distVol(t.pos));
+    if (a === player && t !== player) { sfx.kill(); notePlayerKill(t, !!head); }
+    if (t === player) { if (a && a !== player) revengeName = a.name; onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
   } else if (k === 'sp') {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
     e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN;
@@ -1807,7 +1842,7 @@ function personalEvent(ev) {
   }
 }
 function onlineEnd(m) {
-  const o = online; resetAds(); state = 'over'; mouseDown = false; o.endMsg = m;
+  const o = online; resetAds(); state = 'over'; mouseDown = false; rightDown = false; o.endMsg = m;
   if (document.pointerLockElement) document.exitPointerLock();
   for (const [id, , k, d] of m.board) { const e = entOf(id); if (e) { e.kills = k; e.deaths = d; } }
   for (const r of m.board) { const e = entOf(r[0]); if (e && r[6] != null) e.caps = r[6]; }
@@ -1838,6 +1873,6 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,
   get mode() { return mode; }, get zone() { return zone; }, set zone(v) { zone = v; }, get teamScore() { return teamScore; }, get spawnHold() { return spawnHold; }, get selectedPrimary() { return selectedPrimary; },
-  DOM, applyTeam, damage, kill: (e) => kill(e, null, 0, false), V3, KNIFE, MELEE, switchWeapon, quickKnife, knifeAttack, meleeHit, modelYaw, get fpKnife() { return { t: fp.knifeT, kind: fp.knifeKind, visible: fp.kr.visible }; }, get bacon() { return baconStats; }, los: (a, b) => losClear(new V3(...a), new V3(...b)), activeBacons, BACON, get deathCam() { return deathCamState; },
+  DOM, applyTeam, damage, kill: (e) => kill(e, null, 0, false), V3, KNIFE, MELEE, switchWeapon, quickKnife, knifeAttack, meleeHit, modelYaw, get fpBoltHand() { const g = fp.guns[player ? player.weapon : -1]; return !!(g && g.userData.boltHand && g.userData.boltHand.visible && fp.sRound.parent === g); }, get menuPreviewX() { return menuPreviewX; }, get previewScreen() { if (!preview || !showcase.visible) return null; const v = showcase.position.clone(); v.y += 0.9; v.project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, skin: selectedSkin, kids: preview.group.children.length }; }, get fpKnife() { return { t: fp.knifeT, kind: fp.knifeKind, visible: fp.kr.visible }; }, get bacon() { return baconStats; }, los: (a, b) => losClear(new V3(...a), new V3(...b)), activeBacons, BACON, get deathCam() { return deathCamState; },
   blastAt: (x, y, z, kind = 'r', owner) => blast(new V3(x, y, z), owner || player, kind === 'n' ? { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE } : { ...WEAPONS[3].rocket, wIdx: 3 }),
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()) };

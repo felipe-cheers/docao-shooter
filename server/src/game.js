@@ -142,7 +142,14 @@ export class Game {
     this.pickups = map.pickups.map(([type, x, z, y]) => ({ type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: true, respawnAt: 0 }));
     this.nades = []; this.rockets = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
-    for (const e of this.ents.values()) { e.kills = 0; e.deaths = 0; e.alive = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1; }
+    for (const e of this.ents.values()) {
+      e.kills = 0; e.deaths = 0; e.alive = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1;
+      // this.T e o relógio do cliente voltam a 0 na partida nova: zera cadência/anti speed-hack, senão os tiros da partida anterior
+      // (lastShot/lastCt/lastMelee no futuro) fazem o servidor rejeitar todo tiro no "Próximo mapa"/"Jogar de novo" (sem dano)
+      e.lastShot = WEAPONS.map(() => -9); e.lastCt = []; e.maxOff = undefined; e.lastMeleeCt = undefined; e.lastMeleeT = undefined; e.lastMeleeRate = 0; e.lastKnock = -9;
+      e.rejectedShots = 0; e.rejectedMelee = 0; e.reload = null; e.hist = []; e.nextFire = 0; e.reloadEnd = 0; e.knifeRoll = 0; e.knifeMode = false;
+      if (e.bot) Object.assign(e, { think: 0, lastSeenAt: -99, nextNade: 0, repathAt: 0 });
+    }
     if (this.teamMode) { // times
       const hs = this.humans(); // os times do lobby já respeitam a regra; só completa quem está sem time e reequilibra (automáticos primeiro)
       for (const e of hs) if (e.team !== 0 && e.team !== 1) e.team = e.teamPref >= 0 && canJoinTeam(e.teamPref, this.teamCounts(e)) ? e.teamPref : smallerTeam(this.teamCounts(e));
@@ -187,6 +194,7 @@ export class Game {
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
         if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); break;
+      case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
       case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? MAPS[(MAPS.findIndex((x) => x.id === this.mapId) + 1) % MAPS.length].id : this.cfg.map)); break;
       case 'team': {
         if (!this.teamMode) return; const r = this.chooseTeam(e, m.team);
@@ -477,7 +485,10 @@ export class Game {
   botWeaponFor(b, d) {
     if (d < 3 && this.T > (b.knifeRoll || 0)) { b.knifeRoll = this.T + 1.5; b.knifeMode = Math.random() < 0.45; } // às vezes saca a faca colado no alvo
     if (b.knifeMode && d < 7) return KNIFE; if (d >= 7) b.knifeMode = false;
-    const pr = b.primary; if (pr === 1) return d < 14 ? pr : PISTOL; if (pr === 2) return d >= 9 ? pr : PISTOL; if (pr === 3) return d >= 6 && d <= 28 ? pr : PISTOL; return pr; }
+    const pr = b.primary; if (pr === 1) return d < 14 ? pr : PISTOL;
+    if (WEAPONS[pr] && WEAPONS[pr].scope) { const min = pr === 5 ? 14 : pr === 6 ? 6 : 9; return d >= min ? pr : PISTOL; }
+    if (pr === 3) return d >= 6 && d <= 28 ? pr : PISTOL; return pr;
+  }
   updateBot(b, dt) {
     if (!b.alive) return;
     if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; b.reloadEnd = 0; }
@@ -510,7 +521,8 @@ export class Game {
       if (b.nades > 0 && d > 8 && d < 24 && this.T > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < 0.35) this.botThrow(b, t); else b.nextNade = this.T + rand(1.5, 3); }
       b.aim += dt;
       let diff = desiredYaw - b.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      if (b.aim > b.reaction + (b.weapon === 2 ? 0.8 : 0) && Math.abs(diff) < 0.35) this.botShoot(b, t, d);
+      const scopeWait = WEAPONS[b.weapon].scope ? (b.weapon === 5 ? 1.15 : b.weapon === 6 ? 0.45 : 0.8) : 0;
+      if (b.aim > b.reaction + scopeWait && Math.abs(diff) < 0.35) this.botShoot(b, t, d);
     } else {
       let goal = null;
       const near = (type, maxD) => this.pickups.filter((p) => p.active && p.type === type && dist(p.pos, b.pos) < maxD).sort((a, c) => dist(a.pos, b.pos) - dist(c.pos, b.pos))[0];
@@ -541,7 +553,7 @@ export class Game {
     }
     if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
     if (w.rocket && d < 6) return;
-    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * [rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6)][b.weapon]; b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * ([rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6), 1.15, 1.05][b.weapon] || 1.2); b.invulnUntil = Math.min(b.invulnUntil, this.T);
     const o = center(b, 1.3), tMoving = Math.hypot(t.vel.x, t.vel.z) > 2 ? 1.5 : 1;
     if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + t.vel.x * lead + rand(-0.8, 0.8), y: t.pos.y + 0.25, z: t.pos.z + t.vel.z * lead + rand(-0.8, 0.8) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
     const aim = w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6)); aim.x += rand(-0.3, 0.3); aim.z += rand(-0.3, 0.3);

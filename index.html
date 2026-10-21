@@ -12,7 +12,10 @@
 
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
-  <div id="hitmarker"></div>
+  <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+  <div id="points"></div>
+  <div id="medals"></div>
+  <div id="streak"></div>
   <div id="vignette"></div>
   <div id="adsvig"></div>
   <div id="scope" class="hidden"><div class="lens"></div><div class="hair h"></div><div class="hair v"></div><div class="dot"></div></div>
@@ -77,13 +80,16 @@
       <label>Sensibilidade
         <input id="sens" type="range" min="0.5" max="3" step="0.1" value="1.4">
       </label>
+      <label>Mirando
+        <input id="sensAds" type="range" min="0.2" max="2" step="0.05" value="1">
+      </label>
     </div>
     <div class="playrow"><button id="playBtn">JOGAR OFFLINE <small>(bots)</small></button><button id="onlineBtn" class="online">JOGAR ONLINE</button></div>
     <div class="controls">
       <b>Controles</b>
-      <div>WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom</div>
-      <div>Clique atirar · R recarregar · 1 primária / 2 pistola (ou rodinha)</div>
-      <div>Segure Q (ou 3): Copo Bomba · solte para arremessar</div>
+      <div>WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (com a faca: estocada)</div>
+      <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida</div>
+      <div>Segure Q: Copo Bomba · solte para arremessar</div>
       <div>Tab placar · Esc pausar</div>
       <div class="rules">Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos</div>
     </div>

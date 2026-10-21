@@ -34,12 +34,12 @@ const stage = (dist, faceAway = false) => G(([dist, faceAway]) => {
 }, [dist, faceAway]);
 const tHp = () => G(() => ({ hp: Math.round(window.__t.hp), alive: window.__t.alive, last: window.__lastMelee, feed: (window.__feedLog || []).slice(-1)[0] || '' }));
 const click = async (button = 'left') => { await page.mouse.move(640, 360); await page.mouse.down({ button }); await waitGame(0.06); await page.mouse.up({ button }); await waitGame(0.08); };
-const NAMES = ['fuzil', 'calibre12', 'sniper', 'bazuca', 'pistola'];
+const NAMES = ['fuzil', 'calibre12', 'sniper', 'bazuca', 'pistola', 'canhao', 'carabina'];
 await stage(30); await G(() => { window.__t.pos.set(999, -50, 999); });
 // arma na mão, munição do pente parcial, reserva cheia
 const arm = (w, mag) => G(([w, mag]) => { const g = window.__docao, p = g.player; if (w !== 4) p.slots[0] = w; p.weapon = -1; g.switchWeapon(p, w); p.switchEnd = 0; p.reloadEnd = 0; p.mag[w] = mag; p.reserve[w] = 60; p.invulnUntil = g.time + 999; }, [w, mag]);
 const st = () => G(() => { const g = window.__docao, p = g.player; return { w: p.weapon, mag: p.mag[p.weapon], res: p.reserve[p.weapon], rl: p.reloadEnd > g.time, drops: window.__magDrops || 0 }; });
-for (const w of [0, 1, 2, 3, 4]) {
+for (const w of [0, 1, 2, 3, 4, 5, 6]) { // inclui as snipers do PR #1 (Canhão do Barril, Carabina da Granja)
   const W = await G((w) => window.__docao.WEAPONS[w], w);
   await arm(w, W.key === 'bazooka' ? 0 : W.key === 'shotgun' ? 5 : 1); await waitGame(0.45);
   const d0 = (await st()).drops;
@@ -50,6 +50,7 @@ for (const w of [0, 1, 2, 3, 4]) {
   await G((mid) => { window.__stopAt = window.__docao.player.reloadStartT + mid; }, mid);
   await page.waitForFunction(() => window.__docao.time >= window.__stopAt - 1e-6, null, { timeout: 15000 });
   await wait(250); await page.screenshot({ path: `${SHOTS}/20-reload-${NAMES[w]}.png` });
+  if (W.bolt) ok(await G(() => window.__docao.fpBoltHand), `${W.short}: mão no ferrolho aberto durante a recarga`);
   await G(() => { window.__stopAt = null; });
   const total = W.shellReload ? W.reloadStart + W.reload * (W.mag - 5) + 0.3 : W.reload + 0.25;
   await waitGame(total);

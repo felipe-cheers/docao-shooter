@@ -146,7 +146,7 @@ const equipViaDeath = async (k) => { // morre, aperta [k] na tela de morte, rena
   await waitGame(1.25); // câmera do bacon (1,1 s) antes dos cartões
   const pickVisible = await page.evaluate(() => !document.getElementById('deathpick').classList.contains('hidden'));
   await page.keyboard.press('Digit' + k); await waitGame(0.1);
-  if (k === 4) { await page.evaluate(() => { window.__docao.player.respawnAt = window.__docao.time + 30; }); await page.screenshot({ path: 'screenshots/12-tela-morte-escolha.png' }); await page.evaluate(() => { window.__docao.player.respawnAt = window.__docao.time; }); }
+  if (k === 6) { await page.evaluate(() => { window.__docao.player.respawnAt = window.__docao.time + 30; }); await page.screenshot({ path: 'screenshots/12-tela-morte-escolha.png' }); await page.evaluate(() => { window.__docao.player.respawnAt = window.__docao.time; }); }
   await page.waitForFunction(() => window.__docao.player.alive, null, { timeout: 30000, polling: 16 });
   return { pickVisible, primary: await page.evaluate(() => window.__docao.player.primary), weapon: await page.evaluate(() => window.__docao.player.weapon) };
 };
@@ -174,7 +174,8 @@ await page.screenshot({ path: 'screenshots/12-sniper-scope.png' });
 await shoot(); await waitGame(0.1); W.sniper.target = await tState();
 await page.keyboard.up('Shift'); await waitGame(0.3);
 // 4) Bazuca: foguete visível com fumaça, abate em área, rocket jump
-W.bazuca = await equipViaDeath(4); await setupTarget(4); await waitGame(0.5);
+// tela de morte: 1 Fuzil · 2 Calibre 12 · 3 Sniper · 4 Canhão · 5 Carabina · 6 Bazuca (ordem do PR #1)
+W.bazuca = await equipViaDeath(6); await setupTarget(4); await waitGame(0.5);
 const bx0 = await page.evaluate(() => window.__docao.explosions);
 await shoot(); await waitGame(0.3);
 W.bazuca.rocketsInFlight = await page.evaluate(() => window.__docao.rockets.length);

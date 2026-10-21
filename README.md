@@ -12,7 +12,7 @@ python3 -m http.server 8123
 (Precisa ser servido por HTTP por causa dos módulos ES; funciona offline, o Three.js está em `vendor/`.)
 
 ## Controles
-WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom (luneta no Sniper) · Clique atirar (faca: golpe) · Botão direito: estocada com a faca · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V troca rápida faca ↔ arma · Segure Q: Copo Bomba, solte para arremessar · Morto: 1–4 escolhe a primária do próximo renascimento · Tab placar · Esc (ou P) pausar
+WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a estocada · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V troca rápida faca ↔ arma · Segure Q: Copo Bomba, solte para arremessar · Morto: 1–6 escolhe a primária do próximo renascimento · Tab placar · Esc (ou P) pausar
 
 ## Online (multiplayer) 🌐
 
@@ -106,6 +106,7 @@ Escolha **uma arma primária** no menu (ao lado das skins; fica salva no navegad
 - Nomes no feed de abates: Fuzil Pururuca, Calibre 12, Sniper Torresmo, Bazuca, Pistolinha, Copo Bomba, Faca.
 
 ## Faca de churrasqueiro 🔪 (slot 3, sempre equipada)
+- Índice da arma: `KNIFE = 7` (depois das snipers Canhão do Barril = 5 e Carabina da Granja = 6, do PR #1). Botão direito = mira (ADS) nas armas de fogo e estocada só com a faca na mão. Tecla 3 = faca (o Copo Bomba fica só no Q). Recarga animada também nas três snipers (ferrolho do modelo de `sniper-view.js` + mão + bala entrando).
 - Faca de churrasqueiro com lâmina de aço, cabo de madeira com rebites e logo **C!** vermelho (cel-shading com contorno). Modelo em 1ª pessoa (parada, sacar, golpe, estocada) e na mão do boneco em 3ª pessoa; sons WebAudio de golpe/acerto.
 - **Clique: golpe** — 40 de dano, alcance ~1,6 m, em cone, a cada 0,42 s. **Botão direito: estocada** — 75 de dano, ~1,8 m, cone mais estreito, recarga de 1 s.
 - **Pelas costas mata na hora** (qualquer golpe). Com a faca na mão você corre **15% mais rápido**. Sem munição, sem recarga, sem mira.
