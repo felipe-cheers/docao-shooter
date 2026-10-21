@@ -264,7 +264,8 @@ Online quem decide é o servidor: ele só renasce um humano depois dos 5 s **e**
 ## Morte = BACON 🥓
 Quando qualquer Docão morre (você, outro jogador ou bot), ele dá um "pop" (achata), some numa nuvem de fumaça e vira uma **tira de bacon** ondulada (carne vermelha/rosada com listras de gordura, cel-shading com contorno). O bacon pula, quica no chão chiando (som WebAudio + faíscas de gordura), fica ~3 s e encolhe.
 - **Câmera da morte**: você vê o seu bacon em 3ª pessoa (órbita lenta, encurta se tiver parede) por 1,1 s; depois aparecem os cartões de arma.
-- Tudo no cliente (`bacon.js`): geometria/materiais únicos, pool de 14 bacons + fumaça + faíscas (nada é criado durante a partida). Online usa os eventos de morte que o servidor já manda — sem mudança no Worker.
+- **Bacon que cura**: qualquer Docão vivo que pisar no bacon (inimigo, aliado, quem matou — só não o próprio morto) ganha **+10 de vida** (máx. 100) e o bacon some com uma nuvem rosada, faíscas e um "nhac nhac". Com 100 de vida o bacon fica no chão (igual ao pickup de vida). Raio ~1,2 m na horizontal, mesmo andar (|Δy| < 1 m); dá pra comer de 0,3 s depois da morte até o bacon sumir (3,45 s). Bots com menos de 60 de vida vão atrás de um bacon a até 12 m. Valores em `shared/rules.js` (`BACON_ITEM`).
+- Visual no cliente (`bacon.js`): geometria/materiais únicos, pool de 14 bacons + fumaça + faíscas (nada é criado durante a partida). Offline a cura é no `main.js`; online o **servidor decide**: guarda um bacon por morte (posição da morte, no chão via `groundAt`), confere a cada tick e manda o evento `['bc', morto, quemComeu, vida]` pra todos (clientes antigos ignoram o evento e recebem a vida pelo snapshot).
 - Teste: `node test-bacon.mjs` (offline, gera `screenshots/19-bacon-*.png`); `test-online.mjs` confere bacon de remoto, do próprio jogador e de bots.
 
 ## Nome do jogador

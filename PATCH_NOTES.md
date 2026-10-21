@@ -4,6 +4,14 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.6 — Bacon Restaurador 🥓❤️ (21/10/2026)
+O bacon agora serve pra alguma coisa: **quem pisar no bacon de um Docão morto ganha +10 de vida!**
+- Vale pra qualquer um que estiver vivo: inimigo, aliado ou quem fez a vítima virar bacon. Só o próprio morto não come o bacon dele.
+- Comeu: aparece **"+10 de vida (bacon!)"**, toca um "nhac nhac" e o bacon some numa nuvenzinha rosada. A vida não passa de 100. Se você já está com 100, o bacon fica no chão pra outro.
+- Dá pra pegar enquanto o bacon estiver no chão (uns 3 segundos). Se ninguém pegar, ele some como antes. Agora ele cai pertinho de onde o Docão morreu.
+- Os bots também comem: pegam quando passam por cima e, com pouca vida, vão atrás de um bacon que esteja perto.
+- No online quem decide é o servidor, então todo mundo vê o mesmo bacon sumir.
+
 ## v1.5.7 (21/10/2026)
 - **Piso e telhado não piscam mais:** onde duas superfícies ficavam exatamente no mesmo plano (laje em cima da parede, faixa no piso, asfalto, meio-fio…) a imagem ficava trocando de cor quando você mexia a câmera. Agora cada uma fica no seu lugar. A colisão continua igualzinha.
 - **Bacon não afunda mais no chão:** quando um Docão morre, a tira de bacon fica deitada por cima do piso (no chão ou num telhado), sem afundar nem no fim da animação.
