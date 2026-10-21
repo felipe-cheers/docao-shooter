@@ -104,6 +104,7 @@ const shot = await G(() => ({ s: window.__lastShot, pitch: window.__docao.player
 await page.keyboard.up('ShiftLeft');
 const fwd = [-Math.sin(0.3) * Math.cos(0.05), Math.sin(0.05), -Math.cos(0.3) * Math.cos(0.05)];
 const dot = shot.s ? shot.s.dir.reduce((a, v, i) => a + v * fwd[i], 0) : 0;
+console.log('tiro:', JSON.stringify(shot));
 ok(sc && shot.s && shot.s.w === 2 && shot.s.spread === 0, 'Sniper com luneta e parado: dispersão 0');
 ok(dot > 0.99999, `raio sai exatamente pelo centro da mira (cos = ${dot.toFixed(6)})`);
 ok(Math.abs(shot.pitch - 0.05) < 1e-6 && Math.abs(shot.yaw - 0.3) < 1e-6, 'sem coice deslocando a mira depois do tiro');
