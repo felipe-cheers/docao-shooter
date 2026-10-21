@@ -228,7 +228,7 @@ Escolha o modo no menu (offline) ou ao criar a sala (online; o anfitrião pode t
 - **Mata-mata** (todos contra todos): vence quem chegar a 20 abates ou quem liderar ao fim do tempo (padrão 5 minutos; o anfitrião pode escolher 3–20 min, e o menu offline também tem o campo **Tempo**).
 - **Dominação** (times Vermelho × Azul): regras em `shared/domination.js`, as mesmas offline e no servidor.
   - Uma **zona de captura** (anel + coluna de luz, raio 4 m) aparece num ponto andável aleatório; barra de progresso no topo e seta na borda da tela quando ela está fora de vista.
-  - **Velocidade:** 1/15 por segundo por jogador dentro, até **3** contando (1 → 15 s, 2 → 7,5 s, 3+ → 5 s).
+  - **Tempo de captura:** 25 s com 1 jogador dentro e 1 s a menos por jogador extra do mesmo time (2 → 24 s, 3 → 23 s … 10 → 16 s). Neutralizar o progresso do outro time vai na mesma velocidade.
   - **Contestada** (os dois times dentro): o progresso **para**. Time adversário sozinho primeiro **neutraliza** o progresso do outro, depois começa o seu.
   - **Vazia:** o progresso **decai** 0,1/s até zerar (zona volta a neutra).
   - Cada captura = **1 ponto** pro time; a zona reaparece em outro lugar (≥ 18 m da anterior, quando dá). **Primeiro a 5 vence**; tempo limite 7 min no padrão ou o escolhido pelo anfitrião (empate se igual).
