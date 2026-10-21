@@ -390,7 +390,9 @@ export function makeDocao(skinOrId, opts = {}) {
     const ps = new THREE.Group(); ps.position.set(0.0, 0.9, 0.55); g.add(ps);
     mesh(new THREE.BoxGeometry(0.07, 0.08, 0.26), toon('#ff9fb6'), ps, 0.01);
     mesh(new THREE.BoxGeometry(0.06, 0.15, 0.08), toon('#3b3f4a'), ps, 0.01).position.set(0, -0.1, -0.06);
-    guns.push(r, sg, sn, bz, ps); for (const o of [sg, sn, bz, ps]) o.visible = false;
+    // faca de churrasqueiro na mão direita (filha do braço: acompanha o golpe)
+    const kn = makeKnife(1.7, 0.006); kn.rotation.set(-Math.PI / 2, 0, 0); kn.position.set(0, -0.6, 0.02); arms[0].add(kn);
+    guns.push(r, sg, sn, bz, ps, kn); for (const o of [sg, sn, bz, ps, kn]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -422,6 +424,7 @@ export function setPose(model, pose) {
     const s = i === 0 ? -1 : 1;
     if (pose === 'gun') a.rotation.set(-1.32, -s * 0.5, s * 0.12);
     else if (pose === 'reload') a.rotation.set(-0.8, -s * 0.4, s * 0.1);
+    else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
   });
@@ -457,7 +460,9 @@ export function makeFPArms(skinOrId, pose = 'rifle') {
     if (gl && glove.sparkle !== false) addSparkles(fist, 14, r * 1.45);
     const th = add(new THREE.CapsuleGeometry(r * 0.42, r * 0.6, 4, 8), handM, 0.005); th.position.copy(fist.position).add(new V3(-0.03, 0.05, -0.04)); th.rotation.set(0.4, 0, 0.9);
   }
-  if (pose === 'pistol') { // pistola: as duas mãos juntas no cabo
+  if (pose === 'knife') { // faca: só a mão direita, segurando o cabo
+    limb(new V3(0.22, -0.55, 0.45), new V3(0.02, -0.12, 0.06), 0.07);
+  } else if (pose === 'pistol') { // pistola: as duas mãos juntas no cabo
     limb(new V3(0.14, -0.55, 0.5), new V3(0.0, -0.15, 0.02), 0.07);
     limb(new V3(-0.4, -0.6, 0.35), new V3(-0.07, -0.19, 0.0), 0.07);
   } else {
@@ -517,4 +522,32 @@ export function makeRocket(scale = 1) {
   for (let i = 0; i < 4; i++) { const f = m(new THREE.BoxGeometry(0.012, 0.09, 0.09), toon('#7DF9FF'), 0.004); const a = i * Math.PI / 2; f.position.set(Math.cos(a) * 0.085, Math.sin(a) * 0.085, -0.15); f.rotation.z = a + Math.PI / 2; }
   const back = m(new THREE.CylinderGeometry(0.05, 0.06, 0.04, 14), toon('#3b3f4a')); back.rotation.x = Math.PI / 2; back.position.z = -0.2;
   root.scale.setScalar(scale); return root;
+}
+
+// ---------- Faca de churrasqueiro: lâmina de aço (chef), cabo de madeira com 3 rebites e logo C! vermelho ----------
+// Origem = centro da empunhadura; lâmina aponta pra -z, fio pra -y, espessura em x. Usada em 1ª e 3ª pessoa.
+let knifeLogoTex = null;
+export function makeKnife(scale = 1, th = 0.004) {
+  if (!knifeLogoTex) knifeLogoTex = canvasTex(128, 64, (x, W, H) => {
+    x.fillStyle = '#f5e6d0'; x.beginPath(); x.roundRect(4, 4, W - 8, H - 8, 16); x.fill();
+    drawLogo(x, W / 2, H / 2, H * 0.62, '#e63946');
+  });
+  const g = new THREE.Group();
+  const m = (geo, mat, t = th) => { const o = new THREE.Mesh(geo, mat); g.add(o); if (t) outline(o, t); return o; };
+  // lâmina: perfil de faca de chef (costas retas, fio que curva até a ponta)
+  const s = new THREE.Shape();
+  s.moveTo(0, 0.012); s.lineTo(0.235, 0.012); s.quadraticCurveTo(0.285, 0.008, 0.305, -0.006);
+  s.quadraticCurveTo(0.25, -0.042, 0.13, -0.05); s.lineTo(0, -0.05); s.closePath();
+  const bg = new THREE.ExtrudeGeometry(s, { depth: 0.007, bevelEnabled: true, bevelThickness: 0.0025, bevelSize: 0.002, bevelSegments: 1, curveSegments: 10 });
+  bg.translate(0, 0, -0.0035); bg.rotateY(Math.PI / 2); // comprimento → -z, espessura → x
+  const blade = m(bg, toonWarm('#cfd6de', 0.1, {}, '#eef6ff')); blade.position.set(0, 0.018, -0.085);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.0115, 0.006, 0.2), basic('#ffffff')); edge.position.set(0, -0.027, -0.2); g.add(edge); // fio brilhante
+  m(new THREE.BoxGeometry(0.022, 0.07, 0.022), toon('#9aa3ad')).position.set(0, 0.0, -0.075); // reforço (bolster)
+  // cabo de madeira + rebites + logo
+  const wood = toonWarm('#8b5a2b', 0.2, {}, '#c8813e');
+  const h = m(new THREE.BoxGeometry(0.03, 0.05, 0.15), wood); h.position.set(0, -0.004, 0.005);
+  const cap = m(new THREE.CylinderGeometry(0.025, 0.025, 0.03, 12), wood); cap.rotation.z = Math.PI / 2; cap.position.set(0, -0.004, 0.08); cap.scale.set(1, 1, 1.1);
+  for (const z of [-0.058, -0.026, 0.066]) for (const sx of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.004, 10), toon('#e8edf2')); r.rotation.z = Math.PI / 2; r.position.set(sx * 0.0165, -0.004, z); g.add(r); }
+  for (const sx of [-1, 1]) { const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 0.02), new THREE.MeshBasicMaterial({ map: knifeLogoTex, transparent: true })); lg.position.set(sx * 0.0162, -0.004, 0.022); lg.rotation.y = sx * Math.PI / 2; g.add(lg); }
+  g.scale.setScalar(scale); return g;
 }

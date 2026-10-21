@@ -17,15 +17,25 @@ export const WEAPONS = [
     rocket: { speed: 24, radius: 5, maxDmg: 120, selfMul: 0.4, knock: 11, lift: 13 }, desc: 'Foguete · 1/4 · dano em área · rocket jump' },
   { key: 'pistol', name: 'Pistolinha Leitão', short: 'Pistolinha', chip: 'Pistola', mag: 12, reserve: 60, dmg: 25, headMul: 2, rate: 0.16, auto: false, pellets: 1, spread: 0.007, reload: 1.1, range: 110, recoil: 0.03, adsFov: 50, adsSpread: 0.4, flashZ: -0.42,
     desc: 'Semiautomática · 12/60 · 25 dano' },
+  // 5 · Faca de churrasqueiro: corpo a corpo, sempre no slot 3 (sem munição). Regras de acerto em shared/melee.js
+  { key: 'knife', name: 'Faca de churrasqueiro', short: 'Faca', chip: 'Faca', mag: 0, reserve: 0, dmg: 40, headMul: 1, rate: 0.42, auto: true, pellets: 0, spread: 0, reload: 0, range: 1.6, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
+    melee: true, desc: 'Sempre equipada · golpe 40 · estocada 75 (botão direito) · pelas costas mata' },
 ];
-export const PRIMARIES = [0, 1, 2, 3], PISTOL = 4, W_NADE = -1;
+export const PRIMARIES = [0, 1, 2, 3], PISTOL = 4, KNIFE = 5, W_NADE = -1;
+// Faca: golpe (clique) e estocada (botão direito). range = alcance até a superfície do corpo; cone = meia-abertura (rad).
+// Pelas costas (atacante atrás da vítima: cos(frente da vítima, vítima→atacante) < backDot) = morte instantânea.
+export const MELEE = {
+  slash: { dmg: 40, range: 1.6, cone: 0.62, rate: 0.42 },
+  stab: { dmg: 75, range: 1.8, cone: 0.36, rate: 1.0 },
+  backDot: -0.4, backDmg: 1000, speedMul: 1.15, draw: 0.2,
+};
 
 // Copo Bomba (granada)
 export const NADE = { max: 3, spawnWith: 1, fuse: 2.5, charge: 1.2, radius: 6, maxDmg: 130, selfMul: 0.4, grav: -20, r: 0.14, pickupRespawn: 20, knock: 14, lift: 7 };
-export const WEAPON_SHORT = (i) => (i === W_NADE ? 'Copo Bomba' : WEAPONS[i].short);
+export const WEAPON_SHORT = (i) => (i === W_NADE ? 'Copo Bomba' : WEAPONS[i] ? WEAPONS[i].short : '?');
 export const BOT_DEFS = [
   { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' }, { name: 'Linguiça' }, { name: 'Quindim' },
 ];
 
-export const BOT_RANGE = [14, 4.5, 26, 14, 10]; // distância preferida dos bots por arma
+export const BOT_RANGE = [14, 4.5, 26, 14, 10, 1.2]; // distância preferida dos bots por arma
 export const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b', '#9fd0ff', '#ffa3d8'];
