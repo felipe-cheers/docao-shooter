@@ -143,7 +143,7 @@ export const MAPS = [];
       o.push(...building(-18, zc - 3, -11, zc + 3, { col: { wall: '#b5793e', wall2: '#a0682f', floor: '#c8a27a', roof: '#8b5a2b', roof2: '#6b4423' }, floors: 1, H: 3.2,
         ops: [{ s: 'w', a: zc - 1, b: zc + 0.8 }, { s: 'e', a: zc - 0.8, b: zc + 1 }, { s: zc < 0 ? 's' : 'n', a: -16.5, b: -14, k: 'win' }], roofGaps: [{ s: zc < 0 ? 'n' : 's', a: -14.5, b: -12 }] }));
       const zr = zc < 0 ? zc - 3 : zc + 3, d = zc < 0 ? -1 : 1;
-      o.push(B(-14.4, zr, -12.1, zr + d * 1.4, 2.0, '#f2c94c'), R(-14.4, zr + d * 1.4, -12.1, zr + d * 3.6, 0, 2.0, 'z', -d, '#e8c25a'));
+      o.push(R(-14.4, Math.min(zr, zr + d * 5), -12.1, Math.max(zr, zr + d * 5), 0, 3.2, 'z', -d, '#e8c25a'));
     }
     // corredor norte: muretas de pedra e fardos | campo: cercas e caixotes
     o.push(B(-21, -20.6, -16, -19.8, 1.2, '#a8a29a'), B(-12, -24.6, -8, -23.8, 1.2, '#a8a29a'), B(-26, -16, -24.6, -14.2, 1.4, '#f2c94c'), B(-9, -18.8, -7, -16.6, 1.4, '#f2c94c'));
@@ -180,7 +180,7 @@ export const MAPS = [];
       ['ammo', 2, -4.5, 3.5], ['ammo', -2, 4.5, 3.5], ['ammo', -14.5, -11], ['ammo', 14.5, 11], ['ammo', -27, 3, 7], ['ammo', 27, -3, 7],
       ['grenade', -14.5, 11], ['grenade', 14.5, -11], ['grenade', -20, 0], ['grenade', 20, 0], ['grenade', -2.3, 19, 4.4]],
     showcase: [0, 0, 9], view: [-20, 0, 1.5, -1.62, 0.0], openMax: 7,
-    test: { stairs: { from: [-29.8, 0, -5.5], to: [-23.6, 3.5, -5.5], level: 3.5 }, roof: { from: [-29.8, 3.5, 5.5], to: [-23.6, 7.0, 5.5], level: 7.0 }, under: { from: [-29, 0, -2.5], to: [-23.5, 0, -2.5], ceil: 3.2 } },
+    test: { stairs: { from: [-28.4, 0, -5.5], via: [[-23.5, -5.5]], to: [-23.5, 3.5, -3.6], level: 3.5 }, roof: { from: [-28.4, 3.5, 5.5], via: [[-23.5, 5.5]], to: [-25.5, 7.0, 4.0], level: 7.0 }, under: { from: [-29, 0, -2.5], to: [-23.5, 0, -2.5], ceil: 3.2 } },
   });
 }
 
@@ -310,7 +310,7 @@ export const MAPS = [];
   C(-20, -15, 1.4, 1.2); C(-6, -16.5, 1.6, 1.4, '#b07a45');
   boxes.push(B(10, -28, 16, -24, 1.2, stone), R(13, -24, 16, -21, 0, 1.2, 'z', -1, stone), C(12, -27, 1.6, 1.6, '#b07a45', 1.2), C(6, -20, 2, 2), C(20, -30, 1.6, 1.6), C(26, -16, 2, 1.4, '#b07a45'), B(16, -19, 19, -18.2, 1.3, stone));
   boxes.push(...building(22, -26, 30, -20, { col: casa(t4, t2), floors: 1, H: 3.2, ops: [{ s: 'w', a: -24, b: -22 }, { s: 'e', a: -24, b: -22 }, { s: 'n', a: 25, b: 27, k: 'win' }], roofGaps: [{ s: 'n', a: 28, b: 29.8 }] }));
-  boxes.push(B(28, -28.4, 29.8, -26, 1.6, '#9c6b3a'), R(28, -32, 29.8, -28.4, 0, 1.6, 'z', 1, '#b07a45'));
+  boxes.push(R(28, -31, 29.8, -26, 0, 3.2, 'z', 1, '#b07a45'));
   // conector (jungle): liga A, meio e a sala da janela
   boxes.push(...building(4, -14, 18, -4, { col: casa(t3, t1), floors: 1, H: 3.4, parapet: 0, ops: [{ s: 'n', a: 8, b: 10 }, { s: 's', a: 6, b: 8 }, { s: 'e', a: -11, b: -9 }, { s: 'n', a: 13, b: 16, k: 'win' }],
     inner: [{ axis: 'z', s0: -13.5, s1: -4.5, line: 11, ops: [{ a: -8, b: -6 }] }] }));
@@ -350,7 +350,7 @@ export const MAPS = [];
       ['ammo', 0, 0], ['ammo', 14.4, -25.2, 1.2], ['ammo', 22, 28.5, 1.2], ['ammo', 8, -9], ['ammo', 8, 9.5], ['ammo', 25, 4, H],
       ['grenade', -20, -17], ['grenade', -8, -25, H], ['grenade', -8.5, 23.5], ['grenade', 26, -23], ['grenade', -2, 11, H]],
     showcase: [0, 0, 28], view: [-30, 0, 0, -1.57, 0.0], openMax: 7,
-    test: { stairs: { from: [-20.2, 0, 9.4], to: [-13.8, H, 9.4], level: H }, under: { from: [-20, 0, 17], to: [-14, 0, 17], ceil: 3.2 }, roof: { from: [-9, H, -25], to: [-1.8, 0, -25], level: 0 } },
+    test: { stairs: { from: [-20.2, 0, 9.4], to: [-13.8, H, 9.4], level: H }, under: { from: [-20, 0, 17], to: [-14, 0, 17], ceil: 3.2 }, roof: { from: [26, 0, 0.5 - 31], via: [[28.9, -30.5]], to: [28.9, 3.2, -23], level: 3.2 } },
   });
 }
 
@@ -410,7 +410,7 @@ export const MAPS = [];
       ['grenade', -24, 0], ['grenade', 24, 0], ['grenade', 0, 16, 3], ['grenade', 0, -16, 3]],
     openMax: 7.5, // mapa de Sniper: um pouco mais aberto de propósito
     showcase: [22, 0, 36], view: [0, 4.4, 50, 0, -0.04],
-    test: { stairs: { from: [10, 0, 63], to: [10, 4.4, 50], level: 4.4 }, under: { from: [-8, 0, 0.8], to: [8, 0, 0.8], ceil: 2.7 } },
+    test: { stairs: { from: [10, 0, 63], to: [10, 4.4, 50], level: 4.4 }, roof: { from: [-6.5, 4.4, 50.6], via: [[-6.5, 61.6]], to: [-2.5, 8.4, 61.6], level: 8.4 }, under: { from: [-8, 0, 2.8], to: [8, 0, 2.8], ceil: 2.7 } },
   });
 }
 
@@ -460,7 +460,7 @@ export const MAPS = [];
     pickups: [['health', -12.5, -16], ['health', 12.5, 16], ['ammo', -12, -16.5, 3.5], ['ammo', 12, 16.5, 3.5], ['ammo', -27, 0], ['ammo', 27, 0],
       ['grenade', -9, -13, 7], ['grenade', 9, 13, 7], ['grenade', 10, -15.5], ['grenade', -10, 15.5], ['health', 0, -23], ['health', 0, 23]],
     showcase: [4, 0, -4], view: [22, 0, 5, 1.35, 0.02], openMax: 7,
-    test: { stairs: { from: [-9.8, 0, -17.5], to: [-3.4, 3.5, -17.5], level: 3.5 }, under: { from: [-15, 0, -12.5], to: [-10.2, 0, -12.5], ceil: 3.2 }, roof: { from: [-22.4, 3.5, -16.8], to: [-13, 7.0, -16.8], level: 7.0 } },
+    test: { stairs: { from: [-9.8, 0, -17.5], via: [[-3.2, -17.5]], to: [-3.2, 3.5, -15.2], level: 3.5 }, under: { from: [-15, 0, -12.5], to: [-10.2, 0, -12.5], ceil: 3.2 }, roof: { from: [-22.4, 3.5, -16.8], to: [-13, 7.0, -16.8], level: 7.0 } },
   });
 }
 
@@ -519,7 +519,7 @@ export const MAPS = [];
     pickups: [['health', 0, -7], ['health', -18.5, -4.5], ['health', 16, -2], ['ammo', 2, -12, H], ['ammo', 15, -16, 2 * H], ['ammo', 16, 11], ['ammo', -22.6, 6],
       ['grenade', 8, 2], ['grenade', -8, 2], ['grenade', 0, 15, 1], ['grenade', -2, -16, 2 * H]],
     showcase: [0, 0, 6], view: [-2, 1, 13, -0.08, -0.08], openMax: 7,
-    test: { stairs: { from: [-4.2, 0, -18.5], to: [2.2, H, -18.5], level: H }, under: { from: [-9, 0, -13], to: [-3, 0, -13], ceil: 3.0 }, roof: { from: [9.3, H, -18.5], to: [15.7, 2 * H, -18.5], level: 2 * H } },
+    test: { stairs: { from: [-4.2, 0, -18.5], to: [2.2, H, -18.5], level: H }, under: { from: [-4.5, 0, -15], to: [4.5, 0, -15], ceil: 3.0 }, roof: { from: [9.3, H, -18.5], to: [15.7, 2 * H, -18.5], level: 2 * H } },
   });
 }
 

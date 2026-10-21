@@ -119,15 +119,17 @@ e o **Copo Bomba** (tecla Q ou 3). **1** = primária, **2** = pistola, a rodinha
 ## Mapas (7)
 Escolha no menu (cartão **Mapa** → grade com miniaturas aéreas, ou **Aleatório**: sorteia um mapa diferente a cada partida). A escolha fica salva no navegador. No fim da partida há **PRÓXIMO MAPA ▸** (segue a ordem da lista).
 
-| Mapa | Ideia de fluxo (inspiração, só layout) | Destaques |
+Mapas v2: tudo foi refeito para parecer mapa de FPS de verdade. São prédios com interior, portas e janelas, vários andares ligados por rampas, telhados e sacadas onde dá pra subir, becos, gargalos e flancos, e nenhum campo aberto (todo ponto fica a ≤ 7 m de uma cobertura). Cada mapa tem pelo menos uma linha longa de Sniper.
+
+| Mapa | Inspiração (só layout) | Destaques |
 |---|---|---|
-| **Arena da Fazendinha** | o mapa original | plataforma central, torres de canto, feno e caixotes |
-| **Duas Pocilgas** | mapa clássico de bomba com dois bombsites (estilo Dust2) | praça A elevada, praça B com túnel coberto, corredor "LONGO" com portas, portas do "MEIO", passarela; areia e caixotes |
-| **Celeiro Industrial** | galpão de dois níveis (estilo Nuke) | térreo + mezanino interno por rampa, telhado acessível por rampa externa, pátio com contêineres, silos e caminhão |
-| **Mercadão** | ruas de mercado com becos e arcos (estilo Mirage/Inferno) | barracas com toldo, fonte central, dois arcos, sacadas com escada, telhado baixo, becos estreitos; paleta terracota |
-| **Torres Gêmeas do Barril** | campo aberto simétrico com duas bases (estilo Blood Gulch / Facing Worlds) | duas torres de 3 níveis (vermelha e ciano), planaltos com ponte (dá pra passar por baixo), pedras e barris; bom pra sniper |
-| **Vizinhança Cheers** | beco sem saída com duas casas frente a frente (estilo Nuketown) | casas de 2 andares com escada interna e janelas, ônibus e caminhão Cheers no meio da rua, carros, cercas; caos rápido |
-| **Bar Cheers Noturno** | mapa compacto de vários níveis (estilo Shell Shockers / Shipment) | noite, neon ciano #7DF9FF e rosa, balcão em U, barris, copões vermelhos gigantes, palco com DJ, mezanino com 2 rampas |
+| **Arena da Fazendinha** | 3 corredores, estilo Shipment / Rust | bases de 2 andares nas pontas com terraço no telhado; celeiro no meio com portões largos e jirau com janelas pros dois lados; galinheiro-túnel no corredor norte; caixa d'água alta no sul (linha de Sniper por baixo); galpões com rampa até o telhado |
+| **Duas Pocilgas** | Dust2 | túneis do B cobertos, com parede em zigue-zague; túnel de baixo até o meio; portas do meio e caixote; catwalk alto até o A; longo com portões; casa do meio de 2 andares com janelas pro meio e pro longo; casa do A e janela do B com terraço; casa do CT olhando o meio inteiro |
+| **Celeiro Industrial** | Rust / Office | galpão com vão central de pé-direito duplo, mezanino em volta com escritórios e guarda-corpo, rampas e telhado com casas de máquina; ponte do mezanino até a torre de contêineres; pátio de contêineres com pilha e rampa; guarita de 2 andares; silos |
+| **Mercadão** | Mirage / Inferno | palácio de 2 andares com sacada e rampa sobre o A; beco da rampa; conector (jungle); sala da janela de 2 andares no fim do meio; apartamentos de 2 andares com corredor em cima e sacada pro B; mercearia (B curto); beco de flanco; fonte no B; quiosque com rampa até o telhado |
+| **Torres Gêmeas do Barril** | mapa comprido de Sniper (Blood Gulch / Facing Worlds) em 3 corredores | torres de 3 níveis com muretas; ruínas de 2 andares sem telhado e trincheira no oeste; planaltos com ruínas e ponte com pilares no meio; paredões de pedra e casamata com telhado (rampas nas pontas) no leste |
+| **Vizinhança Cheers** | Nuketown | duas casas de 2 andares com divisórias, portas e sacada; garagem com telhado ligado ao 1º andar; rampa até o telhado da casa; quintais cercados; galpão com rampa de caixotes; ônibus e caminhões na rua |
+| **Bar Cheers Noturno** | Office (+ Shell Shockers) | ala norte de 2 andares (cozinha, corredor e depósito embaixo; VIP com janelões e sacada em cima; terraço no telhado); banheiros com cabines; escritório; sala de sinuca; camarotes; corredores laterais compridos (linha de Sniper); balcão em U, palco com DJ e neon |
 
 Toda a geometria, os nomes e a arte são originais (nada copiado dos jogos citados).
 
@@ -138,7 +140,11 @@ Toda a geometria, os nomes e a arte são originais (nada copiado dos jogos citad
   - `boxes` e `props`;
   - `spawns`, `pickups` (`health`, `ammo` e `grenade` = Copo Bomba) e `waypoints` extras;
   - `showcase`/`view` e `test`.
-- Para montar o layout há helpers: `B()` caixa, `R()` rampa, `wallX`/`wallZ` (paredes com `door()`/`win()`), `house()` (casa de 2 andares), `mirrorZ`/`rot180` (espelhar bases).
+- Para montar o layout há helpers: `B()` caixa, `R()` rampa, `wallX`/`wallZ` (paredes com `door()`/`win()`), `mirrorZ`/`rot180` (espelhar bases) e o kit v2:
+  - `building(x0, z0, x1, z1, { floors, H, ops, stairs, inner, roofGaps, floorHoles, parapet })` monta um prédio com paredes por andar, portas, janelas e portões largos (`ops`), lajes com vão das rampas (`stairs`), divisórias internas com portas (`inner`), telhado com mureta e vãos (`roofGaps`) e vãos extras na laje (`floorHoles`, para mezanino).
+  - Cada porta gera waypoints (dentro, na porta e fora) para os bots passarem por portas estreitas.
+  - `slab()` (laje com furos), `crate()`, `balcony()` e `fin()` (separa caixas de waypoints).
+  - Dica: comece a rampa a ≥ 1 m da parede, senão não dá pra subir; se o topo encostar na parede, saia pelo lado.
 - `world.js` monta o mapa:
   - caixas mescladas em **uma malha por cor** e uma malha de contornos;
   - props: barril, copão, ônibus, caminhão, árvore, silo, barraca, toldo, placa, neon, estandarte, rua…;
@@ -158,8 +164,11 @@ Toda a geometria, os nomes e a arte são originais (nada copiado dos jogos citad
   - Os props redondos (barril, silo, copão) colidem como quadrados.
   - Os bots às vezes desviam do objetivo para pegar vida ou Copo Bomba.
   - Os bots não usam rocket jump nem pulam entre telhados.
-  - Os telhados mais altos (prédios do Mercadão, quarteirões das Duas Pocilgas) ficam fora do grafo de propósito.
-- Novo mapa: copie um bloco em `maps.js`, ajuste `boxes`/`props`/`spawns`/`pickups` e pronto. Rode `node test-maps.mjs` para conferir (carrega, bots andam, escadas e tetos).
+  - Alguns telhados ficam fora do alcance de propósito (quarteirões maciços, celeiro do meio, galinheiro, palácio).
+- Novo mapa: copie um bloco em `maps.js`, ajuste `boxes`/`props`/`spawns`/`pickups` e rode:
+  - `node test-map-audit.mjs [ids]` (sem navegador): andares no grafo, nós altos e cobertos, "sem campo aberto", linha longa de Sniper, exposição, spawns e itens alcançáveis, zonas da Dominação, e uma partida simulada no servidor em que os bots precisam subir e descer andares. Com `DUMP=/tmp/audit` dá pra gerar a planta: `python3 tools/planta.py /tmp/audit/<id>.json planta.png`.
+  - `node test-maps.mjs` (navegador): carrega, bots andam, escadas, telhados e lajes; falha se algum item falhar.
+  - `node tools/screenshots-mapas.mjs`: gera `screenshots/18-mapa-<id>-{visao-geral,predio,telhado}.png` (câmera livre via `window.__cam`).
 
 ## Regras e modos
 Escolha o modo no menu (offline) ou ao criar a sala (online; o anfitrião pode trocar no lobby).
@@ -206,7 +215,7 @@ Ao morrer o mouse é solto (sem pausar); clique na tela ou em **VOLTAR AO JOGO**
 - `render.html`: renderiza um Docão isolado (`?skin=clube&rot=0.6&frame=face`) para conferir skins
 - `vendor/`: Three.js r169 + BufferGeometryUtils
 - `shared/domination.js` (zona, times) · `shared/combat.js` (explosões, colisão do foguete, dispersão da Sniper): regras usadas pelo cliente e pelo servidor
-- `test.mjs` / `test-maps.mjs` / `test-dom.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`) · `test-shared.mjs`: testes das regras sem navegador
+- `test.mjs` / `test-maps.mjs` / `test-dom.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`) · `test-shared.mjs`: testes das regras sem navegador · `test-map-audit.mjs`: auditoria de layout dos mapas + partida simulada (sem navegador) · `tools/planta.py` e `tools/screenshots-mapas.mjs`: planta e fotos dos mapas
 
 ## Como adicionar uma skin
 Abra `skins.js` e acrescente um objeto no array `SKINS`:

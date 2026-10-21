@@ -2,6 +2,7 @@
 // jogador sobe escadas/rampas e anda debaixo de lajes (teto com colisão). Gera screenshots 14-*.
 import { chromium } from 'playwright';
 const errors = [];
+const failed = [];
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
@@ -62,13 +63,17 @@ for (const id of ids) {
   // ---- jogador: escada/rampa e debaixo da laje ----
   const walk = (seg, jumpMid) => ev(([g, jumpMid]) => new Promise((res) => { // anda segurando W; checado a cada quadro
     const D = window.__docao, p = D.player; D.entities.forEach((e) => { if (!e.isPlayer) e.frozen = true; });
-    p.pos.set(g.from[0], g.from[1], g.from[2]); p.vel.set(0, 0, 0); p.yaw = Math.atan2(-(g.to[0] - g.from[0]), -(g.to[2] - g.from[2])); p.pitch = 0; p.bonk = false;
+    const pts = [...(g.via || []).map(([x, z]) => [x, 0, z]), g.to]; let pi = 0; // via: pontos de virada (ex.: sair da rampa pro lado no patamar)
+    const aim = () => { p.yaw = Math.atan2(-(pts[pi][0] - p.pos.x), -(pts[pi][2] - p.pos.z)); };
+    p.pos.set(g.from[0], g.from[1], g.from[2]); p.vel.set(0, 0, 0); aim(); p.pitch = 0; p.bonk = false;
     const key = (t, c) => document.dispatchEvent(new KeyboardEvent(t, { code: c }));
     const tot = Math.hypot(g.to[0] - g.from[0], g.to[2] - g.from[2]); let maxY = p.pos.y, maxHead = 0, jumped = false; const t0 = D.time;
     key('keydown', 'KeyW');
     const tick = () => {
       maxY = Math.max(maxY, p.pos.y); maxHead = Math.max(maxHead, p.pos.y + 2.0);
-      const d = Math.hypot(g.to[0] - p.pos.x, g.to[2] - p.pos.z);
+      if (pi < pts.length - 1 && Math.hypot(pts[pi][0] - p.pos.x, pts[pi][2] - p.pos.z) < 0.35) { pi++; aim(); }
+      if (pi < pts.length - 1) aim();
+      const d = pi < pts.length - 1 ? 99 : Math.hypot(g.to[0] - p.pos.x, g.to[2] - p.pos.z);
       if (jumpMid && !jumped && 1 - d / tot > 0.5) { // para no meio (debaixo da laje), pula parado e segue
         jumped = true; key('keyup', 'KeyW'); const tj = D.time; let pressed = false;
         const hop = () => { maxHead = Math.max(maxHead, p.pos.y + 2.0);
@@ -93,6 +98,8 @@ for (const id of ids) {
     D.entities.forEach((e) => { e.frozen = false; e.think = 0; }); p.invulnUntil = D.time + 0.3; });
   await waitGame(0.5);
   await page.screenshot({ path: `screenshots/14-mapa-${id}.png` });
+  for (const k of ['stairs', 'roof', 'under']) if (R[k] && !R[k].ok) failed.push(`${id}:${k}`);
+  if (!/chegou ao andar/.test(R.botNav)) failed.push(`${id}:botNav`);
   console.log(id, JSON.stringify({ ...R, bots: R.bots.map((b) => `${b.n}:${b.travel}m/st${b.stuck}/still${b.stillRun}`).join(' ') }));
 }
 // fim de partida: botão "Próximo mapa"
@@ -104,4 +111,5 @@ await page.click('#nextMapBtn'); await waitGame(0.3);
 out.nextMap = await ev(() => [window.__docao.state, window.__docao.map.id]);
 console.log('menu:', JSON.stringify(out.menu)); console.log('fim:', out.over, '→', JSON.stringify(out.nextMap));
 console.log('ERRORS:', errors.length ? errors.join('\n') : 'none');
+if (failed.length) { console.log('FALHAS:', failed.join(', ')); process.exit(1); } else console.log('TUDO OK (escadas, telhados, lajes e bots em todos os mapas)');
 await browser.close();
