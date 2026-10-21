@@ -16,7 +16,8 @@ let baconGeo = null, baconMat = null, BOX = null;
 // chão sob a tira: maior altura entre o centro e as duas pontas (degrau/meio-fio embaixo de uma ponta não engole a tira)
 function floorUnder(b, s) {
   const h = 0.45 * L * s, dx = Math.cos(b.yaw) * h, dz = -Math.sin(b.yaw) * h, y = b.pos.y + 0.3;
-  return Math.max(env.groundAt(b.pos.x, b.pos.z, y), env.groundAt(b.pos.x + dx, b.pos.z + dz, y), env.groundAt(b.pos.x - dx, b.pos.z - dz, y));
+  const c = env.groundAt(b.pos.x, b.pos.z, y), up = (g) => (g > c && g - c <= 0.2 ? g : c); // ponta num degrau baixo levanta; caixa alta ao lado não
+  return Math.max(c, up(env.groundAt(b.pos.x + dx, b.pos.z + dz, y)), up(env.groundAt(b.pos.x - dx, b.pos.z - dz, y)));
 }
 const _c = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
 function lift(b, s, sy) {
