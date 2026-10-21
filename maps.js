@@ -293,39 +293,64 @@ export const MAPS = [];
   });
 }
 
-// ---------- 4) Mercadão (ruas de mercado, becos estreitos, sacadas e arcos) ----------
+// ---------- 4) Mercadão (estilo Mirage: palácio com sacada pro A, apartamentos pro B, sala da janela no fim do meio, conector) ----------
 {
-  const t1 = '#d9825b', t2 = '#e8a06a', t3 = '#c96f4a', t4 = '#f0c08a', stone = '#e6d3b3', rail = '#8b5a2b', boxes = [];
-  boxes.push(B(-38, -34, -24, -12, 7, t1), B(-21, -26, -12, -12, 6, t2), B(12, -26, 26, -12, 6, t3), B(29, -34, 38, -12, 7, t4));
-  boxes.push(B(-26, 12, -12, 26, 6, t3), B(-38, 12, -29, 34, 7, t2), B(12, 12, 26, 24, 3.3, t4), B(29, 12, 38, 34, 7, t1));
-  // arcos sobre a rua principal
-  boxes.push(...wallX(-9.5, 9.5, -18, 1, 6, stone, [door(-3, 3, 3.4)]), B(9.5, -18.5, 12, -17.5, 3, stone), B(-12, -18.5, -9.5, -17.5, 6, stone));
-  boxes.push(...wallX(-9.5, 9.5, 18, 1, 6, stone, [door(-3, 3, 3.4)]), B(-12, 17.5, -9.5, 18.5, 3, stone), B(9.5, 17.5, 12, 18.5, 6, stone)); // a sacada passa por cima do arco
-  // sacadas com rampa (escada) e guarda-corpo
-  boxes.push(B(9.5, -24, 12, -14, 0.3, rail, 3), R(9.5, -14, 12, -4, 0, 3.3, 'z', -1, stone), B(9.5, -24, 9.9, -14, 1.0, rail, 3.3));
-  boxes.push(B(-12, 14, -9.5, 24, 0.3, rail, 3), R(-12, 4, -9.5, 14, 0, 3.3, 'z', 1, stone), B(-9.9, 14, -9.5, 24, 1.0, rail, 3.3));
-  // telhado baixo com mureta + rampa
-  boxes.push(R(14, 24, 18, 32, 0, 3.3, 'z', -1, stone), B(12, 12, 26, 12.4, 0.9, t3, 3.3), B(12, 12.4, 12.4, 24, 0.9, t3, 3.3), B(22, 23.6, 26, 24, 0.9, t3, 3.3));
-  // fonte central
-  boxes.push(B(-2.5, -2.5, 2.5, 2.5, 0.8, stone), B(-0.5, -0.5, 0.5, 0.5, 2.4, stone));
-  // vasos, caixotes e balcões
-  for (const [x, z] of [[-32, -6], [32, 6], [-6, 30], [6, -30], [-17, -30], [20, 30]]) boxes.push(B(x - 0.8, z - 0.8, x + 0.8, z + 0.8, 1.3, '#9c6b3a'));
+  const t1 = '#d9825b', t2 = '#e8a06a', t3 = '#c96f4a', t4 = '#f0c08a', stone = '#e6d3b3', rail = '#8b5a2b', boxes = [], H = 3.5;
+  const casa = (w, w2) => ({ wall: w, wall2: w2, inner: t4, floor: '#c9a46a', roof: '#b5523b', roof2: '#9c4532', stair: rail, trim: stone });
+  const C = (x, z, s = 1.6, h = 1.6, c = '#9c6b3a', y0 = 0) => boxes.push(crate(x, z, s, h, c, y0));
+  // quarteirões maciços que separam os corredores
+  boxes.push(B(-28, -12, -12, -4, 7, t1), B(-12, -12, 4, -4, 7, t2), B(-28, 4, 2, 8, 7, t3), B(2, 4, 5, 8.6, 7, t3), B(14, 4, 18, 14, 7, t1), B(-10, -34, 4, -28, 7, t3), B(-20, 26, 0, 34, 7, t2), B(-28, 8, -22, 22, 7, t4));
+  // palácio (2 andares): entra pelo T, sai na sacada e desce a rampa pro A
+  boxes.push(...building(-26, -34, -10, -20, { col: casa(t2, t1), floors: 2,
+    ops: [{ s: 'w', a: -28, b: -26 }, { s: 's', a: -15, b: -13 }, { s: 'e', a: -26, b: -24, f: 1 }, { s: 's', a: -24, b: -20, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: -31, b: -29, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -22, b: -19, k: 'win' }],
+    stairs: [{ f: 0, r: [-24.5, -33.5, -18.5, -31.6], axis: 'x', dir: 1 }],
+    inner: [{ axis: 'z', s0: -33.5, s1: -20.5, line: -17, ops: [{ a: -25.8, b: -24 }] }, { axis: 'z', s0: -33.5, s1: -20.5, line: -17, f: 1, ops: [{ a: -25.8, b: -24 }] }] }));
+  boxes.push(B(-10, -27, -6, -23, 0.25, t4, H - 0.25), B(-10, -27, -6, -26.85, 1.0, rail, H), B(-10, -23.15, -6, -23, 1.0, rail, H), R(-6, -27, -2, -23, 0, H, 'x', -1, stone), { wp: [-8, H, -25] }, { wp: [-4, 1.75, -25] });
+  // rampa do A (beco) e o A
+  C(-20, -15, 1.4, 1.2); C(-6, -16.5, 1.6, 1.4, '#b07a45');
+  boxes.push(B(10, -28, 16, -24, 1.2, stone), R(13, -24, 16, -21, 0, 1.2, 'z', -1, stone), C(12, -27, 1.6, 1.6, '#b07a45', 1.2), C(6, -20, 2, 2), C(20, -30, 1.6, 1.6), C(26, -16, 2, 1.4, '#b07a45'), B(16, -19, 19, -18.2, 1.3, stone));
+  boxes.push(...building(22, -26, 30, -20, { col: casa(t4, t2), floors: 1, H: 3.2, ops: [{ s: 'w', a: -24, b: -22 }, { s: 'e', a: -24, b: -22 }, { s: 'n', a: 25, b: 27, k: 'win' }], roofGaps: [{ s: 'n', a: 28, b: 29.8 }] }));
+  boxes.push(B(28, -28.4, 29.8, -26, 1.6, '#9c6b3a'), R(28, -32, 29.8, -28.4, 0, 1.6, 'z', 1, '#b07a45'));
+  // conector (jungle): liga A, meio e a sala da janela
+  boxes.push(...building(4, -14, 18, -4, { col: casa(t3, t1), floors: 1, H: 3.4, parapet: 0, ops: [{ s: 'n', a: 8, b: 10 }, { s: 's', a: 6, b: 8 }, { s: 'e', a: -11, b: -9 }, { s: 'n', a: 13, b: 16, k: 'win' }],
+    inner: [{ axis: 'z', s0: -13.5, s1: -4.5, line: 11, ops: [{ a: -8, b: -6 }] }] }));
+  // sala da janela (2 andares) no fim do meio
+  boxes.push(...building(18, -8, 28, 8, { col: casa(t2, t3), floors: 2,
+    ops: [{ s: 'n', a: 22, b: 24 }, { s: 's', a: 22, b: 24 }, { s: 'e', a: -1, b: 1 }, { s: 'w', a: -2, b: 2, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: -6, b: -4, k: 'win' }, { s: 'n', a: 20, b: 22, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: 25, b: 27, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [20, 5.6, 26, 7.5], axis: 'x', dir: -1 }] }));
+  C(20.5, -1, 1.2, 1.0, '#9c6b3a', H);
+  // meio: caixotes nas laterais (a linha do Sniper fica no centro)
+  C(-22, 2.6, 1.6, 1.4); C(-14, -2.6, 1.6, 1.6, '#b07a45'); C(-5, 2.6, 1.6, 1.2); C(3, -2.6, 1.4, 1.4, '#b07a45'); C(10, 2.6, 1.6, 1.6); C(15, -2.6, 1.2, 1.0);
+  // apartamentos (2 andares): entra pelo T, corredor de cima, sai na sacada e desce pro B
+  boxes.push(...building(-22, 8, -4, 22, { col: casa(t4, t3), floors: 2,
+    ops: [{ s: 'w', a: 16, b: 18 }, { s: 'e', a: 18, b: 20 }, { s: 'e', a: 10, b: 12, f: 1 }, { s: 's', a: -18, b: -14, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -10, b: -7, k: 'win' }, { s: 'n', a: -12, b: -8, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-20.5, 8.5, -14.5, 10.4], axis: 'x', dir: 1 }],
+    inner: [{ axis: 'x', s0: -21.5, s1: -4.5, line: 14, f: 1, ops: [{ a: -19, b: -17.2 }, { a: -9, b: -7.2 }] }, { axis: 'z', s0: 8.5, s1: 21.5, line: -13, ops: [{ a: 15, b: 17 }] }] }));
+  boxes.push(B(-4, 9, 0, 13, 0.25, t4, H - 0.25), B(-4, 9, 0, 9.15, 1.0, rail, H), B(-4, 12.85, 0, 13, 1.0, rail, H), R(0, 9, 4, 13, 0, H, 'x', -1, stone), { wp: [-2, H, 11] }, { wp: [2, 1.75, 11] });
+  // mercearia (B curto): do meio até o B
+  boxes.push(...building(5, 6, 14, 13, { col: casa(t1, t3), floors: 1, H: 3.3, parapet: 0, ops: [{ s: 'n', a: 7, b: 9 }, { s: 's', a: 10, b: 12 }, { s: 'w', a: 9, b: 11, k: 'win' }] }));
+  boxes.push(B(-24, 22, -22, 26, 7, t1)); // fecha o canto do beco
+  // B: fonte, bancada e caixotes
+  boxes.push(...wallX(14, 18, 18, 0.4, 0.9, stone), ...wallX(14, 18, 22, 0.4, 0.9, stone), ...wallZ(18, 22, 14, 0.4, 0.9, stone), ...wallZ(18, 22, 18, 0.4, 0.9, stone));
+  boxes.push(B(20, 26, 28, 31, 1.2, stone), R(16.5, 27, 20, 30, 0, 1.2, 'x', 1, stone), C(25, 28.5, 1.6, 1.6, '#b07a45', 1.2), C(8, 20, 2, 2), C(10, 30, 1.6, 1.4), C(24, 16, 1.6, 1.6, '#b07a45'), C(2, 28, 1.6, 1.2), C(-6, 24, 1.4, 1.2));
+  // bases: T a oeste, CT a leste
+  C(-34, -12, 2, 1.6); C(-32, 12, 2, 1.6, '#b07a45'); C(-35, 26, 1.6, 1.4); C(-34, -26, 1.6, 1.4); C(-30, 0, 1.4, 1.2); C(-36, 3, 1.4, 1.4);
+  C(33, -12, 2, 1.6); C(32, 14, 2, 1.6, '#b07a45'); C(34, 26, 1.6, 1.4); C(34, -28, 1.6, 1.4); C(31, 3, 1.4, 1.2); C(36, -3, 1.4, 1.4);
   MAPS.push({
-    id: 'mercadao', name: 'Mercadão', desc: 'Ruas de mercado com barracas, becos estreitos, sacadas, arcos e uma fonte no meio.',
+    id: 'mercadao', name: 'Mercadão', desc: 'Estilo Mirage: palácio com sacada sobre a rampa do A, apartamentos de dois andares até o B, conector, mercearia e a sala da janela olhando o meio.',
     size: [38, 34], wallH: 7, wallColor: [t1, t3],
     palette: { sky: '#9fd0f0', fog: ['#f2d6b0', 45, 115], hemi: ['#fff1dc', '#b07a4a', 1.6], sun: ['#ffe2b8', 2.3], ground: '#e3c9a0', tiles: ['#e8cfa6', '#dcc094', 76, 38], clouds: true },
-    boxes, props: [
-      ...[[-6, -8, '#e63946'], [6, -8, '#7DF9FF'], [-6, 8, '#f2c94c'], [6, 8, '#e63946'], [-24, -4, '#7DF9FF'], [-24, 4, '#e63946'], [24, -4, '#f2c94c'], [24, 4, '#7DF9FF']].map(([x, z, c]) => ({ t: 'stall', x, z, c })),
-      { t: 'water', x: 0, z: 0, r: 2.3, y: 0.82 }, { t: 'jar', x: -13, z: -9 }, { t: 'jar', x: 13, z: 9 }, { t: 'jar', x: -27.5, z: 30 },
+    ...fin(boxes), props: [...[[0, -17, '#e63946'], [14, -32, '#7DF9FF'], [-33, -18, '#f2c94c'], [30, 20, '#e63946'], [-12, 30 - 6, '#7DF9FF'], [36, -16, '#f2c94c']].map(([x, z, c]) => ({ t: 'stall', x, z, c })),
+      { t: 'water', x: 16, z: 20, r: 1.5, y: 0.6 }, { t: 'jar', x: -13, z: -15 }, { t: 'jar', x: 13, z: 17 }, { t: 'jar', x: -27.5, z: 30 },
       { t: 'awning', x0: 26, z0: -12, x1: 29, z1: -10, y: 3, c: '#e63946' },
-      { t: 'sign', x: 0, y: 5, z: -17.45, w: 5, h: 1.1, rot: 0, text: 'MERCADÃO', bg: '#8b2f1c', fg: '#ffe7b0' },
-      { t: 'sign', x: 0, y: 5, z: 17.45, w: 5, h: 1.1, rot: Math.PI, text: 'FEIRA C!', bg: '#8b2f1c', fg: '#ffe7b0' }],
-    spawns: [[-32, 0], [32, 0], [0, -30], [0, 30], [-17, -31], [22, 30], [-32, -9], [32, 9], [-22.5, -18], [27.5, 18]],
-    pickups: [['health', 0, -6], ['health', 0, 6], ['health', -30, -6], ['health', 30, 6],
-      ['ammo', 10.7, -20, 3.3], ['ammo', -10.7, 20, 3.3], ['ammo', 20, 18, 3.3], ['ammo', -20, 0],
-      ['grenade', -26, 0], ['grenade', 26, 0], ['grenade', 0, 26], ['grenade', 0, -26], ['grenade', -22.5, -18]],
-    showcase: [0, 0, 28], view: [0, 0, 24, 0, 0.0],
-    test: { stairs: { from: [10.7, 0, -2.5], to: [10.7, 3.3, -20], level: 3.3 }, under: { from: [0, 0, -12], to: [0, 0, -25], ceil: 3.4 } },
+      { t: 'sign', x: -20, y: 5, z: -12.05, w: 5, h: 1.1, rot: Math.PI, text: 'MERCADÃO', bg: '#8b2f1c', fg: '#ffe7b0' },
+      { t: 'sign', x: -12, y: 5, z: 8.05, w: 5, h: 1.1, rot: 0, text: 'FEIRA C!', bg: '#8b2f1c', fg: '#ffe7b0' }],
+    spawns: [[-34, -5], [-34, 7], [-33, -21], [-34, 19], [-30, 30], [-30, -30], [34, -20], [34, 0], [34, 20], [30, 31], [30, -31], [23, 0, H]],
+    pickups: [['health', -30, 4], ['health', 30, -4], ['health', -14, -27, H], ['health', -14, 18, H], ['health', 16, 24],
+      ['ammo', 0, 0], ['ammo', 14.4, -25.2, 1.2], ['ammo', 22, 28.5, 1.2], ['ammo', 8, -9], ['ammo', 8, 9.5], ['ammo', 25, 4, H],
+      ['grenade', -20, -17], ['grenade', -8, -25, H], ['grenade', -8.5, 23.5], ['grenade', 26, -23], ['grenade', -2, 11, H]],
+    showcase: [0, 0, 28], view: [-30, 0, 0, -1.57, 0.0], openMax: 7,
+    test: { stairs: { from: [-20.2, 0, 9.4], to: [-13.8, H, 9.4], level: H }, under: { from: [-20, 0, 17], to: [-14, 0, 17], ceil: 3.2 }, roof: { from: [-9, H, -25], to: [-1.8, 0, -25], level: 0 } },
   });
 }
 
