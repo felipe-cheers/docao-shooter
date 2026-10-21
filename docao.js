@@ -124,6 +124,14 @@ function headTexture(tone, beard = null, paint = null) {
       g.addColorStop(0, PALETTE.blush); g.addColorStop(0.55, PALETTE.blush + 'cc'); g.addColorStop(1, PALETTE.blush + '00');
       x.save(); x.translate(cx, cy); x.scale(1, pxV / pxH(1.47) * 0.85); x.translate(-cx, -cy); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, 0.13 * pxH(1.47), 0, TAU); x.fill(); x.restore();
     }
+    if (beard) { // barba por fazer: pontinhos no queixo e nas laterais da boca (a boca é pintada por cima)
+      let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const zone = () => { x.beginPath(); for (let i = 0; i <= 24; i++) { const th = -0.9 + (i / 24) * 1.8; const e = Math.abs(th) / 0.9; x.lineTo(...P(th, 1.36 - e * e * 0.1)); } for (let i = 24; i >= 0; i--) { const th = -0.9 + (i / 24) * 1.8; const e = Math.abs(th) / 0.9; x.lineTo(...P(th, 1.05 + e * e * 0.16)); } x.closePath(); };
+      x.save(); x.filter = 'blur(10px)'; zone(); x.fillStyle = beard + '33'; x.fill(); x.restore();
+      x.save(); zone(); x.clip(); x.fillStyle = beard + '66';
+      for (let i = 0; i < 900; i++) { const [px, py] = P((rnd() * 2 - 1) * 0.9, 1.04 + rnd() * 0.33); x.fillRect(px, py, 2, 2); }
+      x.restore();
+    }
     // boca: sorriso aberto com dentes e língua (logo abaixo do focinho)
     const L = P(-0.5, 1.37), R = P(0.5, 1.37), topC = P(0, 1.2), botC = P(0, 0.86);
     const mouthPath = () => { x.beginPath(); x.moveTo(...L); x.quadraticCurveTo(...topC, ...R); x.quadraticCurveTo(...botC, ...L); x.closePath(); };
@@ -450,7 +458,7 @@ export function makeFPArms(skinOrId, pose = 'rifle') {
   const skinM = toonWarm(tone, 0.42, {}, '#e0500a'), sleeveM = toonWarm(sleeveColor(shirt), 0.12), trimM = toon(shirt.trim || '#1d1410');
   const sleeves = shirt.sleeves || 'short', long = sleeves !== 'short', puffy = sleeves === 'puffy';
   const glove = (skin.parts || []).find((p) => p.type === 'glove'); let limbIdx = 0;
-  const wraps = (skin.parts || []).find((p) => p.type === 'armWraps'), bones = (skin.parts || []).find((p) => p.type === 'boneLimbs');
+  const wraps = (skin.parts || []).find((p) => p.type === 'armWraps'), bones = (skin.parts || []).find((p) => p.type === 'boneLimbs'); const sStripes = (skin.parts || []).find((p) => p.type === 'sleeveStripes');
   const g = new THREE.Group();
   const add = (geo, mat, th = 0.008) => { const m = new THREE.Mesh(geo, mat); g.add(m); outline(m, th); return m; };
   function limb(a, b, r) {
@@ -461,6 +469,7 @@ export function makeFPArms(skinOrId, pose = 'rifle') {
     if (puffy) for (const f of [0.25, 0.5, 0.72]) { const pr = add(new THREE.TorusGeometry(r * sr * 0.97, r * 0.45, 8, 20), sleeveM, 0.005); pr.position.copy(a).addScaledVector(dir, len * f); pr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
     const cf = add(new THREE.TorusGeometry(r * (sr - 0.05), r * 0.3, 8, 20), trimM, 0.006); cf.position.copy(a).addScaledVector(dir, len * sk); cf.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2));
     if (wraps) for (const f of wraps.fp || [0.3, 0.5, 0.7]) { const wr = add(new THREE.TorusGeometry(r * sr * 1.02, r * 0.28, 8, 20), toon(wraps.color || '#6b4a2b'), 0.005); wr.position.copy(a).addScaledVector(dir, len * f * sk); wr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
+    if (sStripes) for (const f of [0.15, 0.4, 0.65]) { const st = add(new THREE.TorusGeometry(r * sr * 1.02, r * 0.16, 6, 20), toon(sStripes.color || '#1fb89a'), 0); st.position.copy(a).addScaledVector(dir, len * f * sk); st.quaternion.copy(q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 + 0.45, 0, 0))); }
     if (bones) { // osso pintado em cima da manga
       const up = new V3(0, 1, 0).sub(dir.clone().multiplyScalar(dir.y)).normalize();
       const bm = basic(bones.color || '#f7f7f2'), p0 = a.clone().addScaledVector(dir, len * 0.12 * sk).addScaledVector(up, r * sr * 0.92), p1 = a.clone().addScaledVector(dir, len * 0.9 * sk).addScaledVector(up, r * sr * 0.92);

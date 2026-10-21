@@ -321,13 +321,13 @@ Peças 3D disponíveis (`parts`):
   `laserSword` (espada laser no cinto), `armWraps` (faixas nas mangas, também em 1ª pessoa), `hoodDown` (capuz abaixado nas costas),
   `noseTube` (tubo do traje até o lado do focinho), `desertScarf`
 
-Os braços em 1ª pessoa usam automaticamente manga, punho, luva, faixas (`armWraps`) e ossos (`boneLimbs`) da skin.
+Os braços em 1ª pessoa usam automaticamente manga, punho, luva, faixas (`armWraps`), listras (`sleeveStripes`) e ossos (`boneLimbs`) da skin.
 Para um tipo novo de peça, crie uma função em `PARTS` no `costumes.js`: ela recebe `(opções, rig)` e devolve um `THREE.Object3D`
 (`userData.anchor = 'head'` para prender na cabeça) ou altera o rig (ex.: trocar o material da mão).
 
-Skins atuais (14): Clássico, Clube Cheers, Rei do Pop, Rapper da Hora, Bruxinho, Mestre do Kung Fu, Cabeludo, Pescador, Choquinho, Boné da Firma,
-Fantasminha, Esqueletão, Cavaleiro Galáctico, Nômade do Deserto.
-São fantasias *inspiradas*: sem nomes, rostos ou logos de pessoas/personagens reais.
+Skins atuais (17): Clássico, Clube Cheers, Rei do Pop, Rapper da Hora, Bruxinho, Mestre do Kung Fu, Cabeludo, Pescador, Choquinho, Boné da Firma,
+Fantasminha, Esqueletão, Cavaleiro Galáctico, Nômade do Deserto, Boi Caprichoso, Docão Felipe, Docão Matheus.
+São fantasias *inspiradas* (Docão Felipe e Docão Matheus são homenagens do time, feitas a pedido).
 A identidade (corpo de porquinho, focinho, orelhas, bochechas, olhos, contorno) não é configurável de propósito.
 
 A skin escolhida fica salva em `localStorage['docao.skin']`; os bots recebem skins aleatórias.
