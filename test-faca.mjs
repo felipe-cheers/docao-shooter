@@ -55,7 +55,12 @@ await click(); let r = await tHp(); console.log('golpe:', JSON.stringify(r));
 ok(r.hp === 60 && r.last && r.last.kind === 'slash' && !r.last.back, `golpe de frente: 40 de dano (vida ${r.hp})`);
 ok(await G(() => window.__docao.fpKnife.kind === 'slash' && window.__docao.fpKnife.t < 0.6), 'animação de golpe tocando');
 // cadência: estocada logo depois do golpe não sai antes do cooldown
-await page.mouse.down({ button: 'right' }); await waitGame(0.05); r = await tHp(); console.log('cadência:', JSON.stringify(r), await G(() => [window.__docao.player.nextFire - window.__docao.time])); ok(r.hp === 60, 'cadência: nada antes do cooldown do golpe');
+const nfSlash = await G(() => window.__docao.player.nextFire);
+await page.mouse.down({ button: 'right' }); await waitGame(0.05); r = await tHp();
+{ const nf = await G(() => window.__docao.player.nextFire); const stabAt = nf > nfSlash ? nf - 1.0 : null; // estocada (rate 1,0) saiu em stabAt
+  console.log('cadência:', JSON.stringify(r), { nfSlash, stabAt });
+  // máquina lenta: o tempo de jogo pode passar do cooldown entre os passos; o que importa é a estocada não sair antes de nextFire do golpe
+  ok(r.hp === 60 || (stabAt !== null && stabAt >= nfSlash - 1e-6), 'cadência: nada antes do cooldown do golpe'); }
 await waitGame(0.5); await page.mouse.up({ button: 'right' }); await waitGame(0.05); r = await tHp(); console.log('estocada:', JSON.stringify(r));
 ok(r.last.kind === 'stab' && (!r.alive || r.hp === 60 - 75), 'botão direito = estocada (75 de dano)');
 ok(r.feed.startsWith('Matheus moggou ' + st.name + ' [Faca'), `kill feed: "${r.feed}"`);
