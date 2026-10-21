@@ -4,6 +4,12 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.6.1 — Respiro 💚 (21/10/2026)
+- **Vida regenera fora de combate:** levou dano de outro Docão e ficou **5 segundos** sem apanhar? A vida volta sozinha, **+10 por segundo**, até 100. Levou dano de novo, os 5 segundos recomeçam.
+- **Mas só se o dano não foi seu:** se o último dano veio de você mesmo (foguete da bazuca no pé, seu próprio Copo Bomba, seu míssil), não regenera, e isso cancela a regeneração que ia começar. Quer a vida de volta? Fica longe da própria explosão.
+- Enquanto regenera, a barra de vida brilha verdinho com um "+" pulsando.
+- Vale pros bots também. No online quem decide é o servidor.
+
 ## v1.6 — Bacon Restaurador 🥓❤️ (21/10/2026)
 O bacon agora serve pra alguma coisa: **quem pisar no bacon de um Docão morto ganha +10 de vida!**
 - Vale pra qualquer um que estiver vivo: inimigo, aliado ou quem fez a vítima virar bacon. Só o próprio morto não come o bacon dele.
