@@ -20,7 +20,11 @@
     <div id="timer">5:00</div>
     <div id="leader"></div>
   </div>
-  <div id="netbar" class="hidden"><span id="netRoom"></span> · <span id="netPing">-- ms</span><span id="netStatus"></span></div>
+  <div id="tl"><div id="lb"></div><div id="netbar" class="hidden"><span id="netRoom"></span> · <span id="netPing">-- ms</span><span id="netStatus"></span></div></div>
+  <div id="domhud" class="hidden"><div id="domScore"><span class="tr">VERMELHO <b id="ts0">0</b></span><span class="vs">×</span><span class="tb"><b id="ts1">0</b> AZUL</span></div>
+    <div id="zoneBar"><div id="zoneFill"></div><span id="zoneText">Zona neutra</span></div><div id="myTeam"></div></div>
+  <div id="zoneMark" class="hidden"><div class="zarrow">▲</div><div class="zlbl">ZONA <span id="zoneDist"></span></div></div>
+  <div id="teamPick" class="hidden"><div class="tpt">Escolha seu time</div><div class="teamrow" id="teamPickBtns"></div><div class="tpe" id="teamPickErr"></div></div>
   <div id="score">Abates: 0 · Mortes: 0 · K/D: 0.00</div>
   <div id="killfeed"></div>
   <div id="centermsg"></div>
@@ -37,7 +41,9 @@
     <div id="reloadmsg"></div>
   </div>
   <div id="powermeter" class="hidden"><div id="powertext">Força do arremesso</div><div id="powerbar"><div id="powerfill"></div></div></div>
-  <div id="deathpick" class="hidden"><div class="dl">Arma primária no próximo renascimento:</div><div id="deathList"></div></div>
+  <div id="deathpick" class="hidden"><div class="dl">Arma primária no próximo renascimento <small>(clique ou 1–4)</small>:</div><div id="deathList"></div>
+    <div class="dl">Secundária:</div><div id="deathSec"></div>
+    <button id="deathBack" class="small">VOLTAR AO JOGO (clique)</button></div>
   <div id="tabboard" class="board hidden"></div>
 </div>
 
@@ -59,6 +65,10 @@
       <div class="label2">Mapa</div>
       <button id="mapBtn" class="mapcard current" title="Escolher mapa"><span class="thumb"></span><span class="mtxt"><b id="mapName">Arena da Fazendinha</b><small id="mapDesc"></small></span><span class="mchange">trocar ▸</span></button>
     </div>
+    <div class="row">
+      <label>Modo<select id="modeSel"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option></select></label>
+    </div>
+    <div id="menuTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="menuTeamBtns"></div></div>
     <div class="row">
       <label>Bots
         <select id="botCount"><option>4</option><option selected>5</option><option>6</option></select>
@@ -93,6 +103,7 @@
     <div class="otabs"><button id="tabCreate" class="otab active">Criar sala</button><button id="tabJoin" class="otab">Entrar na sala</button></div>
     <div id="paneCreate">
       <label>Mapa<select id="roomMap"></select></label>
+      <label>Modo<select id="roomMode"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option></select></label>
       <div class="row">
         <label>Máx. jogadores<select id="roomMax"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option><option>8</option></select></label>
         <label>Completar com bots<select id="roomBots"><option value="1" selected>Sim</option><option value="0">Não</option></select></label>
@@ -113,12 +124,14 @@
     <h2>Sala <span id="lobbyCode" class="code">----</span></h2>
     <div class="share"><input id="shareLink" readonly><button id="copyLink" class="small">Copiar link</button></div>
     <div id="lobbyInfo" class="sub"></div>
+    <div id="lobbyTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="lobbyTeamBtns"></div><div class="tpe" id="lobbyTeamErr"></div></div>
     <div id="lobbyPlayers" class="board"></div>
     <div id="hostCtl">
       <div class="row">
         <label>Mapa<select id="lobbyMap"></select></label>
         <label>Máx.<select id="lobbyMax"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
         <label>Bots<select id="lobbyBots"><option value="1">Sim</option><option value="0">Não</option></select></label>
+        <label>Modo<select id="lobbyMode"><option value="dm">Mata-mata</option><option value="dom">Dominação</option></select></label>
       </div>
       <button id="startOnline">INICIAR PARTIDA</button>
     </div>

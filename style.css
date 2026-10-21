@@ -135,3 +135,47 @@ button.small{width:auto;margin:0;padding:8px 12px;font-size:14px;border-width:3p
 #lobbyPlayers .bot{color:#9fd0ff;font-size:12px;margin-left:6px}
 #netbar{position:fixed;top:52px;left:16px;font-weight:bold;font-size:14px;background:rgba(0,0,0,.4);padding:4px 10px;border-radius:8px}
 #netStatus{color:#ff9f6b;margin-left:8px}
+
+/* ---------- Placar no canto (sempre visível) ---------- */
+#tl{position:fixed;top:10px;left:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;pointer-events:none}
+#lb{background:rgba(0,0,0,.45);border-radius:10px;padding:6px 8px;min-width:190px;font-size:13px;font-weight:bold}
+#lb .lbh{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#7DF9FF;margin-bottom:3px;text-transform:uppercase;letter-spacing:1px}
+#lb .lbh .r{color:#ff6b6b}#lb .lbh .b{color:#6bb8ff}
+#lb .row{display:flex;align-items:center;gap:6px;line-height:18px;padding:0 3px;border-radius:5px}
+#lb .row .n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+#lb .row .k{min-width:22px;text-align:right}
+#lb .row.me{background:rgba(255,210,122,.25);color:#ffd27a}
+#lb .row.dead{opacity:.55}
+#lb .dot{width:10px;height:10px;border-radius:50%;border:2px solid #2a1410;flex:none}
+#netbar{position:static}
+#score{top:auto;bottom:96px;left:20px;font-size:15px}
+/* ---------- Dominação ---------- */
+#domhud{position:fixed;top:70px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+#domScore{font-family:"Arial Black",Impact;font-size:20px;display:flex;gap:10px;justify-content:center;-webkit-text-stroke:1px #2a1410}
+#domScore .tr{color:#ff6b6b}#domScore .tb{color:#6bb8ff}#domScore .vs{color:#fff}
+#zoneBar{position:relative;width:300px;height:20px;margin:4px auto 0;background:rgba(0,0,0,.5);border:2px solid #2a1410;border-radius:10px;overflow:hidden}
+#zoneFill{position:absolute;left:0;top:0;bottom:0;width:0;background:#888;transition:width .1s linear}
+#zoneText{position:relative;font-size:12px;font-weight:bold;line-height:20px;text-shadow:0 1px 0 #000}
+#zoneBar.contested{border-color:#ffd27a;animation:zpulse .5s infinite alternate}
+@keyframes zpulse{to{border-color:#fff}}
+#myTeam{font-size:12px;font-weight:bold;margin-top:2px;text-shadow:0 1px 0 #000}
+#zoneMark{position:fixed;left:0;top:0;transform:translate(-50%,-50%);text-align:center;pointer-events:none;font-weight:bold;text-shadow:0 2px 0 #000}
+#zoneMark .zarrow{font-size:22px;line-height:22px}
+#zoneMark .zlbl{font-size:12px;background:rgba(0,0,0,.45);padding:1px 6px;border-radius:6px}
+.teamrow{display:flex;gap:8px}
+button.teambtn{margin:0;flex:1;font-size:15px;padding:8px;border-width:3px;box-shadow:0 3px 0 #2a1410}
+button.teambtn.t0{background:#c0392b}button.teambtn.t1{background:#2471c9}button.teambtn.ta{background:#3a4a7a}
+button.teambtn.active{outline:3px solid #ffd27a;outline-offset:1px}
+button.teambtn small{display:block;font-size:11px;font-family:"Trebuchet MS",Arial;opacity:.9}
+.teampick{margin:8px 0}.tpe{color:#ffd27a;font-size:13px;font-weight:bold;min-height:16px;margin-top:4px}
+#teamPick{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,24,44,.95);border:4px solid #2a1410;border-radius:18px;padding:18px;width:460px;pointer-events:auto;z-index:20}
+#teamPick .tpt{font-family:"Arial Black",Impact;font-size:24px;text-align:center;margin-bottom:10px;color:#ffd27a}
+#lobbyPlayers .tm0{color:#ff6b6b;font-size:12px;margin-left:6px}#lobbyPlayers .tm1{color:#6bb8ff;font-size:12px;margin-left:6px}
+/* tela de morte clicável */
+#hud{pointer-events:none}#hud #deathpick,#hud #teamPick,#hud button,#hud select,#hud input{pointer-events:auto}
+#deathpick{pointer-events:auto}
+#deathpick .dl small{color:#cfe;font-weight:normal}
+#deathSec{display:flex;gap:8px;justify-content:center;margin:4px 0}
+#deathSec button.primchip{max-width:220px}
+#deathBack{margin:10px auto 0;display:block}
+#deathpick{top:calc(50% + 30px)}

@@ -68,6 +68,7 @@ O site (Vercel) não precisa de nada: `.vercelignore` deixa `server/` e os teste
 cd server && npx wrangler dev --port 8787 --var ALLOW_TEST:1     # ALLOW_TEST só para o teste automatizado (aceita teleporte)
 python3 -m http.server 8124                                       # na raiz do jogo
 node test-online.mjs http://localhost:8124/ ws://127.0.0.1:8787
+node test-online-dom.mjs http://localhost:8124/ ws://127.0.0.1:8787   # Dominação online
 ```
 Para jogar em duas abas: `http://localhost:8124/?server=ws://127.0.0.1:8787`.
 
@@ -159,8 +160,40 @@ Toda a geometria, os nomes e a arte são originais (nada copiado dos jogos citad
   - Os telhados mais altos (prédios do Mercadão, quarteirões das Duas Pocilgas) ficam fora do grafo de propósito.
 - Novo mapa: copie um bloco em `maps.js`, ajuste `boxes`/`props`/`spawns`/`pickups` e pronto. Rode `node test-maps.mjs` para conferir (carrega, bots andam, escadas e tetos).
 
-## Regras
-Todos contra todos, 4–6 bots. Vence quem chegar a 20 abates ou quem liderar ao fim de 5 minutos.
+## Regras e modos
+Escolha o modo no menu (offline) ou ao criar a sala (online; o anfitrião pode trocar no lobby).
+
+- **Mata-mata** (todos contra todos): vence quem chegar a 20 abates ou quem liderar ao fim de 5 minutos.
+- **Dominação** (times Vermelho × Azul): regras em `shared/domination.js`, as mesmas offline e no servidor.
+  - Uma **zona de captura** (anel + coluna de luz, raio 4 m) aparece num ponto andável aleatório; barra de progresso no topo e seta na borda da tela quando ela está fora de vista.
+  - **Velocidade:** 1/8 por segundo por jogador dentro, até **3** contando (1 → 8 s, 2 → 4 s, 3+ → 2,7 s).
+  - **Contestada** (os dois times dentro): o progresso **para**. Time adversário sozinho primeiro **neutraliza** o progresso do outro, depois começa o seu.
+  - **Vazia:** o progresso **decai** 0,1/s até zerar (zona volta a neutra).
+  - Cada captura = **1 ponto** pro time; a zona reaparece em outro lugar (≥ 18 m da anterior, quando dá). **Primeiro a 5 vence**; tempo limite 7 min (empate se igual).
+  - Placar individual na Dominação: abates + 2 × zonas capturadas.
+  - **Sem fogo amigo** (tiro, Bazuca e Copo Bomba); dano da explosão em si mesmo continua (40%).
+  - Contorno, anel no pé e plaquinha de nome na cor do time.
+  - **Escolha de time** (Vermelho / Azul / Automático) no lobby, no menu offline e ao entrar no meio da partida (antes de nascer).
+    Automático = time com menos gente. Uma escolha é **recusada se deixaria aquele time com 2+ humanos a mais** que o outro; aí você vai pro Automático e aparece um aviso.
+    Trocar de time no meio da partida conta como morte (sem pontuar pra ninguém) e você renasce no time novo.
+  - Bots completam os dois times (e são remanejados se um time ficar 2+ maior), vão pra zona, contestam e só miram em inimigos.
+- **Placar ao vivo** sempre no canto superior esquerdo (até 8 linhas, você destacado; na Dominação com o placar dos times).
+
+## Explosões (Bazuca e Copo Bomba)
+Regra única em `shared/combat.js` (cliente offline e servidor):
+- O dano usa a distância até o **ponto mais próximo do corpo** (cápsula do Docão, raio 0,58 m), não até o centro: `dano = máx × (0,2 + 0,8 × (1 − d/raio))`.
+- **Linha de visão** testada de 2 pontos da explosão até 4 pontos do corpo (ponto mais próximo, pé, peito, cabeça): basta um livre. Atrás de mureta com a cabeça de fora ainda pega.
+- O foguete colide com o **casco** do Docão (cápsula + 0,15 m); **acerto direto = dano máximo** em quem foi atingido.
+- O anel/clarão da explosão tem o mesmo tamanho do raio de dano (5 m Bazuca, 6 m Copo Bomba).
+
+## Sniper Torresmo (precisão)
+- Com a **luneta aberta** (o overlay aparece) e **parado ou quase** (< 1,5 m/s): dispersão **zero**. Andando com luneta: 0,012; no ar: 0,02. Sem luneta: 0,025 parado, 0,045 andando.
+- O tiro sai **exatamente do centro da câmera**; a Sniper não desloca a mira com coice (só efeito visual).
+- Online, o cliente manda o tempo do servidor que estava vendo na tela (interpolação) e o servidor volta os alvos exatamente pra esse instante (até 400 ms), com a mesma altura de olho (1,6 m) do cliente.
+
+## Tela de morte
+Os cartões de arma são **clicáveis** (as teclas 1–4 continuam valendo), e dá pra marcar “renascer com a pistola na mão”.
+Ao morrer o mouse é solto (sem pausar); clique na tela ou em **VOLTAR AO JOGO** para mirar de novo.
 
 ## Arquivos
 - `index.html`, `style.css`: UI (menu com seletor de skin, HUD, pausa, placar)
@@ -171,7 +204,8 @@ Todos contra todos, 4–6 bots. Vence quem chegar a 20 abates ou quem liderar ao
 - `skins.js`: **registro de skins (só dados)**
 - `render.html`: renderiza um Docão isolado (`?skin=clube&rot=0.6&frame=face`) para conferir skins
 - `vendor/`: Three.js r169 + BufferGeometryUtils
-- `test.mjs` / `test-maps.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`)
+- `shared/domination.js` (zona, times) · `shared/combat.js` (explosões, colisão do foguete, dispersão da Sniper): regras usadas pelo cliente e pelo servidor
+- `test.mjs` / `test-maps.mjs` / `test-dom.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`) · `test-shared.mjs`: testes das regras sem navegador
 
 ## Como adicionar uma skin
 Abra `skins.js` e acrescente um objeto no array `SKINS`:

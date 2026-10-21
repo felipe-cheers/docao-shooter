@@ -10,9 +10,12 @@ import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { KILL_LIMIT, TIME_LIMIT, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, PISTOL, W_NADE, NADE, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
+import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
+import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
 export const MAX_PLAYERS = 8;
 const TICK = 0.05, HIST = 1.0, DC_GRACE = 30;
+const TICK_DT = (g) => clamp(g.T - (g.lastZoneT ?? g.T), 0, 0.25) + (g.lastZoneT = g.T, 0);
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -27,13 +30,24 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y, z: p.z });
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm' };
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
     this.events = []; this.personal = new Map(); this.nades = []; this.rockets = []; this.pickups = []; this.projId = 1;
   }
   now() { return Date.now() / 1000; }
+  get teamMode() { return this.cfg.mode === 'dom'; }
+  live() { return [...this.ents.values()].filter((e) => e.bot || e.connected); }
+  teamCounts(exclude, humansOnly = true) { const c = [0, 0]; for (const e of this.live()) if (e !== exclude && (!humansOnly || !e.bot) && (e.team === 0 || e.team === 1)) c[e.team]++; return c; }
+  // escolha de time (lobby, pré-partida ou entrando no meio): -1 = automático. Bloqueia se deixaria 2+ humanos a mais.
+  chooseTeam(e, want) {
+    want = want === 0 || want === 1 ? want : -1; e.teamPref = want;
+    const c = this.teamCounts(e); let team = want, blocked = false;
+    if (want >= 0 && !canJoinTeam(want, c)) { blocked = true; team = -1; e.teamPref = -1; } // bloqueado: vira Automático
+    if (team < 0) team = smallerTeam(c);
+    e.team = team; return { team, blocked };
+  }
   humans(connectedOnly = true) { return [...this.ents.values()].filter((e) => !e.bot && (!connectedOnly || e.connected)); }
   // ---------- entrada/saída ----------
   join({ name, skin, primary, token }) {
@@ -42,8 +56,9 @@ export class Game {
     if (e) { e.connected = true; e.dcAt = 0; } // reconexão: mesmo id e placar
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
-      if (this.state !== 'lobby') this.removeOneBot(); // abre vaga
+      if (this.state !== 'lobby' && !this.teamMode) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
       e = this.makeEnt({ name, skin, primary, bot: false });
+      if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') e.pendingTeam = true; }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
     }
     if (!this.hostId || !this.ents.get(this.hostId)?.connected) this.hostId = e.id;
@@ -54,7 +69,7 @@ export class Game {
     if (this.state === 'lobby') this.sendLobby();
     else {
       this.io.send(e.id, this.startMsg());
-      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = Math.min(e.respawnAt || this.T, this.T + 0.5); }
+      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + 60 : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 60 s (depois vai no Automático)
       if (this.state === 'over') this.io.send(e.id, this.endMsg());
     }
     this.sendLobby();
@@ -78,25 +93,33 @@ export class Game {
       primary: PRIMARIES.includes(primary) ? primary : 0, nextPrimary: PRIMARIES.includes(primary) ? primary : 0, slots: [0, PISTOL], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
-      connected: !bot, dcAt: 0, lastAttacker: 0 };
+      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0 };
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
     this.ents.set(id, e); return e;
   }
-  entInfo(e) { return { id: e.id, name: e.name, skin: e.skin, bot: e.bot, tag: e.tag, kills: e.kills, deaths: e.deaths, alive: e.alive, primary: e.primary, w: e.weapon }; }
+  entInfo(e) { return { id: e.id, name: e.name, skin: e.skin, bot: e.bot, tag: e.tag, kills: e.kills, deaths: e.deaths, alive: e.alive, primary: e.primary, w: e.weapon, team: e.team, caps: e.caps, pend: e.pendingTeam ? 1 : 0 }; }
   sendLobby() {
     this.io.broadcast({ t: 'lobby', cfg: this.cfg, hostId: this.hostId, state: this.state, mapId: this.mapId,
-      players: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => ({ id: e.id, name: e.name, skin: e.skin, bot: e.bot, ping: e.ping, kills: e.kills, deaths: e.deaths })) });
+      players: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => ({ id: e.id, name: e.name, skin: e.skin, bot: e.bot, ping: e.ping, kills: e.kills, deaths: e.deaths, team: e.team, pref: e.teamPref })) });
   }
   // ---------- bots de preenchimento ----------
   syncBots() {
     if (this.state === 'lobby') return;
     const want = this.cfg.fillBots ? Math.max(0, this.cfg.max - this.humans().length) : 0;
     let bots = [...this.ents.values()].filter((e) => e.bot);
-    while (bots.length > want) { const b = bots.pop(); this.ents.delete(b.id); this.events.push(['l', b.id]); }
+    const tc = () => this.teamCounts(null, false);
+    while (bots.length > want) { // Dominação: tira do time maior
+      let b = bots[bots.length - 1]; if (this.teamMode) { const c = tc(), big = c[0] >= c[1] ? 0 : 1; b = [...bots].reverse().find((x) => x.team === big) || b; }
+      bots = bots.filter((x) => x !== b); this.ents.delete(b.id); this.events.push(['l', b.id]);
+    }
+    if (this.teamMode) { // rebalanceia bots se um time ficou 2+ maior
+      for (let i = 0; i < 8; i++) { const c = tc(), big = c[0] > c[1] ? 0 : 1; if (c[big] - c[1 - big] < 2) break; const b = bots.find((x) => x.team === big); if (!b) break; b.team = 1 - big; this.events.push(['tm', b.id, b.team]); }
+    }
     const used = new Set(bots.map((b) => b.name));
     while (bots.length < want) {
       const name = BOT_DEFS.map((d) => d.name).find((n) => !used.has(n)) || 'Bot ' + this.nextId; used.add(name);
       const b = this.makeEnt({ name, skin: pick(SKINS).id, primary: pick(PRIMARIES), bot: true }); bots.push(b);
+      if (this.teamMode) b.team = smallerTeam(tc());
       if (this.state === 'playing') { this.events.push(['j', this.entInfo(b)]); this.spawn(b); }
     }
   }
@@ -111,22 +134,36 @@ export class Game {
     this.pickups = map.pickups.map(([type, x, z, y]) => ({ type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: true, respawnAt: 0 }));
     this.nades = []; this.rockets = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
-    for (const e of this.ents.values()) { e.kills = 0; e.deaths = 0; e.alive = false; }
+    for (const e of this.ents.values()) { e.kills = 0; e.deaths = 0; e.alive = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1; }
+    if (this.teamMode) { // times
+      const hs = this.humans(); // os times do lobby já respeitam a regra; só completa quem está sem time e reequilibra (automáticos primeiro)
+      for (const e of hs) if (e.team !== 0 && e.team !== 1) e.team = e.teamPref >= 0 && canJoinTeam(e.teamPref, this.teamCounts(e)) ? e.teamPref : smallerTeam(this.teamCounts(e));
+      for (let g = 0; g < 16; g++) {
+        const c = this.teamCounts(null), big = c[0] - c[1] >= 2 ? 0 : c[1] - c[0] >= 2 ? 1 : -1; if (big < 0) break;
+        const mv = hs.find((x) => x.team === big && x.teamPref < 0) || hs.find((x) => x.team === big); mv.team = 1 - big;
+      }
+      for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = -1;
+    }
     this.syncBots();
+    if (this.teamMode) { for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = -1; for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = smallerTeam(this.teamCounts(null, false)); }
+    this.teamScore = [0, 0]; this.zone = this.teamMode ? newZoneState(pickZone(this.nav)) : null;
     for (const e of this.ents.values()) if (e.bot || e.connected) this.spawn(e, true);
     this.io.broadcast(this.startMsg()); this.sendLobby();
     this.io.startLoop();
   }
-  startMsg() { return { t: 'start', map: this.mapId, T: r2(this.T), limit: TIME_LIMIT, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  get timeLimit() { return this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; }
+  zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
+  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.rockets = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
   endMsg() {
-    const rows = [...this.ents.values()].filter((e) => e.bot || e.connected).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
-    const i = MAPS.findIndex((m) => m.id === this.mapId);
-    return { t: 'end', board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: MAPS[(i + 1) % MAPS.length].id, hostId: this.hostId };
+    const rows = [...this.ents.values()].filter((e) => e.bot || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
+    const i = MAPS.findIndex((m) => m.id === this.mapId), ts = this.teamScore || [0, 0];
+    return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: MAPS[(i + 1) % MAPS.length].id, hostId: this.hostId };
   }
+  score(e) { return this.teamMode ? e.kills + 2 * e.caps : e.kills; }
   // ---------- mensagens dos clientes ----------
   onMessage(id, m) {
     const e = this.ents.get(id); if (!e || !m || typeof m !== 'object') return;
@@ -138,8 +175,18 @@ export class Game {
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
+        if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); break;
       case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? MAPS[(MAPS.findIndex((x) => x.id === this.mapId) + 1) % MAPS.length].id : this.cfg.map)); break;
+      case 'team': {
+        if (!this.teamMode) return; const r = this.chooseTeam(e, m.team);
+        if (this.state === 'playing') {
+          if (e.pendingTeam) { e.pendingTeam = false; e.respawnAt = this.T + 0.3; this.syncBots(); }
+          else if (e.alive) { e.alive = false; e.deaths++; e.respawnAt = this.T + RESPAWN_TIME; this.events.push(['k', 0, e.id, -2, 0, 0, e.deaths]); } // troca no meio: renasce no time novo
+          this.events.push(['tm', e.id, e.team]);
+        }
+        this.io.send(e.id, { t: 'teamOk', team: r.team, blocked: r.blocked, pref: e.teamPref }); this.sendLobby(); break;
+      }
       case 'lobby': if (!isHost || this.state !== 'over') return; this.state = 'lobby'; for (const b of [...this.ents.values()]) if (b.bot) this.ents.delete(b.id); this.sendLobby(); break;
       default: break;
     }
@@ -162,7 +209,8 @@ export class Game {
         } else { e.pos = p; if (v) e.vel = { x: clamp(v.x, -40, 40), y: clamp(v.y, -60, 40), z: clamp(v.z, -40, 40) }; }
         e.lastUpd = t;
       }
-      if (Number.isFinite(m.y)) e.yaw = m.y + Math.PI; // câmera → modelo if (Number.isFinite(m.pi)) e.pitch = clamp(m.pi, -1.6, 1.6);
+      if (Number.isFinite(m.y)) e.yaw = m.y + Math.PI; // câmera → modelo
+      if (Number.isFinite(m.pi)) e.pitch = clamp(m.pi, -1.6, 1.6);
       e.onGround = !!m.g;
       if (e.slots.includes(m.w) && m.w !== e.weapon) { e.weapon = m.w; e.reload = null; }
       this.pushHist(e);
@@ -175,7 +223,7 @@ export class Game {
     if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; return; }
     if (!e.alive) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
-    if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.humanFire(e, ev[1], ev[2], ev[3]);
+    if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5]);
     if (k === 'r') return this.clockOk(e, ev[3], 3) && this.humanRocket(e, ev[1], ev[2]);
     if (k === 'n') return this.humanNade(e, ev[1], ev[2]);
   }
@@ -207,11 +255,12 @@ export class Game {
     else if (e.reload) return false;
     e.mag[w]--; e.lastShot[w] = this.T; e.invulnUntil = Math.min(e.invulnUntil, this.T); e.weapon = w; return true;
   }
-  humanFire(e, oA, dirs, w) {
+  humanFire(e, oA, dirs, w, rt) {
     const o = obj3(oA); if (!this.eyeOk(e, o) || !Number.isInteger(w) || !WEAPONS[w] || WEAPONS[w].rocket || !Array.isArray(dirs)) return;
     if (!this.canShoot(e, w)) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; }
     const ds = dirs.slice(0, Math.max(1, WEAPONS[w].pellets)).map(obj3).filter(Boolean).map(norm);
-    const rewind = this.T - clamp(e.ping / 2000 + 0.1, 0, 0.3); // compensação de lag "lite"
+    // compensação de lag: o cliente manda o tempo de servidor do que estava desenhando (rt); senão estima RTT + 100 ms de interpolação
+    const rewind = Number.isFinite(rt) ? clamp(rt, this.T - 0.4, this.T) : this.T - clamp(e.ping / 1000 + 0.1, 0, 0.4);
     this.hitscan(e, o, ds, w, rewind);
   }
   humanRocket(e, oA, dA) {
@@ -232,7 +281,7 @@ export class Game {
   // ---------- combate ----------
   hitscan(shooter, o, dirs, w, rewindT = this.T) {
     const W = WEAPONS[w], hits = new Map(), ends = [];
-    const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected)).map((t) => ({ t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos }));
+    const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos }));
     for (const d of dirs) {
       const wall = this.P.rayWorld(o, d, W.range); const wallD = wall ?? W.range; let best = null;
       for (const { t, p } of targets) for (const [y, r, head] of HITBOXES) { const tt = raySphere(o, d, center(t, y, p), r); if (tt > 0 && tt < wallD && (!best || tt < best.tt)) best = { t, tt, head }; }
@@ -247,8 +296,9 @@ export class Game {
     for (const [t, h] of hits) this.damage(t, h.dmg, shooter, w, h.head);
     return hits;
   }
+  friends(a, b) { return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
   damage(t, amount, a, w, head) {
-    if (!t.alive || this.T < t.invulnUntil) return false;
+    if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
     t.hp -= amount; t.lastAttacker = a ? a.id : 0;
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
     this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0]);
@@ -259,21 +309,18 @@ export class Game {
     t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + RESPAWN_TIME;
     if (a && a !== t) a.kills++;
     this.events.push(['k', a ? a.id : 0, t.id, w, head ? 1 : 0, a ? a.kills : 0, t.deaths]);
-    if (a && a.kills >= KILL_LIMIT) this.pendingEnd = true;
+    if (a && a.kills >= KILL_LIMIT && !this.teamMode) this.pendingEnd = true;
   }
-  blast(c, owner, o) {
+  blast(c, owner, o, direct = null) {
     this.events.push(['bm', o.pid || 0, o.kind, arr3(c)]);
-    for (const e of this.ents.values()) {
-      if (!e.alive || (!e.bot && !e.connected)) continue;
-      const tc = center(e, 0.6), d = dist(tc, c); if (d > o.radius) continue;
-      if (!this.P.losClear({ x: c.x, y: c.y + 0.3, z: c.z }, tc) && !this.P.losClear({ x: c.x, y: c.y + 1.2, z: c.z }, center(e, 1.6))) continue;
-      const k = 1 - d / o.radius; let dx = tc.x - c.x, dz = tc.z - c.z; const L = Math.hypot(dx, dz); if (L < 1e-2) { dx = rand(-1, 1); dz = rand(-1, 1); }
-      const n = Math.hypot(dx, dz) || 1, kv = { x: dx / n * o.knock * k, y: o.lift * k, z: dz / n * o.knock * k };
-      e.lastKnock = this.T;
-      if (e.bot) { e.vel.x += kv.x; e.vel.z += kv.z; e.vel.y = Math.max(e.vel.y, kv.y); e.onGround = false; }
-      else this.toMe(e, ['kn', arr3(kv)]); // empurrão aplicado pelo próprio cliente (rocket jump)
-      this.damage(e, o.maxDmg * (0.2 + 0.8 * k) * (e === owner ? o.selfMul : 1), owner, o.wIdx, false);
+    const hits = explosionHits(c, o, this.live(), (a, b) => this.P.losClear(a, b), owner, this.teamMode, direct);
+    for (const h of hits) {
+      const e = h.e; e.lastKnock = this.T;
+      if (e.bot) { e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; }
+      else this.toMe(e, ['kn', arr3(h.knock)]); // empurrão aplicado pelo próprio cliente (rocket jump)
+      this.damage(e, h.dmg, owner, o.wIdx, false);
     }
+    return hits;
   }
   throwNade(e, o, v) {
     const n = { id: this.projId++, owner: e, pos: { ...o }, vel: { ...v }, explodeAt: this.T + NADE.fuse };
@@ -293,14 +340,15 @@ export class Game {
     }
     const R = WEAPONS[3].rocket;
     for (let i = this.rockets.length - 1; i >= 0; i--) {
-      const r = this.rockets[i], step = R.speed * dt; let hitT = this.P.rayWorld(r.pos, r.dir, step + 0.1);
+      const r = this.rockets[i], step = R.speed * dt; let hitT = this.P.rayWorld(r.pos, r.dir, step + 0.1), hitE = null;
       for (const e of this.ents.values()) {
         if (!e.alive || (!e.bot && !e.connected) || (e === r.owner && this.T - r.born < 0.3)) continue;
-        for (const [y, rad] of [[1.5, 0.5], [0.8, 0.58]]) { const t = raySphere(r.pos, r.dir, center(e, y), rad); if (t >= 0 && t <= step + 0.1 && (hitT === null || t < hitT)) hitT = t; }
+        if (this.friends(e, r.owner)) continue;
+        const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD); if (t !== null && (hitT === null || t < hitT)) { hitT = t; hitE = e; } // casco do Docão
       }
       if (hitT !== null || this.T - r.born > 6) {
-        const t = Math.max(0, (hitT ?? 0) - 0.12); this.rockets.splice(i, 1);
-        this.blast({ x: r.pos.x + r.dir.x * t, y: r.pos.y + r.dir.y * t, z: r.pos.z + r.dir.z * t }, r.owner, { ...R, wIdx: 3, kind: 'r', pid: r.id }); continue;
+        const t = Math.max(0, (hitT ?? 0) - 0.05); this.rockets.splice(i, 1);
+        this.blast({ x: r.pos.x + r.dir.x * t, y: r.pos.y + r.dir.y * t, z: r.pos.z + r.dir.z * t }, r.owner, { ...R, wIdx: 3, kind: 'r', pid: r.id }, hitE); continue;
       }
       r.pos.x += r.dir.x * step; r.pos.y += r.dir.y * step; r.pos.z += r.dir.z * step;
     }
@@ -310,7 +358,7 @@ export class Game {
     let best = this.spawns[0], bd = -Infinity;
     for (const s of this.spawns) {
       let md = 1e9, seen = false; const eye = { x: s.x, y: s.y + 1.5, z: s.z };
-      for (const o of this.ents.values()) { if (o === e || !o.alive) continue; const d = dist(o.pos, s); md = Math.min(md, d); if (!seen && d < 60 && this.P.losClear(eye, center(o, 1.5))) seen = true; }
+      for (const o of this.ents.values()) { if (o === e || !o.alive || this.friends(o, e)) continue; const d = dist(o.pos, s); md = Math.min(md, d); if (!seen && d < 60 && this.P.losClear(eye, center(o, 1.5))) seen = true; }
       const score = Math.min(md, 40) + Math.random() * 6 - (seen ? 30 : 0); if (score > bd) { bd = score; best = s; }
     }
     return best;
@@ -319,7 +367,8 @@ export class Game {
     const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.hp = 100; e.alive = true; e.invulnUntil = this.T + INVULN; e.sq++;
     if (e.bot && Math.random() < 0.3) e.nextPrimary = pick(PRIMARIES);
     e.primary = e.nextPrimary; e.slots = [e.primary, PISTOL]; e.weapon = e.primary; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.nades = NADE.spawnWith;
-    e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro e.hist = []; this.pushHist(e); e.lastUpd = this.now();
+    e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
+    e.hist = []; this.pushHist(e); e.lastUpd = this.now();
     if (e.bot) Object.assign(e, { target: null, wp: null, path: null, stuck: 0, reloadEnd: 0 });
     this.events.push(['sp', e.id, arr3(e.pos), r2(e.yaw), e.primary, e.sq]);
   }
@@ -351,17 +400,27 @@ export class Game {
     this.T = t - this.t0; this.purge();
     while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot) this.updateBot(e, h); this.stepProjectiles(h); }
     for (const e of this.ents.values()) {
-      if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt) this.spawn(e);
+      if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
       if (e.bot) this.pushHist(e);
       if (!e.bot && e.alive) this.progressReload(e);
     }
     this.updatePickups();
-    const snap = { t: 's', T: r2(this.T), e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
+    if (this.zone) this.updateZone(TICK_DT(this));
+    const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
       (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0), Math.round(e.hp), e.ping]), ev: this.events };
     this.events = [];
     this.io.broadcast(snap);
     for (const [id, evs] of this.personal) this.io.send(id, { t: 'p', ev: evs }); this.personal.clear();
-    if (this.pendingEnd || this.T >= TIME_LIMIT) { this.pendingEnd = false; this.endMatch(); }
+    if (this.pendingEnd || this.T >= this.timeLimit) { this.pendingEnd = false; this.endMatch(); }
+  }
+  updateZone(dt) {
+    const z = this.zone, got = stepZone(z, zoneCounts(z, this.live()), dt);
+    if (got >= 0) {
+      this.teamScore[got]++; for (const e of this.live()) if (e.alive && e.team === got && inZone(z, e.pos)) e.caps++;
+      const nz = newZoneState(pickZone(this.nav, z)); this.zone = nz;
+      this.events.push(['zc', got, this.teamScore[0], this.teamScore[1], [r2(nz.x), r2(nz.y), r2(nz.z)], [...this.live()].filter((e) => e.caps).map((e) => [e.id, e.caps])]);
+      if (this.teamScore[got] >= DOM.WIN_CAPS) this.pendingEnd = true;
+    }
   }
   // ---------- bots (mesma lógica dos bots offline, sem Three.js) ----------
   randomWaypoint() { const n = this.nav.randomNode(); return n ? { x: n.x, y: n.y, z: n.z } : { x: rand(-10, 10), y: 0, z: rand(-10, 10) }; }
@@ -373,6 +432,13 @@ export class Game {
     if (P.length > 1 && this.T > (b.nextShortcut || 0)) { b.nextShortcut = this.T + 0.25; const n2 = P[1]; if (Math.abs(n2.y - b.pos.y) < 0.3 && Math.abs(P[0].y - b.pos.y) < 0.3 && Math.hypot(n2.x - b.pos.x, n2.z - b.pos.z) < 3.2 && this.nav.walk(b.pos, n2) >= 0) { P.shift(); tgt = n2; } }
     const vx = tgt.x - b.pos.x, vz = tgt.z - b.pos.z, L = Math.hypot(vx, vz); return L > 0.1 ? { x: vx / L, z: vz / L } : null;
   }
+  // Dominação: ponto dentro da zona pra onde o bot vai (null = já está dentro, ou modo sem zona)
+  zoneGoal(b) {
+    const z = this.zone; if (!z) return null;
+    if (inZone(z, b.pos) && Math.hypot(b.pos.x - z.x, b.pos.z - z.z) < DOM.RADIUS * 0.7) return null;
+    if (!b.zoneOff || b.zoneOff.z !== z) { const a = rand(0, Math.PI * 2), r = rand(0, DOM.RADIUS * 0.5); b.zoneOff = { z, x: Math.cos(a) * r, zz: Math.sin(a) * r }; }
+    return { x: z.x + b.zoneOff.x, y: z.y, z: z.z + b.zoneOff.zz };
+  }
   botWeaponFor(b, d) { const pr = b.primary; if (pr === 1) return d < 14 ? pr : PISTOL; if (pr === 2) return d >= 9 ? pr : PISTOL; if (pr === 3) return d >= 6 && d <= 28 ? pr : PISTOL; return pr; }
   updateBot(b, dt) {
     if (!b.alive) return;
@@ -381,7 +447,7 @@ export class Game {
     if (b.think <= 0) {
       b.think = rand(0.18, 0.32); let best = null, bs = 1e9; const eye = center(b, 1.5);
       for (const o of this.ents.values()) {
-        if (o === b || !o.alive || (!o.bot && !o.connected)) continue; const d = dist(o.pos, b.pos); if (d > 55) continue;
+        if (o === b || !o.alive || (!o.bot && !o.connected) || this.friends(o, b)) continue; const d = dist(o.pos, b.pos); if (d > 55) continue;
         const score = d * (o.id === b.lastAttacker ? 0.5 : 1) * (!o.bot ? 0.85 : 1);
         if (score < bs && this.P.losClear(eye, center(o, 1.2))) { best = o; bs = score; }
       }
@@ -395,7 +461,10 @@ export class Game {
       let tx = t.pos.x - b.pos.x, tz = t.pos.z - b.pos.z; const d = Math.hypot(tx, tz) || 1; tx /= d; tz /= d; desiredYaw = face(tx, tz);
       const want = this.botWeaponFor(b, d); if (want !== b.weapon && !b.reloadEnd) { b.weapon = want; b.nextFire = Math.max(b.nextFire, this.T + 0.35); }
       const range = BOT_RANGE[b.weapon];
-      if (Math.abs(t.pos.y - b.pos.y) > 1.2 && d > 3) { const st = this.steer(b, t.pos); if (st) { mx += st.x; mz += st.z; } }
+      const zg = this.zoneGoal(b);
+      if (zg) { const st = this.steer(b, zg); if (st) { mx += st.x * 1.5; mz += st.z * 1.5; } } // Dominação: vai pra zona atirando
+      else if (this.zone) { /* dentro da zona: segura a posição, só strafe */ }
+      else if (Math.abs(t.pos.y - b.pos.y) > 1.2 && d > 3) { const st = this.steer(b, t.pos); if (st) { mx += st.x; mz += st.z; } }
       else if (d > range + 3) { mx += tx; mz += tz; } else if (d < range - 3) { mx -= tx; mz -= tz; }
       b.strafeT -= dt; if (b.strafeT <= 0) { b.strafeDir = pick([-1, 1, 1, -1, 0]); b.strafeT = rand(0.6, 1.8); if (Math.random() < 0.15 && b.onGround) b.vel.y = JUMP; }
       mx += tz * b.strafeDir * 0.8; mz += -tx * b.strafeDir * 0.8;
@@ -407,7 +476,8 @@ export class Game {
       let goal = null;
       const near = (type, maxD) => this.pickups.filter((p) => p.active && p.type === type && dist(p.pos, b.pos) < maxD).sort((a, c) => dist(a.pos, b.pos) - dist(c.pos, b.pos))[0];
       const hp = b.hp < 45 ? near('health', 1e9) : null, np = !hp && b.nades < 2 ? near('grenade', 22) : null;
-      if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
+      const zg = this.zoneGoal(b);
+      if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
       const gx = goal.x - b.pos.x, gz = goal.z - b.pos.z;
       if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
       else { const st = this.steer(b, goal) || { x: gx / Math.hypot(gx, gz), z: gz / Math.hypot(gx, gz) }; mx = st.x; mz = st.z; desiredYaw = face(st.x, st.z); }
