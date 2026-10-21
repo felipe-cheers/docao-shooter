@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5.7 (21/10/2026)
+- **Piso e telhado não piscam mais:** onde duas superfícies ficavam exatamente no mesmo plano (laje em cima da parede, faixa no piso, asfalto, meio-fio…) a imagem ficava trocando de cor quando você mexia a câmera. Agora cada uma fica no seu lugar. A colisão continua igualzinha.
+- **Bacon não afunda mais no chão:** quando um Docão morre, a tira de bacon fica deitada por cima do piso (no chão ou num telhado), sem afundar nem no fim da animação.
+- **RENASCER já trava o mouse:** clicar em RENASCER (ou apertar Espaço/Enter) já volta a mirar na hora. O aviso "Clique pra voltar a mirar" só aparece se o navegador não deixar, e some assim que o mouse trava.
+- **A mira do centro da tela não pisca mais.**
+- Bots não ficam mais parados no meio da rampa achando que já chegaram no telhado.
+
 ## v1.5.6 (21/10/2026)
 - **Correção: Docão preso na parede** em todos os mapas. Quem saía da borda de um telhado, caixa ou rampa caía "dentro" da lateral dela, e quem subia escada/rampa debaixo de viga ou verga de porta enfiava a cabeça nela. Daí nenhuma direção funcionava.
   - O chão agora usa a mesma largura do corpo, então você para na borda em vez de afundar na parede.
