@@ -31,10 +31,10 @@ export const wallX = (x0, x1, z, t, h, c, op, y0) => wallAlong('x', x0, x1, z, t
 export const wallZ = (z0, z1, x, t, h, c, op, y0) => wallAlong('z', z0, z1, x, t, h, c, op, y0);
 // transformações de grupos de caixas (para espelhar bases/casas)
 export function rot180(list, cx, cz) {
-  return list.map((o) => { const [x0, y0, z0, x1, y1, z1] = o.b; return { ...o, b: [2 * cx - x1, y0, 2 * cz - z1, 2 * cx - x0, y1, 2 * cz - z0], ramp: o.ramp ? { ...o.ramp, dir: -o.ramp.dir } : undefined }; });
+  return list.map((o) => { if (o.wp) return { wp: [2 * cx - o.wp[0], o.wp[1], 2 * cz - o.wp[2]] }; const [x0, y0, z0, x1, y1, z1] = o.b; return { ...o, b: [2 * cx - x1, y0, 2 * cz - z1, 2 * cx - x0, y1, 2 * cz - z0], ramp: o.ramp ? { ...o.ramp, dir: -o.ramp.dir } : undefined }; });
 }
 export function mirrorZ(list) {
-  return list.map((o) => { const [x0, y0, z0, x1, y1, z1] = o.b; return { ...o, b: [x0, y0, -z1, x1, y1, -z0], ramp: o.ramp ? { ...o.ramp, dir: o.ramp.axis === 'z' ? -o.ramp.dir : o.ramp.dir } : undefined }; });
+  return list.map((o) => { if (o.wp) return { wp: [o.wp[0], o.wp[1], -o.wp[2]] }; const [x0, y0, z0, x1, y1, z1] = o.b; return { ...o, b: [x0, y0, -z1, x1, y1, -z0], ramp: o.ramp ? { ...o.ramp, dir: o.ramp.axis === 'z' ? -o.ramp.dir : o.ramp.dir } : undefined }; });
 }
 // casa de 2 andares (frente pro +z), escada interna junto da parede de trás, laje do 2º andar com vão da escada
 export function house(x0, z0, x1, z1, col) {
@@ -54,6 +54,71 @@ export function house(x0, z0, x1, z1, col) {
   out.push(...wallZ(z0 + t, z1 - t, x1 - t / 2, t, H2, wall, [win(z0 + 3.5, z0 + 6.5, 0.8, 2.0)], U));
   out.push(B(x0 - 0.5, z0 - 0.5, x1 + 0.5, z1 + 0.5, 0.35, roof, U + H2));
   out.push(B(x0 - 0.2, z1, x1 + 0.2, z1 + 0.25, 0.25, trim, H1)); // friso entre andares
+  return out;
+}
+
+// ---------- kit v2: prédios de vários andares ----------
+// retângulo menos buracos (para lajes com vão de escada)
+export function slab(x0, z0, x1, z1, y, th, c, holes = []) {
+  let rects = [[x0, z0, x1, z1]];
+  for (const [hx0, hz0, hx1, hz1] of holes) {
+    const next = [];
+    for (const [a0, b0, a1, b1] of rects) {
+      if (hx1 <= a0 || hx0 >= a1 || hz1 <= b0 || hz0 >= b1) { next.push([a0, b0, a1, b1]); continue; }
+      const cx0 = Math.max(a0, hx0), cx1 = Math.min(a1, hx1);
+      if (hz0 > b0) next.push([a0, b0, a1, hz0]); if (hz1 < b1) next.push([a0, hz1, a1, b1]);
+      if (cx0 > a0) next.push([a0, Math.max(b0, hz0), cx0, Math.min(b1, hz1)]); if (cx1 < a1) next.push([cx1, Math.max(b0, hz0), a1, Math.min(b1, hz1)]);
+    }
+    rects = next;
+  }
+  return rects.filter(([a0, b0, a1, b1]) => a1 - a0 > 0.05 && b1 - b0 > 0.05).map(([a0, b0, a1, b1]) => B(a0, b0, a1, b1, th, c, y - th));
+}
+// prédio: x0..x1 × z0..z1, `floors` andares de altura H (piso do andar f em y = f·H, laje de 0,3 por baixo).
+//  ops: lista de aberturas { s: 'n'|'s'|'w'|'e' (n = lado z0, s = z1, w = x0, e = x1), a, b (ao longo da parede), f (andar), k: 'door'|'win'|'wide', lo, hi }
+//  stairs: [{ f, r: [x0, z0, x1, z1], axis, dir }] rampa do andar f pro f+1 (abre vão na laje de cima)
+//  roof: true = laje no topo (y = floors·H) com mureta; roofHoles/roofGaps: vãos na laje/mureta (escada pro telhado)
+//  inner: paredes internas [{ axis: 'x'|'z', s0, s1, line, f, ops: [{ a, b, k }] }]
+export function building(x0, z0, x1, z1, o) {
+  const { col, floors = 2, H = 3.5, t = 0.5, ops = [], stairs = [], roof = true, parapet = 1.0, roofGaps = [], inner = [], noWall = [] } = o, out = [];
+  const opening = (op, f) => {
+    if (op.k === 'win') return win(op.a, op.b, op.lo ?? 1.0, op.hi ?? 2.2);
+    if (op.k === 'wide') return { a: op.a, b: op.b, y0: 0, y1: H - 0.3 };
+    return door(op.a, op.b, op.hi ?? 2.6);
+  };
+  const doorWp = (axis, line, a, b, y) => { const c = (a + b) / 2; for (const d of [-1.0, 0, 1.0]) out.push({ wp: axis === 'x' ? [c, y, line + d] : [line + d, y, c] }); };
+  for (const q of ops) if (q.k !== 'win') { const y = (q.f ?? 0) * H; if (q.s === 'n') doorWp('x', z0 + t / 2, q.a, q.b, y); if (q.s === 's') doorWp('x', z1 - t / 2, q.a, q.b, y); if (q.s === 'w') doorWp('z', x0 + t / 2, q.a, q.b, y); if (q.s === 'e') doorWp('z', x1 - t / 2, q.a, q.b, y); }
+  for (const w of inner) for (const q of w.ops || []) if (q.k !== 'win') doorWp(w.axis, w.line, q.a, q.b, (w.f ?? 0) * H);
+  for (let f = 0; f < floors; f++) {
+    const y = f * H, h = H, of = (side) => ops.filter((q) => q.s === side && (q.f ?? 0) === f).map((q) => opening(q, f));
+    if (!noWall.includes('n' + f)) out.push(...wallX(x0, x1, z0 + t / 2, t, h, col.wall, of('n'), y));
+    if (!noWall.includes('s' + f)) out.push(...wallX(x0, x1, z1 - t / 2, t, h, col.wall, of('s'), y));
+    if (!noWall.includes('w' + f)) out.push(...wallZ(z0 + t, z1 - t, x0 + t / 2, t, h, col.wall2 || col.wall, of('w'), y));
+    if (!noWall.includes('e' + f)) out.push(...wallZ(z0 + t, z1 - t, x1 - t / 2, t, h, col.wall2 || col.wall, of('e'), y));
+    if (f > 0) out.push(...slab(x0 + t, z0 + t, x1 - t, z1 - t, y, 0.3, col.floor, stairs.filter((st) => st.f === f - 1).map((st) => st.r)));
+    if (f > 0 && col.trim) out.push(B(x0 - 0.12, z0 - 0.12, x1 + 0.12, z0 + 0.1, 0.22, col.trim, y - 0.3), B(x0 - 0.12, z1 - 0.1, x1 + 0.12, z1 + 0.12, 0.22, col.trim, y - 0.3));
+  }
+  for (const w of inner) { const y = (w.f ?? 0) * H, ops2 = (w.ops || []).map((q) => opening(q)); out.push(...(w.axis === 'x' ? wallX(w.s0, w.s1, w.line, 0.3, H - 0.3, col.inner || col.wall, ops2, y) : wallZ(w.s0, w.s1, w.line, 0.3, H - 0.3, col.inner || col.wall, ops2, y))); }
+  for (const st of stairs) { const [a0, b0, a1, b1] = st.r; out.push(R(a0, b0, a1, b1, st.f * H, (st.f + 1) * H, st.axis, st.dir, col.stair)); }
+  if (roof) {
+    const Y = floors * H;
+    out.push(...slab(x0, z0, x1, z1, Y, 0.35, col.roof, stairs.filter((st) => st.f === floors - 1).map((st) => st.r)));
+    if (parapet > 0) {
+      const g = (side) => roofGaps.filter((q) => q.s === side).map((q) => ({ a: q.a, b: q.b, y0: 0, y1: 9 }));
+      out.push(...wallX(x0, x1, z0 + 0.15, 0.3, parapet, col.roof2 || col.wall, g('n'), Y), ...wallX(x0, x1, z1 - 0.15, 0.3, parapet, col.roof2 || col.wall, g('s'), Y));
+      out.push(...wallZ(z0 + 0.3, z1 - 0.3, x0 + 0.15, 0.3, parapet, col.roof2 || col.wall, g('w'), Y), ...wallZ(z0 + 0.3, z1 - 0.3, x1 - 0.15, 0.3, parapet, col.roof2 || col.wall, g('e'), Y));
+    }
+  }
+  return out;
+}
+// separa caixas de waypoints (portas viram nós do grafo dos bots)
+export const fin = (list) => ({ boxes: list.filter((o) => o.b), waypoints: list.filter((o) => o.wp).map((o) => o.wp) });
+// caixote / pilha de caixotes
+export const crate = (x, z, s = 1.6, h = 1.6, c = '#9c6b3a', y0 = 0) => B(x - s / 2, z - s / 2, x + s / 2, z + s / 2, h, c, y0);
+// sacada: laje externa com guarda-corpo (lado aberto = 'open' fica sem grade, encostado no prédio)
+export function balcony(x0, z0, x1, z1, y, c, rail, open) {
+  const out = [B(x0, z0, x1, z1, 0.25, c, y - 0.25)], r = 0.15, h = 1.0;
+  if (open !== 'n') out.push(B(x0, z0, x1, z0 + r, h, rail, y)); if (open !== 's') out.push(B(x0, z1 - r, x1, z1, h, rail, y));
+  if (open !== 'w') out.push(B(x0, z0, x0 + r, z1, h, rail, y)); if (open !== 'e') out.push(B(x1 - r, z0, x1, z1, h, rail, y));
   return out;
 }
 
@@ -244,27 +309,53 @@ export const MAPS = [];
   });
 }
 
-// ---------- 6) Vizinhança Cheers (beco sem saída com duas casas de 2 andares, ônibus e caminhão) ----------
+// ---------- 6) Vizinhança Cheers (inspirado em Nuketown: duas casas frente a frente, garagens, quintais) ----------
 {
-  const boxes = [];
-  boxes.push(...house(-18, -20, -4, -10, { wall: '#f2d16b', floor: '#c8a27a', roof: '#e63946', stair: '#b5793e', trim: '#ffffff' }));
-  boxes.push(...rot180(house(4, 10, 18, 20, { wall: '#9be8f0', floor: '#c8a27a', roof: '#12233a', stair: '#b5793e', trim: '#ffffff' }), 11, 15));
-  // cercas dos quintais
-  for (const [a, b, c, d] of [[-26, -10, -20, -9.6], [20, 9.6, 26, 10], [-2, -24, -1.6, -18], [1.6, 18, 2, 24]]) boxes.push(B(a, b, c, d, 1.2, '#b5793e'));
-  // carros e caixas de correio
-  boxes.push(B(-15, 3, -10.5, 4.9, 1.5, '#2f80ed'), B(10.5, -4.9, 15, -3, 1.5, '#28b463'), B(-22, 4, -20, 6, 1, '#9c6b3a'), B(20, -6, 22, -4, 1, '#9c6b3a'));
+  // casa norte (a do sul é a mesma girada 180° em volta do centro)
+  const casa = (c) => {
+    const o = [];
+    o.push(...building(-16, -19, -2, -8, { col: c, floors: 2,
+      ops: [{ s: 's', a: -10, b: -8.2 }, { s: 's', a: -15, b: -12.5, k: 'win' }, { s: 's', a: -5.5, b: -3, k: 'win' },
+        { s: 'n', a: -6.2, b: -4.4 }, { s: 'n', a: -14, b: -11, k: 'win' }, { s: 'w', a: -15, b: -13.2 }, { s: 'e', a: -16, b: -13, k: 'win' },
+        { s: 's', a: -10, b: -8.2, f: 1, hi: 2.4 }, { s: 's', a: -15, b: -12, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -6, b: -3, f: 1, k: 'win', lo: 0.9 },
+        { s: 'n', a: -14, b: -11, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: -14, b: -12.2, f: 1, hi: 2.4 }, { s: 'e', a: -16, b: -12, f: 1, k: 'win', lo: 0.9 }],
+      stairs: [{ f: 0, r: [-8.5, -18.5, -2.5, -16.6], axis: 'x', dir: 1 }],
+      inner: [{ axis: 'z', s0: -15.6, s1: -8.5, line: -11.2, ops: [{ a: -13.4, b: -11.6 }] }, { axis: 'z', s0: -15.6, s1: -8.5, line: -11.2, f: 1, ops: [{ a: -12.6, b: -10.8 }] }],
+      roofGaps: [{ s: 'w', a: -18.6, b: -15.8 }] }));
+    o.push(...balcony(-12, -8, -6, -6.2, 3.5, c.floor, c.trim, 'n'), B(-12, -6.6, -11.6, -6.2, 3.25, c.trim), B(-6.4, -6.6, -6, -6.2, 3.25, c.trim));
+    // garagem (telhado em 3,5 m: liga na janela-porta do 2º andar; rampa no telhado leva ao telhado da casa)
+    o.push(...building(-23, -18, -16, -9, { col: { ...c, wall: c.wall2 || c.wall }, floors: 1, ops: [{ s: 's', a: -22, b: -17, k: 'wide' }, { s: 'e', a: -15, b: -13.2 }, { s: 'n', a: -21, b: -19.4 }],
+      roofGaps: [{ s: 'w', a: -12.4, b: -10 }, { s: 'e', a: -18, b: -15.6 }, { s: 'e', a: -14.4, b: -11.8 }] }));
+    o.push(R(-22.7, -17.7, -16, -15.8, 3.5, 7, 'x', 1, c.stair)); // telhado da garagem → telhado da casa
+    o.push(R(-27, -12.2, -23, -10.2, 0, 3.5, 'x', 1, c.stair)); // "escada" do beco lateral → telhado da garagem
+    o.push(crate(-20, -14.5, 1.6, 1.4, '#9c6b3a'), crate(-18, -11, 1.2, 1.0, '#b07a45'), crate(-5, -13, 1.4, 0.9, '#9c6b3a'), B(-15.4, -10.6, -13, -9.4, 0.9, '#8b5a2b')); // dentro
+    // galpão do quintal leste (telhado alcançável pela pilha de caixotes)
+    o.push(...building(6, -19, 14, -12, { col: { wall: '#b5793e', wall2: '#a0682f', floor: '#c8a27a', roof: '#6b4423' }, floors: 1, H: 3.2, ops: [{ s: 's', a: 8.8, b: 10.6 }, { s: 'w', a: -17, b: -14, k: 'win' }, { s: 'e', a: -16.5, b: -14.7 }], roofGaps: [{ s: 's', a: 12, b: 14 }] }));
+    o.push(crate(13, -10.8, 1.6, 1.0, '#9c6b3a'), crate(13, -10.8, 1.2, 1.0, '#b07a45', 1.0), B(12.2, -12, 13.8, -11.4, 2.2, '#9c6b3a'), R(12.2, -11.4, 13.8, -9.6, 2.2, 3.2, 'z', -1, '#b07a45'));
+    // quintais: cercas com vãos, casinha do cachorro, caixotes
+    o.push(B(-30, -20.2, -24, -19.8, 1.2, '#b5793e'), B(-21, -21.2, -12, -20.8, 1.2, '#b5793e'), B(-9, -21.2, -1, -20.8, 1.2, '#b5793e'), B(2, -21.2, 5, -20.8, 1.2, '#b5793e'), B(16, -21.2, 24, -20.8, 1.2, '#b5793e'));
+    o.push(B(-1.2, -24, -0.8, -19, 1.2, '#b5793e'), crate(-16, -23.5, 2.2, 1.4, '#a0682f'), crate(-3, -24.4, 1.6, 1.6), crate(19, -23.6, 1.6, 1.6), crate(26, -15, 2, 1.6, '#b07a45'), crate(26, -12.8, 1.4, 1.0));
+    o.push(B(20, -17, 22, -14.5, 1.3, '#d35400'), B(-27.5, -4.8, -25.5, -3, 1.4, '#9c6b3a'), crate(-28, 4.5, 1.6, 1.6));
+    o.push(B(2.5, -9, 4.5, -7.5, 1.1, '#2f80ed'), B(-29, -17, -27, -15, 1.4, '#9c6b3a')); // caixa de correio grande / lixeira
+    return o;
+  };
+  const cA = { wall: '#f2d16b', wall2: '#e8c25a', inner: '#f7e3a0', floor: '#c8a27a', roof: '#e63946', roof2: '#c0303c', stair: '#b5793e', trim: '#ffffff' };
+  const cB = { wall: '#9be8f0', wall2: '#86d8e2', inner: '#c8f3f7', floor: '#c8a27a', roof: '#12233a', roof2: '#1d3557', stair: '#b5793e', trim: '#ffffff' };
+  const boxes = [...casa(cA), ...rot180(casa(cB), 0, 0)];
+  boxes.push(B(-12, -2.2, -8, 2.2, 1.5, '#2f80ed'), B(8, -2.2, 12, 2.2, 1.5, '#28b463')); // carros no meio da rua (deixam as faixas laterais abertas pro Sniper)
+  boxes.push(crate(-20, 4.5, 1.6, 1.2), crate(20, -4.5, 1.6, 1.2), B(-1, -5.5, 1, -4.5, 1.0, '#e8e8e8'), B(-1, 4.5, 1, 5.5, 1.0, '#e8e8e8'));
   MAPS.push({
-    id: 'vizinhanca-cheers', name: 'Vizinhança Cheers', desc: 'Pequeno e caótico: duas casas de dois andares frente a frente, ônibus e caminhão no meio da rua.',
-    size: [26, 24], wallH: 3, wallColor: ['#b5793e', '#a0682f'],
+    id: 'vizinhanca-cheers', name: 'Vizinhança Cheers', desc: 'Estilo Nuketown: duas casas de dois andares frente a frente, garagens com telhado, sacadas, quintais e o ônibus no meio da rua.',
+    size: [30, 26], wallH: 3, wallColor: ['#b5793e', '#a0682f'],
     palette: DAY({ ground: '#7cc95a', tiles: null }),
-    boxes, props: [{ t: 'street', x0: -26, z0: -8.5, x1: 26, z1: 8.5 }, { t: 'bus', x: -2, z: 0, c: '#f2c94c' }, { t: 'truck', x: 15, z: 3.5, c: '#e63946' },
-      { t: 'tree', x: -22, z: -16 }, { t: 'tree', x: 22, z: 16 }, { t: 'tree', x: 22, z: -15 }, { t: 'tree', x: -22, z: 15 },
-      { t: 'sign', x: -11, y: 4.8, z: -9.68, w: 3, h: 0.9, rot: 0, text: 'C! 1', bg: '#e63946', fg: '#fff' }, { t: 'sign', x: 11, y: 4.8, z: 9.68, w: 3, h: 0.9, rot: Math.PI, text: 'C! 2', bg: '#12233a', fg: '#7DF9FF' }],
-    spawns: [[-23, -20], [23, 20], [-23, 9], [23, -9], [-11, -22.5], [11, 22.5], [-12, -13, 3.5], [12, 13, 3.5], [-2, -6], [2, 6]],
-    pickups: [['health', -10, -12], ['health', 10, 12], ['ammo', -14, -12, 3.5], ['ammo', 14, 12, 3.5], ['ammo', -23, 0], ['ammo', 23, 0],
-      ['grenade', 0, -6], ['grenade', 0, 6], ['grenade', -6, -12.5, 3.5], ['grenade', 6, 12.5, 3.5]],
-    showcase: [8, 0, -5], view: [9, 0, 6, 0.64, 0.02],
-    test: { stairs: { from: [-16.5, 0, -18.0], to: [-5.5, 3.5, -18.0], level: 3.5 }, under: { from: [-16, 0, -12.5], to: [-6, 0, -12.5], ceil: 3.2 } },
+    ...fin(boxes), props: [{ t: 'street', x0: -30, z0: -7, x1: 30, z1: 7 }, { t: 'bus', x: 0, z: 0, c: '#f2c94c' }, { t: 'truck', x: 19, z: 3.6, c: '#e63946' }, { t: 'truck', x: -19, z: -3.6, c: '#2f80ed' },
+      { t: 'tree', x: -27, z: -23 }, { t: 'tree', x: 27, z: 23 }, { t: 'tree', x: 27, z: -23 }, { t: 'tree', x: -27, z: 23 }, { t: 'tree', x: -9, z: -24 }, { t: 'tree', x: 9, z: 24 },
+      { t: 'sign', x: -9.1, y: 6.0, z: -7.9, w: 3, h: 0.9, rot: 0, text: 'C! 1', bg: '#e63946', fg: '#fff' }, { t: 'sign', x: 9.1, y: 6.0, z: 7.9, w: 3, h: 0.9, rot: Math.PI, text: 'C! 2', bg: '#12233a', fg: '#7DF9FF' }],
+    spawns: [[-20, -23.5], [-6, -23.5], [10, -23.5], [20, 23.5], [6, 23.5], [-10, 23.5], [-27.5, -8], [27.5, 8], [-12, -11.5], [12, 11.5], [27, -19], [-27, 19]],
+    pickups: [['health', -12.5, -16], ['health', 12.5, 16], ['ammo', -12, -16.5, 3.5], ['ammo', 12, 16.5, 3.5], ['ammo', -27, 0], ['ammo', 27, 0],
+      ['grenade', -9, -13, 7], ['grenade', 9, 13, 7], ['grenade', 10, -15.5], ['grenade', -10, 15.5], ['health', 0, -23], ['health', 0, 23]],
+    showcase: [4, 0, -4], view: [22, 0, 5, 1.35, 0.02], openMax: 7,
+    test: { stairs: { from: [-9.8, 0, -17.5], to: [-3.4, 3.5, -17.5], level: 3.5 }, under: { from: [-15, 0, -12.5], to: [-10.2, 0, -12.5], ceil: 3.2 }, roof: { from: [-22.4, 3.5, -16.8], to: [-13, 7.0, -16.8], level: 7.0 } },
   });
 }
 
