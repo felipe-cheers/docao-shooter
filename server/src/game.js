@@ -69,7 +69,7 @@ export class Game {
     if (this.state === 'lobby') this.sendLobby();
     else {
       this.io.send(e.id, this.startMsg());
-      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + 15 : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 15 s
+      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + 60 : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 60 s (depois vai no Automático)
       if (this.state === 'over') this.io.send(e.id, this.endMsg());
     }
     this.sendLobby();
