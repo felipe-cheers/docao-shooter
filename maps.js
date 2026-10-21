@@ -239,7 +239,7 @@ export const MAPS = [];
       ['ammo', 30, -18, 1.2], ['ammo', -26, -18], ['ammo', 0, 3], ['ammo', -20, 14], ['ammo', 15, 0, 2.2], ['ammo', 30, -30, 3.5],
       ['grenade', 0, -18], ['grenade', -12, -24, 3.5], ['grenade', 32, 18], ['grenade', -10, 9.2], ['grenade', 18, 9, 7]],
     showcase: [0, 0, 30], view: [3, 0, 25, 0.1, -0.03], openMax: 7, expMax: 0.3,
-    test: { stairs: { from: [7.4, 0, 20.2], to: [14.5, 3.5, 20.2], level: 3.5 }, roof: { from: [14.4, 3.5, 20.2], to: [21, 7.0, 20.2], level: 7.0 }, under: { from: [-34, 0, 16], to: [-28, 0, 16], ceil: 3.2 } },
+    test: { stairs: { from: [7.4, 0, 20.2], to: [13.7, 3.5, 20.2], level: 3.5 }, roof: { from: [14.4, 3.5, 20.2], to: [21, 7.0, 20.2], level: 7.0 }, under: { from: [-34, 0, 16], to: [-28, 0, 16], ceil: 3.2 } },
   });
 }
 
