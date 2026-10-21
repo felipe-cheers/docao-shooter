@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.5.2 — Skins novas (21/10/2026)
+Agora são **17 skins**. Chegaram três novas no fim da lista:
+- **Boi Caprichoso:** chifrinhos brancos, túnica azul com estrela branca no peito, franja nos ombros e saiote de fitas azuis e brancas.
+- **Docão Felipe:** cabelo bagunçado, óculos pretos grossos, camisa grafite com listras verde-água, short preto e tênis preto de sola branca.
+- **Docão Matheus:** topete curto, bigodinho e barba rala, olhos verdes, moletom preto de capuz, crachá vermelho da Cheers com o "C!", calça preta e tênis branco.
+- No online as skins novas aparecem certinho pra todo mundo (servidor atualizado junto).
+
 ## v1.5.1 (21/10/2026)
 - **Renascimento agora leva 5 s e tem botão:** depois de morrer o botão mostra a contagem ("Renascer em 4.2s") e, liberado, você volta clicando em **RENASCER** (ou Espaço/Enter). Dá tempo de escolher a arma com calma.
 - Bots continuam renascendo sozinhos; no online vale o mesmo (o servidor só te traz de volta quando você clica).
