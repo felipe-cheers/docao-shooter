@@ -14,6 +14,7 @@ import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
 export const MAX_PLAYERS = 8;
+const PENDING_WAIT = 60; // s de relógio de parede pra escolher o time ao entrar no meio; depois vai no Automático
 const TICK = 0.05, HIST = 1.0, DC_GRACE = 30;
 const TICK_DT = (g) => clamp(g.T - (g.lastZoneT ?? g.T), 0, 0.25) + (g.lastZoneT = g.T, 0);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -37,6 +38,8 @@ export class Game {
     this.events = []; this.personal = new Map(); this.nades = []; this.rockets = []; this.pickups = []; this.projId = 1;
   }
   now() { return Date.now() / 1000; }
+  // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
+  syncClock() { if (this.state === 'playing' && this.t0) this.T = Math.max(this.T, this.now() - this.t0); }
   get teamMode() { return this.cfg.mode === 'dom'; }
   live() { return [...this.ents.values()].filter((e) => e.bot || e.connected); }
   teamCounts(exclude, humansOnly = true) { const c = [0, 0]; for (const e of this.live()) if (e !== exclude && (!humansOnly || !e.bot) && (e.team === 0 || e.team === 1)) c[e.team]++; return c; }
@@ -51,25 +54,26 @@ export class Game {
   humans(connectedOnly = true) { return [...this.ents.values()].filter((e) => !e.bot && (!connectedOnly || e.connected)); }
   // ---------- entrada/saída ----------
   join({ name, skin, primary, token }) {
-    this.purge();
+    this.syncClock(); this.purge();
     let e = token ? [...this.ents.values()].find((x) => !x.bot && x.token === token) : null;
     if (e) { e.connected = true; e.dcAt = 0; } // reconexão: mesmo id e placar
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
       if (this.state !== 'lobby' && !this.teamMode) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
       e = this.makeEnt({ name, skin, primary, bot: false });
-      if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') e.pendingTeam = true; }
+      if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
     }
     if (!this.hostId || !this.ents.get(this.hostId)?.connected) this.hostId = e.id;
     return { ent: e };
   }
   welcome(e) {
+    this.syncClock(); if (this.state === 'playing') this.io.startLoop(); // o loop para quando o último humano sai: volta ao entrar/reconectar
     this.io.send(e.id, { t: 'welcome', id: e.id, token: e.token, code: this.cfg.code, hostId: this.hostId, cfg: this.cfg, state: this.state, maps: MAPS.map((m) => [m.id, m.name]) });
     if (this.state === 'lobby') this.sendLobby();
     else {
       this.io.send(e.id, this.startMsg());
-      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + 60 : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 60 s (depois vai no Automático)
+      if (this.state === 'playing') { this.events.push(['j', this.entInfo(e)]); if (!e.alive) e.respawnAt = e.pendingTeam ? this.T + PENDING_WAIT : Math.min(e.respawnAt || this.T, this.T + 0.5); } // escolhendo time: espera até 60 s (depois vai no Automático)
       if (this.state === 'over') this.io.send(e.id, this.endMsg());
     }
     this.sendLobby();
@@ -166,6 +170,7 @@ export class Game {
   score(e) { return this.teamMode ? e.kills + 2 * e.caps : e.kills; }
   // ---------- mensagens dos clientes ----------
   onMessage(id, m) {
+    this.syncClock();
     const e = this.ents.get(id); if (!e || !m || typeof m !== 'object') return;
     const isHost = id === this.hostId;
     switch (m.t) {
@@ -400,7 +405,7 @@ export class Game {
     this.T = t - this.t0; this.purge();
     while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot) this.updateBot(e, h); this.stepProjectiles(h); }
     for (const e of this.ents.values()) {
-      if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
+      if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
       if (e.bot) this.pushHist(e);
       if (!e.bot && e.alive) this.progressReload(e);
     }

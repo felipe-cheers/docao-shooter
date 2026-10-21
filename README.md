@@ -69,6 +69,7 @@ cd server && npx wrangler dev --port 8787 --var ALLOW_TEST:1     # ALLOW_TEST s�
 python3 -m http.server 8124                                       # na raiz do jogo
 node test-online.mjs http://localhost:8124/ ws://127.0.0.1:8787
 node test-online-dom.mjs http://localhost:8124/ ws://127.0.0.1:8787   # Dominação online
+node test-online-idle.mjs http://localhost:8124/ ws://127.0.0.1:8787  # sala parada + entrada no meio (~3 min)
 ```
 Para jogar em duas abas: `http://localhost:8124/?server=ws://127.0.0.1:8787`.
 
