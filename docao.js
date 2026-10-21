@@ -346,6 +346,9 @@ export function makeDocao(skinOrId, opts = {}) {
     const eye = new THREE.Group(); eye.position.copy(p); eye.lookAt(p.clone().add(n)); eye.userData.n = n; head.add(eye);
     const w = mesh(new THREE.SphereGeometry(0.135, 24, 16), white, eye, 0.012); w.scale.set(0.95, 1.2, 0.55);
     const iris = new THREE.Mesh(new THREE.SphereGeometry(0.095, 20, 14), basic((skin.eyes && skin.eyes.iris) || PALETTE.iris)); iris.scale.set(1, 1.1, 0.4); iris.position.set(-s * 0.012, -0.01, 0.052); eye.add(iris);
+    if (skin.eyes && skin.eyes.ring) { // anel mais escuro em volta da íris (opcional, por skin)
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.083, 0.012, 8, 28), basic(skin.eyes.ring)); ring.scale.set(1, 1.1, 0.4); ring.position.set(-s * 0.012, -0.01, 0.066); eye.add(ring);
+    }
     const pup = new THREE.Mesh(new THREE.SphereGeometry(0.052, 16, 12), basic(PALETTE.pupil)); pup.scale.set(1, 1.08, 0.4); pup.position.set(-s * 0.012, -0.01, 0.068); eye.add(pup);
     const hl = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), white); hl.position.set(-s * 0.012 + 0.03, 0.025, 0.08); eye.add(hl);
     const hl2 = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 6), white); hl2.position.set(-s * 0.012 - 0.025, -0.04, 0.078); eye.add(hl2);

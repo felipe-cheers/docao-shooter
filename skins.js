@@ -39,7 +39,7 @@
 //                sleeveStripes {color} · shortsStripes {color} · quiffHair {color, side} · beard {color} (bigode + barba por fazer)
 //                hoodStrings {color} · lanyard {color, logo} · longPants {color} · shoes também aceita {sole}
 //   face:  { paint: 'skull' }   pintura leve no rosto (bochechas/focinho continuam)
-//   eyes:  { iris: '#hex' }     tom da íris (opcional)
+//   eyes:  { iris: '#hex', ring: '#hex' }  tom da íris e anel escuro em volta (opcionais)
 //   float: true                 flutua de leve (bob) e solta um rastro fraquinho no jogo
 //   Peças novas: crie uma função em PARTS (costumes.js).
 
@@ -229,6 +229,7 @@ export const SKINS = [
     name: 'Docão Matheus',
     shirt: { color: '#1a1a1d', trim: '#0e0e10', sleeves: 'long', sleeveColor: '#1a1a1d', details: [{ type: 'hoodie', color: '#0e0e10', zip: '#a8acb2' }] },
     pants: '#121214',
+    eyes: { iris: '#3fae5a', ring: '#24753a' },
     parts: [
       { type: 'quiffHair', color: '#2e1c12', side: '#2a1b12' },
       { type: 'beard', color: '#43291a' },
