@@ -12,7 +12,7 @@ python3 -m http.server 8123
 (Precisa ser servido por HTTP por causa dos módulos ES; funciona offline, o Three.js está em `vendor/`.)
 
 ## Controles
-WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom (luneta no Sniper) · Clique atirar · R recarregar · 1 primária / 2 pistola (ou rodinha) · Segure Q (ou 3): Copo Bomba, solte para arremessar · Morto: 1–4 escolhe a primária do próximo renascimento · Tab placar · Esc (ou P) pausar
+WASD mover · Mouse mirar · Espaço pular · Shift mirar/zoom (luneta no Sniper) · Clique atirar (faca: golpe) · Botão direito: estocada com a faca · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V troca rápida faca ↔ arma · Segure Q: Copo Bomba, solte para arremessar · Morto: 1–4 escolhe a primária do próximo renascimento · Tab placar · Esc (ou P) pausar
 
 ## Online (multiplayer) 🌐
 
@@ -85,7 +85,7 @@ Para jogar em duas abas: `http://localhost:8124/?server=ws://127.0.0.1:8787`.
 
 Escolha **uma arma primária** no menu (ao lado das skins; fica salva no navegador). Morreu? Na tela de morte aperte **1–4**
 (ou clique) para trocar a primária — vale no próximo renascimento. Todo mundo leva a **Pistolinha Leitão** como secundária
-e o **Copo Bomba** (tecla Q ou 3). **1** = primária, **2** = pistola, a rodinha alterna entre as duas.
+, a **Faca de churrasqueiro** (sempre equipada) e o **Copo Bomba** (tecla Q). **1** = primária, **2** = pistola, **3** = faca, a rodinha gira entre as três e **V** alterna faca ↔ última arma.
 
 | Arma | Tipo | Pente/reserva | Dano | Cadência | Recarga | Zoom |
 |---|---|---|---|---|---|---|
@@ -103,7 +103,25 @@ e o **Copo Bomba** (tecla Q ou 3). **1** = primária, **2** = pistola, a rodinha
 - **Bots** recebem uma primária aleatória (às vezes trocam ao renascer) + pistola e escolhem pela distância:
   Calibre 12 de perto (<14 m), Sniper de longe (≥9 m, com atraso extra de ~0,8 s pra mirar e remira a cada tiro, mirando no corpo),
   Bazuca a média distância (6–28 m, mira no pé com antecipação, nunca atira colado), pistola no resto.
-- Nomes no feed de abates: Fuzil Pururuca, Calibre 12, Sniper Torresmo, Bazuca, Pistolinha, Copo Bomba.
+- Nomes no feed de abates: Fuzil Pururuca, Calibre 12, Sniper Torresmo, Bazuca, Pistolinha, Copo Bomba, Faca.
+
+## Faca de churrasqueiro 🔪 (slot 3, sempre equipada)
+- Faca de churrasqueiro com lâmina de aço, cabo de madeira com rebites e logo **C!** vermelho (cel-shading com contorno). Modelo em 1ª pessoa (parada, sacar, golpe, estocada) e na mão do boneco em 3ª pessoa; sons WebAudio de golpe/acerto.
+- **Clique: golpe** — 40 de dano, alcance ~1,6 m, em cone, a cada 0,42 s. **Botão direito: estocada** — 75 de dano, ~1,8 m, cone mais estreito, recarga de 1 s.
+- **Pelas costas mata na hora** (qualquer golpe). Com a faca na mão você corre **15% mais rápido**. Sem munição, sem recarga, sem mira.
+- Feed: **“X moggou Y [Faca]”** (frase fixa) e **“[Faca · pelas costas!]”**; quem morre vê **“Você foi moggado por X”** e o carimbo **MOGGADO!**. Na tela de morte o cartão da faca aparece como sempre equipado.
+- Regra única em `shared/melee.js` (alcance pelo ponto mais próximo do corpo, cone, linha de visão, pelas costas), usada offline e no servidor. Online é **autoritativo**: o cliente manda `['m', tipo, olho, direção, relógio, tempoRender]`; o servidor confere faca na mão, posição do olho, cadência (relógio do cliente + piso no relógio do servidor), volta no tempo (lag comp com posição **e** direção do alvo) e aplica o dano. Evento novo `['ml', id, tipo, acertou]` só pra animação/som (clientes antigos ignoram).
+- **Compatibilidade:** no evento de abate `'k'` o servidor manda a arma como Pistolinha (clientes antigos não conhecem a faca) e um campo extra `ev[7]` = 1 (faca) / 2 (pelas costas) que o cliente novo lê. Cliente antigo vê "pururucou [Pistolinha]" e o boneco sem arma na mão; não quebra. Faça o deploy do Worker antes do site.
+- **Bots** puxam a faca de perto (< 3 m, sorteio a cada 1,5 s), correm pra colar e às vezes dão estocada.
+- Testes: `node test-faca.mjs` (offline, `screenshots/20-faca-*.png`) e `node test-faca-online.mjs http://localhost:8124/ ws://127.0.0.1:8787`.
+
+## Animações de recarga
+Cada arma tem a sua, em 1ª e 3ª pessoa, com a mesma duração da recarga e cliques de recarga em WebAudio:
+- **Fuzil / Pistolinha:** inclina a arma, o pente velho cai (malha caindo com física), entra o pente novo, puxa a alavanca/ferrolho no fim.
+- **Sniper:** abre o ferrolho, coloca as balas uma a uma, fecha o ferrolho.
+- **Calibre 12:** cartucho por cartucho (no ritmo do `shellReload`), pump no fim; atirar interrompe.
+- **Bazuca:** abaixa do ombro e um foguete novo entra no tubo.
+- Online os outros veem pela flag de recarga que já vem no snapshot (sem evento novo). Teste: `node test-reload.mjs` (`screenshots/20-reload-*.png`).
 
 ## Copo Bomba (granada)
 
@@ -202,7 +220,7 @@ Regra única em `shared/combat.js` (cliente offline e servidor):
 - Online, o cliente manda o tempo do servidor que estava vendo na tela (interpolação) e o servidor volta os alvos exatamente pra esse instante (até 400 ms), com a mesma altura de olho (1,6 m) do cliente.
 
 ## Tela de morte
-Os cartões de arma são **clicáveis** (as teclas 1–4 continuam valendo), e dá pra marcar “renascer com a pistola na mão”.
+Os cartões de arma são **clicáveis** (as teclas 1–4 continuam valendo), e dá pra marcar “renascer com a pistola na mão”. A faca aparece como **corpo a corpo — sempre equipada**.
 Ao morrer o mouse é solto (sem pausar); clique na tela ou em **VOLTAR AO JOGO** para mirar de novo.
 
 ## Morte = BACON 🥓
@@ -227,7 +245,7 @@ Campo "Seu nome" no menu, na janela "Jogar online" e no lobby (botão **Trocar**
 - `skins.js`: **registro de skins (só dados)**
 - `render.html`: renderiza um Docão isolado (`?skin=clube&rot=0.6&frame=face`) para conferir skins
 - `vendor/`: Three.js r169 + BufferGeometryUtils
-- `shared/domination.js` (zona, times) · `shared/combat.js` (explosões, colisão do foguete, dispersão da Sniper): regras usadas pelo cliente e pelo servidor
+- `shared/domination.js` (zona, times) · `shared/combat.js` (explosões, colisão do foguete, dispersão da Sniper) · `shared/melee.js` (faca): regras usadas pelo cliente e pelo servidor
 - `test.mjs` / `test-maps.mjs` / `test-dom.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`) · `test-shared.mjs`: testes das regras sem navegador · `test-map-audit.mjs`: auditoria de layout dos mapas + partida simulada (sem navegador) · `tools/planta.py` e `tools/screenshots-mapas.mjs`: planta e fotos dos mapas
 
 ## Como adicionar uma skin
