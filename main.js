@@ -43,7 +43,7 @@ renderer.autoClear = false;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8fd3ff);
 scene.fog = new THREE.Fog(0x8fd3ff, 50, 120);
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 300);
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 300); // near 0,1 (era 0,05): 2× mais precisão de profundidade, menos piscar de piso ao longe; o corpo (raio 0,42) nunca deixa a câmera tão perto de uma parede
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 

@@ -6,6 +6,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { toon, outline, makeCup, canvasTex, drawLogo } from './docao.js';
+import { visualOffsets } from './world-offsets.js';
+// camadas finas no chão (piso xadrez, asfalto, meio-fio, faixa) ficam a 1–2 cm do chão: de longe a profundidade não separa e pisca.
+// polygonOffset empurra cada camada pra frente no depth buffer (camada maior = mais na frente), sem mexer na posição.
+function decal(m, layer) { m.polygonOffset = true; m.polygonOffsetFactor = -1 * layer; m.polygonOffsetUnits = -4 * layer; return m; }
 
 const V3 = THREE.Vector3;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -155,10 +159,10 @@ function buildProp(p, ctx) {
     }
     case 'street': { // asfalto + faixa tracejada
       const w = p.x1 - p.x0, d = p.z1 - p.z0;
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), toon('#5a5f68')); m.rotation.x = -Math.PI / 2; m.position.set((p.x0 + p.x1) / 2, 0.015, (p.z0 + p.z1) / 2); m.receiveShadow = true; group.add(m);
-      const lm = new THREE.MeshBasicMaterial({ color: 0xf2c94c });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), decal(toon('#5a5f68'), 2)); m.rotation.x = -Math.PI / 2; m.position.set((p.x0 + p.x1) / 2, 0.015, (p.z0 + p.z1) / 2); m.receiveShadow = true; group.add(m);
+      const lm = decal(new THREE.MeshBasicMaterial({ color: 0xf2c94c }), 4);
       for (let x = p.x0 + 1; x < p.x1 - 1; x += 3) { const l = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.2), lm); l.rotation.x = -Math.PI / 2; l.position.set(x + 0.8, 0.02, (p.z0 + p.z1) / 2); group.add(l); }
-      for (const z of [p.z0, p.z1]) { const c = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.5), toon('#d9d4cc')); c.rotation.x = -Math.PI / 2; c.position.set((p.x0 + p.x1) / 2, 0.018, z); group.add(c); }
+      for (const z of [p.z0, p.z1]) { const c = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.5), decal(toon('#d9d4cc'), 3)); c.rotation.x = -Math.PI / 2; c.position.set((p.x0 + p.x1) / 2, 0.018, z); group.add(c); }
       break;
     }
     case 'banner': { // estandarte da base (Torres)
@@ -178,8 +182,9 @@ export function buildWorld(map) {
     const k = new THREE.Color(color).getHexString(); if (!byColor.has(k)) byColor.set(k, []); byColor.get(k).push(geo);
     if (withEdges) { const e = new THREE.EdgesGeometry(geo, 20); edges.push(e.attributes.position.array); e.dispose(); }
   };
-  const add = (x0, y0, z0, x1, y1, z1, color, ramp = null, collideTop = null) => {
-    pushGeo(boxGeo(x0, y0, z0, x1, y1, z1, ramp), color);
+  const add = (x0, y0, z0, x1, y1, z1, color, ramp = null, collideTop = null, d = null) => {
+    // d: ajuste só visual (anti z-fighting, ver world-offsets.js); a caixa de colisão continua exata
+    pushGeo(d ? boxGeo(x0 - d[0], y0 - d[1], z0 - d[2], x1 + d[3], y1 + d[4], z1 + d[5], ramp) : boxGeo(x0, y0, z0, x1, y1, z1, ramp), color);
     solids.push({ min: new V3(x0, y0, z0), max: new V3(x1, collideTop ?? y1, z1), ramp });
   };
   const solid = (x0, y0, z0, x1, y1, z1) => { solids.push({ min: new V3(x0, y0, z0), max: new V3(x1, y1, z1), ramp: null }); proxies.push(boxGeo(x0, y0, z0, x1, y1, z1)); };
@@ -191,14 +196,18 @@ export function buildWorld(map) {
     const [c1, c2, size, count] = pal.tiles, cell = size / count;
     const tex = canvasTex(64, 64, (x) => { x.fillStyle = c1; x.fillRect(0, 0, 64, 64); x.fillStyle = c2; x.fillRect(0, 0, 32, 32); x.fillRect(32, 32, 32, 32); });
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.magFilter = THREE.NearestFilter; tex.repeat.set(hx * 2 / cell / 2, hz * 2 / cell / 2);
-    const t = new THREE.Mesh(new THREE.PlaneGeometry(hx * 2, hz * 2), toon(0xffffff, { map: tex })); t.rotation.x = -Math.PI / 2; t.position.y = 0.01; t.receiveShadow = true; group.add(t);
+    const t = new THREE.Mesh(new THREE.PlaneGeometry(hx * 2, hz * 2), decal(toon(0xffffff, { map: tex }), 1)); t.rotation.x = -Math.PI / 2; t.position.y = 0.01; t.receiveShadow = true; group.add(t);
   }
   // limites do mapa (visual na altura wallH; colisão bem alta)
   const wh = map.wallH || 4, [wc1, wc2] = map.wallColor || ['#e86a5c', '#d85a4c'];
   add(-hx - 1, 0, -hz - 1, hx + 1, wh, -hz, wc1, null, WALL_COLLIDE_H); add(-hx - 1, 0, hz, hx + 1, wh, hz + 1, wc1, null, WALL_COLLIDE_H);
   add(-hx - 1, 0, -hz, -hx, wh, hz, wc2, null, WALL_COLLIDE_H); add(hx, 0, -hz, hx + 1, wh, hz, wc2, null, WALL_COLLIDE_H);
   // caixas e rampas do mapa
-  for (const o of map.boxes) { const [x0, y0, z0, x1, y1, z1] = o.b; if (x1 - x0 < 0.01 || y1 - y0 < 0.01 || z1 - z0 < 0.01) continue; add(x0, y0, z0, x1, y1, z1, o.c, o.ramp || null); }
+  // caixas e rampas do mapa. Pisos, telhados e paredes que dividem o mesmo plano (laje por cima da parede, faixa no piso…)
+  // piscavam (z-fighting): cada face em conflito sai uns milímetros pra fora só na malha.
+  const vis = map.boxes.filter((o) => { const [x0, y0, z0, x1, y1, z1] = o.b; return !(x1 - x0 < 0.01 || y1 - y0 < 0.01 || z1 - z0 < 0.01); });
+  const voff = visualOffsets(vis);
+  vis.forEach((o, i) => { const [x0, y0, z0, x1, y1, z1] = o.b; add(x0, y0, z0, x1, y1, z1, o.c, o.ramp || null, null, voff[i]); });
   for (const p of map.props || []) buildProp(p, { group, solid, add });
   // mescla: uma malha por cor
   for (const [k, list] of byColor) {
