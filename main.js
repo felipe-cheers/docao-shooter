@@ -709,7 +709,7 @@ function updateHud(dt) {
   if (p.charging) { const k = chargePower(); $('powerfill').style.width = (k * 100).toFixed(0) + '%'; $('powertext').textContent = k >= 1 ? 'FORÇA MÁXIMA! solte Q' : 'Força do arremesso · solte Q'; }
   $('slot1').textContent = '1 ' + WEAPONS[p.slots[0]].chip; $('slot2').textContent = '2 ' + WEAPONS[p.slots[1]].chip;
   $('slot1').classList.toggle('active', p.weapon === p.slots[0]); $('slot2').classList.toggle('active', p.weapon === p.slots[1]); $('slot3').classList.toggle('active', p.weapon === KNIFE);
-  $('deathpick').classList.toggle('hidden', p.alive || gameTime - p.deathAt < DEATHCAM_HOLD); crossEl.style.visibility = p.alive ? '' : 'hidden';
+  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); } crossEl.style.visibility = p.alive ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT) - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
   $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
@@ -1565,7 +1565,7 @@ function buildDeathSec() {
 }
 buildDeathSec();
 { // faca: sempre equipada (cartão informativo, não precisa escolher)
-  const b = primChip(KNIFE, '3', () => {}); b.classList.add('active', 'locked'); b.title = 'A faca vem sempre com você (tecla 3, V ou rodinha)';
+  const b = primChip(KNIFE, 'V', () => {}); b.classList.add('active', 'locked'); b.title = 'A faca vem sempre com você (tecla 3, V ou rodinha)';
   b.querySelector('small').textContent = 'Sempre equipada ✓ · clique golpe · botão direito estocada · pelas costas mata'; $('deathMelee').appendChild(b);
 }
 document.querySelectorAll('#deathList .primchip').forEach((c) => { const f = c.onclick; c.onclick = (ev) => { ev.stopPropagation(); f(ev); spawnHold = 'primary'; buildDeathSec(); }; });
