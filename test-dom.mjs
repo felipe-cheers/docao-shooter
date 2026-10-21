@@ -111,7 +111,7 @@ await until(() => window.__docao.time >= window.__docao.player.nextFire + 0.05 &
 await until(() => window.__lastShot && window.__lastShot.spread > 0, 5000);
 ok(await G(() => window.__lastShot.spread > 0 && window.__lastShot.spread <= 0.03), `sem luneta: dispersão pequena (${await G(() => window.__lastShot.spread)})`);
 // ---- tela de morte clicável
-await G(() => { window.__docao.player.invulnUntil = 0; window.__docao.kill(window.__docao.player); }); await wait(300);
+await G(() => { window.__docao.player.invulnUntil = 0; window.__docao.kill(window.__docao.player); }); await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 6000); // câmera do bacon (1,1 s de jogo) antes dos cartões
 const dstate = await G(() => ({ lock: !!document.pointerLockElement, state: window.__docao.state, pick: !document.getElementById('deathpick').classList.contains('hidden') }));
 ok(!dstate.lock && dstate.state === 'playing' && dstate.pick, 'ao morrer: mouse solto, sem pausar, cartões de arma visíveis');
 await page.screenshot({ path: `${SHOTS}/17-tela-morte-clicavel.png` });
@@ -121,7 +121,7 @@ await until(() => window.__docao.player.alive, 20000); await wait(300);
 ok(await G(() => window.__docao.player.primary === 1 && window.__docao.player.weapon === 4), 'renasceu com Calibre 12 de primária e a pistola na mão');
 await page.click('#game'); await wait(300);
 ok(await G(() => !!document.pointerLockElement), 'clique trava o mouse de novo');
-await G(() => { window.__docao.player.invulnUntil = 0; window.__docao.kill(window.__docao.player); }); await wait(300);
+await G(() => { window.__docao.player.invulnUntil = 0; window.__docao.kill(window.__docao.player); }); await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 6000); // câmera do bacon (1,1 s de jogo) antes dos cartões
 await page.keyboard.press('Digit3'); ok(await G(() => window.__docao.selectedPrimary === 2), 'atalho de teclado (3) continua valendo');
 await page.click('#deathBack'); await wait(300); ok(await G(() => !!document.pointerLockElement), 'botão VOLTAR AO JOGO trava o mouse');
 // ---- placar no mata-mata também

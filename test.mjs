@@ -142,8 +142,8 @@ const setupTarget = (z, x = 6) => page.evaluate(([z, x]) => { const g = window._
   p.alive = true; p.hp = 100; p.pos.set(6, 0, 26); p.vel.set(0, 0, 0); p.invulnUntil = g.time + 999; p.reloadEnd = 0; p.switchEnd = 0; p.nextFire = 0; p.mag = g.WEAPONS.map((w) => w.mag);
   const dx = b.pos.x - p.pos.x, dz = b.pos.z - p.pos.z; p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2(b.pos.y + 0.85 - (p.pos.y + 1.6), Math.hypot(dx, dz)); }, [z, x]);
 const equipViaDeath = async (k) => { // morre, aperta [k] na tela de morte, renasce com a primária escolhida
-  await page.evaluate(() => { const g = window.__docao, p = g.player; p.alive = false; p.hp = 0; p.deathAt = g.time; p.respawnAt = g.time + 0.6; });
-  await waitGame(0.1);
+  await page.evaluate(() => { const g = window.__docao, p = g.player; p.alive = false; p.hp = 0; p.deathAt = g.time; p.respawnAt = g.time + 1.8; });
+  await waitGame(1.25); // câmera do bacon (1,1 s) antes dos cartões
   const pickVisible = await page.evaluate(() => !document.getElementById('deathpick').classList.contains('hidden'));
   await page.keyboard.press('Digit' + k); await waitGame(0.1);
   if (k === 4) { await page.evaluate(() => { window.__docao.player.respawnAt = window.__docao.time + 30; }); await page.screenshot({ path: 'screenshots/12-tela-morte-escolha.png' }); await page.evaluate(() => { window.__docao.player.respawnAt = window.__docao.time; }); }

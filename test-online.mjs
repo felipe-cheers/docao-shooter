@@ -77,6 +77,10 @@ ok(await until(C, () => (window.__feedLog || []).some((l) => l.includes('Ana car
 ok(await until(C, () => { const a = window.__docao.entities.find((e) => e.name === 'Ana'); return a && a.kills === 1; }, 3000), 'placar do Caio: Ana com 1 abate');
 await A.screenshot({ path: `${SHOTS}/15-online-abate.png` });
 ok(await until(B, () => window.__docao.player.alive, 6000), 'Beto renasceu (servidor)');
+// morte = bacon (só cliente, a partir do evento 'k' do servidor)
+const bac = async (p) => G(p, () => ({ ...window.__docao.bacon.byKind }));
+ok((await bac(A)).remote >= 1, 'Ana viu o Beto virar bacon (remoto)'); ok((await bac(C)).remote >= 1, 'Caio também viu o bacon do Beto');
+ok((await bac(B)).player >= 1, 'Beto virou bacon na própria tela (câmera da morte)');
 // 5) Copo Bomba: Caio joga na Ana
 await G(A, () => { window.__docao.player.invulnUntil = 0; });
 await tp(C, -30, -19.5, -30, -25); await wait(400);
@@ -126,6 +130,9 @@ await wait(6000);
 const fight = await G(D, () => (window.__feedLog || []).length);
 console.log('abates no kill feed da sala com bots após ~9 s:', fight);
 await D.screenshot({ path: `${SHOTS}/15-online-bots.png` });
+const botDeaths = await G(D, () => { const bots = window.__docao.entities.filter((e) => e.bot).map((e) => e.name); return (window.__feedLog || []).filter((l) => { const m = l.match(/carimbou (.+?) \[/) || l.match(/^(.+?) se carimbou/); return m && bots.includes(m[1]); }).length; });
+const dB = await G(D, () => ({ ...window.__docao.bacon.byKind })); console.log('bacon na sala com bots:', JSON.stringify(dB), '· mortes de bots no feed:', botDeaths);
+ok(botDeaths === 0 ? true : dB.bot >= 1, `bots do servidor viram bacon (${dB.bot} bacon(s) de bot)`);
 console.log('\nerros de console:', errors.length ? errors : 'nenhum');
 if (errors.length) fails.push('erros de console');
 await browser.close();

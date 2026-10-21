@@ -205,6 +205,19 @@ Regra única em `shared/combat.js` (cliente offline e servidor):
 Os cartões de arma são **clicáveis** (as teclas 1–4 continuam valendo), e dá pra marcar “renascer com a pistola na mão”.
 Ao morrer o mouse é solto (sem pausar); clique na tela ou em **VOLTAR AO JOGO** para mirar de novo.
 
+## Morte = BACON 🥓
+Quando qualquer Docão morre (você, outro jogador ou bot), ele dá um "pop" (achata), some numa nuvem de fumaça e vira uma **tira de bacon** ondulada (carne vermelha/rosada com listras de gordura, cel-shading com contorno). O bacon pula, quica no chão chiando (som WebAudio + faíscas de gordura), fica ~3 s e encolhe.
+- **Câmera da morte**: você vê o seu bacon em 3ª pessoa (órbita lenta, encurta se tiver parede) por 1,1 s; depois aparecem os cartões de arma.
+- Tudo no cliente (`bacon.js`): geometria/materiais únicos, pool de 14 bacons + fumaça + faíscas (nada é criado durante a partida). Online usa os eventos de morte que o servidor já manda — sem mudança no Worker.
+- Teste: `node test-bacon.mjs` (offline, gera `screenshots/19-bacon-*.png`); `test-online.mjs` confere bacon de remoto, do próprio jogador e de bots.
+
+## Nome do jogador
+Campo "Seu nome" no menu, na janela "Jogar online" e no lobby (botão **Trocar**). É o mesmo valor nos três, salvo no navegador (`docao.name`).
+- Regras em `shared/names.js` (cliente e servidor): tira tags/controles/caracteres invisíveis, junta espaços, máximo **16** caracteres, padrão "Docão".
+- O servidor evita nomes repetidos na sala: o segundo "Matheus" vira **"Matheus (2)"** (o lobby avisa como você aparece). Bots não pegam nome de humano.
+- Troca de nome vale no lobby/entre partidas (durante a partida muda na próxima).
+- Teste: `node test-online-names.mjs http://localhost:8124/ ws://127.0.0.1:8787`.
+
 ## Arquivos
 - `index.html`, `style.css`: UI (menu com seletor de skin, HUD, pausa, placar)
 - `main.js`: jogo (física, armas, bots, áudio, fluxo, seletor de mapas)

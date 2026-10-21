@@ -8,6 +8,7 @@
 import { MAPS, getMap } from '../../maps.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
+import { cleanName, uniqueName } from '../../shared/names.js';
 import { KILL_LIMIT, TIME_LIMIT, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, PISTOL, W_NADE, NADE, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
@@ -60,7 +61,7 @@ export class Game {
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
       if (this.state !== 'lobby' && !this.teamMode) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
-      e = this.makeEnt({ name, skin, primary, bot: false });
+      e = this.makeEnt({ name: this.freeName(name), skin, primary, bot: false });
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
     }
@@ -91,9 +92,11 @@ export class Game {
     const t = this.now();
     for (const e of [...this.ents.values()]) if (!e.bot && !e.connected && t - e.dcAt > DC_GRACE) this.ents.delete(e.id);
   }
+  // nome limpo e sem repetir ("Matheus (2)") entre quem está na sala (humanos conectados e bots)
+  freeName(raw, self = null) { return uniqueName(cleanName(raw), [...this.ents.values()].filter((x) => x !== self).map((x) => x.name)); }
   makeEnt({ name, skin, primary, bot }) {
     const id = this.nextId++;
-    const e = { id, bot, name: String(name || 'Docão').slice(0, 14), skin: SKINS.some((s) => s.id === skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
+    const e = { id, bot, name: cleanName(name), skin: SKINS.some((s) => s.id === skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
       primary: PRIMARIES.includes(primary) ? primary : 0, nextPrimary: PRIMARIES.includes(primary) ? primary : 0, slots: [0, PISTOL], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
@@ -119,7 +122,7 @@ export class Game {
     if (this.teamMode) { // rebalanceia bots se um time ficou 2+ maior
       for (let i = 0; i < 8; i++) { const c = tc(), big = c[0] > c[1] ? 0 : 1; if (c[big] - c[1 - big] < 2) break; const b = bots.find((x) => x.team === big); if (!b) break; b.team = 1 - big; this.events.push(['tm', b.id, b.team]); }
     }
-    const used = new Set(bots.map((b) => b.name));
+    const used = new Set(this.live().map((b) => b.name)); // bot não pega nome de humano
     while (bots.length < want) {
       const name = BOT_DEFS.map((d) => d.name).find((n) => !used.has(n)) || 'Bot ' + this.nextId; used.add(name);
       const b = this.makeEnt({ name, skin: pick(SKINS).id, primary: pick(PRIMARIES), bot: true }); bots.push(b);
@@ -175,7 +178,8 @@ export class Game {
     const isHost = id === this.hostId;
     switch (m.t) {
       case 'u': this.onUpdate(e, m); break;
-      case 'prof': if (typeof m.name === 'string') e.name = m.name.slice(0, 14) || e.name; if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; if (PRIMARIES.includes(m.primary)) e.nextPrimary = m.primary; if (this.state === 'lobby') e.primary = e.nextPrimary; this.sendLobby(); break;
+      case 'prof': if (typeof m.name === 'string' && this.state !== 'playing') e.name = this.freeName(m.name, e); // nome só muda fora da partida (as plaquinhas são criadas no início)
+         if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; if (PRIMARIES.includes(m.primary)) e.nextPrimary = m.primary; if (this.state === 'lobby') e.primary = e.nextPrimary; this.sendLobby(); break;
       case 'cfg': if (!isHost) return;
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);

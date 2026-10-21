@@ -51,7 +51,7 @@
   <div class="panel">
     <h1>Docão <span>Shooter</span></h1>
     <p class="sub">Tiroteio na Fazendinha Cheers</p>
-    <label>Seu nome<input id="nameInput" maxlength="14" value="Docão"></label>
+    <label>Seu nome<input id="nameInput" class="nameField" maxlength="16" value="Docão" autocomplete="nickname" spellcheck="false"></label>
     <div class="skinpick">
       <div class="label2">Skin do Docão <span id="skinIdx"></span></div>
       <div class="skinrow"><button id="skinPrev" class="arrow">◀</button><div id="skinName">Clássico</div><button id="skinNext" class="arrow">▶</button></div>
@@ -100,6 +100,7 @@
 <div id="onlineModal" class="overlay hidden">
   <div class="panel">
     <h2>Jogar online</h2>
+    <label>Seu nome<input id="onlineName" class="nameField" maxlength="16" autocomplete="nickname" spellcheck="false"></label>
     <div class="otabs"><button id="tabCreate" class="otab active">Criar sala</button><button id="tabJoin" class="otab">Entrar na sala</button></div>
     <div id="paneCreate">
       <label>Mapa<select id="roomMap"></select></label>
@@ -124,6 +125,7 @@
     <h2>Sala <span id="lobbyCode" class="code">----</span></h2>
     <div class="share"><input id="shareLink" readonly><button id="copyLink" class="small">Copiar link</button></div>
     <div id="lobbyInfo" class="sub"></div>
+    <div class="namerow"><label>Seu nome<input id="lobbyName" class="nameField" maxlength="16" autocomplete="nickname" spellcheck="false"></label><button id="lobbyNameBtn" class="small">Trocar</button></div><div id="lobbyNameMsg" class="sub"></div>
     <div id="lobbyTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="lobbyTeamBtns"></div><div class="tpe" id="lobbyTeamErr"></div></div>
     <div id="lobbyPlayers" class="board"></div>
     <div id="hostCtl">
