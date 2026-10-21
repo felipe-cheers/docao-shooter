@@ -1035,7 +1035,7 @@ function updateAds(dt, want) {
   const fov = BASE_FOV + (target - BASE_FOV) * e;
   if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
   const sc = scoped(); const scopeEl = $('scope');
-  scopeEl.classList.toggle('hidden', !sc); crossEl.classList.toggle('hidden', sc);
+  scopeEl.classList.toggle('hidden', !sc); crossEl.classList.toggle('hidden', !!sc);
   scopeEl.classList.remove('torresmo', 'canhao', 'carabina');
   const scopeStyle = player && WEAPONS[player.weapon].scopeStyle;
   if (scopeStyle) scopeEl.classList.add(scopeStyle);
@@ -1043,7 +1043,8 @@ function updateAds(dt, want) {
   crossEl.style.transform = `translate(-50%,-50%) scale(${(1 - 0.45 * e).toFixed(3)})`;
   crossEl.classList.toggle('ads', e > 0.5);
 }
-const scoped = () => !!player && player.alive && WEAPONS[player.weapon].scope && ads > 0.85 && !(fp.actionT > 0 && WEAPONS[player.weapon].bolt);
+// sempre booleano: classList.toggle('hidden', undefined) vira toggle simples e a mira piscava a cada quadro (armas sem luneta)
+const scoped = () => !!(player && player.alive && WEAPONS[player.weapon].scope && ads > 0.85 && !(fp.actionT > 0 && WEAPONS[player.weapon].bolt));
 function resetAds() { $('scope').classList.add('hidden'); crossEl.classList.remove('hidden'); ads = 0; camera.fov = BASE_FOV; camera.updateProjectionMatrix(); adsVig.style.opacity = 0; crossEl.style.transform = ''; crossEl.classList.remove('ads'); }
 
 // ---------------- Jogador ----------------
