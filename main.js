@@ -20,7 +20,7 @@ import { createPhysics } from './shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
-import { BACON_ITEM } from './shared/rules.js';
+import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 
 const V3 = THREE.Vector3;
@@ -222,7 +222,7 @@ function pickSpawn(e) {
   return best;
 }
 function respawn(e) {
-  e.pos.copy(pickSpawn(e)); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN;
+  e.pos.copy(pickSpawn(e)); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
   if (!e.isPlayer && Math.random() < 0.3) e.nextPrimary = PRIMARIES[Math.floor(Math.random() * PRIMARIES.length)]; // bots às vezes trocam de primária
   e.primary = e.nextPrimary; e.slots = [e.primary, PISTOL, KNIFE]; e.knifeMode = false; e.prevWeapon = e.primary;
   e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.actionEnd = 0; e.nades = NADE.spawnWith; e.smokeNades = 1; e.stunNades = 1; e.stunUntil = 0; e.charging = false;
@@ -634,7 +634,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle) {
 
 function damage(t, amount, attacker, wIdx, head, back = false) {
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker)) return false; // sem fogo amigo
-  t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12;
+  t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
   if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
   if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head }); sfx.hit(); }
@@ -811,6 +811,7 @@ function updateHud(dt) {
   const p = player, w = WEAPONS[p.weapon];
   $('hpfill').style.width = Math.max(0, p.hp) + '%'; $('hptext').textContent = Math.max(0, Math.ceil(p.hp));
   $('hpfill').style.background = p.hp > 35 ? '' : 'linear-gradient(#ff7b7b,#e63946)';
+  hpBar.classList.toggle('regen', !!(p.alive && p.regenOn)); // brilho verde + "+" pulsando enquanto regenera
   $('mag').textContent = w.melee ? '∞' : p.mag[p.weapon]; $('reserve').textContent = w.melee ? '' : ' / ' + p.reserve[p.weapon]; $('wname').textContent = w.name;
   for (let i = 0; i < NADE.max; i++) $('nade' + i).classList.toggle('on', i < p.nades);
   const pm = $('powermeter'); pm.classList.toggle('hidden', !p.charging);
@@ -1048,6 +1049,7 @@ function knifeAnim(dt) {
 }
 
 // ---------------- Mira (Shift) ----------------
+const hpBar = document.getElementById('hpbar');
 const adsVig = document.getElementById('adsvig'), crossEl = document.getElementById('crosshair');
 function updateAds(dt, want) {
   ads = clamp(ads + (want ? 1 : -1) * dt / ADS_TIME, 0, 1);
@@ -1573,7 +1575,7 @@ function loop() {
     if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); updateFP(dt); updateEffects(dt); updateHud(dt); updateRewards(dt);
+    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (!online) for (const e of entities) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt);
     if (!online && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
@@ -1946,7 +1948,7 @@ function applySnapshot(s) {
   for (const ev of s.ev) netEvent(ev);
   for (const [id, x, y, z, yaw, pitch, w, fl, hp, ping] of s.e) {
     const e = o.ents.get(id); if (!e) continue;
-    e.ping = ping; e.hp = hp; e.onGround = !!(fl & 4);
+    e.ping = ping; e.hp = hp; e.onGround = !!(fl & 4); e.regenOn = !!(fl & 16); // 16: regenerando (servidor novo)
     if (e === player) continue;
     const alive = !!(fl & 1);
     if (alive && !e.alive) { e.alive = true; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = []; e.pos.set(x, y, z); }
@@ -1986,7 +1988,7 @@ function netEvent(ev) {
     if (t === player) { if (a && a !== player) revengeName = a.name; onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
   } else if (k === 'sp') {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
-    e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN;
+    e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
     e.primary = prim; e.slots = [prim, PISTOL, KNIFE]; e.mag = WEAPONS.map((x) => x.mag); e.reserve = WEAPONS.map((x) => x.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.nades = NADE.spawnWith; setWeapon(e, prim);
     if (e === player) { player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; player.onGround = true; $('stamp').classList.remove('show'); if (spawnHold === 'secondary') setWeapon(player, PISTOL); $('teamPick').classList.add('hidden'); onPlayerRespawn(); }
     else { e.yaw = yaw; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = [{ t: performance.now() / 1000 - INTERP_DELAY, x: pos[0], y: pos[1], z: pos[2], yaw }]; }
