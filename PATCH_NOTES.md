@@ -44,7 +44,7 @@ Os 7 mapas foram refeitos com construções de verdade: casas com interior, esca
 
 ## v0.x — Lançamento
 - FPS do Docão inspirado no Shell Shockers, contra bots.
-- 14 skins: Rei do Pop, Rapper, Bruxinho, Chinês, Cabeludo, Camisa do Clube, Pescador, Pikachu, Fantasma, Esqueleto, Jedi, Duna e mais.
+- 14 skins: Clássico, Clube Cheers, Rei do Pop, Rapper da Hora, Bruxinho, Mestre do Kung Fu, Cabeludo, Pescador, Choquinho, Boné da Firma, Fantasminha, Esqueletão, Cavaleiro Galáctico e Nômade do Deserto.
 - Armas: fuzil, AWP, 12, bazooka e pistola (1 primária + 1 secundária).
 - **Granada Red Cup** com o logo Cheers: até 3 cargas, segure Q pra dosar a força.
 - Zoom no Shift.
