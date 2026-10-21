@@ -363,31 +363,52 @@ export const MAPS = [];
     o.push(...wallZ(52.8, 63.2, -7.6, 0.8, 4, wc2, [door(56, 60, 4)]), ...wallZ(52.8, 63.2, 7.6, 0.8, 4, wc2, [door(56, 60, 4)]));
     o.push(B(-8, 48, 8, 64, 0.4, floor, 4), B(8, 48, 12, 52, 0.4, floor, 4), R(8, 52, 12, 64, 0, 4.4, 'z', -1, wc2));
     o.push(B(-8, 48, -1.2, 48.4, 0.9, wc, 4.4), B(1.2, 48, 8, 48.4, 0.9, wc, 4.4)); // mureta da varanda
+    o.push(B(-8.3, 48, -8, 64, 1.0, wc, 4.4), B(7.6, 52, 8, 64, 1.0, wc, 4.4), B(-8, 63.6, 8, 64, 1.0, wc, 4.4), B(4.6, 60.5, 6.2, 62.1, 1.2, '#8b5a2b', 4.4), B(1.5, 50, 3.1, 51.6, 1.2, '#8b5a2b', 4.4), B(-5, 63.6, 5, 64, 1.0, wc, 8.4), B(-3.6, 56.4, -2.4, 57.6, 1.0, '#8b5a2b', 8.4));
     o.push(R(-8, 50, -5, 62, 4.4, 8.4, 'z', 1, wc2), B(-5, 54, 5, 64, 0.4, floor, 8));
     o.push(B(-5, 54, -0.5, 54.4, 0.9, wc, 8.4), B(0.5, 54, 5, 54.4, 0.9, wc, 8.4), B(4.6, 54, 5, 64, 0.9, wc, 8.4)); // mureta do topo (fresta do sniper)
     o.push(B(-1, -1, 1, 1, 0, wc)); // (marcador)
     return o.filter((b) => b.b[4] > b.b[1]);
   };
   const boxes = [...tower(red, red2), ...mirrorZ(tower(cyan, cyan2))];
-  // planaltos + ponte (dá pra passar por baixo)
-  const mid = [B(-14, 10, 14, 22, 3, earth), R(-3, 22, 3, 31, 0, 3, 'z', -1, earth), R(14, 12, 22, 18, 0, 3, 'x', -1, earth)];
-  boxes.push(...mid, ...mirrorZ(mid));
-  boxes.push(B(-3, -10, 3, 10, 0.3, '#8b5a2b', 2.7), B(-3, -10, -2.7, 10, 0.8, '#6b4423', 3), B(2.7, -10, 3, 10, 0.8, '#6b4423', 3));
+  const ruin = { wall: '#b8a98f', wall2: '#a89a80', inner: '#c9bba2', floor: '#9c8a6a', stair: '#8b5a2b', trim: '#d9c7a0' };
+  const half = []; // metade norte (z > 0); a sul é espelhada
+  // planaltos + ponte (dá pra passar por baixo) e ruínas em cima
+  half.push(B(-14, 10, 14, 22, 3, earth), R(-3, 22, 3, 31, 0, 3, 'z', -1, earth), R(14, 12, 22, 18, 0, 3, 'x', -1, earth));
+  half.push(B(-11, 13, -7, 13.6, 1.3, rock, 3), B(6, 17, 10, 17.6, 1.3, rock, 3), B(-2, 19, -1.4, 21.5, 1.3, rock, 3), crate(11.5, 12.5, 1.4, 1.2, '#8b5a2b', 3));
+  // corredor oeste: casa em ruínas de 2 andares (sem telhado) e trincheira
+  half.push(...building(-29, 26, -15, 38, { col: ruin, floors: 2, roof: false,
+    ops: [{ s: 'e', a: 30, b: 32 }, { s: 'n', a: -24, b: -21 }, { s: 's', a: -19, b: -17 }, { s: 'e', a: 34, b: 37, k: 'win' }, { s: 'n', a: -28, b: -25, f: 1, k: 'win', lo: 0.6 }, { s: 'e', a: 28, b: 33, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -26, b: -21, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-27.2, 36, -21.2, 37.5], axis: 'x', dir: 1 }], inner: [{ axis: 'x', s0: -28.5, s1: -15.5, line: 31, ops: [{ a: -20, b: -18.2 }] }] }));
+  half.push(B(-25, 6, -24.3, 19, 1.3, '#8b7d5a'), B(-19.7, 6, -19, 19, 1.3, '#8b7d5a'), B(-29, 12, -26, 12.7, 1.2, '#8b7d5a'), crate(-22, 22, 1.4, 1.2, '#8b5a2b'));
+  // corredor leste: paredões de pedra
+  half.push(B(15, 26, 16, 40, 2.6, rock), B(22, 30, 25, 33, 2.2, rock), B(26, 20, 30, 21, 2.6, rock), B(18, 44, 22, 45, 2.0, rock));
+  // ruínas entre o meio e as torres
+  half.push(...wallX(-12, -4, 38, 0.6, 2.4, ruin.wall, [door(-9, -7.4, 1.8)]), ...wallX(2, 9, 42, 0.6, 2.4, ruin.wall), B(-3, 34, -2.4, 37, 1.6, ruin.wall2), crate(5, 34, 1.6, 1.4, '#8b5a2b'), crate(-15.5, 46, 1.4, 1.2, '#8b5a2b'));
+  // laterais perto das torres
+  half.push(B(-26, 48, -22, 49, 2.0, rock), crate(-18, 64, 1.6, 1.6, '#8b5a2b'), crate(22, 64, 1.6, 1.4, '#8b5a2b'), B(14, 56, 15, 62, 1.6, rock), B(-28, 60, -24, 61, 1.4, rock), crate(-17, 54, 1.6, 1.4, '#8b5a2b'));
+  boxes.push(...half, ...mirrorZ(half));
+  boxes.push(B(-3, -10, 3, 10, 0.3, '#8b5a2b', 2.7), B(-3, -10, -2.7, 10, 1.0, '#6b4423', 3), B(2.7, -10, 3, 10, 1.0, '#6b4423', 3), B(-0.5, -0.5, 0.5, 0.5, 2.7, '#6b4423'), B(-0.5, -6.5, 0.5, -5.5, 2.7, '#6b4423'), B(-0.5, 5.5, 0.5, 6.5, 2.7, '#6b4423'));
+  // casamata no meio do corredor leste (telhado pelas rampas das pontas)
+  boxes.push(...building(16, -7, 28, 7, { col: { ...ruin, wall: '#7f8c6d', wall2: '#6f7c5d', roof: '#5f6c4d', roof2: '#4f5c3d' }, floors: 1, H: 3.2,
+    ops: [{ s: 'w', a: -1, b: 1 }, { s: 'e', a: -1, b: 1 }, { s: 'n', a: 19, b: 21 }, { s: 's', a: 23, b: 25 }, { s: 'w', a: -5, b: -3, k: 'win', lo: 1.2, hi: 1.8 }, { s: 'w', a: 3, b: 5, k: 'win', lo: 1.2, hi: 1.8 }],
+    roofGaps: [{ s: 'n', a: 24, b: 27.5 }, { s: 's', a: 16.5, b: 20 }], inner: [{ axis: 'z', s0: -6.5, s1: 6.5, line: 22, ops: [{ a: -4.5, b: -2.7 }, { a: 2.7, b: 4.5 }] }] }));
+  boxes.push(R(24, -12, 27.5, -7, 0, 3.55, 'z', 1, '#7f8c6d'), R(16.5, 7, 20, 12, 0, 3.55, 'z', -1, '#7f8c6d'), crate(20, -2, 1.2, 1.0, '#8b5a2b', 3.55), crate(25, 3, 1.2, 1.0, '#8b5a2b', 3.55));
   // pedras de cobertura nas laterais
-  for (const [x, z, s, h] of [[-22, 30, 3, 2], [22, 34, 2.5, 1.6], [-20, 6, 3, 2.2], [20, -6, 3, 2.2], [-24, -18, 2.5, 1.8], [24, 18, 2.5, 1.8], [-8, 40, 2, 1.4], [8, -40, 2, 1.4], [-18, -40, 3, 2], [18, 40, 3, 2]])
+  for (const [x, z, s, h] of [[-22, 30 - 30, 3, 2], [-10, 4, 2, 1.4], [8, -4, 2, 1.4], [-27, -4, 2, 1.6], [-14, 2, 1.6, 1.2], [10, 6, 1.6, 1.2], [-6, 26, 2, 1.6], [6, -26, 2, 1.6], [-24, -18 - 6, 2.5, 1.8], [24, 18, 2.5, 1.8], [-8, 42, 2, 1.4], [8, -42, 2, 1.4], [-18, -42, 3, 2], [18, 42 - 6, 3, 2]])
     boxes.push(B(x - s / 2, z - s / 2, x + s / 2, z + s / 2, h, rock), B(x - s / 2, -z - s / 2, x + s / 2, -z + s / 2, h, rock));
-  const kegs = []; for (const [x, z] of [[-12, 46], [-11, 46], [-11.5, 47], [12, 44], [16, 50], [-16, 30], [16, 30]]) kegs.push({ t: 'keg', x, z }, { t: 'keg', x, z: -z });
+  for (const wp of [[-4.2, 8.4, 61.6], [-4.2, 8.4, -61.6], [0, 8.4, 58], [0, 8.4, -58], [-6.5, 8.3, 61.7], [-6.5, 8.3, -61.7]]) boxes.push({ wp });
+  const kegs = []; for (const [x, z] of [[-12, 46], [-11, 46], [-11.5, 47], [12, 44], [16, 50], [-13, 24.5], [18, 24]]) kegs.push({ t: 'keg', x, z }, { t: 'keg', x, z: -z });
   MAPS.push({
-    id: 'torres-do-barril', name: 'Torres Gêmeas do Barril', desc: 'Campo aberto e comprido com duas bases-torre, ponte no meio e barris. Paraíso do sniper.',
+    id: 'torres-do-barril', name: 'Torres Gêmeas do Barril', desc: 'Mapa comprido de Sniper em três corredores: torres de três andares, ruínas de dois andares com trincheira, planaltos com ponte e casamata com telhado no corredor leste.',
     size: [30, 72], wallH: 5, wallColor: [rock, '#7a6e60'],
     palette: { sky: '#7ec8f2', fog: ['#b8e0f5', 70, 180], hemi: ['#ffffff', '#5a8f3a', 1.6], sun: ['#ffffff', 2.3], ground: '#6cbf4f', tiles: null, clouds: true },
-    boxes: boxes.filter((b) => b.b[4] - b.b[1] > 0.05), props: [...kegs, { t: 'tree', x: -26, z: 0 }, { t: 'tree', x: 26, z: 4 }, { t: 'tree', x: -26, z: 50 }, { t: 'tree', x: 26, z: -50 },
+    ...(() => { const F = fin(boxes); F.boxes = F.boxes.filter((b) => b.b[4] - b.b[1] > 0.05); return F; })(), props: [...kegs, { t: 'tree', x: -26, z: 0 }, { t: 'tree', x: 26, z: 4 }, { t: 'tree', x: -26, z: 50 }, { t: 'tree', x: 26, z: -50 },
       { t: 'banner', x: 0, y: 6.2, z: 47.9, c: red, rot: Math.PI }, { t: 'banner', x: 0, y: 6.2, z: -47.9, c: cyan, rot: 0 }],
     spawns: [[0, 58], [-4, 60, 4.4], [20, 60], [-20, 56], [0, -58], [4, -60, 4.4], [-20, -60], [20, -56], [-24, 0], [24, 0]],
-    pickups: [['health', 0, 0], ['health', -22, 40], ['health', 22, -40], ['health', 0, 58], ['health', 0, -58],
-      ['ammo', 4, 58, 4.4], ['ammo', -4, -58, 4.4], ['ammo', 0, 60, 8.4], ['ammo', 0, -60, 8.4], ['ammo', -24, -24], ['ammo', 24, 24],
+    pickups: [['health', 1.5, 0, 3], ['health', -22, 40], ['health', 22, -40], ['health', 0, 58], ['health', 0, -58],
+      ['ammo', 4, 58, 4.4], ['ammo', -4, -58, 4.4], ['ammo', 0, 60, 8.4], ['ammo', 0, -60, 8.4], ['ammo', -26, -20], ['ammo', 27, 23],
       ['grenade', -24, 0], ['grenade', 24, 0], ['grenade', 0, 16, 3], ['grenade', 0, -16, 3]],
-    waypoints: [[-4.2, 8.4, 61.6], [-4.2, 8.4, -61.6], [0, 8.4, 58], [0, 8.4, -58], [-6.5, 8.3, 61.7], [-6.5, 8.3, -61.7]],
+    openMax: 7.5, // mapa de Sniper: um pouco mais aberto de propósito
     showcase: [22, 0, 36], view: [0, 4.4, 50, 0, -0.04],
     test: { stairs: { from: [10, 0, 63], to: [10, 4.4, 50], level: 4.4 }, under: { from: [-8, 0, 0.8], to: [8, 0, 0.8], ceil: 2.7 } },
   });
