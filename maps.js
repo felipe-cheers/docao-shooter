@@ -127,30 +127,60 @@ const DAY = (o) => ({ sky: '#8fd3ff', fog: ['#8fd3ff', 50, 130], hemi: ['#ffffff
 // =====================================================================
 export const MAPS = [];
 
-// ---------- 1) Arena da Fazendinha (o mapa original) ----------
+// ---------- 1) Arena da Fazendinha (3 corredores estilo Shipment/Rust: bases de 2 andares, celeiro no meio, caixa d'água) ----------
 {
-  const H = 36, boxes = [];
-  boxes.push(B(-5, -5, 5, 5, 3, '#9b7bd6'), R(-1.75, 5, 1.75, 13, 0, 3, 'z', -1, '#b59be6'), R(-1.75, -13, 1.75, -5, 0, 3, 'z', 1, '#b59be6'));
-  boxes.push(B(19, 19, 26, 26, 2.2, '#4fb3c9'), R(12, 21, 19, 24, 0, 2.2, 'x', 1, '#7fd3e3'));
-  boxes.push(B(-26, -26, -19, -19, 2.2, '#4fb3c9'), R(-19, -24, -12, -21, 0, 2.2, 'x', -1, '#7fd3e3'));
-  boxes.push(B(19, -26, 26, -19, 2.2, '#f28fb0'), R(21, -19, 24, -12, 0, 2.2, 'z', -1, '#f7b3c9'));
-  boxes.push(B(-26, 19, -19, 26, 2.2, '#f28fb0'), R(-24, 12, -21, 19, 0, 2.2, 'z', 1, '#f7b3c9'));
-  for (const [a, b, c, d] of [[-16, -3, -15, 3], [15, -3, 16, 3], [-3, -17, 3, -16], [-3, 16, 3, 17], [-30, -8, -29, 0], [29, 0, 30, 8], [8, 26, 16, 27], [-16, -27, -8, -26]]) boxes.push(B(a, b, c, d, 2.6, '#5dade2'));
-  for (const [x, z] of [[-9, 9], [9, -9], [-10, -10], [10, 10], [-24, 4], [24, -4], [4, 26], [-4, -26], [-30, 25], [30, -25], [0, 30], [0, -31]]) boxes.push(B(x - 1, z - 0.6, x + 1, z + 0.6, 1.2, '#f2c94c'));
-  for (const [x, z] of [[-7, 18], [7, -18], [18, 7], [-18, -7], [-28, -16], [28, 16], [14, -30], [-14, 30], [-12, 4], [12, -4]]) boxes.push(B(x - 0.75, z - 0.75, x + 0.75, z + 0.75, 1.5, '#b5793e'));
-  boxes.push(B(-8.5, 17.25, -7.5, 18.25, 1, '#c98a4b', 1.5), B(6.5, -18.75, 7.5, -17.75, 1, '#c98a4b', 1.5));
-  for (const sx of [-3.5, 3.5]) for (const sz of [-H + 0.3, H - 0.3]) boxes.push(B(sx - 0.2, sz - 0.2, sx + 0.2, sz + 0.2, 2.8, '#8b5a2b', 4));
+  const H = 3.5, boxes = [];
+  const lado = (c) => { // metade oeste; a leste é a mesma girada 180°
+    const o = [];
+    o.push(...building(-31, -7, -22, 7, { col: c, floors: 2,
+      ops: [{ s: 'e', a: -1, b: 1 }, { s: 'n', a: -27.8, b: -26 }, { s: 's', a: -27.8, b: -26 }, { s: 'e', a: -5, b: -3, k: 'win' }, { s: 'e', a: 3, b: 5, k: 'win' },
+        { s: 'e', a: -5, b: -1.5, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 1.5, b: 5, f: 1, k: 'win', lo: 0.9 }, { s: 'n', a: -30, b: -27, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -30, b: -27, f: 1, k: 'win', lo: 0.9 }],
+      stairs: [{ f: 0, r: [-28.7, -6.5, -23.0, -4.6], axis: 'x', dir: 1 }, { f: 1, r: [-28.7, 4.6, -23.0, 6.5], axis: 'x', dir: 1 }],
+      inner: [{ axis: 'x', s0: -30.5, s1: -22.5, line: 1.8, ops: [{ a: -25.2, b: -23.4 }] }] }));
+    o.push(crate(-29.5, 0.5, 1.4, 1.0, '#b5793e'), crate(-29.5, -2.8, 1.2, 1.2, '#f2c94c', 3.5), crate(-26.5, -2, 1.2, 1.0, '#b5793e', 7), crate(-23.6, 3, 1.0, 1.0, '#f2c94c', 7));
+    // galpões entre os corredores (telhado pela pilha de feno)
+    for (const zc of [-11, 11]) {
+      o.push(...building(-18, zc - 3, -11, zc + 3, { col: { wall: '#b5793e', wall2: '#a0682f', floor: '#c8a27a', roof: '#8b5a2b', roof2: '#6b4423' }, floors: 1, H: 3.2,
+        ops: [{ s: 'w', a: zc - 1, b: zc + 0.8 }, { s: 'e', a: zc - 0.8, b: zc + 1 }, { s: zc < 0 ? 's' : 'n', a: -16.5, b: -14, k: 'win' }], roofGaps: [{ s: zc < 0 ? 'n' : 's', a: -14.5, b: -12 }] }));
+      const zr = zc < 0 ? zc - 3 : zc + 3, d = zc < 0 ? -1 : 1;
+      o.push(B(-14.4, zr, -12.1, zr + d * 1.4, 2.0, '#f2c94c'), R(-14.4, zr + d * 1.4, -12.1, zr + d * 3.6, 0, 2.0, 'z', -d, '#e8c25a'));
+    }
+    // corredor norte: muretas de pedra e fardos | campo: cercas e caixotes
+    o.push(B(-21, -20.6, -16, -19.8, 1.2, '#a8a29a'), B(-12, -24.6, -8, -23.8, 1.2, '#a8a29a'), B(-26, -16, -24.6, -14.2, 1.4, '#f2c94c'), B(-9, -18.8, -7, -16.6, 1.4, '#f2c94c'));
+    o.push(B(-29, -22, -27, -20, 1.5, '#b5793e'), B(-25, 22.2, -21, 23.0, 1.1, '#b5793e'), B(-14, 19.6, -10, 20.4, 1.1, '#b5793e'), crate(-27, 18, 1.6, 1.6), crate(-18, 25, 1.4, 1.2, '#f2c94c'));
+    o.push(crate(-19, -3.5, 1.6, 1.6), crate(-19, 3.5, 1.6, 1.6), B(-14.5, -0.8, -13.7, 2.8, 1.3, '#b5793e'), crate(-9.5, 6.5, 1.4, 1.2, '#f2c94c'), crate(-9.5, -7.5, 1.4, 1.2, '#f2c94c'));
+    return o;
+  };
+  boxes.push(...lado({ wall: '#f28fb0', wall2: '#e87fa0', inner: '#f7b3c9', floor: '#c8a27a', roof: '#c0392b', roof2: '#a93226', stair: '#b5793e', trim: '#ffffff' }));
+  boxes.push(...rot180(lado({ wall: '#4fb3c9', wall2: '#45a2b6', inner: '#7fd3e3', floor: '#c8a27a', roof: '#1d5f8a', roof2: '#174f74', stair: '#b5793e', trim: '#ffffff' }), 0, 0));
+  // celeiro do meio: portões largos (corredor do meio passa por dentro), jirau com janelas pros dois lados
+  boxes.push(...building(-7, -6, 7, 6, { col: { wall: '#9b7bd6', wall2: '#8a6bc6', floor: '#c8a27a', roof: '#6b4fa8', stair: '#b59be6', trim: '#ffffff' }, floors: 2, roof: true, parapet: 0,
+    ops: [{ s: 'w', a: -2, b: 2, k: 'wide' }, { s: 'e', a: -2, b: 2, k: 'wide' }, { s: 'n', a: -1, b: 1 }, { s: 's', a: -1, b: 1 },
+      ...['n', 's'].flatMap((q) => [{ s: q, a: -6, b: -3, f: 1, k: 'win', lo: 0.9 }, { s: q, a: 3, b: 6, f: 1, k: 'win', lo: 0.9 }]), ...['w', 'e'].map((q) => ({ s: q, a: -2.5, b: 2.5, f: 1, k: 'win', lo: 0.9 }))],
+    stairs: [{ f: 0, r: [-5.2, -5.5, 0.8, -3.7], axis: 'x', dir: 1 }, { f: 0, r: [-0.8, 3.7, 5.2, 5.5], axis: 'x', dir: -1 }] }));
+  boxes.push(B(-4, 1.5, -2.2, 3, 1.2, '#f2c94c'), B(2.2, -3, 4, -1.5, 1.2, '#f2c94c'), B(-1, -1, 1, 1, 1.2, '#f2c94c', 3.5));
+  boxes.push(B(-2.2, -12.6, 2.2, -11.8, 1.3, '#a8a29a'), crate(-5.5, -14.5, 1.4, 1.2), crate(6.5, -9.5, 1.4, 1.4, '#f2c94c'), crate(-6.5, 9.5, 1.4, 1.4, '#f2c94c'), B(-2.2, 11.8, 2.2, 12.6, 1.3, '#a8a29a'));
+  // galinheiro (túnel no corredor norte)
+  boxes.push(...building(-5, -23, 5, -17, { col: { wall: '#f7f1e3', wall2: '#e8e0cc', floor: '#c8a27a', roof: '#e63946', roof2: '#c0303c' }, floors: 1, H: 2.9,
+    ops: [{ s: 'w', a: -21, b: -19 }, { s: 'e', a: -21, b: -19 }, { s: 's', a: -3.5, b: -1.5, k: 'win' }, { s: 's', a: 1.5, b: 3.5, k: 'win' }, { s: 'n', a: -1, b: 1, k: 'win' }], parapet: 0 }));
+  // caixa d'água (plataforma alta no corredor sul; dá pra passar por baixo — linha longa do Sniper)
+  for (const [x, z] of [[-2.9, 16.1], [2.4, 16.1], [-2.9, 21.4], [2.4, 21.4]]) boxes.push(B(x, z, x + 0.5, z + 0.5, 4.0, '#8b5a2b'));
+  boxes.push(B(-3, 16, 3, 22, 0.4, '#a0682f', 4.0), B(-1.5, 17.6, 1.5, 20.4, 2.6, '#bdc3c7', 4.4), R(3, 17.6, 9, 20.4, 0, 4.4, 'x', -1, '#b5793e'), { wp: [-2.3, 4.4, 19] }, { wp: [-2.3, 4.4, 17] }, { wp: [-2.3, 4.4, 21] });
+  boxes.push(B(-3, 16, 3, 16.2, 1.0, '#8b5a2b', 4.4), B(-3, 21.8, 3, 22, 1.0, '#8b5a2b', 4.4));
+  for (const sx of [-3.5, 3.5]) for (const sz of [-27.7, 27.7]) boxes.push(B(sx - 0.2, sz - 0.2, sx + 0.2, sz + 0.2, 2.8, '#8b5a2b', 4));
   MAPS.push({
-    id: 'arena', name: 'Arena da Fazendinha', desc: 'O clássico: plataforma central, torres nos cantos e feno pra todo lado.',
-    size: [H, H], wallH: 4, wallColor: ['#e86a5c', '#d85a4c'],
-    palette: DAY({ ground: '#7cc95a', tiles: ['#a9e07f', '#9bd972', 72, 12] }),
-    boxes, props: [{ t: 'logoSign', x: 0, y: 5.2, z: -H + 0.02, rot: 0 }, { t: 'logoSign', x: 0, y: 5.2, z: H - 0.02, rot: Math.PI }],
-    spawns: [[-30, -30], [30, 30], [-30, 30], [30, -30], [0, 22], [0, -22], [-20, 0], [20, 0], [-12, -30], [12, 30]],
-    pickups: [['health', 0, 0, 3], ['health', -22.5, 22.5, 2.2], ['health', 22.5, -22.5, 2.2], ['health', 31, 31], ['health', -31, -31],
-      ['ammo', 22.5, 22.5, 2.2], ['ammo', -22.5, -22.5, 2.2], ['ammo', -13, 0], ['ammo', 13, 0], ['ammo', 0, 20], ['ammo', 0, -20],
-      ['grenade', 16, 16], ['grenade', -16, -16], ['grenade', -16, 16], ['grenade', 16, -16], ['grenade', 3.5, 3.5, 3], ['grenade', 0, -27]],
-    showcase: [0, 3, 0], view: [6, 0, 30, 0.15, -0.05],
-    test: { stairs: { from: [0, 0, 12], to: [0, 3, 2], level: 3 } },
+    id: 'arena', name: 'Arena da Fazendinha', desc: 'Três corredores: bases de dois andares com terraço, celeiro com jirau no meio, galinheiro-túnel ao norte e caixa d\'água ao sul.',
+    size: [32, 28], wallH: 4, wallColor: ['#e86a5c', '#d85a4c'],
+    palette: DAY({ ground: '#7cc95a', tiles: ['#a9e07f', '#9bd972', 64, 14] }),
+    ...fin(boxes), props: [{ t: 'logoSign', x: 0, y: 5.2, z: -27.98, rot: 0 }, { t: 'logoSign', x: 0, y: 5.2, z: 27.98, rot: Math.PI },
+      { t: 'hay', x: -22, z: -25 }, { t: 'hay', x: 22, z: 25 }, { t: 'hay', x: -3, z: 25 }, { t: 'hay', x: 3, z: -25.5 }, { t: 'truck', x: -16, z: 21, c: '#e63946' }, { t: 'truck', x: 16, z: -21, c: '#2f80ed' },
+      { t: 'tree', x: -30, z: -25 }, { t: 'tree', x: 30, z: 25 }, { t: 'tree', x: -9, z: -26 }, { t: 'tree', x: 9, z: 26 }],
+    spawns: [[-28, 0], [28, 0], [-26.5, -10], [26.5, 10], [-26.5, 10], [26.5, -10], [-17, -25], [17, 25], [-21, 25], [21, -25], [-28, -3, 3.5], [28, 3, 3.5]],
+    pickups: [['health', 0, 0], ['health', -26, 3], ['health', 26, -3], ['health', 0, -20], ['health', 2.4, 19, 4.4],
+      ['ammo', 2, -4.5, 3.5], ['ammo', -2, 4.5, 3.5], ['ammo', -14.5, -11], ['ammo', 14.5, 11], ['ammo', -27, 3, 7], ['ammo', 27, -3, 7],
+      ['grenade', -14.5, 11], ['grenade', 14.5, -11], ['grenade', -20, 0], ['grenade', 20, 0], ['grenade', -2.3, 19, 4.4]],
+    showcase: [0, 0, 9], view: [-20, 0, 1.5, -1.62, 0.0], openMax: 7,
+    test: { stairs: { from: [-29.8, 0, -5.5], to: [-23.6, 3.5, -5.5], level: 3.5 }, roof: { from: [-29.8, 3.5, 5.5], to: [-23.6, 7.0, 5.5], level: 7.0 }, under: { from: [-29, 0, -2.5], to: [-23.5, 0, -2.5], ceil: 3.2 } },
   });
 }
 

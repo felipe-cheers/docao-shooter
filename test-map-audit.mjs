@@ -27,7 +27,9 @@ for (const id of ids) {
   // área aberta: maior distância de um nó do chão até a cobertura mais próxima (caixa com ≥ 1,1 m acima do pé)
   const cover = solids.filter((s) => s.max.y - s.min.y > 0.9 && s.max.x - s.min.x < 200);
   let worst = 0, worstAt = null;
+  const onSmall = (n) => solids.some((s) => !s.ramp && Math.abs(s.max.y - n.y) < 0.05 && n.x >= s.min.x - 0.05 && n.x <= s.max.x + 0.05 && n.z >= s.min.z - 0.05 && n.z <= s.max.z + 0.05 && (s.max.x - s.min.x) * (s.max.z - s.min.z) < 4.5);
   for (const n of good) {
+    if (onSmall(n)) continue; // em cima de caixote/mureta: escolha de quem sobe, não é "campo aberto"
     let d = Infinity; for (const s of cover) { if (s.max.y < n.y + 0.9 || s.min.y > n.y + 2) continue; const dx = Math.max(s.min.x - n.x, 0, n.x - s.max.x), dz = Math.max(s.min.z - n.z, 0, n.z - s.max.z); d = Math.min(d, Math.hypot(dx, dz)); }
     const [hx, hz] = map.size; d = Math.min(d, hx - Math.abs(n.x), hz - Math.abs(n.z));
     if (d > worst) { worst = d; worstAt = n; }

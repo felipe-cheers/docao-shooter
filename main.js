@@ -1183,8 +1183,10 @@ function loop() {
     for (const p of pickups) p.mesh.rotation.y += dt;
   }
   renderer.clear();
+  const camO = window.__cam; // testes/screenshots: câmera livre { p: [x, y, z], t: [x, y, z], fov }
+  if (camO) { camera.position.set(...camO.p); camera.lookAt(...camO.t); if (camO.fov && camera.fov !== camO.fov) { camera.fov = camO.fov; camera.updateProjectionMatrix(); } }
   renderer.render(scene, camera);
-  if (state !== 'menu' && player && player.alive) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
+  if (state !== 'menu' && player && player.alive && !camO) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
 }
 loop();
 
