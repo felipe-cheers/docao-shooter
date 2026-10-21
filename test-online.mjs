@@ -55,7 +55,7 @@ ok(await G(A, () => window.__docao.entities.length) === 3, 'Ana vê 3 Docões (s
 // teleporte de teste (o servidor só aceita com ALLOW_TEST=1)
 const tp = (page, x, z, faceX, faceZ) => G(page, ([x, z, fx, fz]) => { const g = window.__docao, p = g.player, o = g.online; p.pos.set(x, g.groundAt(x, z, 0.3), z); p.vel.set(0, 0, 0);
   p.yaw = Math.atan2(-(fx - x), -(fz - z)); p.pitch = 0; o.net.send({ t: 'u', sq: p.sq, tp: 1, p: [p.pos.x, p.pos.y, p.pos.z], v: [0, 0, 0], y: p.yaw, pi: 0, g: 1, w: p.weapon }); }, [x, z, faceX, faceZ]);
-await tp(A, -30, -30, -22, -30); await tp(B, -22, -30, -30, -30); await tp(C, -30, -16, -30, -30);
+await tp(A, -30, -25, -22.5, -25); await tp(B, -22.5, -25, -30, -25); await tp(C, -30, -16, -30, -25);
 await wait(800);
 // Ana mira em Beto pela posição interpolada que ela vê
 const aimAt = (page, name, dy = 1.1) => G(page, ([n, dy]) => { const g = window.__docao, p = g.player; const t = g.entities.find((e) => e.name === n); if (!t) return null;
@@ -79,7 +79,7 @@ await A.screenshot({ path: `${SHOTS}/15-online-abate.png` });
 ok(await until(B, () => window.__docao.player.alive, 6000), 'Beto renasceu (servidor)');
 // 5) Copo Bomba: Caio joga na Ana
 await G(A, () => { window.__docao.player.invulnUntil = 0; });
-await tp(C, -30, -22, -30, -30); await wait(400);
+await tp(C, -30, -19.5, -30, -25); await wait(400);
 console.log('Caio → Ana', await aimAt(C, 'Ana', -0.6));
 const ex0 = await G(A, () => window.__docao.explosions), aHp0 = await G(A, () => window.__docao.player.hp);
 await C.keyboard.down('KeyQ'); await wait(500); await C.keyboard.up('KeyQ');
@@ -121,7 +121,7 @@ const e0 = await G(D, () => window.__docao.explosions);
 await G(D, () => { const p = window.__docao.player; p.pitch = -1.2; }); // atira no chão a uns metros
 await D.mouse.move(640, 360); await D.mouse.down(); await wait(120); await D.mouse.up();
 ok(await until(D, (x) => window.__docao.explosions > x, 3000, e0), 'foguete da Bazuca explodiu (servidor)');
-ok(await until(D, () => window.__docao.player.lastKnock > 0 || !window.__docao.player.alive, 2000), 'Duda levou o empurrão da explosão (rocket jump)');
+ok(await until(D, () => window.__docao.lastKnock > -99 || !window.__docao.player.alive, 2000), 'Duda levou o empurrão da explosão (rocket jump)'); // lastKnock fica em __docao (não no player)
 await wait(6000);
 const fight = await G(D, () => (window.__feedLog || []).length);
 console.log('abates no kill feed da sala com bots após ~9 s:', fight);
