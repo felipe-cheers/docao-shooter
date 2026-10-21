@@ -354,7 +354,7 @@ export const MAPS = [];
   });
 }
 
-// ---------- 5) Torres Gêmeas do Barril (campo aberto com duas bases-torre e ponte) ----------
+// ---------- 5) Torres Gêmeas do Barril (mapa de Sniper em 3 corredores: torres, ruínas, planaltos com ponte, casamata) ----------
 {
   const red = '#e63946', red2 = '#c0303c', cyan = '#4fd8e8', cyan2 = '#2fb5c9', rock = '#8d8070', earth = '#a58b5f', floor = '#d9c7a0';
   const tower = (wc, wc2) => {
@@ -464,37 +464,62 @@ export const MAPS = [];
   });
 }
 
-// ---------- 7) Bar Cheers Noturno (bar compacto de noite, neon ciano, balcão, barris e mezanino) ----------
+// ---------- 7) Bar Cheers Noturno (estilo Office: salão com balcão, ala de 2 andares com cozinha/depósito e VIP, banheiros, escritório, sinuca, corredores laterais) ----------
 {
-  const wood = '#5a3420', dark = '#2a2238', neon = '#7DF9FF', boxes = [];
-  boxes.push(B(-7, -4, 7, -2.8, 1.2, wood), B(5.8, -4, 7, 2, 1.2, wood), B(-7, -4, -5.8, 0, 1.2, wood)); // balcão em U
-  boxes.push(B(-14, -16, 14, -15, 2.2, '#3b2a1f')); // prateleiras no fundo (embaixo do mezanino)
-  boxes.push(B(-20, -16, 20, -10, 0.3, '#4a2e1e', 3), R(-20, -10, -16, 2, 0, 3.3, 'z', -1, wood), R(16, -10, 20, 2, 0, 3.3, 'z', -1, wood));
-  boxes.push(B(-16, -10.4, -1.5, -10, 1.0, '#1b1626', 3.3), B(1.5, -10.4, 16, -10, 1.0, '#1b1626', 3.3)); // guarda-corpo do mezanino
-  boxes.push(B(-8, 10, 8, 16, 1.0, '#3a2a48'), R(8, 10, 11, 16, 0, 1, 'x', -1, '#3a2a48'), R(-11, 10, -8, 16, 0, 1, 'x', 1, '#3a2a48')); // palco
-  boxes.push(B(-2, 13.5, 2, 15, 1.2, '#1b1626', 1), B(-6.5, 14, -5, 15.6, 2.4, '#111', 1), B(5, 14, 6.5, 15.6, 2.4, '#111', 1)); // DJ + caixas de som
-  for (const [x, z] of [[-12, 0], [-12, 6], [12, 0], [12, 6], [-5, 5], [5, 5]]) boxes.push(B(x - 0.7, z - 0.7, x + 0.7, z + 0.7, 0.95, '#6b4423'));
-  boxes.push(B(-3, -13.5, 3, -11.5, 0.9, '#1e7a4a')); // mesa de sinuca (embaixo do mezanino)
+  const wood = '#5a3420', dark = '#2a2238', neon = '#7DF9FF', pink = '#ff5fa2', boxes = [], H = 3.3;
+  const col = { wall: '#3b2a4a', wall2: '#33243f', inner: '#4a3a5a', floor: '#4a2e1e', roof: '#231c30', roof2: '#1b1626', stair: wood, trim: neon };
+  const C = (x, z, s = 1.4, h = 1.2, c = '#6b4423', y0 = 0) => boxes.push(crate(x, z, s, h, c, y0));
+  // ala norte (2 andares): cozinha | corredor | depósito no térreo; VIP com janelões e sacada em cima; terraço no telhado
+  boxes.push(...building(-21, -20, 21, -10, { col, floors: 2, H,
+    ops: [{ s: 's', a: -15, b: -13 }, { s: 's', a: -1.5, b: 1.5 }, { s: 's', a: 12, b: 14 }, { s: 'w', a: -16, b: -14 }, { s: 'e', a: -16, b: -14 },
+      { s: 's', a: -2, b: 2, f: 1 }, { s: 's', a: -18, b: -8, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: 7, b: 17, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: -17, b: -13, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: -17, b: -13, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-4.5, -19.5, 1.5, -17.6], axis: 'x', dir: 1 }, { f: 1, r: [9, -19.5, 15, -17.6], axis: 'x', dir: 1 }],
+    inner: [{ axis: 'z', s0: -19.5, s1: -10.5, line: -6, ops: [{ a: -14.5, b: -12.7 }] }, { axis: 'z', s0: -19.5, s1: -10.5, line: 6, ops: [{ a: -14.5, b: -12.7 }] },
+      { axis: 'z', s0: -19.5, s1: -10.5, line: -8, f: 1, ops: [{ a: -15, b: -13.2 }] }] }));
+  boxes.push(B(-19, -19.5, -14, -18.5, 1.0, '#8a8a9a'), B(-12, -14, -9, -12.5, 1.0, '#8a8a9a'), C(9, -16, 1.6, 1.6), C(16, -12.5, 1.4, 1.4), C(18.5, -18, 1.4, 1.2)); // fogão, bancada, caixas do depósito
+  boxes.push(B(-18, -16, -15, -14.6, 0.9, '#7a2d5a', H), B(-4, -14.5, 0, -13, 0.9, '#7a2d5a', H), B(14, -12.6, 18, -11.4, 1.0, '#1b1626', H), C(-12, -12, 1.2, 1.0, wood, 2 * H), C(4, -15, 1.4, 1.2, wood, 2 * H), C(-16, -16, 1.4, 1.2, wood, 2 * H));
+  // sacada do VIP + escada pro salão
+  boxes.push(B(-4, -10, 4, -7.6, 0.25, wood, H - 0.25), B(-4, -7.75, 4, -7.6, 1.0, '#1b1626', H), B(-4, -10, -3.85, -7.6, 1.0, '#1b1626', H), R(4, -10, 9.5, -7.6, 0, H, 'x', -1, wood), { wp: [0, H, -8.8] }, { wp: [6.8, 1.65, -8.8] });
+  // salão: balcão em U, mesas, palco com DJ
+  boxes.push(B(-7, -4, 7, -2.8, 1.2, wood), B(5.8, -4, 7, 2, 1.2, wood), B(-7, -4, -5.8, 0, 1.2, wood));
+  boxes.push(B(-8, 13, 8, 19.5, 1.0, '#3a2a48'), R(8, 13, 11, 19.5, 0, 1, 'x', -1, '#3a2a48'), R(-11, 13, -8, 19.5, 0, 1, 'x', 1, '#3a2a48'));
+  boxes.push(B(-2, 16.5, 2, 18, 1.2, '#1b1626', 1), B(-6.5, 17, -5, 18.6, 2.4, '#111', 1), B(5, 17, 6.5, 18.6, 2.4, '#111', 1));
+  for (const [x, z] of [[-9, 4], [-4, 8], [4, 8], [9, 4], [-9, -6.5], [10, -2]]) boxes.push(B(x - 0.7, z - 0.7, x + 0.7, z + 0.7, 0.95, '#6b4423'));
+  // banheiros (oeste): corredor + cabines
+  boxes.push(...building(-21, -7, -12, 7, { col: { ...col, wall: '#4a5a6a', wall2: '#3f4f5f', inner: '#9aa9b9' }, floors: 1, H: 3.0, parapet: 0,
+    ops: [{ s: 'e', a: -1, b: 1 }, { s: 'w', a: 3, b: 5 }, { s: 'n', a: -15, b: -13 }],
+    inner: [{ axis: 'z', s0: -6.5, s1: 6.5, line: -16.5, ops: [{ a: -5, b: -3.4 }, { a: -0.8, b: 0.8 }, { a: 3.4, b: 5 }] }, { axis: 'x', s0: -20.5, s1: -16.5, line: -2, ops: [] }, { axis: 'x', s0: -20.5, s1: -16.5, line: 2, ops: [] }] }));
+  // escritório (leste)
+  boxes.push(...building(12, -7, 21, 7, { col, floors: 1, H: 3.0, parapet: 0,
+    ops: [{ s: 'w', a: -1, b: 1 }, { s: 'e', a: -5, b: -3 }, { s: 's', a: 17, b: 19 }, { s: 'w', a: 3, b: 5.5, k: 'win' }],
+    inner: [{ axis: 'x', s0: 12.5, s1: 20.5, line: 0, ops: [{ a: 17, b: 18.8 }] }] }));
+  C(14.5, -4.5, 1.8, 0.9, '#6b4423'); C(18.5, 4, 1.6, 0.9, '#6b4423');
+  // sinuca (sudeste) e camarotes (sudoeste)
+  boxes.push(...building(12, 9, 21, 19.6, { col, floors: 1, H: 3.0, parapet: 0, ops: [{ s: 'w', a: 13, b: 15 }, { s: 'e', a: 11, b: 13 }, { s: 'n', a: 14, b: 16 }, { s: 'w', a: 16.5, b: 18.5, k: 'win' }] }));
+  boxes.push(B(14.5, 13, 18.5, 15, 0.9, '#1e7a4a'));
+  boxes.push(B(-20, 9, -14, 10, 1.3, '#7a2d5a'), B(-20, 14, -14, 15, 1.3, '#7a2d5a'), B(-12.5, 11, -11.7, 17, 1.3, '#7a2d5a'), C(-17, 12, 1.2, 0.9, wood), C(-17, 17.5, 1.2, 0.9, wood));
+  // corredores laterais (linha longa do Sniper): barris encostados
+  C(-22.8, -4, 1.2, 1.2); C(-22.8, 12, 1.2, 1.2); C(22.8, 4, 1.2, 1.2); C(22.8, -12, 1.2, 1.2);
   const props = [];
-  for (const [x, z] of [[-16, 6], [-15, 6], [-15.5, 7], [16, -4], [16, -5.1], [-3, -6], [-1.8, -6], [3, -6], [1.8, -6.2], [-10, -14], [10, -14]]) props.push({ t: 'keg', x, z });
-  props.push({ t: 'keg', x: 6, z: -13, y: 3.3 }, { t: 'keg', x: -6, z: -13, y: 3.3 });
-  props.push({ t: 'cup', x: -15, z: 12, s: 5 }, { t: 'cup', x: 15, z: 12, s: 5 }, { t: 'cup', x: 6, z: 7, s: 4 }, { t: 'cup', x: -3, z: -3.4, s: 0.6, y: 1.2, deco: true }, { t: 'cup', x: 2, z: -3.4, s: 0.6, y: 1.2, deco: true });
-  props.push({ t: 'neon', x: 0, y: 5.2, z: -15.9, w: 10, h: 2.2, rot: 0, text: 'CHEERS', c: neon });
-  props.push({ t: 'neon', x: -19.9, y: 4.2, z: 4, w: 4, h: 3, rot: Math.PI / 2, text: 'C!', c: '#ff5fa2' });
-  props.push({ t: 'neon', x: 19.9, y: 4.2, z: 4, w: 5, h: 2, rot: -Math.PI / 2, text: 'BAR', c: neon });
-  props.push({ t: 'neon', x: 0, y: 4.4, z: 15.9, w: 7, h: 1.6, rot: Math.PI, text: 'OINK!', c: '#ff5fa2' });
-  props.push({ t: 'strip', x0: -7, z0: -2.78, x1: 7, z1: -2.78, y: 1.0, c: neon }, { t: 'strip', x0: -8, z0: 9.98, x1: 8, z1: 9.98, y: 0.9, c: '#ff5fa2' });
+  for (const [x, z] of [[-3, -6], [-1.8, -6], [3, -6], [1.8, -6.2], [-22.6, 1], [22.6, 10], [-11, -8.5], [11, 11]]) props.push({ t: 'keg', x, z });
+  props.push({ t: 'keg', x: 6, z: -16, y: H }, { t: 'keg', x: -10, z: -16, y: H });
+  props.push({ t: 'cup', x: -9.5, z: 11, s: 4 }, { t: 'cup', x: 10, z: 8, s: 4 }, { t: 'cup', x: -3, z: -3.4, s: 0.6, y: 1.2, deco: true }, { t: 'cup', x: 2, z: -3.4, s: 0.6, y: 1.2, deco: true });
+  props.push({ t: 'neon', x: 0, y: 5.6, z: -9.9, w: 8, h: 1.6, rot: Math.PI, text: 'CHEERS', c: neon });
+  props.push({ t: 'neon', x: -11.9, y: 2.6, z: -4, w: 3, h: 1.4, rot: -Math.PI / 2, text: 'WC', c: pink });
+  props.push({ t: 'neon', x: 11.9, y: 2.6, z: 4, w: 3.5, h: 1.4, rot: Math.PI / 2, text: 'BAR', c: neon });
+  props.push({ t: 'neon', x: 0, y: 4.4, z: 19.9, w: 7, h: 1.6, rot: Math.PI, text: 'OINK!', c: pink });
+  props.push({ t: 'strip', x0: -7, z0: -2.78, x1: 7, z1: -2.78, y: 1.0, c: neon }, { t: 'strip', x0: -8, z0: 12.98, x1: 8, z1: 12.98, y: 0.9, c: pink });
   MAPS.push({
-    id: 'bar-cheers', name: 'Bar Cheers Noturno', desc: 'Bar compacto de noite: balcão, barris, copões vermelhos, palco, mezanino e neon ciano.',
-    size: [20, 16], wallH: 6, wallColor: [dark, '#231c30'],
-    palette: { sky: '#0b0e22', fog: ['#161236', 26, 80], hemi: ['#9a9aff', '#3a1c50', 1.6], sun: ['#b8c4ff', 1.1], ground: '#3a2418', tiles: ['#4a2e1e', '#3c2618', 40, 20], clouds: false, stars: true,
-      lights: [[neon, 0, 4.5, -8, 40, 22], ['#ff5fa2', -14, 3.5, 8, 30, 18], [neon, 14, 3.5, 8, 30, 18], ['#ffd27a', 0, 3, 13, 25, 14]] },
-    boxes, props,
-    spawns: [[-17, 12], [17, 12], [-13, -6], [13, -6], [0, -13, 3.3], [-10, -12.5], [10, -12.5], [-12, 3], [12, 3], [0, 8]],
-    pickups: [['health', 0, -7], ['health', -17, 14], ['ammo', -12, -13, 3.3], ['ammo', 12, -13, 3.3], ['ammo', 16, 14],
-      ['grenade', 8, 2], ['grenade', -8, 2], ['grenade', 0, 12, 1]],
-    showcase: [0, 0, 6], view: [-2, 1, 13, -0.08, -0.08],
-    test: { stairs: { from: [-18, 0, 1.5], to: [-18, 3.3, -13], level: 3.3 }, under: { from: [-12, 0, -10.8], to: [8, 0, -10.8], ceil: 3 } },
+    id: 'bar-cheers', name: 'Bar Cheers Noturno', desc: 'Estilo Office: salão com balcão e palco, cozinha e depósito, VIP no andar de cima com sacada, terraço, banheiros, escritório, sinuca e corredores laterais compridos.',
+    size: [24, 20], wallH: 6, wallColor: [dark, '#231c30'], laneMin: 35,
+    palette: { sky: '#0b0e22', fog: ['#161236', 30, 90], hemi: ['#9a9aff', '#3a1c50', 1.6], sun: ['#b8c4ff', 1.1], ground: '#3a2418', tiles: ['#4a2e1e', '#3c2618', 48, 24], clouds: false, stars: true,
+      lights: [[neon, 0, 4.5, -2, 40, 22], [pink, -16, 3, 12, 30, 18], [neon, 16, 3, 0, 30, 18], ['#ffd27a', 0, 3, 16, 25, 14], ['#ffd27a', 0, 3, -15, 25, 14]] },
+    ...fin(boxes), props,
+    spawns: [[-22.5, -18], [22.5, 18], [-22.5, 18], [22.5, -18], [-16, -12], [16, -15], [-18.5, 0], [16, 3], [16, 17], [-14.5, 12], [0, 10], [-12, -15, H], [12, -14, H]],
+    pickups: [['health', 0, -7], ['health', -18.5, -4.5], ['health', 16, -2], ['ammo', 2, -12, H], ['ammo', 15, -16, 2 * H], ['ammo', 16, 11], ['ammo', -22.6, 6],
+      ['grenade', 8, 2], ['grenade', -8, 2], ['grenade', 0, 15, 1], ['grenade', -2, -16, 2 * H]],
+    showcase: [0, 0, 6], view: [-2, 1, 13, -0.08, -0.08], openMax: 7,
+    test: { stairs: { from: [-4.2, 0, -18.5], to: [2.2, H, -18.5], level: H }, under: { from: [-9, 0, -13], to: [-3, 0, -13], ceil: 3.0 }, roof: { from: [9.3, H, -18.5], to: [15.7, 2 * H, -18.5], level: 2 * H } },
   });
 }
 
