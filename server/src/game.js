@@ -14,6 +14,8 @@ import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
+import { BOMB, W_BOMB, bombLayout, newBombState, startRound, stepBomb, blastVictims, packBomb, spawnPool, botObjective, bombFrozen } from '../../shared/bomb.js';
+const MODE_OK = (m) => (m === 'dom' || m === 'bomb' ? m : 'dm');
 
 export const MAX_PLAYERS = 10;
 const RS_SAFETY = 60; // s: cliente antigo que nunca manda 'rs' renasce sozinho depois disso
@@ -34,7 +36,7 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y, z: p.z });
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm', time: normTime(cfg.time) };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: MODE_OK(cfg.mode), time: normTime(cfg.time) };
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
@@ -43,7 +45,8 @@ export class Game {
   now() { return Date.now() / 1000; }
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
   syncClock() { if (this.state === 'playing' && this.t0) this.T = Math.max(this.T, this.now() - this.t0); }
-  get teamMode() { return this.cfg.mode === 'dom'; }
+  get teamMode() { return this.cfg.mode === 'dom' || this.cfg.mode === 'bomb'; } // Dominação e Bomba têm times
+  get bombMode() { return this.cfg.mode === 'bomb'; }
   live() { return [...this.ents.values()].filter((e) => e.bot || e.connected); }
   teamCounts(exclude, humansOnly = true) { const c = [0, 0]; for (const e of this.live()) if (e !== exclude && (!humansOnly || !e.bot) && (e.team === 0 || e.team === 1)) c[e.team]++; return c; }
   // escolha de time (lobby, pré-partida ou entrando no meio): -1 = automático. Bloqueia se deixaria 2+ humanos a mais.
@@ -163,22 +166,27 @@ export class Game {
     }
     this.syncBots();
     if (this.teamMode) { for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = -1; for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = smallerTeam(this.teamCounts(null, false)); }
-    this.teamScore = [0, 0]; this.zone = this.teamMode ? newZoneState(pickZone(this.nav)) : null;
+    this.teamScore = [0, 0]; this.zone = this.cfg.mode === 'dom' ? newZoneState(pickZone(this.nav)) : null;
+    this.bomb = null; this.bombL = null;
+    if (this.bombMode) { // Modo Bomba (protótipo): lados + sites A/B do mapa, rodada 1 começa na preparação
+      this.bombL = bombLayout(this.nav, this.spawns, map); this.bomb = newBombState(); this.teamScore = this.bomb.score;
+      for (const ev of startRound(this.bomb, 0, this.live())) this.events.push(['bb', ...ev]);
+    }
     for (const e of this.ents.values()) if (e.bot || e.connected) this.spawn(e, true);
     this.io.broadcast(this.startMsg()); this.sendLobby();
     this.io.startLoop();
   }
-  get cfgLimit() { return this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; }
+  get cfgLimit() { return this.bombMode ? 1e6 : this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; } // Bomba: acaba em 13 rodadas, não por tempo
   get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
-  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), bomb: this.bomb ? { sites: this.bombL.sites.map((s) => [r2(s.x), r2(s.y), r2(s.z)]), atk: this.bombL.atk, def: this.bombL.def, s: packBomb(this.bomb) } : undefined, win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.rockets = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
   endMsg() {
     const rows = [...this.ents.values()].filter((e) => e.bot || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
-    const i = MAPS.findIndex((m) => m.id === this.mapId), ts = this.teamScore || [0, 0];
+    const i = MAPS.findIndex((m) => m.id === this.mapId), ts = (this.bomb ? this.bomb.score : this.teamScore) || [0, 0];
     return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: MAPS[(i + 1) % MAPS.length].id, hostId: this.hostId };
   }
   score(e) { return this.teamMode ? e.kills + 2 * e.caps : e.kills; }
@@ -197,7 +205,7 @@ export class Game {
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
-        if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
+        if ((m.mode === 'dm' || m.mode === 'dom' || m.mode === 'bomb') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode !== 'dm') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); break;
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
       case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? MAPS[(MAPS.findIndex((x) => x.id === this.mapId) + 1) % MAPS.length].id : this.cfg.map)); break;
@@ -238,6 +246,7 @@ export class Game {
       if (e.slots.includes(m.w) && m.w !== e.weapon) { e.weapon = m.w; e.reload = null; }
       this.pushHist(e);
     }
+    e.useHold = !!m.bk; // Modo Bomba: segurando E (plantar/desarmar)
     if (Array.isArray(m.ev)) for (const ev of m.ev.slice(0, 24)) this.onEvent(e, ev);
   }
   onEvent(e, ev) {
@@ -344,7 +353,7 @@ export class Game {
   }
   friends(a, b) { return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
   damage(t, amount, a, w, head, back = false) {
-    if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
+    if (!t.alive || this.T < t.invulnUntil || this.friends(t, a) || bombFrozen(this.bomb)) return false; // sem fogo amigo; Bomba: ninguém leva dano na preparação
     t.hp -= amount; t.lastAttacker = a ? a.id : 0; noteHurt(t, a, this.T); // regen só com dano de outro
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
     this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0]);
@@ -355,7 +364,7 @@ export class Game {
     t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + RESPAWN_TIME; if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
     if (a && a !== t) a.kills++;
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
-    const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
+    const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w === W_BOMB ? W_NADE : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1); else if (w === W_BOMB) ev.push(3); // 3 = botijão (clientes antigos veem Copo Bomba)
     this.events.push(ev);
     // vira bacon que cura: fica no chão onde morreu pelo mesmo tempo que o bacon aparece no cliente
     this.bacons = this.bacons.filter((b) => b.id !== t.id);
@@ -406,8 +415,9 @@ export class Game {
   }
   // ---------- renascimento e pickups ----------
   pickSpawn(e) {
-    let best = this.spawns[0], bd = -Infinity;
-    for (const s of this.spawns) {
+    const pool = spawnPool(this.bomb, this.bombL, e.team), list = pool ? pool.map((i) => this.spawns[i]) : this.spawns; // Bomba: spawn do lado do time
+    let best = list[0], bd = -Infinity;
+    for (const s of list) {
       let md = 1e9, seen = false; const eye = { x: s.x, y: s.y + 1.5, z: s.z };
       for (const o of this.ents.values()) { if (o === e || !o.alive || this.friends(o, e)) continue; const d = dist(o.pos, s); md = Math.min(md, d); if (!seen && d < 60 && this.P.losClear(eye, center(o, 1.5))) seen = true; }
       const score = Math.min(md, 40) + Math.random() * 6 - (seen ? 30 : 0); if (score > bd) { bd = score; best = s; }
@@ -472,7 +482,8 @@ export class Game {
     this.updatePickups(); this.updateBacons();
     { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) regenStep(e, this.T, rt); }
     if (this.zone) this.updateZone(TICK_DT(this));
-    const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
+    if (this.bomb) this.updateBomb(clamp(this.T - (this.lastBombT ?? this.T), 0, 0.25)); this.lastBombT = this.T;
+    const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, b: this.bomb ? packBomb(this.bomb) : undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
       (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping]), ev: this.events };
     this.events = [];
     this.io.broadcast(snap);
@@ -488,6 +499,17 @@ export class Game {
       if (this.teamScore[got] >= DOM.WIN_CAPS) this.pendingEnd = true;
     }
   }
+  // Modo Bomba: rodadas, plantar/desarmar, explosão (regras em shared/bomb.js; eventos 'bb' pros clientes)
+  updateBomb(dt) {
+    const S = this.bomb, live = this.live();
+    for (const ev of stepBomb(S, live, this.T, dt, this.bombL.sites)) {
+      this.events.push(['bb', ...ev]);
+      if (ev[0] === 'plant' || ev[0] === 'defuse') { const e = this.ents.get(ev[1]); if (e) e.caps++; } // conta como objetivo no placar
+      else if (ev[0] === 'boom') { const pl = this.ents.get(ev[4]); for (const v of blastVictims(S, live, { x: ev[1], y: ev[2], z: ev[3] })) this.kill(v, pl && pl !== v && !this.friends(pl, v) ? pl : null, W_BOMB, false); }
+      else if (ev[0] === 'round') { this.nades = []; this.rockets = []; for (const e of live) if (!e.pendingTeam) this.spawn(e); } // rodada nova: todo mundo volta pro spawn com vida cheia
+      else if (ev[0] === 'over') this.pendingEnd = true;
+    }
+  }
   // ---------- bots (mesma lógica dos bots offline, sem Three.js) ----------
   randomWaypoint() { const n = this.nav.randomNode(); return n ? { x: n.x, y: n.y, z: n.z } : { x: rand(-10, 10), y: 0, z: rand(-10, 10) }; }
   steer(b, goal) {
@@ -500,6 +522,7 @@ export class Game {
   }
   // Dominação: ponto dentro da zona pra onde o bot vai (null = já está dentro, ou modo sem zona)
   zoneGoal(b) {
+    if (this.bomb) return botObjective(this.bomb, b, this.bombL.sites, this.live()); // Bomba: site/botijão (null = segura a posição)
     const z = this.zone; if (!z) return null;
     if (inZone(z, b.pos) && Math.hypot(b.pos.x - z.x, b.pos.z - z.z) < DOM.RADIUS * 0.7) return null;
     if (!b.zoneOff || b.zoneOff.z !== z) { const a = rand(0, Math.PI * 2), r = rand(0, DOM.RADIUS * 0.5); b.zoneOff = { z, x: Math.cos(a) * r, zz: Math.sin(a) * r }; }
@@ -514,6 +537,7 @@ export class Game {
   }
   updateBot(b, dt) {
     if (!b.alive) return;
+    if (bombFrozen(this.bomb)) { b.vel.x = b.vel.z = 0; b.useHold = false; return; } // Bomba: preparação, todo mundo parado
     if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; b.reloadEnd = 0; }
     b.think -= dt;
     if (b.think <= 0) {
@@ -535,7 +559,7 @@ export class Game {
       const range = BOT_RANGE[b.weapon];
       const zg = this.zoneGoal(b);
       if (zg) { const st = this.steer(b, zg); if (st) { mx += st.x * 1.5; mz += st.z * 1.5; } } // Dominação: vai pra zona atirando
-      else if (this.zone) { /* dentro da zona: segura a posição, só strafe */ }
+      else if (this.zone || this.bomb) { /* dentro da zona / no objetivo: segura a posição, só strafe */ }
       else if (Math.abs(t.pos.y - b.pos.y) > 1.2 && d > 3) { const st = this.steer(b, t.pos); if (st) { mx += st.x; mz += st.z; } }
       else if (b.weapon === KNIFE) { if (d > 1.1) { mx += tx; mz += tz; } } // faca: cola no alvo
       else if (d > range + 3) { mx += tx; mz += tz; } else if (d < range - 3) { mx -= tx; mz -= tz; }
@@ -552,12 +576,13 @@ export class Game {
       const hp = b.hp < 45 ? near('health', 1e9) : null, np = !hp && b.nades < 2 ? near('grenade', 22) : null;
       const zg = this.zoneGoal(b);
       let bc = null; if (b.hp < 60) { let bd = 12; for (const x of this.bacons) { if (x.id === b.id || this.T - x.born < BACON_ITEM.from || Math.abs(x.y - b.pos.y) >= BACON_ITEM.dy) continue; const d = dist(x, b.pos); if (d < bd) { bd = d; bc = x; } } }
-      if (bc) goal = bc; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
+      if (bc) goal = bc; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone || this.bomb) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
       const gx = goal.x - b.pos.x, gz = goal.z - b.pos.z;
       if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5 && !(bc && Math.hypot(gx, gz) > 0.1)) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
       else { const st = this.steer(b, goal) || { x: gx / Math.hypot(gx, gz), z: gz / Math.hypot(gx, gz) }; mx = st.x; mz = st.z; desiredYaw = face(st.x, st.z); }
       if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5 && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
     }
+    if (b.useHold) { mx = 0; mz = 0; } // plantando/desarmando: fica parado
     const sp = BOT_SPEED * (b.weapon === KNIFE ? MELEE.speedMul : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
     const acc = b.onGround ? 10 : 3; b.vel.x += (mx - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (mz - b.vel.z) * Math.min(1, acc * dt);
     const blocked = this.P.moveEntity(b, dt);
