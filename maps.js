@@ -180,7 +180,7 @@ export const MAPS = [];
       ['ammo', 2, -4.5, 3.5], ['ammo', -2, 4.5, 3.5], ['ammo', -14.5, -11], ['ammo', 14.5, 11], ['ammo', -27, 3, 7], ['ammo', 27, -3, 7],
       ['grenade', -14.5, 11], ['grenade', 14.5, -11], ['grenade', -20, 0], ['grenade', 20, 0], ['grenade', -2.3, 19, 4.4]],
     showcase: [0, 0, 9], view: [-20, 0, 1.5, -1.62, 0.0], openMax: 7,
-    test: { stairs: { from: [-28.4, 0, -5.5], via: [[-23.5, -5.5]], to: [-23.5, 3.5, -3.6], level: 3.5 }, roof: { from: [-28.4, 3.5, 5.5], via: [[-23.5, 5.5]], to: [-25.5, 7.0, 4.0], level: 7.0 }, under: { from: [-29, 0, -2.5], to: [-23.5, 0, -2.5], ceil: 3.2 } },
+    test: { stairs: { from: [-28.4, 0, -5.5], via: [[-23.5, -5.5]], to: [-23.5, 3.5, -3.6], level: 3.5 }, roof: { from: [-28.4, 3.5, 5.5], via: [[-23.5, 5.5]], to: [-23.5, 7.0, 4.0], level: 7.0 }, under: { from: [-29, 0, -2.5], to: [-23.5, 0, -2.5], ceil: 3.2 } },
   });
 }
 
@@ -410,7 +410,7 @@ export const MAPS = [];
       ['grenade', -24, 0], ['grenade', 24, 0], ['grenade', 0, 16, 3], ['grenade', 0, -16, 3]],
     openMax: 7.5, // mapa de Sniper: um pouco mais aberto de propósito
     showcase: [22, 0, 36], view: [0, 4.4, 50, 0, -0.04],
-    test: { stairs: { from: [10, 0, 63], to: [10, 4.4, 50], level: 4.4 }, roof: { from: [-6.5, 4.4, 50.6], via: [[-6.5, 61.6]], to: [-2.5, 8.4, 61.6], level: 8.4 }, under: { from: [-8, 0, 2.8], to: [8, 0, 2.8], ceil: 2.7 } },
+    test: { stairs: { from: [10, 0, 63], to: [10, 4.4, 50], level: 4.4 }, roof: { from: [-6.5, 4.4, 50.6], via: [[-6.5, 61.6]], to: [-2.5, 8.4, 61.6], level: 8.4 }, under: { from: [-8, 0, 1.8], to: [8, 0, 1.8], ceil: 2.7 } },
   });
 }
 
