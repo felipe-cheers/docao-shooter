@@ -216,7 +216,7 @@ Campo "Seu nome" no menu, na janela "Jogar online" e no lobby (botão **Trocar**
 - Regras em `shared/names.js` (cliente e servidor): tira tags/controles/caracteres invisíveis, junta espaços, máximo **16** caracteres, padrão "Docão".
 - O servidor evita nomes repetidos na sala: o segundo "Matheus" vira **"Matheus (2)"** (o lobby avisa como você aparece). Bots não pegam nome de humano.
 - Troca de nome vale no lobby/entre partidas (durante a partida muda na próxima).
-- Teste: `node test-online-names.mjs http://localhost:8124/ ws://127.0.0.1:8787`.
+- Teste: `node test-online-names.mjs http://localhost:8124/ ws://127.0.0.1:8787` (gera `screenshots/19-nomes-*.png`).
 
 ## Arquivos
 - `index.html`, `style.css`: UI (menu com seletor de skin, HUD, pausa, placar)

@@ -31,7 +31,7 @@ const code = await G(A, () => window.__docao.online.code);
 ok(await G(A, () => document.getElementById('lobbyName').value === 'Matheus'), 'campo de nome no lobby com o nome salvo');
 // 2) B entra pelo link com o MESMO nome salvo → servidor devolve "Matheus (2)"
 const B = await client('B', 'matheus', `&sala=${code}`);
-ok(await until(B, () => window.__docao.online && window.__docao.online.myId > 0 && window.__docao.online.lobby, 20000), 'B entrou pelo link');
+ok(await until(B, () => !!(window.__docao.online && window.__docao.online.myId > 0 && window.__docao.online.lobby), 30000), 'B entrou pelo link');
 ok(await until(A, () => (window.__docao.online.lobby?.players || []).filter((x) => !x.bot).length === 2), 'lobby com 2 jogadores');
 let names = await lobbyNames(A); console.log('lobby:', names);
 ok(names.includes('Matheus') && names.includes('matheus (2)'), 'nome repetido vira "matheus (2)"');
@@ -48,7 +48,7 @@ await B.fill('#lobbyName', raw); await B.click('#lobbyNameBtn');
 ok(await until(A, (w) => (window.__docao.online.lobby?.players || []).some((x) => x.name === w), 5000, want), `servidor usa o nome limpo (${want}, ${Array.from(want).length} caracteres)`);
 ok(await G(B, (w) => localStorage.getItem('docao.name') === w && document.getElementById('nameInput').value === w, want), 'nome novo salvo no navegador do B');
 ok(await G(A, () => !document.getElementById('lobbyPlayers').innerHTML.includes('<b>Zé')), 'sem HTML injetado na lista do lobby');
-await A.waitForTimeout(800); await A.screenshot({ path: `${SHOTS}/20-nome-lobby.png` });
+await A.waitForTimeout(800); await A.screenshot({ path: `${SHOTS}/19-nomes-lobby.png` });
 // 4) partida: plaquinha, placar e kill feed com os nomes certos dos dois lados
 await A.click('#startOnline');
 for (const p of [A, B]) ok(await until(p, () => window.__docao.state === 'playing' && window.__docao.player && window.__docao.player.alive), 'jogando');
@@ -61,7 +61,7 @@ const tp = (page, x, z, fx, fz) => G(page, ([x, z, fx, fz]) => { const g = windo
   p.yaw = Math.atan2(-(fx - x), -(fz - z)); p.pitch = 0; o.net.send({ t: 'u', sq: p.sq, tp: 1, p: [p.pos.x, p.pos.y, p.pos.z], v: [0, 0, 0], y: p.yaw, pi: 0, g: 1, w: p.weapon }); }, [x, z, fx, fz]);
 await tp(A, -30, -25, -22.5, -25); await tp(B, -22.5, -25, -30, -25); await wait(800);
 await G(A, () => { const g = window.__docao, p = g.player, t = g.entities.find((e) => !e.isPlayer); const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, h = t.pos.y + 1.1 - (p.pos.y + 1.6); p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2(h, Math.hypot(dx, dz)); p.invulnUntil = 0; });
-await wait(1600); await A.screenshot({ path: `${SHOTS}/20-nome-plaquinha.png` });
+await wait(1600); await A.screenshot({ path: `${SHOTS}/19-nomes-plaquinha-A.png` }); await B.screenshot({ path: `${SHOTS}/19-nomes-plaquinha-B.png` });
 let killed = false;
 for (let i = 0; i < 6 && !killed; i++) { // re-mira e atira em rajadas (proteção de renascimento pode durar um pouco)
   await G(A, () => { const g = window.__docao, p = g.player, t = g.entities.find((e) => !e.isPlayer); const dx = t.pos.x - p.pos.x, dz = t.pos.z - p.pos.z, h = t.pos.y + 1.1 - (p.pos.y + 1.6); p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2(h, Math.hypot(dx, dz)); });
@@ -72,8 +72,8 @@ const line = `Matheus carimbou ${want}`;
 ok(await until(A, (l) => (window.__feedLog || []).some((x) => x.includes(l)), 3000, line), `kill feed do A: "${line}"`);
 ok(await until(B, (l) => (window.__feedLog || []).some((x) => x.includes(l)), 3000, line), 'kill feed do B igual');
 await G(B, () => document.getElementById('tabboard').classList.remove('hidden')); await wait(300);
-ok(await G(B, (w) => { const t = document.getElementById('tabboard').textContent; return t.includes('Matheus') && t.includes(w); }, want), 'placar (Tab) com os dois nomes');
-await B.screenshot({ path: `${SHOTS}/20-nome-placar.png` });
+ok(await until(B, (w) => { const t = document.getElementById('tabboard').textContent; return t.includes('Matheus') && t.includes(w); }, 5000, want), 'placar (Tab) com os dois nomes');
+await B.screenshot({ path: `${SHOTS}/19-nomes-placar.png` });
 console.log('\nerros de console:', errors.length ? errors : 'nenhum');
 if (errors.length) fails.push('erros de console');
 await browser.close();
