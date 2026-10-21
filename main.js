@@ -1394,7 +1394,17 @@ function buildSkinPicker() {
 buildSkinPicker(); setPreview(selectedSkin); buildPrimaryPickers();
 
 // ---------------- Mapas ----------------
-let navMs = 0, showBaseY = 3, menuPreviewX = 0;
+let navMs = 0, showBaseY = 3, menuPreviewX = 0, showCamYaw = 0;
+// câmera da vitrine: por padrão olha o Docão de frente (+Z), mas se tiver parede/ônibus/casa no caminho (ex.: Vizinhança Cheers,
+// onde a câmera ficava dentro do ônibus e o menu mostrava só um fundo escuro) gira em volta até achar um ângulo livre.
+function pickShowcaseCam() {
+  const sp = showcase.position, head = new V3(sp.x, showBaseY + 1.0, sp.z);
+  for (const a of [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2, -2, 2.5, -2.5, Math.PI]) {
+    const far = new V3(sp.x + Math.sin(a) * 4.6, showBaseY + 1.25, sp.z + Math.cos(a) * 4.6);
+    if (losClear(head, far)) { showCamYaw = a; return; }
+  }
+  showCamYaw = 0;
+}
 function loadMap(id) {
   const map = getMap(id);
   if (currentMap === map && worldGroup) return map;
@@ -1409,7 +1419,7 @@ function loadMap(id) {
   const t0 = performance.now();
   nav = buildNav({ hx: map.size[0], hz: map.size[1], spacing: map.navSpacing || 2, collides, groundAt, solids, topAt, seeds: SPAWNS.map((s) => [s.x, s.y, s.z]), extra: map.waypoints || [] });
   navMs = performance.now() - t0;
-  showcase.position.set(...map.showcase); showBaseY = map.showcase[1];
+  showcase.position.set(...map.showcase); showBaseY = map.showcase[1]; pickShowcaseCam();
   currentMap = map; return map;
 }
 // seletor: mapa salvo no navegador ('random' = aleatório a cada partida)
@@ -1589,7 +1599,7 @@ function loop() {
     if (!online && gameTime >= (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT)) endGame();
   } else if (state === 'menu') {
     menuT += dt * 0.25;
-    const sp = showcase.position; camera.position.set(sp.x, showBaseY + 1.25, sp.z + 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
+    const sp = showcase.position; camera.position.set(sp.x + Math.sin(showCamYaw) * 3.5, showBaseY + 1.25, sp.z + Math.cos(showCamYaw) * 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
     // Docão da vitrine centralizado no espaço livre à direita do painel do menu (recalcula a cada frame: janela redimensionada,
     // menu mais largo com as 6 primárias...). Antes era um deslocamento fixo de 22% e, em janelas menores, a skin ficava atrás do menu.
     const pr = $('menu').classList.contains('hidden') ? null : $('menu').querySelector('.panel').getBoundingClientRect();

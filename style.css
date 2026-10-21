@@ -248,3 +248,6 @@ body.dead #centermsg{top:22%}
 #deathMelee button.primchip{max-width:260px;cursor:default;background:#5a4a3a;outline:3px solid #7DF9FF;outline-offset:1px}
 #deathMelee button.primchip small{color:#e8fbff}
 .kf.knife i{color:#7DF9FF}
+
+/* barra de prêmios por abate só na partida: no menu ela cobria o Docão da vitrine */
+body:has(#menu:not(.hidden)) #streakBar { display: none !important; }

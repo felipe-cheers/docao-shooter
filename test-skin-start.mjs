@@ -17,6 +17,41 @@ for (const [w, h] of [[1920, 1080], [1366, 768], [1280, 720], [1024, 768]]) {
   if (w === 1024) await page.screenshot({ path: `${SHOTS}/21-skin-vitrine-1024.png` });
   await page.close();
 }
+// pixels de verdade: o Docão (pele laranja/amarela) tem que aparecer na área livre à direita do painel, em todos os mapas.
+// Pega o caso da Vizinhança Cheers, em que a câmera da vitrine ficava dentro do ônibus e só aparecia fundo escuro.
+const pigPixels = async (page) => {
+  const p = await prev(page); if (!p) return { n: 0 };
+  const x0 = Math.max(Math.round(p.right) + 4, Math.round(p.x - 110)), x1 = Math.min(p.w, Math.round(p.x + 110));
+  const vh = page.viewportSize().height, y0 = Math.max(0, Math.round(p.y - 190)), y1 = Math.min(vh, Math.round(p.y + 90));
+  if (x1 - x0 < 20) return { n: 0, p };
+  const buf = await page.screenshot({ clip: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } });
+  const n = await page.evaluate(async (b64) => {
+    const img = await createImageBitmap(await (await fetch('data:image/png;base64,' + b64)).blob());
+    const c = new OffscreenCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, img.width, img.height).data; let k = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 110 && d[i + 1] < 225 && d[i + 2] < 120) k++;
+    return k;
+  }, buf.toString('base64'));
+  return { n, p };
+};
+const MAP_IDS = ['arena', 'duas-pocilgas', 'celeiro-industrial', 'mercadao', 'torres-do-barril', 'vizinhanca-cheers', 'bar-cheers'];
+for (const [w, h, maps] of [[1024, 554, MAP_IDS], [1280, 720, ['vizinhanca-cheers', 'arena']], [1440, 900, ['vizinhanca-cheers', 'bar-cheers']]]) {
+  for (const m of maps) {
+    const page = await browser.newPage({ viewport: { width: w, height: h } });
+    page.on('pageerror', (e) => errors.push(`[${w} ${m}] ${e.message}`));
+    await page.addInitScript((m) => { localStorage.setItem('docao.skin', 'cavaleiro-galactico'); localStorage.setItem('docao.map', m); }, m);
+    await page.goto(SITE, { waitUntil: 'load' }); await page.waitForTimeout(1200);
+    const r = await pigPixels(page);
+    ok(r.n > 300, `${w}x${h} ${m}: Docão visível na vitrine (${r.n} px de pele)`);
+    if (m === 'vizinhanca-cheers') await page.screenshot({ path: `${SHOTS}/22-vitrine-${m}-${w}.png` });
+    if (w === 1024 && m === 'vizinhanca-cheers') { // trocar de skin atualiza a vitrine e o Docão continua visível
+      await page.click('#skinNext'); await page.waitForTimeout(500);
+      const r2 = await pigPixels(page);
+      ok(r2.p && r2.p.skin === 'nomade-do-deserto' && r2.n > 300, `${w}x${h} ${m}: trocar skin atualiza a vitrine (${r2.p && r2.p.skin}, ${r2.n} px)`);
+    }
+    await page.close();
+  }
+}
 // redimensionar a janela
 {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
