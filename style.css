@@ -103,6 +103,8 @@ button.skinchip.active{outline:3px solid #7DF9FF;outline-offset:2px}
 .nlabel{font-size:12px;font-weight:bold;color:#ff9fb6;margin-right:4px;text-shadow:0 1px 0 #000}
 .cupicon{display:inline-block;width:20px;height:26px;background:linear-gradient(#fff 0 14%,#e0232b 14% 100%);clip-path:polygon(0 0,100% 0,82% 100%,18% 100%);opacity:.25;filter:drop-shadow(0 0 1px #000)}
 .cupicon.on{opacity:1}
+#tac{text-align:right;font-size:12px;font-weight:bold;color:#d7ece4;text-shadow:0 1px 0 #000;margin-bottom:4px}
+#tac b{color:#fff}
 #powermeter{position:fixed;left:50%;top:calc(50% + 46px);transform:translateX(-50%);text-align:center}
 #powertext{font-size:13px;font-weight:bold;color:#7DF9FF;text-shadow:0 1px 0 #000;margin-bottom:4px}
 #powerbar{width:220px;height:14px;border:3px solid #2a1410;border-radius:9px;background:rgba(0,0,0,.5);overflow:hidden}
