@@ -1476,14 +1476,20 @@ function toMenu() {
   ['pause', 'gameover', 'hud'].forEach((id) => $(id).classList.add('hidden')); $('menu').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
 }
-function lockPointer() { try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) { /* sem pointer lock */ } }
+// pede o pointer lock DENTRO do gesto do usuário (clique/tecla). Se o navegador recusar, mostra o aviso e o próximo clique no jogo tenta de novo.
+const RELOCK_MSG = 'Clique pra voltar a mirar';
+function lockPointer() {
+  window.__lockCalls = (window.__lockCalls || 0) + 1;
+  const fail = () => { if (state === 'playing' && player && player.alive && document.pointerLockElement !== canvas) flashMsg(RELOCK_MSG); };
+  try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(fail); } catch (e) { fail(); }
+}
 
 $('playBtn').onclick = () => startGame(); $('menuBtn').onclick = toMenu;
 $('resumeBtn').onclick = resume; $('quitBtn').onclick = toMenu;
 $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); e.stopPropagation(); });
 
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement === canvas) { hadLock = true; deathUnlock = false; }
+  if (document.pointerLockElement === canvas) { hadLock = true; deathUnlock = false; if ($('centermsg').textContent === RELOCK_MSG) { $('centermsg').textContent = ''; msgTimer = 0; } }
   else if (state === 'playing' && hadLock && !deathUnlock && !pickingStrike) pause(); // soltar o mouse ao morrer, ou pra escolher o míssil, não pausa
 });
 document.addEventListener('mousemove', (e) => {
@@ -1715,12 +1721,15 @@ function updateRespawnBtn(p) {
 }
 function requestRespawn() {
   const p = player; if (state !== 'playing' || !respawnReady(p) || rsSent) return false;
+  lockPointer(); // primeiro, ainda dentro do gesto (clique em RENASCER ou Espaço/Enter): a mira volta na hora
   if (online) { rsSent = true; online.net.send({ t: 'rs' }); } else respawn(p);
-  lockPointer(); return true;
+  return true;
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
 function onPlayerDeath() { rsSent = false; resetRewards(); if (document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; }
-function onPlayerRespawn() { rsSent = false; deathCamState.on = false; if (ghost) ghost.model.group.visible = false; if (!document.pointerLockElement && deathUnlock && state === 'playing') flashMsg('Clique pra voltar a mirar'); }
+function onPlayerRespawn() { rsSent = false; deathCamState.on = false; if (ghost) ghost.model.group.visible = false;
+  // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
+  setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 
 // ============================================================
 //  Online (Cloudflare Worker + Durable Object — ver server/ e net.js)
