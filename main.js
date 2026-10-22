@@ -4,12 +4,14 @@ import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, toon, out
 import { makeFPSniper, poseSniperBolt } from './sniper-view.js';
 import { makeFPSaber, makeWorldSaber, setSaberColor, poseSaber } from './saber-view.js';
 import { makeFPCrossbow, makeFPBow, poseDraw, poseRelease, makeFlightShaft } from './bow-view.js';
+import { renderWeaponThumb } from './weapon-thumbs.js';
+import { camoLevel, camoInfo, nextCamo, applyWeaponCamo, resetWeaponCamo } from './weapon-camo.js';
 import { createSaberSfx } from './saber-sfx.js';
 import { resetFeedback, feedbackPoints, feedbackHit, feedbackKill, feedbackAward, tickFeedback } from './feedback.js';
 import { SMOKE, STUN, makeTacticalMesh, makeSmokeCloud, inRadius } from './tactical-nades.js';
 import { mountUav, showUav, drawUav, tickUav, hideUav } from './uav.js';
 import { mountStreakUi, setStreakCount, setStreakCycle, openStrikeMap, closeStrikeMap, showNukeCount, hideNuke, showNukeReady, hideNukeReady } from './killstreak-ui.js';
-import { makeTablet, poseTablet, makeRadio, poseRadio } from './fp-gear.js';
+import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } from './fp-gear.js';
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
 import { MAPS, getMap } from './maps.js';
@@ -208,7 +210,7 @@ function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
   const skin = getSkin(skinId);
   const e = { name, isPlayer, skinId: skin.id, float: !!skin.float, floatPh: Math.random() * 6, nextWisp: 0, shirt: (skin.shirt && skin.shirt.color) || '#d8261c', tag, pos: new V3(), vel: new V3(), yaw: 0, pitch: 0, onGround: false, hp: 100, alive: true,
     kills: 0, deaths: 0, invulnUntil: 0, weapon: 0, primary: 0, nextPrimary: 0, mag: WEAPONS.map(() => 0), reserve: WEAPONS.map(() => 0), reloadEnd: 0, nextFire: 0, switchEnd: 0, actionEnd: 0,
-    respawnAt: 0, deathAt: 0, fxDeath: 0, lastAttacker: null, flashUntil: 0, nades: 0, smokeNades: 0, stunNades: 0, stunUntil: 0, charging: false, chargeStart: 0, nextNade: 0 };
+    respawnAt: 0, deathAt: 0, fxDeath: 0, lastAttacker: null, flashUntil: 0, nades: 0, smokeNades: 0, stunNades: 0, stunUntil: 0, charging: false, chargeStart: 0, nextNade: 0, gunKills: WEAPONS.map(() => 0) };
   e.nextPrimary = isPlayer ? selectedPrimary : BOT_PRIMARIES[Math.floor(Math.random() * BOT_PRIMARIES.length)];
   e.nextSecondary = isPlayer ? selectedSecondary : PISTOL;
   e.nextMelee = isPlayer ? selectedMelee : KNIFE;
@@ -703,7 +705,7 @@ function kill(t, a, wIdx, head, back = false, noReward = false) {
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head, back);
   sfx.die(t.isPlayer ? 1 : distVol(t.pos));
-  if (a && a.isPlayer && a !== t) { sfx.kill(); if (!noReward) notePlayerKill(t, head); }
+  if (a && a.isPlayer && a !== t) { sfx.kill(); if (!noReward) { notePlayerKill(t, head); noteWeaponKill(a, wIdx); } }
   if (t.isPlayer) { if (a && a !== t) revengeName = a.name; showStamp(wIdx); onPlayerDeath(); }
   if (a && a.kills >= KILL_LIMIT && !teamMode()) endGame();
 }
@@ -777,7 +779,8 @@ function flashMsg(t) { $('centermsg').textContent = t; msgTimer = 1.5; }
 const STREAK_LAP = 10;
 const streakCycle = (kills) => (kills <= 0 ? 0 : ((kills - 1) % STREAK_LAP) + 1);
 let rewardKills = 0, nukeAt = 0, uavLive = false, pickingStrike = false, nukeReady = false;
-let tabletWant = 0, radioWant = 0, tabletK = 0, radioK = 0;
+let streakReady = [];
+let tabletWant = 0, radioWant = 0, laptopWant = 0, tabletK = 0, radioK = 0, laptopK = 0;
 let heli = null;
 const HELI = { hp: 280, life: 30, height: 17, hit: 3.1, dmg: 16, rate: 0.22 };
 function syncRewardHud() {
@@ -786,8 +789,9 @@ function syncRewardHud() {
 }
 function resetRewards(keepBoom = false) {
   const pending = keepBoom && nukeAt > gameTime ? nukeAt : 0;
-  rewardKills = 0; uavLive = false; nukeReady = false;
-  tabletWant = 0;
+  rewardKills = 0; uavLive = false; nukeReady = false; streakReady = [];
+  tabletWant = 0; laptopWant = 0;
+  clearPredator();
   if (!pending) { nukeAt = 0; radioWant = 0; hideNuke(); }
   hideUav(); hideNukeReady(); syncRewardHud();
   if (pickingStrike) { pickingStrike = false; closeStrikeMap(); }
@@ -1023,7 +1027,167 @@ function updateHeli(dt) {
   const time = hud.querySelector('small');
   if (time) time.textContent = Math.max(0, Math.ceil(heli.until - gameTime)) + 's';
 }
-function grantNuke() { nukeReady = true; showNukeReady(); flashMsg('Segredo! Aperte F para o fim da chapa'); }
+// Míssil da granja: o de 5. Abre o laptop e você pilota um míssil que desce do céu.
+const PREDATOR = { radius: 26, maxDmg: 460, selfMul: 0.4, knock: 20, lift: 14, speed: 28, life: 16, height: 98 };
+const STREAK_PROMPT = { uav: 'F · Olho da granja', missile: 'F · Míssil da granja', heli: 'F · Gavião da granja', nuke: 'F · Fim da chapa' };
+let predator = null;
+function refreshStreakPrompt() {
+  const id = streakReady[0];
+  if (!id) { hideNukeReady(); return; }
+  showNukeReady();
+  const node = document.getElementById('nukeReady');
+  if (node) node.textContent = STREAK_PROMPT[id] || 'F · killstreak';
+}
+function bankStreak(id) {
+  streakReady.push(id);
+  flashMsg(`${(STREAK_PROMPT[id] || id).replace('F · ', '')} pronto · aperte F`);
+  refreshStreakPrompt();
+}
+function ensurePredatorHud() {
+  let node = document.getElementById('predatorHud');
+  if (!node) {
+    node = document.createElement('div');
+    node.id = 'predatorHud';
+    node.hidden = true;
+    node.innerHTML = '<b>MÍSSIL DA GRANJA</b><i></i><small>mexe o mouse · ele vem do céu</small>';
+    document.body.appendChild(node);
+    const style = document.createElement('style');
+    style.textContent = '#predatorHud{position:fixed;inset:0;z-index:24;pointer-events:none;box-shadow:inset 0 0 0 34px #140e0c,inset 0 0 0 38px #3a2a22,inset 0 0 80px rgba(0,0,0,.45)}#predatorHud[hidden]{display:none!important}#predatorHud b{position:absolute;top:46px;left:50%;transform:translateX(-50%);font-family:Impact,Arial,sans-serif;letter-spacing:1px;color:#d7f3ff;text-shadow:0 2px 0 #000}#predatorHud small{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);color:#ffe8c2;font-weight:bold;text-shadow:0 2px 0 #000}#predatorHud i{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%)}#predatorHud i:before,#predatorHud i:after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px #000}#predatorHud i:before{left:8px;top:-10px;width:2px;height:38px}#predatorHud i:after{top:8px;left:-10px;height:2px;width:38px}';
+    document.head.appendChild(style);
+  }
+  return node;
+}
+function showPredatorHud(on) {
+  const node = ensurePredatorHud();
+  node.hidden = !on;
+}
+function clearPredator() {
+  if (!predator) return;
+  scene.remove(predator.mesh);
+  predator = null;
+  laptopWant = 0;
+  showPredatorHud(false);
+  if (camera.fov !== BASE_FOV) { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); }
+}
+function grantPredator() {
+  if (predator || !currentMap || !player) return;
+  const yaw = player.yaw;
+  const x = player.pos.x - Math.sin(yaw) * 8;
+  const z = player.pos.z - Math.cos(yaw) * 8;
+  const ground = groundAt(x, z, player.pos.y + 4);
+  const mesh = makeRocket(3.2);
+  mesh.children[0].rotation.y = Math.PI;
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff3c4 }));
+  flame.position.z = 0.55;
+  mesh.add(flame);
+  const glow = new THREE.PointLight(0xffb15a, 18, 30);
+  glow.position.z = 0.4;
+  mesh.add(glow);
+  scene.add(mesh);
+  predator = {
+    mesh, flame, phase: 'laptop', until: gameTime + 0.7, born: gameTime,
+    pos: new V3(x, ground + PREDATOR.height, z), yaw, pitch: -1.05, nextSmoke: 0,
+  };
+  laptopWant = 1;
+  mesh.position.copy(predator.pos);
+  flashMsg('Laptop aberto · segura o mouse');
+  if (state === 'playing' && !document.pointerLockElement) lockPointer();
+}
+function predatorDir(p) {
+  const cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
+  return new V3(-Math.sin(p.yaw) * cp, sp, -Math.cos(p.yaw) * cp);
+}
+function predatorAim(p, dir) {
+  p.mesh.position.copy(p.pos);
+  p.mesh.lookAt(p.pos.clone().add(dir));
+}
+function predatorSmoke(p) {
+  if (gameTime < p.nextSmoke) return;
+  p.nextSmoke = gameTime + 0.02;
+  const m = new THREE.Mesh(smokeGeo, new THREE.MeshBasicMaterial({ color: Math.random() < 0.35 ? 0x6a727a : 0xe7e2da, transparent: true, depthWrite: false }));
+  m.position.copy(p.pos);
+  scene.add(m);
+  particles.push({ mesh: m, vel: new V3(rand(-0.4, 0.4), rand(0.2, 0.8), rand(-0.4, 0.4)), life: rand(0.8, 1.3), t: 0, kind: 'smoke', s0: rand(4, 7) });
+}
+function missileHit(from, to) {
+  for (let i = 1; i <= 4; i++) {
+    const p = from.clone().lerp(to, i / 4);
+    const g = groundAt(p.x, p.z, p.y + 1.2);
+    if (p.y <= g + 0.45) return new V3(p.x, g + 0.25, p.z);
+    if (collides(p.x, p.y, p.z)) return p;
+  }
+  return null;
+}
+function endPredator(at) {
+  const where = at.clone();
+  clearPredator();
+  blast(where, player, { radius: PREDATOR.radius, maxDmg: PREDATOR.maxDmg, selfMul: PREDATOR.selfMul, knock: PREDATOR.knock, lift: PREDATOR.lift, wIdx: W_NADE });
+  refreshStreakPrompt();
+}
+function posePredatorCam() {
+  const dir = predatorDir(predator);
+  const side = new V3(dir.z, 0, -dir.x);
+  if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+  side.normalize();
+  // Atrás, acima e um pouco de lado: dá pra ver o corpo do míssil e o chão pra onde ele aponta.
+  camera.up.set(0, 1, 0);
+  camera.position.copy(predator.pos).addScaledVector(dir, -5.2).addScaledVector(side, 1.7);
+  camera.position.y += 2.2;
+  camera.lookAt(predator.pos.clone().addScaledVector(dir, 16));
+  if (camera.fov !== 58) { camera.fov = 58; camera.updateProjectionMatrix(); }
+}
+function updatePredator(dt) {
+  if (!predator) return;
+  const p = predator;
+  if (p.phase === 'laptop') {
+    predatorAim(p, predatorDir(p));
+    if (gameTime >= p.until) { p.phase = 'fly'; p.born = gameTime; laptopWant = 0; showPredatorHud(true); }
+    return;
+  }
+  const dir = predatorDir(p);
+  const next = p.pos.clone().addScaledVector(dir, PREDATOR.speed * dt);
+  const hit = missileHit(p.pos, next);
+  if (hit || gameTime - p.born > PREDATOR.life) { endPredator(hit || next); return; }
+  p.pos.copy(next);
+  if (p.flame) p.flame.scale.setScalar(0.75 + Math.random() * 0.55);
+  if (p.mesh.children[0]) p.mesh.children[0].rotation.z += dt * 14;
+  predatorAim(p, dir);
+  predatorSmoke(p);
+  posePredatorCam();
+}
+function startNukeCountdown() {
+  nukeReady = false; radioWant = 1;
+  nukeAt = gameTime + 5; showNukeCount(5); flashMsg('Fim da chapa');
+  refreshStreakPrompt();
+}
+function useStreak() {
+  if (!player || !player.alive || predator || nukeAt) return;
+  const id = streakReady.shift();
+  if (!id) return;
+  refreshStreakPrompt();
+  if (id === 'uav') grantUav();
+  else if (id === 'missile') grantPredator();
+  else if (id === 'heli') grantHeli();
+  else if (id === 'nuke') startNukeCountdown();
+}
+function grantNuke() { bankStreak('nuke'); }
+function callNuke() {
+  if (!player || !player.alive || nukeAt) return;
+  const i = streakReady.indexOf('nuke');
+  if (i < 0 && !nukeReady) return;
+  if (i >= 0) streakReady.splice(i, 1);
+  startNukeCountdown();
+}
+function onRewardKill() {
+  if (!player || !player.alive) return;
+  rewardKills++;
+  const cycle = streakCycle(rewardKills);
+  syncRewardHud();
+  if (cycle === 3) bankStreak('uav');
+  else if (cycle === 5) bankStreak('missile');
+  else if (cycle === 7) bankStreak('heli');
+  if (rewardKills % STREAK_LAP === 0) bankStreak('nuke');
+}
 function nukeFlash() {
   let el = document.getElementById('nukeFlash');
   if (!el) {
@@ -1035,21 +1199,6 @@ function nukeFlash() {
   el.style.transition = 'none';
   el.style.opacity = '0.9';
   requestAnimationFrame(() => { el.style.transition = 'opacity .55s linear'; el.style.opacity = '0'; });
-}
-function callNuke() {
-  if (!nukeReady || !player || !player.alive || nukeAt) return;
-  nukeReady = false; hideNukeReady(); radioWant = 1;
-  nukeAt = gameTime + 5; showNukeCount(5); flashMsg('Fim da chapa');
-}
-function onRewardKill() {
-  if (!player || !player.alive) return;
-  rewardKills++;
-  const cycle = streakCycle(rewardKills);
-  syncRewardHud();
-  if (cycle === 3) grantUav();
-  else if (cycle === 5) grantMissiles();
-  else if (cycle === 7) grantHeli();
-  if (rewardKills % STREAK_LAP === 0) grantNuke();
 }
 function updateRewards(dt) {
   if (uavLive && player) {
@@ -1099,7 +1248,7 @@ function updateHud(dt) {
   $('hpfill').style.width = Math.max(0, p.hp) + '%'; $('hptext').textContent = Math.max(0, Math.ceil(p.hp));
   $('hpfill').style.background = p.hp > 35 ? '' : 'linear-gradient(#ff7b7b,#e63946)';
   hpBar.classList.toggle('regen', !!(p.alive && p.regenOn)); // brilho verde + "+" pulsando enquanto regenera
-  $('mag').textContent = w.melee ? '∞' : p.mag[p.weapon]; $('reserve').textContent = w.melee ? '' : ' / ' + p.reserve[p.weapon]; $('wname').textContent = w.name;
+  $('mag').textContent = w.melee ? '∞' : p.mag[p.weapon]; $('reserve').textContent = w.melee ? '' : ' / ' + p.reserve[p.weapon]; $('wname').textContent = weaponTitle(p);
   for (let i = 0; i < NADE.max; i++) $('nade' + i).classList.toggle('on', i < p.nades);
   const pm = $('powermeter');
   const pulling = !!(p.alive && p.weapon === BOW && p.bowDraw && !p.charging);
@@ -1111,7 +1260,7 @@ function updateHud(dt) {
   const smokeN = $('smokeN'), stunN = $('stunN');
   if (smokeN) smokeN.textContent = p.smokeNades || 0;
   if (stunN) stunN.textContent = p.stunNades || 0;
-  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive ? '' : 'hidden';
+  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
   $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
@@ -1250,7 +1399,7 @@ const fp = (() => {
   guns.push(cross, bow); // 13 besta, 14 arco
   // braços (pose de fuzil, de pistola e de faca)
   let arms = makeFPArms(getSkin()), armsP = makeFPArms(getSkin(), 'pistol'), armsK = makeFPArms(getSkin(), 'knife'); root.add(arms, armsP); kr.add(armsK); armsP.visible = false; armsP.position.set(0, 0.07, -0.04);
-  const setSkin = (id) => { root.remove(arms, armsP); kr.remove(armsK); arms = makeFPArms(getSkin(id)); armsP = makeFPArms(getSkin(id), 'pistol'); armsK = makeFPArms(getSkin(id), 'knife'); armsP.position.set(0, 0.07, -0.04); root.add(arms, armsP); kr.add(armsK); fpRef.arms = arms; fpRef.armsP = armsP; s.remove(pumpHand); pumpHand = makeFPForearm(getSkin(id)); s.add(pumpHand); root.remove(saberR, saberL); saberR = makeFPForearm(getSkin(id)); saberL = makeFPForearm(getSkin(id)); root.add(saberR, saberL); fpRef.saberR = saberR; fpRef.saberL = saberL; root.remove(bowGrip, bowDraw); bowGrip = makeFPForearm(getSkin(id)); bowDraw = makeFPForearm(getSkin(id)); root.add(bowGrip, bowDraw); fpRef.bowGrip = bowGrip; fpRef.bowDraw = bowDraw; };
+  const setSkin = (id) => { root.remove(arms, armsP); kr.remove(armsK); arms = makeFPArms(getSkin(id)); armsP = makeFPArms(getSkin(id), 'pistol'); armsK = makeFPArms(getSkin(id), 'knife'); armsP.position.set(0, 0.07, -0.04); root.add(arms, armsP); kr.add(armsK); fpRef.arms = arms; fpRef.armsP = armsP; s.remove(pumpHand); pumpHand = makeFPForearm(getSkin(id)); s.add(pumpHand); root.remove(saberR, saberL); saberR = makeFPForearm(getSkin(id)); saberL = makeFPForearm(getSkin(id)); root.add(saberR, saberL); fpRef.saberR = saberR; fpRef.saberL = saberL; root.remove(bowGrip, bowDraw); bowGrip = makeFPForearm(getSkin(id)); bowDraw = makeFPForearm(getSkin(id)); root.add(bowGrip, bowDraw); fpRef.bowGrip = bowGrip; fpRef.bowDraw = bowDraw; pumpHand.userData.noCamo = true; armsK.userData.noCamo = true; };
   const fpRef = { arms, armsP };
   // clarão do disparo
   const flash = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), basic(0xfff27a)); flash.position.set(0, 0.01, -0.78); flash.scale.set(1, 1, 2); flash.visible = false; root.add(flash);
@@ -1260,7 +1409,39 @@ const fp = (() => {
   fpRef.saberR = saberR; fpRef.saberL = saberL; fpRef.bowGrip = bowGrip; fpRef.bowDraw = bowDraw;
   return { root, guns, flash, setSkin, cup, cupThrowT: 0, kick: 0, bob: 0, flashT: 0, pumpPart, get pumpHand() { return pumpHand; }, pumpShoulder, rocketTip, slide, fpRef, actionT: 0, actionLen: 1, shellT: 0, stringT: 0, kr, kpiv, rMag, rCh, pMag, uMag, uCh, p90Mag, p90Ch, nStrip, semiMag, semiCh, sShell, sRound, loadRocket, drops: [], reloadSeen: 0, knifeT: 9, knifeKind: 'slash', knifeDrawT: 0 };
 })();
-fp.tablet = makeTablet(); fp.radio = makeRadio(); fpScene.add(fp.tablet, fp.radio);
+fp.tablet = makeTablet(); fp.laptop = makeLaptop(); fp.radio = makeRadio(); fpScene.add(fp.tablet, fp.laptop, fp.radio);
+// Mãos dentro da arma (pump, ferrolho, braço da faca) não entram na camuflagem nem na miniatura.
+function markWeaponHands() {
+  if (fp.pumpHand) fp.pumpHand.userData.noCamo = true;
+  for (const g of fp.guns) {
+    if (g.userData.boltHand) g.userData.boltHand.userData.noCamo = true;
+    g.traverse((o) => {
+      if (o === g || !o.userData) return;
+      if (o.userData.handR || (o.userData.grip && 'support' in o.userData)) o.userData.noCamo = true;
+    });
+  }
+}
+markWeaponHands();
+function weaponTitle(p) {
+  const w = WEAPONS[p.weapon], n = (p.gunKills && p.gunKills[p.weapon]) || 0;
+  const info = camoInfo(n), nxt = nextCamo(n);
+  if (info && !nxt) return `${w.name} · ${info.name}`;
+  if (info && nxt) return `${w.name} · ${info.name} · ${n}/${nxt.at}`;
+  if (nxt) return `${w.name} · ${n}/${nxt.at}`;
+  return w.name;
+}
+function noteWeaponKill(a, wIdx) {
+  if (!a || !a.isPlayer || wIdx < 0 || wIdx >= WEAPONS.length) return;
+  if (!a.gunKills) a.gunKills = WEAPONS.map(() => 0);
+  const before = camoLevel(a.gunKills[wIdx]);
+  a.gunKills[wIdx]++;
+  const after = camoLevel(a.gunKills[wIdx]);
+  if (after === before) return;
+  applyWeaponCamo(fp.guns[wIdx], after);
+  const info = camoInfo(a.gunKills[wIdx]);
+  if (info) flashMsg(`${WEAPONS[wIdx].short}: ${info.name}`);
+}
+function resetMatchCamos() { for (const g of fp.guns) resetWeaponCamo(g); }
 
 const _saberPt = new V3(), _saberInv = new THREE.Matrix4();
 const SABER_SHOULDERS = [new V3(0.46, -0.62, 0.58), new V3(-0.28, -0.58, 0.52)];
@@ -1356,9 +1537,10 @@ function updateFP(dt) {
   fp.root.visible = p.alive && !scoped(); // com a luneta a arma some
   tabletK += (tabletWant - tabletK) * Math.min(1, dt * 7);
   radioK += (radioWant - radioK) * Math.min(1, dt * 7);
-  fp.tablet.visible = tabletK > 0.04; fp.radio.visible = radioK > 0.04;
-  poseTablet(fp.tablet, tabletK); poseRadio(fp.radio, radioK);
-  if (tabletK > 0.2 || radioK > 0.2) fp.root.visible = false; // guarda a arma para segurar o tablet ou o rádio
+  laptopK += (laptopWant - laptopK) * Math.min(1, dt * 8);
+  fp.tablet.visible = tabletK > 0.04; fp.radio.visible = radioK > 0.04; fp.laptop.visible = laptopK > 0.04;
+  poseTablet(fp.tablet, tabletK); poseRadio(fp.radio, radioK); poseLaptop(fp.laptop, laptopK);
+  if (tabletK > 0.2 || radioK > 0.2 || laptopK > 0.2) fp.root.visible = false; // guarda a arma para segurar o tablet, o laptop ou o rádio
   // copo na mão enquanto carrega o arremesso
   fp.cupThrowT = Math.max(0, fp.cupThrowT - dt);
   if (p.charging && p.alive) { const k = chargePower(); fp.cup.visible = true; fp.cup.position.set(-0.36 - k * 0.05, -0.27 + k * 0.06, -0.72 + k * 0.08); fp.cup.rotation.set(0.25 - k * 0.5, 0.4, 0.15 + k * 0.3); }
@@ -1556,21 +1738,26 @@ function updatePlayer(dt) {
     return;
   }
   // mira com zoom: segura Shift ou o botão direito (com a faca o botão direito é a estocada). No ferrolho da sniper a luneta desce pra mão aparecer.
+  const guiding = !!predator;
   const bolting = fp.actionT > 0 && WEAPONS[p.weapon].bolt;
-  updateAds(dt, !bolting && p.weapon !== KNIFE && p.weapon !== SABER && (keys.ShiftLeft || keys.ShiftRight || rightDown) && p.reloadEnd <= gameTime && p.switchEnd <= gameTime);
-  saberSfx.hum(p.weapon === SABER);
+  updateAds(dt, !guiding && !bolting && p.weapon !== KNIFE && p.weapon !== SABER && (keys.ShiftLeft || keys.ShiftRight || rightDown) && p.reloadEnd <= gameTime && p.switchEnd <= gameTime);
+  saberSfx.hum(p.weapon === SABER && !guiding);
   fwd.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); right.set(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
   const wish = new V3();
-  if (keys.KeyW || keys.ArrowUp) wish.add(fwd); if (keys.KeyS || keys.ArrowDown) wish.sub(fwd);
-  if (keys.KeyD || keys.ArrowRight) wish.add(right); if (keys.KeyA || keys.ArrowLeft) wish.sub(right);
+  if (!guiding && (keys.KeyW || keys.ArrowUp)) wish.add(fwd); if (!guiding && (keys.KeyS || keys.ArrowDown)) wish.sub(fwd);
+  if (!guiding && (keys.KeyD || keys.ArrowRight)) wish.add(right); if (!guiding && (keys.KeyA || keys.ArrowLeft)) wish.sub(right);
   if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (1 - (1 - ADS_SPEED) * ads)); // faca corre; sabre (move 0.7) anda 30% mais devagar
   const acc = p.onGround ? 14 : 4;
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
-  if (keys.Space && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
+  if (!guiding && keys.Space && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
   moveEntity(p, dt);
   const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 : 0;
   camera.position.set(p.pos.x, p.pos.y + EYE + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
-  if (shake > 0) { camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.25)); camera.rotation.z += rand(-1, 1) * shake * 0.05; shake = Math.max(0, shake - dt * 1.8); }
+  if (shake > 0) {
+    if (!guiding) { camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.25)); camera.rotation.z += rand(-1, 1) * shake * 0.05; }
+    shake = Math.max(0, shake - dt * 1.8);
+  }
+  if (guiding) { updatePredator(dt); if (predator && predator.phase === 'fly') posePredatorCam(); return; }
   // tiro
   finishReload(p);
   const w = WEAPONS[p.weapon];
@@ -1858,7 +2045,10 @@ function buildSaberColors() {
 }
 function primChip(i, keyHint, onPick, kind) {
   const w = WEAPONS[i]; const b = document.createElement('button'); b.className = 'primchip'; b.dataset.i = i; b.dataset.pick = kind || 'primary';
-  b.innerHTML = `${keyHint ? `<kbd>[${keyHint}]</kbd>` : ''}${escapeHtml(w.key === 'shotgun' ? 'Calibre 12 Chiqueiro' : w.name)}<small>${escapeHtml(w.desc)}</small>`; b.onclick = () => onPick(i); return b;
+  const name = w.key === 'shotgun' ? 'Calibre 12 Chiqueiro' : w.name;
+  b.innerHTML = `${keyHint ? `<kbd>[${keyHint}]</kbd>` : ''}<span class="wthumb" data-w="${i}"></span><span class="wtxt">${escapeHtml(name)}<small>${escapeHtml(w.desc)}</small></span>`;
+  if (weaponThumbs[i]) b.querySelector('.wthumb').style.backgroundImage = `url("${weaponThumbs[i]}")`;
+  b.onclick = () => onPick(i); return b;
 }
 function markPick(kind, i) {
   document.querySelectorAll(`.primchip[data-pick="${kind}"]`).forEach((c) => c.classList.toggle('active', +c.dataset.i === i));
@@ -1921,7 +2111,24 @@ function buildSkinPicker() {
   const step = (d) => { const i = SKINS.findIndex((s) => s.id === selectedSkin); setPreview(SKINS[(i + d + SKINS.length) % SKINS.length].id); };
   $('skinPrev').onclick = () => step(-1); $('skinNext').onclick = () => step(1);
 }
+const weaponThumbs = [];
 buildSkinPicker(); setPreview(selectedSkin); buildPrimaryPickers(); buildSaberColors();
+function paintWeaponThumbs() {
+  document.querySelectorAll('.wthumb').forEach((el) => {
+    const url = weaponThumbs[+el.dataset.w];
+    if (url) el.style.backgroundImage = `url("${url}")`;
+  });
+}
+function makeWeaponThumbs() {
+  let i = 0;
+  const next = () => {
+    if (i >= fp.guns.length) { paintWeaponThumbs(); window.__gunThumbs = weaponThumbs.length; return; }
+    try { weaponThumbs[i] = renderWeaponThumb(fp.guns[i]); } catch (e) { console.warn('miniatura da arma', i, e); }
+    i++; requestAnimationFrame(next);
+  };
+  requestAnimationFrame(next);
+}
+makeWeaponThumbs();
 
 // ---------------- Mapas ----------------
 let navMs = 0, showBaseY = 3, menuPreviewX = 0, showCamYaw = 0;
@@ -2006,7 +2213,7 @@ function startGame(mapId) {
   const name = myName(); saveName(name);
   sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
   try { localStorage.setItem('docao.sens', String(sens)); localStorage.setItem('docao.sensAds', String(sensAds)); } catch (e) { /* sem storage */ }
-  revengeName = null; resetFeedback(); resetRewards();
+  revengeName = null; resetFeedback(); resetRewards(); resetMatchCamos();
   clearBots(); gameTime = 0;
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
   const n = parseInt($('botCount').value) || 5;
@@ -2076,6 +2283,12 @@ document.addEventListener('pointerlockchange', () => {
 document.addEventListener('mousemove', (e) => {
   if (state !== 'playing' || document.pointerLockElement !== canvas || !player) return;
   if (Math.abs(e.movementX) > 250 || Math.abs(e.movementY) > 250) return; // ignora saltos espúrios do pointer lock
+  if (predator && predator.phase === 'fly') {
+    predator.yaw -= e.movementX * 0.0022;
+    predator.pitch = clamp(predator.pitch - e.movementY * 0.002, -1.2, 0.22);
+    return;
+  }
+  if (predator) return;
   const s = sens * (ads > 0.2 ? sensAds : 1) * (camera.fov / BASE_FOV); // mirando usa o slider "Mirando"; o zoom ainda deixa o mouse mais lento
   player.yaw -= e.movementX * 0.0015 * s; player.pitch = clamp(player.pitch - e.movementY * 0.0015 * s, -1.5, 1.5);
 });
@@ -2112,7 +2325,7 @@ document.addEventListener('keydown', (e) => {
       if (e.code === 'KeyV' && !e.repeat) quickKnife(player);
       if (e.code === 'Digit4' && player.alive && !e.repeat) throwTactical('smoke');
       if (e.code === 'Digit5' && player.alive && !e.repeat) throwTactical('stun');
-      if (e.code === 'KeyF' && player.alive && !e.repeat) callNuke();
+      if (e.code === 'KeyF' && player.alive && !e.repeat) useStreak();
     }
     if (e.code === 'KeyQ' && !e.repeat) startCharge();
     if (e.code === 'Tab') $('tabboard').classList.remove('hidden');
@@ -2152,7 +2365,7 @@ function loop() {
   const camO = window.__cam; // testes/screenshots: câmera livre { p: [x, y, z], t: [x, y, z], fov }
   if (camO) { camera.position.set(...camO.p); camera.lookAt(...camO.t); if (camO.fov && camera.fov !== camO.fov) { camera.fov = camO.fov; camera.updateProjectionMatrix(); } }
   renderer.render(scene, camera);
-  if (state !== 'menu' && player && player.alive && !camO) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
+  if (state !== 'menu' && player && player.alive && !camO && !(predator && predator.phase === 'fly')) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
 }
 mountUav();
 mountStreakUi();
@@ -2471,7 +2684,7 @@ function startOnlineMatch(m) {
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
   const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
   player = makeEntity(me.name, true, me.skin, '#ffd27a'); player.netId = o.myId; player.sq = 0; player.alive = false; player.respawnAt = Infinity;
-  player.kills = me.kills || 0; player.deaths = me.deaths || 0; revengeName = null; resetFeedback();
+  player.kills = me.kills || 0; player.deaths = me.deaths || 0; player.gunKills = WEAPONS.map(() => 0); revengeName = null; resetFeedback(); resetMatchCamos();
   player.primary = player.nextPrimary = selectedPrimary; player.nextSecondary = selectedSecondary; player.nextMelee = selectedMelee; player.slots = [selectedPrimary, selectedSecondary, selectedMelee]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
   entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin); player.caps = me.caps || 0; applyTeam(player, me.team ?? -1);
   for (const info of m.ents) remoteEnt(info);
@@ -2547,7 +2760,7 @@ function netEvent(ev) {
     if (a) a.kills = aK; t.deaths = tD; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.lastAttacker = a || null; t.killW = w; t.killBack = back;
     if (w === -2) { t.fxDeath = t.deathAt; return; } // trocou de time (sem bacon)
     addKillFeed(a, t, w, head, back); sfx.die(t === player ? 1 : distVol(t.pos));
-    if (a === player && t !== player) { sfx.kill(); notePlayerKill(t, !!head); }
+    if (a === player && t !== player) { sfx.kill(); notePlayerKill(t, !!head); if (w >= 0) noteWeaponKill(player, w); }
     if (t === player) { if (a && a !== player) revengeName = a.name; onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
   } else if (k === 'sp') {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
@@ -2624,5 +2837,5 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   DOM, applyTeam, damage, kill: (e) => kill(e, null, 0, false), V3, KNIFE, MELEE, switchWeapon, quickKnife, knifeAttack, meleeHit, modelYaw, get fpBoltHand() { const g = fp.guns[player ? player.weapon : -1]; return !!(g && g.userData.boltHand && g.userData.boltHand.visible && fp.sRound.parent === g); }, get menuPreviewX() { return menuPreviewX; }, get previewScreen() { if (!preview || !showcase.visible) return null; const v = showcase.position.clone(); v.y += 0.9; v.project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, skin: selectedSkin, kids: preview.group.children.length }; }, get fpKnife() { return { t: fp.knifeT, kind: fp.knifeKind, visible: fp.kr.visible }; }, get bacon() { return baconStats; }, los: (a, b) => losClear(new V3(...a), new V3(...b)), activeBacons, BACON, get deathCam() { return deathCamState; },
   blastAt: (x, y, z, kind = 'r', owner) => blast(new V3(x, y, z), owner || player, kind === 'n' ? { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE } : { ...WEAPONS[3].rocket, wIdx: 3 }),
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()),
-  rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, callNuke, get nukeReady() { return nukeReady; }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, hurtHeli, throwSmoke: () => throwTactical('smoke'), throwStun: () => throwTactical('stun'), get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE,
+  rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical('smoke'), throwStun: () => throwTactical('stun'), get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
   swingSaber: () => swingSaber(player) };

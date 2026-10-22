@@ -8,7 +8,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(SITE, { waitUntil: 'load' });
-await page.waitForTimeout(1500);
+await page.waitForFunction(() => window.__docao && window.__docao.startGame, { timeout: 15000 });
 const G = (fn, a) => page.evaluate(fn, a);
 const until = async (fn, ms = 12000) => {
   const t0 = Date.now();
@@ -67,13 +67,21 @@ ok(stun.until && parseFloat(stun.op) > 0.5 && stun.left === 0, `atordoamento peg
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
-const uav = await G(() => ({
+const armed = await G(() => ({
   n: document.querySelector('#streakCount b')?.textContent,
   shown: !document.getElementById('streakCount').hidden,
   uav: !document.getElementById('uav').hidden,
+  prompt: document.getElementById('nukeReady')?.textContent || '',
+  promptOn: document.getElementById('nukeReady') && !document.getElementById('nukeReady').hidden,
+}));
+ok(armed.n === '3' && armed.shown && !armed.uav && armed.promptOn && armed.prompt.includes('Olho'), `3 abates deixam o minimapa pronto, sem ligar (${JSON.stringify(armed)})`);
+await G(() => window.__docao.useStreak());
+await page.waitForTimeout(200);
+const uav = await G(() => ({
+  uav: !document.getElementById('uav').hidden,
   time: document.getElementById('uavTime')?.textContent,
 }));
-ok(uav.n === '3' && uav.shown && uav.uav && uav.time === '10s', `3 abates ligam o minimapa (${JSON.stringify(uav)})`);
+ok(uav.uav && uav.time === '10s', `F liga o minimapa (${JSON.stringify(uav)})`);
 await G(() => {
   const g = window.__docao;
   g.player.pos.set(0, 0, 0);
@@ -102,20 +110,54 @@ ok(aim.high < aim.low && aim.left === '0', `barra de baixo pra cima, o de 3 já 
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); });
 await page.waitForTimeout(300);
-const mapOpen = await G(() => !document.getElementById('strikeMap').hidden);
-ok(mapOpen, '5 abates abrem o mapa dos mísseis');
+const armedMissile = await G(() => ({
+  map: !document.getElementById('strikeMap').hidden,
+  prompt: document.getElementById('nukeReady')?.textContent || '',
+  fly: !!window.__docao.predator,
+}));
+ok(!armedMissile.map && !armedMissile.fly && armedMissile.prompt.includes('Míssil'), `5 abates armam o míssil, sem abrir o mapa (${JSON.stringify(armedMissile)})`);
 const before = await G(() => window.__docao.explosions);
-const box = await page.locator('#strikeMap canvas').boundingBox();
-ok(!!box, 'mapa dos mísseis tem área clicável');
-if (box) {
-  for (const k of [0.3, 0.55, 0.75]) await page.mouse.click(box.x + box.width * k, box.y + box.height * 0.5);
-}
-await page.evaluate((n) => { window.__needBoom = n; }, before + 3);
-ok(await until(() => window.__docao.explosions >= window.__needBoom, 8000), 'os mísseis saem');
-const boom = await G(() => window.__docao.explosions);
-ok(boom >= before + 3, `três mísseis estouram (${before} → ${boom})`);
+await G(() => window.__docao.useStreak());
+ok(await until(() => window.__docao.predator && window.__docao.predator.phase === 'fly'), 'o laptop abre e a câmera vira o míssil');
+await G(() => {
+  const g = window.__docao;
+  g.player.pos.set(80, 0, 80);
+  g.player.vel.set(0, 0, 0);
+  let x = 0, z = 0, gy = 0, best = 1e9;
+  for (let i = -6; i <= 6; i++) for (let j = -6; j <= 6; j++) {
+    const tx = i * 2, tz = j * 2;
+    const h = g.groundAt(tx, tz, 40);
+    const d = tx * tx + tz * tz;
+    if (h < 0.8 && d < best && !g.collides(tx, h + 4, tz) && !g.collides(tx, h + 10, tz)) { x = tx; z = tz; gy = h; best = d; }
+  }
+  for (const e of g.entities) if (!e.isPlayer) { e.pos.set(70, 0, -70); e.invulnUntil = g.time + 999; e._missileTarget = false; }
+  const bot = g.entities.find((e) => !e.isPlayer && e.alive);
+  bot._missileTarget = true;
+  bot.invulnUntil = 0;
+  bot.hp = 100;
+  bot.pos.set(x, gy, z);
+  const p = g.predator;
+  p.pos.set(x, gy + 14, z);
+  p.pitch = -Math.PI / 2;
+  p.yaw = 0;
+  window.__drop = { x, z, gy };
+});
+ok(await until(() => !window.__docao.predator, 8000), 'o míssil chega no chão');
+const boom = await G(() => {
+  const bot = window.__docao.entities.find((e) => e._missileTarget);
+  return { n: window.__docao.explosions, hp: bot ? bot.hp : -1, alive: !!(bot && bot.alive), kills: window.__docao.rewardKills, drop: window.__drop };
+});
+ok(boom.n >= before + 1 && !boom.alive, `o míssil estoura e mata (${JSON.stringify(boom)})`);
 
-await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); });
+await G(() => { while (window.__docao.rewardKills < 7) window.__docao.rewardKill(); });
+await page.waitForTimeout(200);
+const heliWait = await G(() => {
+  const h = window.__docao.heli;
+  const prompt = document.getElementById('nukeReady')?.textContent || '';
+  return { up: !!(h && h.alive), prompt, kills: window.__docao.rewardKills };
+});
+ok(!heliWait.up && heliWait.prompt.includes('Gavião') && heliWait.kills === 7, `7 abates deixam o helicóptero pronto (${JSON.stringify(heliWait)})`);
+await G(() => window.__docao.useStreak());
 await page.waitForTimeout(200);
 const heliOn = await G(() => {
   const h = window.__docao.heli;
@@ -123,7 +165,7 @@ const heliOn = await G(() => {
   const card = document.querySelector('#streakBar .streak-card[data-need="7"]');
   return { up: !!(h && h.alive), hp: h ? Math.round(h.hp) : 0, ready: !!(ready && !ready.hidden), kills: window.__docao.rewardKills, card: card?.className || '' };
 });
-ok(heliOn.up && heliOn.hp >= 200 && !heliOn.ready && heliOn.kills === 7 && heliOn.card.includes('earned'), `7 abates chamam o helicóptero, sem nuke (${JSON.stringify(heliOn)})`);
+ok(heliOn.up && heliOn.hp >= 200 && !heliOn.ready && heliOn.kills === 7 && heliOn.card.includes('earned'), `F chama o helicóptero, sem nuke (${JSON.stringify(heliOn)})`);
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
@@ -133,7 +175,7 @@ const nukeOn = await G(() => {
   return { hidden: !b || b.hidden, ready: ready && !ready.hidden, kills: window.__docao.rewardKills, bots: window.__docao.entities.filter((e) => !e.isPlayer && e.alive).length };
 });
 ok(nukeOn.hidden && nukeOn.ready && nukeOn.kills === 10 && nukeOn.bots > 0, `10 abates armam o nuke secreto, sem estourar (${JSON.stringify(nukeOn)})`);
-await G(() => window.__docao.callNuke());
+await G(() => window.__docao.useStreak());
 await page.waitForTimeout(200);
 const counting = await G(() => document.getElementById('nukeBanner')?.querySelector('b')?.textContent);
 ok(counting === '5', `apertar o rádio começa a contagem (${counting})`);

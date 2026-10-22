@@ -58,6 +58,33 @@ export function makeTablet() {
   return group;
 }
 
+export function makeLaptop() {
+  const g = new THREE.Group();
+  g.name = 'fp-laptop';
+  put(g, new THREE.BoxGeometry(0.58, 0.034, 0.4), '#2a241c', 0, 0, 0);
+  put(g, new THREE.BoxGeometry(0.5, 0.01, 0.2), '#14161c', 0, 0.022, 0.05);
+  const lid = new THREE.Group();
+  lid.position.set(0, 0.02, -0.19);
+  put(lid, new THREE.BoxGeometry(0.58, 0.36, 0.022), '#1c1c1e', 0, 0.18, 0);
+  put(lid, new THREE.PlaneGeometry(0.5, 0.28), '#8fd0ff', 0, 0.19, 0.013);
+  g.add(lid);
+  g.userData.lid = lid;
+  addTabletHand(g, -1);
+  addTabletHand(g, 1);
+  g.visible = false;
+  return g;
+}
+
+export function poseLaptop(group, k) {
+  const t = clamp01(k);
+  // Sobe na frente do rosto. Rotação X negativa inclina a tela pra gente, igual o tablet.
+  // A tampa começa deitada no teclado (1.35) e abre até ficar quase em pé (0.02).
+  group.position.set(lerp(0.04, 0, t), lerp(-0.52, -0.2, t), lerp(-0.32, -0.55, t));
+  group.rotation.set(lerp(0.15, -0.42, t), 0, 0);
+  const lid = group.userData.lid;
+  if (lid) lid.rotation.x = lerp(1.35, 0.02, t);
+}
+
 export function poseTablet(group, k) {
   const t = clamp01(k);
   group.position.set(

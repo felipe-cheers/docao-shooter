@@ -3,7 +3,7 @@
 
 const REWARDS = [
   { need: 3, name: 'Olho da granja', icon: 'eye' },
-  { need: 5, name: 'Chuva de torresmo', icon: 'missiles' },
+  { need: 5, name: 'Míssil da granja', icon: 'missiles' },
   { need: 7, name: 'Gavião da granja', icon: 'heli' },
 ];
 
@@ -83,9 +83,9 @@ const CSS = `
   border-left:3px solid transparent;border-right:3px solid transparent;
   border-top:4px solid currentColor;
 }
-#streakBar .streak-glyph.missiles i:nth-child(1){left:2px;transform:rotate(24deg)}
-#streakBar .streak-glyph.missiles i:nth-child(2){left:11px}
-#streakBar .streak-glyph.missiles i:nth-child(3){left:20px;transform:rotate(-24deg)}
+#streakBar .streak-glyph.missiles i:nth-child(1){left:11px;transform:none}
+#streakBar .streak-glyph.missiles i:nth-child(2){display:none}
+#streakBar .streak-glyph.missiles i:nth-child(3){display:none}
 #streakBar .streak-glyph.radio{width:18px;height:22px}
 #streakBar .streak-glyph.radio::before{
   content:"";position:absolute;left:3px;top:0;width:2px;height:7px;
