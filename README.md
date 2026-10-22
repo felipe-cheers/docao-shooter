@@ -89,6 +89,8 @@ a **Faca de churrasqueiro** (sempre equipada), o **Copo Bomba** (tecla Q), **1 f
 **1** = primária, **2** = pistola, **3** = faca, a rodinha gira entre as três e **V** alterna faca ↔ última arma.
 Todo Docão tem **100 de vida** (e 2 s de proteção ao renascer). Valores em `shared/rules.js` (`WEAPONS`, `MELEE`, `NADE`), os mesmos no cliente e no servidor.
 
+**Regeneração fora de combate:** depois de levar dano de **outro** Docão, se você ficar **5 s** sem levar dano nenhum, a vida volta a **+10 por segundo** até 100 (a barra de vida ganha um brilho verde e um "+" pulsando). Qualquer dano novo zera os 5 s. Dano em você mesmo (foguete/bazuca no pé, seu próprio Copo Bomba, míssil/nuke seu, qualquer dano sem atacante) **não** libera a regeneração e cancela a que estava pendente. Pickup de vida e bacon curam normalmente e não mexem nisso. Vale igual pra bots. Online quem regenera é o servidor (a vida chega no snapshot; o bit 16 das flags indica "regenerando"). Valores em `shared/rules.js` (`REGEN_DELAY`, `REGEN_RATE`, `regenStep`).
+
 | Arma | Tipo | Pente/reserva | Dano (cabeça) | Cadência | Recarga | Zoom |
 |---|---|---|---|---|---|---|
 | **Fuzil Pururuca** | automático | 30/120 | 20 (cabeça ×2 = 40) | 0,1 s | 1,6 s | 40° |

@@ -6,6 +6,17 @@ export const KILL_LIMIT = 20, TIME_LIMIT = 300, RESPAWN_TIME = 5, INVULN = 2;
 // duração da partida escolhida pelo anfitrião (minutos); 0 = padrão do modo (5 min Mata-mata, 7 min Dominação)
 export const TIME_OPTIONS = [0, 3, 5, 7, 10, 15, 20];
 export const normTime = (v) => { const n = Number(v); return TIME_OPTIONS.includes(n) ? n : 0; };
+// Regeneração fora de combate: 5 s sem levar dano → +10 de vida por segundo até 100.
+// Só se o último dano veio de OUTRO Docão: dano em si mesmo (bazuca/foguete no pé, Copo Bomba próprio, míssil/nuke em si,
+// atacante = você ou sem atacante) não libera e cancela a regeneração pendente. Pickup de vida e bacon não mexem nisso.
+export const REGEN_DELAY = 5, REGEN_RATE = 10;
+export function noteHurt(e, attacker, now) { e.lastHurt = now; e.regenOk = !!attacker && attacker !== e; }
+export function resetRegen(e) { e.lastHurt = -1e9; e.regenOk = false; e.regenOn = false; }
+export function regenStep(e, now, dt) {
+  e.regenOn = !!(e.alive && e.regenOk && e.hp > 0 && e.hp < 100 && now - e.lastHurt >= REGEN_DELAY);
+  if (e.regenOn) e.hp = Math.min(100, e.hp + REGEN_RATE * dt);
+  return e.regenOn;
+}
 // Bacon que cura: quem pisa no bacon de um Docão morto (menos o próprio morto) ganha +10 de vida e o bacon some.
 // life = tempo que o bacon fica visível no cliente (bacon.js: LINGER 3,0 + FADE 0,45 s); from = já virou bacon (MORPH 0,3 s).
 // radius/dy: igual aos pickups de vida (raio horizontal ~1,2 m, mesmo andar).

@@ -9,7 +9,7 @@ import { MAPS, getMap } from '../../maps.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
-import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
@@ -366,7 +366,7 @@ export class Game {
   friends(a, b) { return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
   damage(t, amount, a, w, head, back = false) {
     if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
-    t.hp -= amount; t.lastAttacker = a ? a.id : 0;
+    t.hp -= amount; t.lastAttacker = a ? a.id : 0; noteHurt(t, a, this.T); // regen só com dano de outro
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
     this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0]);
     if (t.hp <= 0) { this.kill(t, a, w, head, back); return true; }
@@ -436,7 +436,7 @@ export class Game {
     return best;
   }
   spawn(e, silent = false) {
-    const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.hp = 100; e.alive = true; e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
+    const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
     if (e.bot && Math.random() < 0.3) e.nextPrimary = pick(BOT_PRIMARIES);
     e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.nades = NADE.spawnWith;
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
@@ -491,9 +491,10 @@ export class Game {
       if (!e.bot && e.alive) this.progressReload(e);
     }
     this.updatePickups(); this.updateBacons();
+    { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) regenStep(e, this.T, rt); }
     if (this.zone) this.updateZone(TICK_DT(this));
     const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
-      (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0), Math.round(e.hp), e.ping]), ev: this.events };
+      (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping]), ev: this.events };
     this.events = [];
     this.io.broadcast(snap);
     for (const [id, evs] of this.personal) this.io.send(id, { t: 'p', ev: evs }); this.personal.clear();
