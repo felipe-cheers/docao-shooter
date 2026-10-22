@@ -625,4 +625,80 @@ export const MAPS = [];
   });
 }
 
+
+// ---------- 9) Estande do Docão (modo Treino: alvos que não atacam, só renascem) ----------
+// Linha de tiro em z = 22 (os jogadores atiram pra -z). Raias separadas por muretas baixas:
+//  A (oeste) distâncias 10/20/30/50 m · B alvos andando · C explosivos e arco · D faca e sabre (perto da linha).
+//  Atrás da linha: área de renascimento (leste) e arena pequena de X1 (oeste).
+// dummies: { name, x, z, y?, yaw?, move?: { amp, speed, ph } } (move = vai e volta no eixo X; speed = velocidade máxima m/s)
+{
+  const FIRE = 22, boxes = [], props = [];
+  const wood = '#b5793e', wood2 = '#9c6b3a', stone = '#a8a29a', yel = '#f2c94c', red = '#e63946', white = '#fff4e0';
+  const signAt = (x, z, text, bg, w = 3.2, h = 0.9, y = 2.3) => { props.push({ t: 'sign', x, y, z: z + 0.06, w, h, rot: 0, text, bg, fg: '#fff6e4' }); boxes.push(B(x - 0.1, z - 0.1, x + 0.1, z, y - h / 2, wood2)); };
+  // linha de tiro: balcão baixo com passagens pra cada raia e faixa amarela no chão
+  const gaps = [[-31.2, -28.8], [-10.2, -7.8], [10.8, 13.2], [29.8, 32.2]];
+  let cx = -40;
+  for (const [a, b] of gaps) { boxes.push(B(cx, 20.4, a, 21.2, 1.0, wood)); cx = b; }
+  boxes.push(B(cx, 20.4, 40, 21.2, 1.0, wood));
+  boxes.push(B(-40, 21.4, 40, 21.7, 0.03, yel));
+  // muretas entre as raias (até o balcão)
+  for (const x of [-19, 2, 22]) boxes.push(B(x - 0.3, -34, x + 0.3, 20.4, 1.3, stone));
+  // ---- Raia A: distâncias ----
+  const dummies = [];
+  [[10, -36], [20, -31], [30, -26], [50, -22]].forEach(([d, x]) => {
+    const z = FIRE - d;
+    boxes.push(B(x - 0.7, z - 0.7, x + 0.7, z + 0.7, 0.12, yel));
+    boxes.push(B(-38.5, z + 1.1, -19.4, z + 1.3, 0.03, white));
+    signAt(x + 2.2, z, `${d} m`, '#2f80ed', 1.8, 0.8, 2.0);
+    dummies.push({ name: `Alvo ${d} m`, x, z });
+  });
+  // ---- Raia B: alvos andando em trilhos ----
+  [[12, 2.0, 'Lento'], [24, 3.5, 'Médio'], [38, 5.0, 'Ligeiro']].forEach(([d, sp, tag], i) => {
+    const z = FIRE - d;
+    boxes.push(B(-16.5, z - 0.25, -1, z + 0.25, 0.06, wood2));
+    signAt(-17.2, z - 1.4, `${d} m · ${tag}`, '#8a6bc6', 2.4, 0.7, 2.0);
+    dummies.push({ name: `Corredor ${tag}`, x: -8.5, z, move: { amp: 6, speed: sp, ph: i * 2.1 } });
+  });
+  // ---- Raia C: explosivos e arco ----
+  boxes.push(B(5, 5.6, 19, 6.6, 1.2, '#c8b07a')); // sacos de areia: Copo Bomba por cima da mureta
+  dummies.push({ name: 'Atrás do Muro 1', x: 8.5, z: 3.5 }, { name: 'Atrás do Muro 2', x: 15.5, z: 3.5 });
+  boxes.push(B(8.5, -8.6, 15.5, -4.4, 0.12, '#d9c49a')); // roda dos três (bazuca: dano em área)
+  dummies.push({ name: 'Trio 1', x: 10, z: -6 }, { name: 'Trio 2', x: 12, z: -7.2 }, { name: 'Trio 3', x: 14, z: -6 });
+  boxes.push(B(15, -20, 19, -16, 4, wood), B(14.8, -20.2, 19.2, -16.2, 0.3, red, 4)); // torre do arco (alvo no alto)
+  dummies.push({ name: 'Alvo da Torre', x: 17, z: -18, y: 4.3 });
+  boxes.push(B(5, -27.7, 7, -25.7, 0.12, yel));
+  dummies.push({ name: 'Alvo Longe', x: 6, z: -26.7 });
+  boxes.push(B(4, -12, 6, -10, 2.2, wood2), crate(19.5, -2, 1.4, 1.2, yel)); // cobertura pro foguete bater
+  // ---- Raia D: faca e sabre (cercadinho perto da linha) ----
+  boxes.push(B(22.3, 2, 40, 2.4, 1.1, wood)); // cerca do fundo
+  boxes.push(B(25.2, 7.2, 36.8, 13.8, 0.06, '#d9c49a'));
+  dummies.push({ name: 'Saco de Faca 1', x: 27, z: 12 }, { name: 'Saco de Faca 2', x: 35, z: 12 }, { name: 'De Costas', x: 31, z: 8.5, yaw: Math.PI });
+  dummies.push({ name: 'Rodando', x: 31, z: 4.8, move: { amp: 4, speed: 1.6, ph: 0 } });
+  // ---- arena do X1 (oeste, atrás da linha) ----
+  boxes.push(B(-24, 26, -18, 30, 2.4, wood), R(-18, 26.8, -14, 29.2, 0, 2.4, 'x', -1, wood2), B(-24, 25.8, -18, 26, 0.9, wood2, 2.4));
+  boxes.push(crate(-34, 26, 1.6, 1.6), crate(-30, 31, 1.4, 1.2, yel), crate(-10, 30.5, 1.6, 1.6), crate(-12, 25.5, 1.4, 1.2, yel), B(-36, 29.5, -32.6, 30.3, 1.2, stone), B(-8, 27.4, -4.6, 28.2, 1.2, stone));
+  boxes.push(B(-2.3, 22.6, -1.7, 34, 1.3, stone, 0)); // mureta separando o X1 da área de renascer
+  // placas das raias (no fundo) e da entrada
+  props.push({ t: 'sign', x: -29.5, y: 3.0, z: -33.9, w: 8, h: 1.6, rot: 0, text: 'DISTÂNCIA', bg: '#2f80ed', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: -8.5, y: 3.0, z: -33.9, w: 8, h: 1.6, rot: 0, text: 'EM MOVIMENTO', bg: '#8a6bc6', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 12, y: 3.0, z: -33.9, w: 8, h: 1.6, rot: 0, text: 'EXPLOSIVOS · ARCO', bg: red, fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 31, y: 3.0, z: 2.0, w: 7, h: 1.4, rot: 0, text: 'FACA · SABRE', bg: '#c0392b', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 19, y: 3.4, z: 33.9, w: 12, h: 2.0, rot: Math.PI, text: 'ESTANDE DO DOCÃO', bg: red, fg: '#fff6e4' });
+  props.push({ t: 'sign', x: -21, y: 3.4, z: 33.9, w: 7, h: 1.6, rot: Math.PI, text: 'ARENA X1', bg: '#1d5f8a', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 19, y: 1.75, z: 33.9, w: 12, h: 0.9, rot: Math.PI, text: 'B primária · N secundária · M faca/sabre', bg: '#2a1410', fg: '#ffd27a' });
+  props.push({ t: 'logoSign', x: 0, y: 5.2, z: -33.98, rot: 0 });
+  props.push({ t: 'hay', x: 37, z: 31 }, { t: 'hay', x: 3, z: 32 }, { t: 'keg', x: 21, z: 24 }, { t: 'keg', x: 1, z: 24 }, { t: 'tree', x: 38, z: -31 }, { t: 'tree', x: -38, z: -31 });
+  MAPS.push({
+    id: 'estande', name: 'Estande do Docão', desc: 'Modo Treino: raias de 10/20/30/50 m, alvos andando, área de explosivos e arco, cercadinho da faca/sabre e arena X1. Os alvos não atacam, só renascem.',
+    training: true, size: [40, 34], wallH: 4, wallColor: ['#e8c25a', '#d8b24a'],
+    palette: DAY({ ground: '#7cc95a', tiles: ['#a9e07f', '#9bd972', 64, 14] }),
+    ...fin(boxes), props, dummies,
+    spawns: [[5, 26], [10, 30], [15, 26], [20, 30], [25, 26], [30, 30], [35, 26], [8, 32.5], [-6, 26], [-14, 32], [-30, 33], [-37, 24.5]],
+    pickups: [['grenade', 8, 23.8], ['grenade', 16, 23.8], ['ammo', 24, 23.8], ['health', -20, 32.5], ['health', 34, 32.5], ['ammo', -28, 24.5]],
+    showcase: [12, 0, 26], view: [0, 1.6, 26, 0, -0.05],
+  });
+}
+
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
+// mapas jogáveis nas listas/rodízio (o Estande só abre no modo Treino)
+export const PLAY_MAPS = MAPS.filter((m) => !m.training);
