@@ -58,7 +58,7 @@ export class Room extends DurableObject {
   }
   // recria o jogo depois de hibernar (lobby/fim de partida): config + jogadores ainda conectados
   restore(saved) {
-    this.game = this.makeGame({ ...saved.cfg, test: this.env.ALLOW_TEST === '1' }); this.game.nextId = saved.nextId || 1;
+    this.game = this.makeGame({ ...saved.cfg, test: this.env.ALLOW_TEST === '1', chatLog: saved.chat }); this.game.nextId = saved.nextId || 1;
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment(); if (!a) continue;
       const e = this.game.makeEnt({ name: a.name, skin: a.skin, primary: a.primary, secondary: a.secondary, melee: a.melee, bot: false });
@@ -88,7 +88,7 @@ export class Room extends DurableObject {
   }
   sockets() { return this.ctx.getWebSockets().filter((w) => w.readyState === 1 && w.deserializeAttachment()); }
   safeSend(ws, s) { try { ws.send(s); } catch (e) { /* socket fechando */ } }
-  persist() { if (this.game) this.ctx.storage.put('room', { cfg: this.game.cfg, nextId: this.game.nextId, hostId: this.game.hostId, mapId: this.game.mapId }); }
+  persist() { if (this.game) this.ctx.storage.put('room', { cfg: this.game.cfg, nextId: this.game.nextId, hostId: this.game.hostId, mapId: this.game.mapId, chat: this.game.chatLog || [] }); }
 
   async fetch(req) {
     const url = new URL(req.url);
