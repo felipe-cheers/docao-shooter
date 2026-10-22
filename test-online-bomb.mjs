@@ -11,7 +11,9 @@ await A.addInitScript(() => { localStorage.setItem('docao.name', 'Ana'); localSt
 await A.goto(`${SITE}?server=${encodeURIComponent(SERVER)}`, { waitUntil: 'load', timeout: 90000 }); await A.waitForTimeout(1500);
 const G = (fn, a) => A.evaluate(fn, a); const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function until(fn, ms = 8000, a) { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await A.evaluate(fn, a)) return true; await wait(200); } return false; }
-await A.click('#onlineBtn'); await A.selectOption('#roomMap', 'arena'); await A.selectOption('#roomMax', '4'); await A.selectOption('#roomBots', '1'); await A.selectOption('#roomMode', 'bomb');
+await A.click('#onlineBtn'); await A.selectOption('#roomMax', '4'); await A.selectOption('#roomBots', '1'); await A.selectOption('#roomMode', 'bomb');
+ok(await G(() => document.getElementById('roomMap').value === 'rodizio'), 'criar sala: escolher Bomba troca o mapa pro Rodízio do Docão');
+if (process.env.MAP) await A.selectOption('#roomMap', process.env.MAP);
 await A.click('#createBtn'); ok(await until(() => window.__docao.online && window.__docao.online.myId > 0), 'criou sala no Modo Bomba');
 ok(await until(() => /BOMBA/.test(document.getElementById('lobbyInfo').textContent)), 'lobby mostra BOMBA');
 await A.click('#lobbyTeamBtns .teambtn.t0'); await wait(500);
@@ -20,6 +22,8 @@ ok(await until(() => window.__docao.state === 'playing' && window.__docao.mode =
 const s0 = await G(() => { const g = window.__docao, S = g.bomb.S; return { round: S.round, phase: S.phase, carrier: S.carrier, me: g.player.id, team: g.player.team, sites: g.bomb.L.sites.map((s) => [s.name, s.x, s.z]) }; });
 console.log(JSON.stringify(s0));
 ok(s0.round === 1 && s0.phase === 'prep' && s0.team === 0, 'rodada 1, preparação, Ana no Vermelho (Ataque)');
+const sp = await G(() => { const g = window.__docao, L = g.bomb.L, p = g.player.pos, d = (l) => Math.min(...l.map((i) => Math.hypot(L.pts[i].x - p.x, L.pts[i].z - p.z))); return { map: g.map.id, pts: !!L.pts, atk: d(L.atk), def: d(L.def) }; });
+ok(sp.pts && sp.atk < 1 && sp.def > 20, `servidor manda os spawns do modo Bomba e a Ana nasce no lado do Ataque (${JSON.stringify(sp)})`);
 ok(await until(() => window.__docao.bomb.S.phase === 'live', 15000), 'servidor libera a rodada depois de 10 s');
 const S1 = await G(() => window.__docao.bomb.S.carrier === window.__docao.player.id);
 if (S1) { // Ana carrega: teleporta pro A (só com ALLOW_TEST) e segura E
