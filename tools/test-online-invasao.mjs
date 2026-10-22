@@ -56,6 +56,10 @@ ok(await until(A, () => { const v = window.__docao.invView; return [...v.lives.v
 // 2) wave 1: zumbis aparecem nos dois
 await T(A, { wave: 1, fog: NOFOG });
 for (const [p, n] of [[A, 'Ana'], [B, 'Beto']]) ok(await until(p, () => window.__docao.invView.phase === 'wave' && window.__docao.entities.some((e) => e.zt && e.alive), 15000), `${n} vê a wave 1 e os zumbis`);
+// sem killstreaks online: o servidor recusa (teste de sequência + pedido direto de Gavião/nuke)
+await G(A, () => { const o = window.__docao.online; o.net.send({ t: 'testKs', n: 12 }); o.evq.push(['ks', 'h'], ['ks', 'x']); });
+await wait(1500);
+for (const [p, n] of [[A, 'Ana'], [B, 'Beto']]) { const r = await G(p, () => ({ h: window.__docao.netHelis.length, x: window.__docao.netNukeAt || 0, k: window.__docao.rewardKills })); ok(!r.h && !r.x && !r.k, `${n}: servidor recusa killstreaks na Invasão (Gavião ${r.h}, nuke ${r.x})`); }
 // 3) sem fogo amigo: foguete da Ana no pé dela e no Beto
 await until(A, () => window.__docao.player.alive && window.__docao.time > window.__docao.player.invulnUntil, 8000); await until(B, () => window.__docao.player.alive && window.__docao.time > window.__docao.player.invulnUntil, 8000);
 await T(A, { clearQueue: true, killAll: true });

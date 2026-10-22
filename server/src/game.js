@@ -364,12 +364,13 @@ export class Game {
   // abate que conta pra sequência (quem matou precisa estar vivo, igual ao cliente)
   streakKill(a) {
     if (!a.ksBank) this.resetStreak(a);
+    if (this.inv) return; // Invasão: sem killstreaks (só os poderes de Halloween)
     a.ksKills++;
     for (const r of streakRewards(a.ksKills)) if (r in a.ksBank) a.ksBank[r]++;
   }
   // F: 'p' = Míssil (abre o laptop; o cliente pilota e manda o impacto em 'ms'), 'h' = Gavião, 'x' = nuke
   useStreak(e, kind, startA) {
-    const B = e.ksBank; if (!B || e.bot) return;
+    const B = e.ksBank; if (!B || e.bot || this.inv) return; // Invasão: servidor recusa killstreaks
     if (kind === 'p') {
       const st = obj3(startA); if (!B.missile || e.ksMissile || !st || Math.hypot(st.x - e.pos.x, st.z - e.pos.z) > PREDATOR.back + 2.5) return;
       B.missile--; e.ksMissile = { T0: this.T, start: { x: st.x, y: this.P.groundAt(st.x, st.z, e.pos.y + 4) + PREDATOR.height, z: st.z } };

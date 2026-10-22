@@ -1104,6 +1104,7 @@ function refreshStreakPrompt() {
   if (node) node.textContent = STREAK_PROMPT[id] || 'F · killstreak';
 }
 function bankStreak(id) {
+  if (invMode()) return;
   streakReady.push(id);
   flashMsg(`${(STREAK_PROMPT[id] || id).replace('F · ', '')} pronto · aperte F`);
   refreshStreakPrompt();
@@ -1229,6 +1230,7 @@ function startNukeCountdown() {
   refreshStreakPrompt();
 }
 function useStreak() {
+  if (invMode()) return; // Invasão: sem killstreaks (F não faz nada; só G/X dos poderes)
   if (!player || !player.alive || predator || nukeAt) return;
   const id = streakReady.shift();
   if (!id) return;
@@ -1240,6 +1242,7 @@ function useStreak() {
 }
 function grantNuke() { bankStreak('nuke'); }
 function callNuke() {
+  if (invMode()) return;
   if (!player || !player.alive || nukeAt) return;
   const i = streakReady.indexOf('nuke');
   if (i < 0 && !nukeReady) return;
@@ -1247,6 +1250,7 @@ function callNuke() {
   startNukeCountdown();
 }
 function onRewardKill() {
+  if (invMode()) return; // Invasão: abates não rendem killstreak
   if (!player || !player.alive) return;
   rewardKills++;
   const cycle = streakCycle(rewardKills);
@@ -2557,7 +2561,7 @@ document.addEventListener('keydown', (e) => {
       if (e.code === 'KeyV' && !e.repeat) quickKnife(player);
       if (e.code === 'Digit4' && player.alive && !e.repeat) throwTactical('smoke');
       if (e.code === 'Digit5' && player.alive && !e.repeat) throwTactical('stun');
-      if (e.code === 'KeyF' && player.alive && !e.repeat) useStreak();
+      if (e.code === 'KeyF' && player.alive && !e.repeat && !invMode()) useStreak();
       if (training() && player.alive && !e.repeat && (e.code === 'KeyB' || e.code === 'KeyN' || e.code === 'KeyM')) trainSwap(e.code);
       if (exploreMode() && player.alive && !e.repeat && (e.code === 'Comma' || e.code === 'Period' || e.code === 'BracketLeft' || e.code === 'BracketRight')) cycleExplorePrimary(e.code === 'Period' || e.code === 'BracketRight' ? 1 : -1);
     }

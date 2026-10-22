@@ -75,6 +75,15 @@ ok(await until(() => window.__docao.invMusic && window.__docao.invMusic.on && wi
 ok(await until(() => window.__docao.entities.filter((e) => e.zt && e.alive).length >= 2, 15000), 'zumbis entram em lote');
 ok(await G(() => window.__docao.invView.remaining >= 15 && window.__docao.entities.filter((e) => e.zt && e.alive).length <= window.__docao.inv.spec.maxAlive), 'wave 1 com ~18 zumbis e vivos dentro do teto');
 ok(await G(() => document.getElementById('invWaveN').textContent.includes('WAVE 1/20')), 'HUD mostra WAVE 1/20');
+// sem killstreaks na Invasão (só os poderes G/X)
+{
+  const ks = await G(() => { const g = window.__docao; for (let i = 0; i < 12; i++) g.rewardKill(); g.useStreak(); g.callNuke(); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF' })); document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF' }));
+    const vis = (id) => { const n = document.getElementById(id); return !!n && getComputedStyle(n).display !== 'none' && !n.hidden; };
+    return { k: g.rewardKills, ready: g.streakReady.length, nuke: g.nukeReady, at: g.nukeAt, pred: !!g.predator, heli: !!g.heli, hud: vis('streakCount') || vis('streakBar') || vis('nukeReady') }; });
+  ok(ks.k === 0 && ks.ready === 0 && !ks.nuke && !ks.at, `Invasão: abates não rendem killstreak (${ks.k} na sequência, ${ks.ready} prontos)`);
+  ok(!ks.pred && !ks.heli, 'Invasão: F não chama míssil/Gavião/nuke');
+  ok(!ks.hud, 'Invasão: sem coluna/HUD de killstreak');
+}
 await page.screenshot({ path: `${SHOTS}/wave-banner.png` });
 // zumbis nascem na borda (longe do jogador)
 const zd = await G(() => { const g = window.__docao, p = g.player; return Math.min(...g.entities.filter((e) => e.zt).map((e) => e.pos.distanceTo(p.pos))); });
