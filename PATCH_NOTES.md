@@ -33,8 +33,15 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.8.3 · Comanda da Fazendinha** ([@hiro-cheers](https://github.com/hiro-cheers), PR #8): menu inicial novo com cenário de fazendinha ao entardecer
 - **v1.8.4 · Agachadinha** ([@felipe-cheers](https://github.com/felipe-cheers), PR #9): Shift agacha com hitbox sincronizada no online, mira só no botão direito e um pulo por toque no Espaço
 - **v1.9 · Arsenal da Quermesse** ([@rramosjoao](https://github.com/rramosjoao), PR #12): FAMAS, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo, bala que atravessa parede, inspecionar no I e Chopper da granja aos 10
+- **v1.9.1 · Docão Bravo:** o Docão faz cara de brava ao atirar e ao golpear com faca ou sabre
 
 ---
+
+## v1.9.1 — Docão Bravo 😠 (22/10/2026)
+- Quando atira, o Docão agora **fecha a cara**: sobrancelhas em V, olhos apertados e dentes cerrados no lugar do sorrisão.
+- Vale pra todas as armas, inclusive a rajada da FAMAS, a metralhadora giratória, a bazuca, o Lança-Milho, o Disco Voador e o Estilingue, e também pros golpes de faca e de sabre (simples ou duplo).
+- A cara de brava aparece rapidinho no disparo, fica enquanto o Docão continua atirando e some meio segundo depois do último tiro, quando volta o sorriso.
+- Dá pra ver nos bots e nos outros jogadores online, com todas as skins (de óculos, de pintura de caveira ou de capuz).
 
 ## v1.9 — Arsenal da Quermesse 🌽 (22/10/2026)
 Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #12).
