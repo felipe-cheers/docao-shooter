@@ -32,8 +32,35 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
 - **v1.8.3 · Comanda da Fazendinha** ([@hiro-cheers](https://github.com/hiro-cheers), PR #8): menu inicial novo com cenário de fazendinha ao entardecer
 - **v1.8.4 · Agachadinha** ([@felipe-cheers](https://github.com/felipe-cheers), PR #9): Shift agacha com hitbox sincronizada no online, mira só no botão direito e um pulo por toque no Espaço
+- **v1.9 · Arsenal da Quermesse** ([@rramosjoao](https://github.com/rramosjoao), PR #12): FAMAS, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo, bala que atravessa parede, inspecionar no I e Chopper da granja aos 10
 
 ---
+
+## v1.9 — Arsenal da Quermesse 🌽 (22/10/2026)
+Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #12).
+
+**Armas novas**
+- **FAMAS da Pocilga:** rajada de 3 por clique, com o recuo subindo reto.
+- **Disco Voador:** um disco-OVNI que quica 3 vezes nas paredes antes de se desfazer.
+- **Lança-Milho da Quermesse:** solta 3 grãos por tiro, e cada grão estoura 3 vezes em pipoca.
+- **Estilingue de Ovo:** secundária quase silenciosa. Segure o clique pra esticar o elástico, e o ovo suja a tela de quem leva.
+- **Sabre Duplo:** um sabre em cada mão, com golpes alternados. O Sabre de Luz agora fica em guarda de cavaleiro e anda só 15% mais devagar.
+
+**Tiroteio**
+- **Penetração de parede:** a bala atravessa paredes finas, muretas e caixotes, perdendo dano conforme a espessura. Cada arma tem o seu limite.
+- **Collateral:** nas snipers a bala atravessa corpos, perdendo dano a cada um.
+- **Inspecionar (I):** gira a arma na mão e mostra a camuflagem e os abates com ela.
+- **Kill feed com ícones:** cada abate mostra o ícone da arma ou do killstreak.
+- **Animações:** balanço com inércia ao virar e andar de lado, e saque com a arma subindo girando.
+
+**Killstreaks**
+- **Chopper da granja aos 10 abates:** você vai pra porta do helicóptero por 60 s, com metralhadora giratória ou sniper.
+- **Fim da chapa** agora sai aos **15** abates.
+- O streak ganho **fica guardado depois de morrer**, e a barra só brilha no que está pronto.
+- O Olho da granja, o Gavião e o Chopper chegam por uma **chamada no rádio**.
+- O minimapa não fica mais espelhado.
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
 
 ## v1.8.4 — Agachadinha 🐖 (22/10/2026)
 Feito pelo **[@felipe-cheers](https://github.com/felipe-cheers)** (PR #9).
