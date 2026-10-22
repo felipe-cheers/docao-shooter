@@ -4,6 +4,17 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## Próxima versão
+
+- Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
+
+- A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.
+
+- O menu virou a comanda da fazendinha: papel de açougue, placas de madeira e o botão Jogar. Arsenal e visual são acessados pelas placas junto do Docão; ajustes e áudio ficam no canto superior direito.
+- O Docão fica de frente na vitrine. Os botões de jogar continuam à mão, mesmo ao escolher armas ou skins, e o menu se adapta a telas menores.
+
+---
+
 ## Resumo de 21 e 22/10/2026
 Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados

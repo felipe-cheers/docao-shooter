@@ -124,12 +124,12 @@ function raySphere(o, d, c, r) {
 const center = (e, y = 1.0) => new V3(e.pos.x, e.pos.y + y, e.pos.z);
 
 // ---------------- Áudio sintetizado ----------------
-let actx = null, master = null, noiseBuf = null;
+let actx = null, master = null, noiseBuf = null, menuMuted = false;
 function initAudio() {
   if (actx) { actx.resume(); return; }
   try {
     actx = new (window.AudioContext || window.webkitAudioContext)();
-    master = actx.createGain(); master.gain.value = 0.4; master.connect(actx.destination);
+    master = actx.createGain(); master.gain.value = menuMuted ? 0 : 0.4; master.connect(actx.destination);
     noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     saberSfx.bind(actx, master);
@@ -2077,7 +2077,72 @@ function botShoot(b, t, dist = 10) {
   b.invulnUntil = Math.min(b.invulnUntil, gameTime);
 }
 
+// Entradas do menu fazem parte da vitrine; a comanda mantém a partida a um clique.
+const menuViewButtons = [...document.querySelectorAll('[data-menu-view]')];
+let menuViewTrigger = null;
+function openMenuView(view, trigger) {
+  for (const name of ['match', 'arsenal', 'operator', 'settings']) $('menu-' + name).hidden = name !== view;
+  for (const button of menuViewButtons) button.setAttribute('aria-expanded', String(button.dataset.menuView === view));
+  $('menuBack').hidden = view === 'match';
+  $('menu').dataset.view = view;
+  $('menu').querySelector('.menu-content').scrollTop = 0;
+  if (trigger) menuViewTrigger = trigger;
+  if (view !== 'match') $('menu-' + view).focus();
+  else if (menuViewTrigger) menuViewTrigger.focus();
+}
+menuViewButtons.forEach((button) => button.onclick = () => openMenuView(button.dataset.menuView, button));
+$('menuBack').onclick = () => openMenuView('match');
+$('menu').addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && $('menu').dataset.view && $('menu').dataset.view !== 'match') {
+    event.preventDefault(); openMenuView('match');
+  }
+});
+$('menuSound').onclick = () => {
+  const muted = $('menuSound').getAttribute('aria-pressed') !== 'true';
+  $('menuSound').setAttribute('aria-pressed', String(muted));
+  $('menuSound').setAttribute('aria-label', muted ? 'Ativar áudio' : 'Silenciar áudio');
+  $('menuSound').title = muted ? 'Ativar áudio' : 'Silenciar áudio';
+  menuMuted = muted;
+  if (master) master.gain.value = muted ? 0 : 0.4;
+};
+
+// Os valores acompanham os controles nativos, inclusive pelo teclado.
+for (const id of ['sens', 'sensAds']) {
+  const updateRangeTicket = () => {
+    $(id + 'Value').value = Number($(id).value).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  };
+  $(id).addEventListener('input', updateRangeTicket);
+  // As preferências salvas são carregadas mais abaixo durante a inicialização.
+  requestAnimationFrame(updateRangeTicket);
+}
+
 // ---------------- Fluxo do jogo ----------------
+// Vitrine independente: a arte do menu e sua luz não alteram os mapas jogáveis.
+const menuScene = new THREE.Scene();
+menuScene.background = new THREE.Color(0xdfb477);
+new THREE.TextureLoader().load('./assets/menu/fazendinha-entardecer.png', (texture) => {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  menuScene.background = texture;
+});
+menuScene.add(new THREE.HemisphereLight(0xffe6bd, 0x79522f, 2.1));
+const menuSun = new THREE.DirectionalLight(0xffd292, 2.4);
+menuSun.position.set(-3, 7, 5); menuScene.add(menuSun);
+const menuStage = new THREE.Group(); menuScene.add(menuStage);
+for (let i = 0; i < 7; i++) {
+  const plank = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.13, 1.1), new THREE.MeshStandardMaterial({ color: [0x8a603b, 0x98704b, 0xa47b4f][i % 3], roughness: 1 }));
+  plank.position.set((i - 3) * 0.355, -0.085, 0); menuStage.add(plank);
+  for (const z of [-0.43, 0.43]) {
+    const nail = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.005, 6), new THREE.MeshBasicMaterial({ color: 0x3c3025 }));
+    nail.position.set(plank.position.x, -0.018, z); menuStage.add(nail);
+  }
+}
+const stageShadow = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.4), new THREE.MeshBasicMaterial({
+  map: canvasTex(128, 128, (ctx) => {
+    const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 64); g.addColorStop(0, '#24160cc0'); g.addColorStop(1, '#24160c00');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  }), transparent: true, depthWrite: false,
+}));
+stageShadow.rotation.x = -Math.PI / 2; stageShadow.position.y = -0.012; menuStage.add(stageShadow);
 const showcase = new THREE.Group(); showcase.position.set(0, 3, 0); scene.add(showcase);
 let selectedSkin = getSkin(localStorage.getItem('docao.skin') || DEFAULT_SKIN).id, preview = null;
 // loadout: arma primária escolhida (salva no navegador)
@@ -2494,13 +2559,21 @@ function loop() {
     const free = pr ? innerWidth - pr.right : innerWidth, cx = pr && free >= 200 ? pr.right + free / 2 : innerWidth * 0.72;
     const offX = innerWidth / 2 - cx; menuPreviewX = cx;
     if (!camera.view || !camera.view.enabled || Math.abs(camera.view.offsetX - offX) > 0.5 || camera.view.fullWidth !== innerWidth || camera.view.fullHeight !== innerHeight) camera.setViewOffset(innerWidth, innerHeight, offX, 0, innerWidth, innerHeight);
-    showcase.rotation.y += dt * 0.7; showcase.position.y = showBaseY + (getSkin(selectedSkin).float ? 0.1 + Math.sin(menuT * 10) * 0.06 : Math.abs(Math.sin(menuT * 6)) * 0.06);
+    showcase.rotation.y = showCamYaw + 0.15 + Math.sin(menuT * 1.8) * 0.12; showcase.position.y = showBaseY + (getSkin(selectedSkin).float ? 0.1 + Math.sin(menuT * 10) * 0.06 : Math.abs(Math.sin(menuT * 6)) * 0.06);
     for (const p of pickups) p.mesh.rotation.y += dt;
   }
   renderer.clear();
   const camO = window.__cam; // testes/screenshots: câmera livre { p: [x, y, z], t: [x, y, z], fov }
   if (camO) { camera.position.set(...camO.p); camera.lookAt(...camO.t); if (camO.fov && camera.fov !== camO.fov) { camera.fov = camO.fov; camera.updateProjectionMatrix(); } }
-  renderer.render(scene, camera);
+  if (state === 'menu' && !camO) {
+    if (showcase.parent !== menuScene) menuScene.add(showcase);
+    menuStage.position.set(showcase.position.x, showBaseY, showcase.position.z);
+    menuStage.rotation.y = showCamYaw;
+    renderer.render(menuScene, camera);
+  } else {
+    if (showcase.parent !== scene) scene.add(showcase);
+    renderer.render(scene, camera);
+  }
   if (state !== 'menu' && player && player.alive && !camO && !(predator && predator.phase === 'fly')) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
 }
 mountUav();
@@ -2634,7 +2707,7 @@ function refreshMenuMode() {
   $('menuTeam').classList.toggle('hidden', v !== 'dom');
   $('botCount').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
   $('timeSel').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
-  $('playBtn').innerHTML = v === 'explore' ? 'EXPLORAR MAPA <small>(sem bots)</small>' : 'JOGAR OFFLINE <small>(bots)</small>';
+  $('playBtn').innerHTML = v === 'explore' ? 'EXPLORAR <small>SEM BOTS · SEM PRESSA</small>' : v === TRAIN.mode ? 'TREINAR <small>ESTANDE · SEM LIMITE</small>' : 'JOGAR <small>SOLO · CONTRA BOTS</small>';
   $('menuRules').textContent = MENU_RULES[v];
   teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); });
 }
