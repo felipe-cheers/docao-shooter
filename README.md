@@ -86,6 +86,7 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **1** / **2** / **3** | primária / secundária / corpo a corpo |
 | **Rodinha do mouse** | gira entre as três armas |
 | **V** | troca rápida: faca ↔ última arma |
+| **I** | inspecionar a arma (segure pra ficar olhando) · mostra camuflagem e abates |
 | **Q** (segurar e soltar) | carrega e arremessa o **Copo Bomba** |
 | **4** | granada de **fumaça** (só offline) |
 | **5** | granada de **atordoamento** (só offline) |

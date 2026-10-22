@@ -31,6 +31,8 @@ button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
 #hitmarker i:nth-child(4){transform:translate(9px,9px) rotate(45deg)}
 #hitmarker.show{opacity:1;animation:hitpop .14s ease-out}
 #hitmarker.kill i{width:14px;height:4px;margin:-2px 0 0 -7px;background:#ff3b3b}
+#hitmarker.wall i{background:#ffb347}
+#hitmarker.wall.kill i{background:#ff3b3b;box-shadow:0 0 0 1px #ffb347,0 0 2px rgba(0,0,0,.85)}
 #hitmarker.kill i:nth-child(1){transform:translate(-12px,-12px) rotate(45deg)}
 #hitmarker.kill i:nth-child(2){transform:translate(12px,-12px) rotate(-45deg)}
 #hitmarker.kill i:nth-child(3){transform:translate(-12px,12px) rotate(-45deg)}
@@ -58,14 +60,26 @@ button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
 #streak.s6 b{font-size:76px;color:#ff4b4b;text-shadow:0 0 22px #ff2a2a}
 @keyframes streakpop{0%{opacity:0;transform:translateX(-50%) scale(1.7)}14%{opacity:1;transform:translateX(-50%) scale(1)}72%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1.08)}}
 #vignette{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,80,120,0) 45%,rgba(255,40,80,.75) 100%)}
+#eggsplat{position:fixed;inset:0;pointer-events:none;opacity:0}#eggsplat canvas{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))} /* ovo na tela (Estilingue) */
 #topbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);text-align:center}
 #timer{font-family:"Arial Black",Impact;font-size:30px;-webkit-text-stroke:1.5px #2a1410;color:#fff}
 #leader{font-size:14px;color:#ffd27a;font-weight:bold;text-shadow:0 2px 0 #000}
 #score{position:fixed;top:14px;left:16px;font-weight:bold;font-size:17px;background:rgba(0,0,0,.4);padding:6px 12px;border-radius:10px}
 #killfeed{position:fixed;left:20px;bottom:132px;top:auto;right:auto;display:flex;flex-direction:column-reverse;gap:5px;align-items:flex-start;pointer-events:none;z-index:6}
 .kf{background:rgba(0,0,0,.5);padding:5px 10px;border-radius:8px;font-size:15px}
-.kf b{color:#7DF9FF}.kf .me{color:#ffd27a}.kf i{color:#ff9fb6;font-style:normal}
+.kf b{color:#7DF9FF}.kf .me{color:#ffd27a}.kf i{color:#ff9fb6;font-style:normal;font-size:12px;opacity:.85}
+.kf .kfi{display:inline-flex;align-items:center;gap:3px;vertical-align:-3px;margin:0 2px;color:#f5f1e8;filter:drop-shadow(0 1px 0 #000)}
+.kf .kfi-hs{color:#ff4a4a}
+.kf .kfi-wall{color:#ffb347}
+.kf .kfi-col{color:#7DF9FF}
 #centermsg{position:fixed;top:62%;left:50%;transform:translateX(-50%);font-size:22px;font-weight:bold;text-shadow:0 2px 0 #000;text-align:center}
+#inspect{position:fixed;left:40px;top:42%;min-width:220px;max-width:min(320px,calc(100vw - 80px));padding:10px 14px;background:rgba(20,10,8,.55);border-left:4px solid #7DF9FF;border-radius:8px;text-shadow:0 2px 0 #000;pointer-events:none}
+#inspName{font:bold 20px "Arial Black",Impact,sans-serif;color:#fff}
+#inspCamo{color:#7DF9FF;font-weight:bold;margin-top:2px}
+#inspKills{font-size:13px;opacity:.9;margin-top:2px}
+#inspBar{height:6px;background:rgba(255,255,255,.18);border-radius:3px;margin-top:6px;overflow:hidden}
+#inspFill{height:100%;width:0;background:#ffbf3a}
+body.dead #inspect{display:none}
 #stamp{position:fixed;top:34%;left:50%;transform:translate(-50%,-50%) rotate(-12deg) scale(1);font-family:"Arial Black",Impact;font-size:72px;color:#e63946;border:8px solid #e63946;border-radius:14px;padding:4px 24px;opacity:0;background:rgba(255,255,255,.85)}
 #stamp.show{animation:stamp .35s ease-out forwards}
 @keyframes stamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-12deg) scale(3)}100%{opacity:1;transform:translate(-50%,-50%) rotate(-12deg) scale(1)}}

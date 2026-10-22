@@ -457,7 +457,53 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.035, 0.62, 0.03), toon('#6b3f22'), bw, 0.008);
     mesh(new THREE.BoxGeometry(0.012, 0.52, 0.012), toon('#f4efe4'), bw, 0.004).position.z = 0.05;
     const arr = mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.38, 6), toon('#c4a574'), bw, 0.004); arr.rotation.x = Math.PI / 2; arr.position.set(0, 0.02, 0.18);
-    guns.push(xb, bw); for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw]) o.visible = false;
+    guns.push(xb, bw);
+    // FAMAS (bullpup): corpo comprido, alça de transporte em cima, pente atrás do cabo
+    const fm = new THREE.Group(); fm.position.copy(r.position); g.add(fm);
+    mesh(new THREE.BoxGeometry(0.1, 0.12, 0.66), toon('#4b5240'), fm, 0.01).position.z = 0.02;
+    mesh(new THREE.BoxGeometry(0.03, 0.03, 0.4), toon('#2a2d35'), fm, 0.006).position.set(0, 0.13, 0.04);
+    for (const z of [-0.14, 0.22]) mesh(new THREE.BoxGeometry(0.03, 0.08, 0.03), toon('#2a2d35'), fm, 0.004).position.set(0, 0.09, z);
+    mesh(new THREE.BoxGeometry(0.05, 0.14, 0.06), toon('#2a2d35'), fm, 0.006).position.set(0, -0.12, 0.12);
+    mesh(new THREE.BoxGeometry(0.06, 0.15, 0.08), toon('#e63946'), fm, 0.006).position.set(0, -0.13, -0.14);
+    const fmb = mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 8), toon('#22252c'), fm, 0.006); fmb.rotation.x = Math.PI / 2; fmb.position.set(0, 0.01, 0.45);
+    guns.push(fm);
+    // Disco Voador: lançador roxo com o disquinho em cima da boca
+    const dk = new THREE.Group(); dk.position.copy(r.position); g.add(dk);
+    mesh(new THREE.BoxGeometry(0.12, 0.12, 0.5), toon('#5b3fa0'), dk, 0.008).position.z = 0.02;
+    const dkc = mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.04, 16), toon('#2a2d35'), dk, 0.006); dkc.position.set(0, 0.07, 0.36);
+    const dks = mesh(new THREE.SphereGeometry(0.15, 14, 8), toon('#c9d1d9'), dk, 0.006); dks.position.set(0, 0.11, 0.36); dks.scale.set(1, 0.26, 1);
+    mesh(new THREE.SphereGeometry(0.06, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon('#7df9ff'), dk, 0.004).position.set(0, 0.12, 0.36);
+    guns.push(dk);
+    // Sabre Duplo: um em cada mão (o da esquerda é o twin; main.js liga/desliga os dois juntos)
+    const dualHold = (arm, s) => { const h = new THREE.Group(); h.position.set(0, -0.64, 0.05); h.rotation.set(-Math.PI / 2, s * 0.2, s * 0.05); arm.add(h); const sb = makeWorldSaber(); h.add(sb); h.userData.blade = sb.userData.blade; h.userData.glow = sb.userData.glow; return h; };
+    const d2r = dualHold(arms[0], 1), d2l = dualHold(arms[1], -1); d2r.userData.twin = d2l;
+    guns.push(d2r);
+    // Lança-Milho: tambor de pipoqueira vermelho/branco, cano curto com boca amarela e a espiga em cima
+    const mh = new THREE.Group(); mh.position.copy(r.position); g.add(mh);
+    const mhd = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.34, 14), toon('#e63946'), mh, 0.008); mhd.rotation.x = Math.PI / 2;
+    const mhs = mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.05, 14), toon('#f5f1e8'), mh, 0); mhs.rotation.x = Math.PI / 2; mhs.position.z = 0.04;
+    const mhb = mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.24, 10), toon('#2a2d35'), mh, 0.006); mhb.rotation.x = Math.PI / 2; mhb.position.z = 0.3;
+    mesh(new THREE.TorusGeometry(0.052, 0.012, 6, 14), toon('#ffd23f'), mh, 0).position.z = 0.42;
+    mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.16, 8), toon('#f2c230'), mh, 0.005).position.set(0, 0.17, 0);
+    guns.push(mh); // 18 = Lança-Milho
+    // Estilingue de Ovo: forquilha de madeira, elástico vermelho e o ovinho puxado pra trás
+    const es = new THREE.Group(); es.name = 'estilingue'; es.position.set(0.04, 1.0, 0.6); g.add(es);
+    mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.14, 8), toon('#8b5a2b'), es, 0.006);
+    for (const s of [-1, 1]) { const f = mesh(new THREE.BoxGeometry(0.025, 0.12, 0.025), toon('#8b5a2b'), es, 0.005); f.position.set(s * 0.05, 0.11, 0); f.rotation.z = -s * 0.45; }
+    mesh(new THREE.BoxGeometry(0.12, 0.012, 0.012), toon('#e63946'), es, 0.004).position.set(0, 0.17, -0.04);
+    const eo = mesh(new THREE.SphereGeometry(0.04, 10, 8), toon('#fff3dc'), es, 0.004); eo.scale.set(1, 1.3, 1); eo.position.set(0, 0.17, -0.07);
+    guns.push(es); // 19 = Estilingue de Ovo
+    // Minigun: carcaça, 6 canos num grupo que gira (main.js gira por userData.barrels), caixa de munição à esquerda
+    const mg = new THREE.Group(); mg.position.copy(r.position); mg.position.y -= 0.08; g.add(mg);
+    mesh(new THREE.BoxGeometry(0.15, 0.16, 0.42), toon('#3a3f4a'), mg, 0.01).position.z = 0.0;
+    mesh(new THREE.BoxGeometry(0.155, 0.04, 0.1), toon('#e63946'), mg, 0.006).position.set(0, 0.09, 0.05);
+    const mgb = new THREE.Group(); mgb.position.set(0, 0, 0.42); mg.add(mgb);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, b = mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.46, 8), toon('#22252c'), mgb, 0.005); b.rotation.x = Math.PI / 2; b.position.set(Math.cos(a) * 0.045, Math.sin(a) * 0.045, 0); }
+    mesh(new THREE.TorusGeometry(0.062, 0.012, 6, 16), toon('#1a1c22'), mgb, 0.004).position.z = 0.2;
+    mesh(new THREE.BoxGeometry(0.12, 0.15, 0.2), toon('#5c6b3a'), mg, 0.006).position.set(-0.14, -0.07, -0.04);
+    mesh(new THREE.BoxGeometry(0.05, 0.1, 0.03), toon('#2a2d35'), mg, 0.004).position.set(0, 0.14, -0.02); // alça
+    mg.userData.barrels = mgb; guns.push(mg); // 20 = Minigun
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -502,6 +548,7 @@ export function setPose(model, pose) {
     if (pose === 'gun') a.rotation.set(-1.32, -s * 0.5, s * 0.12);
     else if (pose === 'reload') a.rotation.set(-0.8, -s * 0.4, s * 0.1);
     else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
+    else if (pose === 'saber2') { if (i === 0) a.rotation.set(-1.25, 0.15, -0.4); else a.rotation.set(-1.25, -0.15, 0.4); } // um sabre em cada mão, abertos
     else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
