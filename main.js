@@ -21,7 +21,7 @@ import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/co
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
 import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
-import { BOMB, W_BOMB, SIDE_NAMES, SITE_NAMES, attackTeam, sideOf, bombLayout, newBombState, startRound, stepBomb, blastVictims, unpackBomb, spawnPool, botObjective, bombFrozen, bombCanUse, plantNow } from './shared/bomb.js';
+import { BOMB, W_BOMB, SIDE_NAMES, SITE_NAMES, attackTeam, sideOf, bombLayout, newBombState, startRound, stepBomb, blastVictims, unpackBomb, spawnList, botObjective, bombFrozen, bombCanUse, plantNow } from './shared/bomb.js';
 import { makeBotijao, makeSiteMark } from './bomb-gfx.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, PISTOL, KNIFE, MELEE, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 
@@ -214,7 +214,7 @@ function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
 
 // spawn equilibrado: longe dos vivos e, se possível, fora da linha de visão deles
 function pickSpawn(e) {
-  const pool = spawnPool(bombS, bombL, e.team), list = pool ? pool.map((i) => SPAWNS[i]) : SPAWNS; // Bomba: spawn do lado do time
+  const list = spawnList(bombS, bombL, e.team, SPAWNS); // Bomba: spawn do lado do time
   let best = list[0], bd = -Infinity;
   for (const s of list) {
     let md = 1e9, seen = false; const eye = new V3(s.x, s.y + 1.5, s.z);
@@ -1929,7 +1929,7 @@ function startOnlineMatch(m) {
   player.primary = player.nextPrimary = selectedPrimary; player.slots = [selectedPrimary, PISTOL, KNIFE]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
   entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin); player.caps = me.caps || 0; applyTeam(player, me.team ?? -1);
   for (const info of m.ents) remoteEnt(info);
-  if (mode === 'bomb' && m.bomb) setupBomb({ sites: m.bomb.sites.map(([x, y, z], i) => ({ x, y, z, name: SITE_NAMES[i] })), atk: m.bomb.atk, def: m.bomb.def }, unpackBomb(m.bomb.s)); else if (mode === 'bomb') mode = 'dm';
+  if (mode === 'bomb' && m.bomb) setupBomb({ sites: m.bomb.sites.map(([x, y, z], i) => ({ x, y, z, name: SITE_NAMES[i] })), atk: m.bomb.atk, def: m.bomb.def, pts: m.bomb.pts ? m.bomb.pts.map(([x, y, z]) => ({ x, y, z })) : undefined }, unpackBomb(m.bomb.s)); else if (mode === 'bomb') mode = 'dm';
   refreshModeHud(); $('teamPick').classList.add('hidden');
   if (teamMode() && me.pend) showTeamPick(m.ents);
   pickups.forEach((p, i) => { p.active = !!(m.pk ? m.pk[i] : 1); p.mesh.visible = p.active; });
@@ -2100,7 +2100,7 @@ function clearBombGfx() {
 }
 function endBomb() { clearBombGfx(); bombS = null; bombL = null; }
 function startBombOffline() {
-  setupBomb(bombLayout(nav, SPAWNS, currentMap), newBombState());
+  setupBomb(bombLayout(nav, SPAWNS, currentMap, groundAt), newBombState());
   return startRound(bombS, gameTime, entities); // rodada 1: os respawns logo depois já usam o lado certo
 }
 // offline: avança a rodada e aplica explosão / renascimento / fim

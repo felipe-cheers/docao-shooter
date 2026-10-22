@@ -28,7 +28,18 @@ const nearBomb = (S, p) => !!S.bomb && hd(S.bomb, p) <= BOMB.DEFUSE_R && Math.ab
 // Lados: os 2 spawns mais distantes viram o "lado do Ataque" e o "lado da Defesa"; cada spawn vai pro lado mais perto (projeção no eixo).
 // Sites: nós andáveis do grafo com chão em volta, na metade da Defesa e longe do spawn do Ataque, o par mais afastado entre si.
 // Determinístico (sem sorteio): cliente e servidor chegam no mesmo resultado. map.bombSites [[x, y, z], [x, y, z]] sobrescreve.
-export function bombLayout(nav, spawns, map = null) {
+// map.bomb = { sites: [[x, y, z], [x, y, z]], atk: [[x, z, y?], ...], def: [[x, z, y?], ...] } (feito à mão, preferido):
+//  spawns próprios do modo Bomba — o Ataque nasce longe dos sites, a Defesa perto. Os índices de atk/def apontam pra layout.pts.
+//  groundAt (opcional) acerta a altura do chão de cada ponto.
+export function bombLayout(nav, spawns, map = null, groundAt = null) {
+  const hb = map && map.bomb;
+  if (hb && Array.isArray(hb.sites) && hb.sites.length >= 2 && Array.isArray(hb.atk) && hb.atk.length && Array.isArray(hb.def) && hb.def.length) {
+    const pt = ([x, z, y = 0]) => ({ x, y: groundAt ? groundAt(x, z, y + 0.3) : y, z });
+    const ap = hb.atk.map(pt), dp = hb.def.map(pt), pts = [...ap, ...dp];
+    const cen = (l) => ({ x: l.reduce((a, p) => a + p.x, 0) / l.length, y: 0, z: l.reduce((a, p) => a + p.z, 0) / l.length });
+    const sites = hb.sites.slice(0, 2).map(([x, y, z], i) => ({ x, y: groundAt ? groundAt(x, z, y + 0.3) : y, z, name: SITE_NAMES[i] }));
+    return { sites, atk: ap.map((_, i) => i), def: dp.map((_, i) => ap.length + i), pts, atkC: cen(ap), defC: cen(dp) };
+  }
   const sp = spawns.map((s) => ({ x: s.x, y: s.y || 0, z: s.z }));
   let ia = 0, ib = Math.min(1, sp.length - 1), best = -1;
   for (let i = 0; i < sp.length; i++) for (let j = i + 1; j < sp.length; j++) { const d = hd(sp[i], sp[j]) - (sp[i].y + sp[j].y) * 2; if (d > best) { best = d; ia = i; ib = j; } }
@@ -69,6 +80,11 @@ export function bombLayout(nav, spawns, map = null) {
 export function spawnPool(S, layout, team) {
   if (!S || !layout || (team !== 0 && team !== 1)) return null;
   return sideOf(S, team) === 0 ? layout.atk : layout.def;
+}
+// pontos de nascimento permitidos (layout.pts quando o mapa tem spawns próprios do modo Bomba; senão os spawns do mapa)
+export function spawnList(S, layout, team, spawns) {
+  const pool = spawnPool(S, layout, team); if (!pool) return spawns;
+  const src = (layout && layout.pts) || spawns, l = pool.map((i) => src[i]).filter(Boolean); return l.length ? l : spawns;
 }
 
 // ---------- estado da partida ----------

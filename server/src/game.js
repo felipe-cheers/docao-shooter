@@ -14,7 +14,7 @@ import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
-import { BOMB, W_BOMB, bombLayout, newBombState, startRound, stepBomb, blastVictims, packBomb, spawnPool, botObjective, bombFrozen } from '../../shared/bomb.js';
+import { BOMB, W_BOMB, bombLayout, newBombState, startRound, stepBomb, blastVictims, packBomb, spawnList, botObjective, bombFrozen } from '../../shared/bomb.js';
 const MODE_OK = (m) => (m === 'dom' || m === 'bomb' ? m : 'dm');
 
 export const MAX_PLAYERS = 10;
@@ -169,7 +169,7 @@ export class Game {
     this.teamScore = [0, 0]; this.zone = this.cfg.mode === 'dom' ? newZoneState(pickZone(this.nav)) : null;
     this.bomb = null; this.bombL = null;
     if (this.bombMode) { // Modo Bomba (protótipo): lados + sites A/B do mapa, rodada 1 começa na preparação
-      this.bombL = bombLayout(this.nav, this.spawns, map); this.bomb = newBombState(); this.teamScore = this.bomb.score;
+      this.bombL = bombLayout(this.nav, this.spawns, map, this.P.groundAt); this.bomb = newBombState(); this.teamScore = this.bomb.score;
       for (const ev of startRound(this.bomb, 0, this.live())) this.events.push(['bb', ...ev]);
     }
     for (const e of this.ents.values()) if (e.bot || e.connected) this.spawn(e, true);
@@ -179,7 +179,7 @@ export class Game {
   get cfgLimit() { return this.bombMode ? 1e6 : this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; } // Bomba: acaba em 13 rodadas, não por tempo
   get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
-  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), bomb: this.bomb ? { sites: this.bombL.sites.map((s) => [r2(s.x), r2(s.y), r2(s.z)]), atk: this.bombL.atk, def: this.bombL.def, s: packBomb(this.bomb) } : undefined, win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), bomb: this.bomb ? { sites: this.bombL.sites.map((s) => [r2(s.x), r2(s.y), r2(s.z)]), atk: this.bombL.atk, def: this.bombL.def, pts: this.bombL.pts ? this.bombL.pts.map((p) => [r2(p.x), r2(p.y), r2(p.z)]) : undefined, s: packBomb(this.bomb) } : undefined, win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.rockets = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
@@ -415,7 +415,7 @@ export class Game {
   }
   // ---------- renascimento e pickups ----------
   pickSpawn(e) {
-    const pool = spawnPool(this.bomb, this.bombL, e.team), list = pool ? pool.map((i) => this.spawns[i]) : this.spawns; // Bomba: spawn do lado do time
+    const list = spawnList(this.bomb, this.bombL, e.team, this.spawns); // Bomba: spawn do lado do time
     let best = list[0], bd = -Infinity;
     for (const s of list) {
       let md = 1e9, seen = false; const eye = { x: s.x, y: s.y + 1.5, z: s.z };
