@@ -419,7 +419,8 @@ export class Game {
     let best = list[0], bd = -Infinity;
     for (const s of list) {
       let md = 1e9, seen = false; const eye = { x: s.x, y: s.y + 1.5, z: s.z };
-      for (const o of this.ents.values()) { if (o === e || !o.alive || this.friends(o, e)) continue; const d = dist(o.pos, s); md = Math.min(md, d); if (!seen && d < 60 && this.P.losClear(eye, center(o, 1.5))) seen = true; }
+      for (const o of this.ents.values()) { if (o === e || !o.alive) continue; if (this.friends(o, e)) { if (this.bomb && dist(o.pos, s) < 2.5) md = Math.min(md, -40); continue; } // Bomba: não nasce em cima do colega
+        const d = dist(o.pos, s); md = Math.min(md, d); if (!seen && d < 60 && this.P.losClear(eye, center(o, 1.5))) seen = true; }
       const score = Math.min(md, 40) + Math.random() * 6 - (seen ? 30 : 0); if (score > bd) { bd = score; best = s; }
     }
     return best;

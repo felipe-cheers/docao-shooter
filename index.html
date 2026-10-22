@@ -27,6 +27,13 @@
   <div id="domhud" class="hidden"><div id="domScore"><span class="tr">VERMELHO <b id="ts0">0</b></span><span class="vs">×</span><span class="tb"><b id="ts1">0</b> AZUL</span></div>
     <div id="zoneBar"><div id="zoneFill"></div><span id="zoneText">Zona neutra</span></div><div id="myTeam"></div></div>
   <div id="zoneMark" class="hidden"><div class="zarrow">▲</div><div class="zlbl">ZONA <span id="zoneDist"></span></div></div>
+  <div id="bombhud" class="hidden"><div id="bScore"><span class="ba">ATAQUE <b id="bs0">0</b></span><span class="vs">×</span><span class="bd"><b id="bs1">0</b> DEFESA</span></div>
+    <div id="bTimer" class="hidden"></div><div id="bCarrier"></div><div id="bSide"></div></div>
+  <div id="bProg" class="hidden"><div id="bProgFill"></div><span id="bProgText"></span></div>
+  <div id="bombBanner" class="hidden"><div class="b1"></div><div class="b2"></div></div>
+  <div id="siteMark0" class="bmark hidden"><div class="zarrow">▲</div><div class="zlbl"><b>A</b> <span></span></div></div>
+  <div id="siteMark1" class="bmark hidden"><div class="zarrow">▲</div><div class="zlbl"><b>B</b> <span></span></div></div>
+  <div id="bombMark" class="bmark hidden"><div class="zarrow">▲</div><div class="zlbl">BOTIJÃO <span></span></div></div>
   <div id="teamPick" class="hidden"><div class="tpt">Escolha seu time</div><div class="teamrow" id="teamPickBtns"></div><div class="tpe" id="teamPickErr"></div></div>
   <div id="score">Abates: 0 · Mortes: 0 · K/D: 0.00</div>
   <div id="killfeed"></div>
@@ -71,7 +78,7 @@
       <button id="mapBtn" class="mapcard current" title="Escolher mapa"><span class="thumb"></span><span class="mtxt"><b id="mapName">Arena da Fazendinha</b><small id="mapDesc"></small></span><span class="mchange">trocar ▸</span></button>
     </div>
     <div class="row">
-      <label>Modo<select id="modeSel"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option></select></label>
+      <label>Modo<select id="modeSel"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option><option value="bomb">Bomba · Planta o Botijão (protótipo)</option></select></label>
     </div>
     <div id="menuTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="menuTeamBtns"></div></div>
     <div class="row">
@@ -114,7 +121,7 @@
     <div class="otabs"><button id="tabCreate" class="otab active">Criar sala</button><button id="tabJoin" class="otab">Entrar na sala</button></div>
     <div id="paneCreate">
       <label>Mapa<select id="roomMap"></select></label>
-      <label>Modo<select id="roomMode"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option></select></label>
+      <label>Modo<select id="roomMode"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option><option value="bomb">Bomba · Planta o Botijão (protótipo)</option></select></label>
       <div class="row">
         <label>Máx. jogadores<select id="roomMax"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <label>Completar com bots<select id="roomBots"><option value="1" selected>Sim</option><option value="0">Não</option></select></label>
@@ -144,7 +151,7 @@
         <label>Mapa<select id="lobbyMap"></select></label>
         <label>Máx.<select id="lobbyMax"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <label>Bots<select id="lobbyBots"><option value="1">Sim</option><option value="0">Não</option></select></label>
-        <label>Modo<select id="lobbyMode"><option value="dm">Mata-mata</option><option value="dom">Dominação</option></select></label>
+        <label>Modo<select id="lobbyMode"><option value="dm">Mata-mata</option><option value="dom">Dominação</option><option value="bomb">Bomba (protótipo)</option></select></label>
         <label>Tempo<select id="lobbyTime"><option value="0">Padrão</option><option value="3">3 min</option><option value="5">5 min</option><option value="7">7 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></label>
       </div>
       <button id="startOnline">INICIAR PARTIDA</button>

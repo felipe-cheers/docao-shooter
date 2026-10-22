@@ -89,7 +89,7 @@ export function startRound(S, T, ents, rnd = Math.random) {
   S.round++; S.phase = 'prep'; S.phaseEnd = T + BOMB.PREP;
   Object.assign(S, { bomb: null, dropped: false, planted: false, site: -1, explodeAt: 0, plantProg: 0, defuseProg: 0, planter: 0, defuser: 0, reason: '' });
   const atk = attackTeam(S.round), c = ents.filter((e) => e.team === atk);
-  const hum = c.filter((e) => !e.bot && !e.isBot); // prefere um humano (é mais divertido carregar)
+  const hum = c.filter((e) => e.isPlayer || e.bot === false); // prefere um humano (é mais divertido carregar)
   const pool = hum.length && rnd() < 0.6 ? hum : c;
   S.carrier = pool.length ? pool[Math.floor(rnd() * pool.length)].id : 0;
   S.target = rnd() < 0.5 ? 0 : 1;
