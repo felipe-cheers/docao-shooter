@@ -523,4 +523,106 @@ export const MAPS = [];
   });
 }
 
+// =====================================================================
+// MAPA 8: Pátio Ferrugem. Rust do Call of Duty, em escala menor:
+// pátio quadrado e curto. A torre do meio é a coisa mais alta (meio em 6 m, topo em 13 m).
+// Sobe pela rampa laranja do sul (o duto de exaustão) até o meio, e por outra rampa até o topo.
+// Em volta: bomba a noroeste, duto ao norte (dá para andar em cima e por baixo),
+// contêineres, tanques a leste e uma salinha a sudoeste.
+{
+  const boxes = [];
+  const steel = '#5a626a', rust = '#8d5a34', pipe = '#c4783a', conc = '#b7b1a6', sand = '#c4a574';
+  const redC = '#c44536', blueC = '#3d6ea8';
+  const fenceOp = [door(-14, -10, 2.2), door(-2, 2, 2.2), door(10, 14, 2.2)];
+  boxes.push(...wallX(-20, 20, -20.5, 0.28, 1.5, sand, fenceOp));
+  boxes.push(...wallX(-20, 20, 20.5, 0.28, 1.5, sand, fenceOp));
+  boxes.push(...wallZ(-20, 20, -20.5, 0.28, 1.5, sand, fenceOp));
+  boxes.push(...wallZ(-20, 20, 20.5, 0.28, 1.5, sand, fenceOp));
+
+  // pernas da torre, mais altas que o topo, para o mastro aparecer de longe
+  boxes.push(B(-4.6, 2.9, -3.4, 4.05, 16.6, steel), B(3.3, 2.9, 4.5, 4.05, 16.6, steel));
+  boxes.push(B(-4.6, -4.3, -3.4, -3.15, 16.6, steel), B(3.3, -4.3, 4.5, -3.15, 16.6, steel));
+  // meio da torre, em 6 m. A borda sul para exatamente onde a rampa chega.
+  boxes.push(B(-5.1, -4.55, 4.7, 4.15, 0.4, '#6a727a', 5.6));
+  boxes.push(B(-4.5, -2.2, -3.4, 0.4, 1.15, steel, 6));
+  // passarela leste, ao sul da perna, até o pé da rampa de cima
+  boxes.push(B(4.7, -2.45, 13.5, 0.35, 0.35, '#5c656e', 5.65));
+  boxes.push(B(12.8, -7.35, 13.5, -2.45, 0.35, '#5c656e', 5.65));
+  // rampa do sul: chão → meio. Sobe andando para o norte.
+  boxes.push(R(-1.65, 4.15, 1.65, 12.4, 0, 6, 'z', -1, pipe));
+  // rampa do lado: meio → topo. Longa de propósito: se for íngreme, o corpo bate na quina da laje.
+  boxes.push(R(3.55, -7.25, 13.5, -4.85, 6, 13, 'x', -1, pipe));
+  boxes.push(B(-3.1, -2.4, 2.65, 2.7, 0.35, '#4e565e', 12.65));
+  boxes.push(B(-0.6, -7.25, 3.55, -2.4, 0.35, '#4e565e', 12.65));
+  boxes.push(B(-2.7, 0.8, -1.4, 2.2, 1.15, steel, 13));
+  boxes.push(B(-0.4, -0.4, 0.4, 0.4, 5.2, '#3e454c', 13)); // mastro, topo em 18 m
+  boxes.push(
+    { wp: [0, 3, 8.4] }, { wp: [0, 6, 2.2] }, { wp: [3.2, 6, -1.2] }, { wp: [13.1, 6, -1.2] },
+    { wp: [13.1, 6, -6.05] }, { wp: [8, 9.9, -6.05] }, { wp: [1.6, 13, -5.2] }, { wp: [1.4, 13, 1] },
+  );
+
+  // bomba de óleo (noroeste), mais baixa que a torre
+  boxes.push(B(-18.2, -19.2, -10.2, -15.4, 0.35, rust, 4.65));
+  for (const [x, z] of [[-17.6, -18.7], [-11.5, -18.7], [-17.6, -16.5], [-11.5, -16.5]]) boxes.push(B(x, z, x + 0.9, z + 0.9, 5.1, '#4a4038'));
+  boxes.push(B(-16.4, -18.5, -13.4, -16.4, 1.25, '#6a4a30', 5));
+  boxes.push(R(-10.2, -18.6, -4.2, -16.2, 0, 5, 'x', -1, rust));
+  boxes.push({ wp: [-14, 5, -17.2] }, { wp: [-7, 2.4, -17.4] });
+
+  // duto do norte: anda em cima e passa por baixo. Liga na bomba.
+  boxes.push(B(-16.5, -13.6, 11.2, -11.6, 0.42, pipe, 2.95));
+  boxes.push(R(-16, -15.4, -12.2, -13.6, 3.37, 5, 'z', -1, pipe));
+  boxes.push(R(11.2, -13.6, 16.4, -11.6, 0, 3.37, 'x', -1, pipe));
+  for (const x of [-14, -9, -4, 1, 6]) boxes.push(B(x, -13.55, x + 0.4, -13.15, 1.1, steel, 3.37));
+  boxes.push({ wp: [-8, 3.37, -12.6] }, { wp: [2, 3.37, -12.6] }, { wp: [13.5, 1.6, -12.6] });
+
+  // geradores ao sul da torre, um de cada lado da rampa
+  boxes.push(B(-9.2, 6.2, -4.0, 10.2, 2.15, '#c8962e'));
+  boxes.push(B(4.0, 6.0, 8.8, 9.6, 2.15, '#c8962e'));
+
+  // contêineres: vermelho a leste, azul a oeste
+  boxes.push(B(13.2, 1.5, 18.4, 6.2, 2.55, redC));
+  boxes.push(R(13.6, 6.2, 17.8, 9.4, 0, 2.55, 'z', -1, conc));
+  boxes.push(B(-18.6, 2, -13.2, 7.2, 2.55, blueC));
+  boxes.push(R(-13.2, 2.4, -10, 6.6, 0, 2.55, 'x', -1, conc));
+
+  // salinha coberta (sudoeste): o interior do mapa
+  boxes.push(...building(-18.5, 8.2, -9.2, 15.8, {
+    col: { wall: '#d2c2a4', wall2: '#c4b496', floor: '#8d8a84', roof: '#6e5438', roof2: '#5c4630', stair: rust, inner: '#e4d8c4', trim: '#6e5438' },
+    floors: 1, H: 3.3,
+    ops: [{ s: 'n', a: -15.2, b: -12.2 }, { s: 'e', a: 10.4, b: 13.2 }],
+  }));
+
+  // caixotes baixos para ninguém ficar no meio do areal
+  boxes.push(B(6.2, 2.2, 7.6, 4.8, 2.45, conc), B(-8.2, -6.4, -6.6, -4.4, 2.45, conc), B(10.2, 7.4, 11.8, 9.6, 3.4, steel));
+  boxes.push(B(8.4, -10.6, 10.1, -8.5, 2.7, steel), B(-8.1, -1.2, -6.4, 1.4, 2.55, conc));
+  for (const [x, z, h] of [[0, 16.2, 2.35], [7.5, 16.5, 2.35], [-7.2, 16.6, 2.35], [16.2, 12.5, 2.35], [17.4, -8.5, 2.35], [5, -15.6, 1.15], [-7, -16, 1.15], [-15.2, -4.5, 1.15], [-4, 15.6, 1.15], [6.2, 13.6, 1.15]]) {
+    boxes.push(B(x - 0.6, z - 0.6, x + 0.6, z + 0.6, h, '#cbb892'));
+  }
+
+  const props = [
+    { t: 'silo', x: 16.5, z: -8, r: 1.45, h: 5.2, c: '#8d8f86' },
+    { t: 'silo', x: 18.2, z: -1.5, r: 1.3, h: 4.6, c: '#7e8680' },
+    { t: 'truck', x: 4.5, z: 18.2, c: '#c44536' },
+    { t: 'truck', x: 11.5, z: 18.2, c: '#3d6ea8' },
+    { t: 'sign', x: 0, y: 3.1, z: -20.2, w: 5.4, h: 1.3, rot: 0, text: 'FERRUGEM', bg: '#c44536', fg: '#fff6e4' },
+    { t: 'keg', x: -6, z: -9 }, { t: 'keg', x: 6, z: -9 }, { t: 'keg', x: 10, z: 4 }, { t: 'keg', x: -11, z: 0 }, { t: 'keg', x: 2, z: 15 },
+  ];
+  MAPS.push({
+    id: 'patio-ferrugem', name: 'Pátio Ferrugem', desc: 'Pátio pequeno no estilo do Rust: a torre do meio é a mais alta, com rampa do chão até o topo.',
+    size: [24, 24], wallH: 3, wallColor: ['#d7c49a', '#c9b48a'], navSpacing: 1.5, expMax: 0.36,
+    palette: { ...DAY({ ground: '#e4cc90', tiles: ['#edd7a6', '#d8c08a', 56, 16] }), sky: '#8ec8ea', fog: ['#e7d7b0', 34, 88], hemi: ['#fff4e0', '#c4a36a', 1.55], sun: ['#fff6e4', 2.25] },
+    ...fin(boxes), props,
+    spawns: [[-18, -5], [2, -19], [12, -18.5], [19, -12], [19.2, 9], [-2, 19.2], [8, 14.5], [-15, 18.2], [-19.2, 2], [-6, 12.4], [18.4, 14.5], [-10, -9]],
+    pickups: [['health', 0, 1.2, 6], ['health', 1.2, 0.4, 13], ['health', -14, -6], ['health', -2, 16.2],
+      ['ammo', -12.2, -17.4, 5], ['ammo', 0, -12.6, 3.37], ['ammo', -6, 12.6], ['ammo', 15.6, 3.6, 2.55],
+      ['grenade', -1.4, -0.6, 13], ['grenade', 0, -8.4], ['grenade', 8.5, -18.6], ['grenade', -13.2, -2]],
+    showcase: [0, 0, 9], view: [15, 2.4, 17, 0.75, -0.22],
+    test: {
+      stairs: { from: [0, 0, 12], to: [0, 6, 2.2], level: 6 },
+      roof: { from: [0, 6, 2.2], via: [[3.2, -1.2], [13.1, -1.2], [13.1, -6.05], [1.5, -6.05]], to: [1.4, 13, 1], level: 13 },
+      under: { from: [-5, 0, -12.6], to: [5, 0, -12.6], ceil: 3.05 },
+    },
+  });
+}
+
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];

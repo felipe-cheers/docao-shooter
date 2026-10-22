@@ -4,7 +4,7 @@
 const REWARDS = [
   { need: 3, name: 'Olho da granja', icon: 'eye' },
   { need: 5, name: 'Chuva de torresmo', icon: 'missiles' },
-  { need: 7, name: 'Fim da chapa', icon: 'radio' },
+  { need: 7, name: 'Gavião da granja', icon: 'heli' },
 ];
 
 const CSS = `
@@ -23,22 +23,38 @@ const CSS = `
   font-size:15px;font-weight:bold;letter-spacing:1.5px;color:#ffe8c2;text-shadow:0 2px 0 #000;
 }
 #streakBar{
-  position:fixed;right:14px;bottom:130px;z-index:20;
+  position:fixed;right:12px;bottom:210px;z-index:20;
   display:flex;flex-direction:column-reverse;align-items:flex-end;gap:7px;
   pointer-events:none;user-select:none;
 }
 #streakBar .streak-card{
-  position:relative;width:54px;height:54px;color:#c9c0b4;
+  position:relative;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+  height:54px;color:#f2e6dc;
 }
 #streakBar .streak-sq{
-  width:54px;height:54px;box-sizing:border-box;position:relative;
-  background:rgba(16,14,12,.94);border:2px solid #3a342f;border-radius:4px;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),0 2px 0 rgba(0,0,0,.35);
+  width:54px;height:54px;box-sizing:border-box;position:relative;flex:none;
+  background:rgba(18,10,12,.94);border:2px solid #ff2a2a;border-radius:3px;
+  box-shadow:0 0 8px rgba(255,40,40,.85),inset 0 0 0 1px rgba(0,0,0,.55);
 }
 #streakBar .streak-chevron{
-  position:absolute;right:calc(100% + 3px);top:50%;transform:translateY(-50%);
-  font-family:"Segoe UI",Arial,sans-serif;font-size:20px;font-weight:700;
+  position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);
+  font-family:"Segoe UI",Arial,sans-serif;font-size:18px;font-weight:700;
   line-height:1;color:#fff;opacity:0;text-shadow:0 1px 2px #000;
+}
+#streakBar .streak-chevron.right{
+  position:static;transform:none;width:12px;text-align:center;flex:none;
+}
+#streakBar .streak-pips{
+  width:22px;height:54px;flex:none;display:flex;flex-direction:column;
+  justify-content:center;gap:4px;visibility:hidden;
+}
+#streakBar .streak-card.next .streak-pips{visibility:visible}
+#streakBar .streak-pips i{
+  display:block;height:7px;border-radius:1px;background:#4a1820;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.55);
+}
+#streakBar .streak-pips i.on{
+  background:#e02028;box-shadow:0 0 6px #ff2a2a,inset 0 0 0 1px rgba(0,0,0,.25);
 }
 #streakBar .streak-card b{
   position:absolute;left:0;right:0;bottom:2px;text-align:center;
@@ -82,17 +98,32 @@ const CSS = `
     linear-gradient(currentColor,currentColor) center 4px / 8px 2px no-repeat,
     linear-gradient(currentColor,currentColor) center 8px / 8px 2px no-repeat;
 }
-#streakBar .streak-card.locked{opacity:.5}
-#streakBar .streak-card.next{opacity:1;color:#ffd27a}
+#streakBar .streak-glyph.eye{color:#e8fbff}
+#streakBar .streak-glyph.missiles{color:#ffe7a4}
+#streakBar .streak-glyph.radio{color:#ff8d8d}
+#streakBar .streak-glyph.heli{width:28px;height:18px}
+#streakBar .streak-glyph.heli::before{
+  content:"";position:absolute;left:6px;top:7px;width:14px;height:7px;box-sizing:border-box;
+  border:2px solid currentColor;border-radius:2px 7px 2px 2px;background:transparent;
+}
+#streakBar .streak-glyph.heli::after{
+  content:"";position:absolute;left:1px;top:3px;width:26px;height:2px;background:currentColor;border-radius:1px;
+}
+#streakBar .streak-glyph.heli{color:#ffd27a}
+#streakBar .streak-card.locked{opacity:.62}
+#streakBar .streak-card.locked .streak-sq{
+  border-color:#8a2430;box-shadow:0 0 5px rgba(160,24,36,.4);
+}
+#streakBar .streak-card.next{opacity:1;color:#fff}
 #streakBar .streak-card.next .streak-chevron{opacity:1}
 #streakBar .streak-card.next .streak-sq{
-  border-color:#ffd27a;background:rgba(48,34,12,.96);
-  box-shadow:0 0 10px rgba(255,210,122,.5),0 2px 0 rgba(0,0,0,.35);
+  border-color:#ff4a4a;background:rgba(42,10,14,.96);
+  box-shadow:0 0 14px #ff2a2a,0 0 2px #fff;
 }
 #streakBar .streak-card.earned{opacity:1;color:#fff}
 #streakBar .streak-card.earned .streak-sq{
-  border-color:#e63946;background:rgba(48,12,16,.96);
-  box-shadow:0 0 12px #ff2a2a,0 0 3px #ff2a2a,0 2px 0 rgba(0,0,0,.35);
+  border-color:#ff3b3b;background:rgba(48,12,16,.96);
+  box-shadow:0 0 12px #ff2a2a,0 0 3px #ff2a2a;
 }
 #nukeReady{
   position:absolute;right:0;bottom:calc(100% + 6px);
@@ -232,12 +263,19 @@ function ensureBar() {
       chevron.className = 'streak-chevron';
       chevron.setAttribute('aria-hidden', 'true');
       chevron.textContent = '<';
+      const chevR = document.createElement('span');
+      chevR.className = 'streak-chevron right';
+      chevR.setAttribute('aria-hidden', 'true');
+      chevR.textContent = '>';
       const sq = document.createElement('div');
       sq.className = 'streak-sq';
       const num = document.createElement('b');
       num.textContent = String(reward.need);
       sq.append(makeGlyph(reward.icon), num);
-      card.append(chevron, sq);
+      const pips = document.createElement('div');
+      pips.className = 'streak-pips';
+      for (let i = 0; i < segmentOf(reward.need); i++) pips.appendChild(document.createElement('i'));
+      card.append(chevron, sq, chevR, pips);
       bar.appendChild(card);
     }
   }
@@ -305,6 +343,12 @@ function ensureNuke() {
 
 // faltam = cycle >= need ? 0 : need - cycle
 // próximo = menor need com faltam > 0; faltam 0 = earned; o resto = locked
+function segmentOf(need) {
+  if (need <= 3) return 3;
+  if (need <= 5) return 2;
+  return 2;
+}
+
 function remainingFor(need, cycle) {
   const c = Number.isFinite(cycle) ? cycle : 0;
   const goal = Number(need);
@@ -342,7 +386,11 @@ function applyCycle(cycle) {
     card.classList.remove('locked', 'next', 'earned');
     card.classList.add(state);
     const num = card.querySelector('b');
-    if (num) num.textContent = remainingText(remainingFor(need, cycle));
+    const left = remainingFor(need, cycle);
+    if (num) num.textContent = remainingText(left);
+    const pips = card.querySelectorAll('.streak-pips i');
+    const filled = state === 'next' ? Math.max(0, pips.length - left) : 0;
+    pips.forEach((pip, i) => pip.classList.toggle('on', pips.length - 1 - i < filled));
   });
 }
 

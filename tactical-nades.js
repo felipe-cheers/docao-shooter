@@ -10,8 +10,26 @@ const bandGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.038, 8);
 const tipGeo = new THREE.SphereGeometry(0.042, 8, 6);
 const puffGeo = new THREE.SphereGeometry(1, 7, 5);
 
-const GRAYS = [0xb7bdc4, 0x9aa1a8, 0x8a9096, 0xc8ced4];
-const PUFFS = 13;
+const GRAYS = [0x7d868e, 0x626a72, 0x6e767e, 0x8a929a];
+const PUFFS = 22;
+
+// disco cinza quase sólido no meio, some só na borda — esfera transparente parece vidro
+function smokeTex() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(64, 64, 6, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.42, 'rgba(255,255,255,0.98)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.55)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const SMOKE_TEX = smokeTex();
 
 function flat(geo, color, extra) {
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, ...extra }));
@@ -68,17 +86,19 @@ export function makeSmokeCloud(pos) {
   group.position.set(center.x, center.y, center.z);
   const puffs = [];
   for (let i = 0; i < PUFFS; i++) {
-    const mat = new THREE.MeshBasicMaterial({
-      color: GRAYS[i % GRAYS.length],
+    const core = i < 8; // miolo fechado; o resto faz a borda
+    const mat = new THREE.SpriteMaterial({
+      map: SMOKE_TEX,
+      color: core ? 0x555d65 : GRAYS[i % GRAYS.length],
       transparent: true,
       depthWrite: false,
-      opacity: 0.16 + Math.random() * 0.16,
+      opacity: core ? 1 : 0.94,
     });
-    const m = new THREE.Mesh(puffGeo, mat);
+    const m = new THREE.Sprite(mat);
     const ang = Math.random() * Math.PI * 2;
-    const dist = Math.sqrt(Math.random()) * SMOKE.radius * 0.58;
-    const y = (Math.random() - 0.2) * SMOKE.radius * 0.42;
-    const s0 = 1.15 + Math.random() * 1.45;
+    const dist = Math.sqrt(Math.random()) * SMOKE.radius * (core ? 0.16 : 0.42);
+    const y = (Math.random() - 0.1) * SMOKE.radius * (core ? 0.18 : 0.34);
+    const s0 = core ? 4.4 + Math.random() * 1.1 : 3.4 + Math.random() * 1.3;
     m.position.set(Math.cos(ang) * dist, y, Math.sin(ang) * dist);
     m.scale.setScalar(s0);
     m.userData.y0 = y;
@@ -108,7 +128,7 @@ export function makeSmokeCloud(pos) {
         const wave = Math.sin(this.age * 1.7 + u.phase);
         m.position.y = u.y0 + this.age * u.rise;
         m.scale.setScalar(u.s0 * (1 + 0.1 * wave));
-        m.material.opacity = u.op0 * (0.82 + 0.18 * wave) * fade;
+        m.material.opacity = u.op0 * (0.94 + 0.06 * wave) * fade;
       }
       return true;
     },
