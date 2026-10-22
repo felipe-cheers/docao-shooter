@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { makeWardrobeCase } from './menu-wardrobe.js';
 import { makeMenuBackdrop } from './menu-backdrop.js';
-import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, setCrouchPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife } from './docao.js';
+import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, setCrouchPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife, setExpression, updateExpression } from './docao.js';
 import { makeFPSniper, poseSniperBolt } from './sniper-view.js';
 import { makeFPSaber, makeWorldSaber, setSaberColor, poseSaber } from './saber-view.js';
 import { makeFPCrossbow, makeFPBow, poseDraw, poseRelease, makeFlightShaft } from './bow-view.js';
@@ -907,6 +907,7 @@ function rocketSmoke(r, R) {
 // bala: traceShot (shared/penetration.js) nas caixas de PHYS, a mesma regra do servidor: atravessa parede leve e corpos (collateral)
 function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
   const w = WEAPONS[wIdx]; const res = { hit: false, kill: false, kills: 0, wall: false };
+  if (shooter && shooter.model) setExpression(shooter.model, 'angry', 0.5); // cara de brava ao atirar
   const scale = wIdx === BOW ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
   const hitsBy = new Map(), dirs = [], heliDmg = new Map(), skies = shooter === player ? [] : skyHelis();
   const targets = entities.filter((e) => e !== shooter && e.alive && !friends(e, shooter)).map((e) => ({ e, p: e.pos, crouch: e.crouch || 0 })); // time: bala atravessa o companheiro; agachado achata o corpo
@@ -2681,6 +2682,8 @@ function animateBot(b, dt) { // visual: andar, flutuar, piscar ao levar dano, bo
   m.group.rotation.y = b.yaw;
   m.legs[0].rotation.x = Math.sin(b.walk) * 0.6 * Math.min(1, speed); m.legs[1].rotation.x = -m.legs[0].rotation.x;
   setCrouchPose(m, b.crouch);
+  const sw = b.swingT ?? 9; if (sw < 0.05 && !b.swingFaced) { setExpression(m, 'angry', 0.55); b.swingFaced = true; } else if (sw >= 0.05) b.swingFaced = false; // faca/sabre (local ou online)
+  updateExpression(m, dt);
   const flashing = gameTime < b.flashUntil;
   for (const mat of m.flashMats) mat.emissive.copy(flashing ? FLASH : mat.userData.baseEmissive);
   b.bubble.visible = gameTime < b.invulnUntil;
@@ -2785,7 +2788,7 @@ function botShoot(b, t, dist = 10) {
   if (b.mag[b.weapon] <= 0) { startReload(b); return; }
   if (w.rocket && dist < 6) return; // não se explode
   if (w.corn && dist < 4) return;
-  b.mag[b.weapon]--;
+  b.mag[b.weapon]--; setExpression(b.model, 'angry', 0.5); // bazuca/milho/rajada também
   b.nextFire = gameTime + w.rate * (BOT_RATE[b.weapon] || (() => 1.2))();
   if (w.burst) { b.burstLeft = (b.burstLeft || w.burst) - 1; b.nextFire = gameTime + (b.burstLeft > 0 ? w.rate : w.burstDelay * rand(1.6, 2.6)); } // FAMAS: rajada de 3 e respira
   const origin = center(b, 1.3);
@@ -3974,8 +3977,10 @@ function applySnapshot(s) {
 }
 const entOf = (id) => (online ? online.ents.get(id) : null);
 function remoteMuzzle(e) { return center(e, 1.3).add(new V3(Math.sin(e.yaw) * 1.0, -0.25, Math.cos(e.yaw) * 1.0)); }
+const NET_SHOOTER = { sh: 1, ml: 1, dl: 2, el: 2, cl: 1, rk: 2 }; // índice do id de quem disparou em cada evento
 function netEvent(ev) {
   const o = online, k = ev[0];
+  { const si = NET_SHOOTER[k]; const se = si && entOf(ev[si]); if (se && se.model) setExpression(se.model, 'angry', 0.5); } // cara de brava de quem atirou/golpeou
   if (k === 'sh') {
     const [, sid, w, , ends] = ev; if (sid === o.myId) return; const e = entOf(sid); if (!e) return; const W = WEAPONS[w];
     const vol = distVol(e.pos) * 0.7; sfx[W.key](vol); if (W.pump) sfx.pump(vol * 0.7, 0.3); if (W.bolt) sfx.bolt(vol * 0.7, 0.3);

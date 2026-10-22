@@ -113,15 +113,15 @@ export function drawLogo(x, cx, cy, h, color, outlineColor = null) {
   x.strokeStyle = x.fillStyle = color; x.lineWidth = h * 0.26; paths(); x.stroke(); bang(0);
 }
 const texCache = new Map();
-function headTexture(tone, beard = null, paint = null) {
-  const key = 'head' + tone + beard + paint; if (texCache.has(key)) return texCache.get(key);
+function headTexture(tone, beard = null, paint = null, angry = false) { // angry: cara de bravo (dentes cerrados, sem blush)
+  const key = 'head' + tone + beard + paint + (angry ? ':angry' : ''); if (texCache.has(key)) return texCache.get(key);
   const W = 1024, H = 512;
   const t = canvasTex(W, H, (x) => {
     x.fillStyle = tone; x.fillRect(0, 0, W, H);
     const P = (theta, y) => [(0.5 + theta / TAU) * W, (1 - (y - HEAD.y0) / (HEAD.y1 - HEAD.y0)) * H];
     const pxH = (y) => W / (TAU * headR(y)), pxV = H / (HEAD.y1 - HEAD.y0);
     // bochechas (blush) suaves
-    for (const s of [-1, 1]) {
+    for (const s of angry ? [] : [-1, 1]) {
       const [cx, cy] = P(s * 0.86, 1.47); const g = x.createRadialGradient(cx, cy, 2, cx, cy, 0.13 * pxH(1.47));
       g.addColorStop(0, PALETTE.blush); g.addColorStop(0.55, PALETTE.blush + 'cc'); g.addColorStop(1, PALETTE.blush + '00');
       x.save(); x.translate(cx, cy); x.scale(1, pxV / pxH(1.47) * 0.85); x.translate(-cx, -cy); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, 0.13 * pxH(1.47), 0, TAU); x.fill(); x.restore();
@@ -134,15 +134,28 @@ function headTexture(tone, beard = null, paint = null) {
       for (let i = 0; i < 900; i++) { const [px, py] = P((rnd() * 2 - 1) * 0.9, 1.04 + rnd() * 0.33); x.fillRect(px, py, 2, 2); }
       x.restore();
     }
+    if (angry) { // boca de bravo: dentes cerrados, cantos caídos
+      const pts = [[-0.36, 1.13], [-0.3, 1.22], [0, 1.26], [0.3, 1.22], [0.36, 1.13], [0.3, 1.09], [0, 1.1], [-0.3, 1.09]].map(([t, y]) => P(t, y));
+      const path = () => { x.beginPath(); x.moveTo(...pts[0]); x.quadraticCurveTo(...pts[1], ...P(-0.12, 1.255)); x.quadraticCurveTo(...pts[2], ...P(0.12, 1.255)); x.quadraticCurveTo(...pts[3], ...pts[4]);
+        x.quadraticCurveTo(...pts[5], ...P(0.1, 1.098)); x.quadraticCurveTo(...pts[6], ...P(-0.1, 1.098)); x.quadraticCurveTo(...pts[7], ...pts[0]); x.closePath(); };
+      path(); x.fillStyle = PALETTE.teeth; x.fill();
+      x.save(); path(); x.clip(); x.strokeStyle = PALETTE.mouth; x.lineWidth = 5; x.beginPath();
+      const ym = P(0, 1.175)[1]; x.moveTo(P(-0.4, 0)[0], ym); x.lineTo(P(0.4, 0)[0], ym);
+      for (const t of [-0.24, -0.12, 0, 0.12, 0.24]) { const [tx] = P(t, 0); x.moveTo(tx, P(0, 1.3)[1]); x.lineTo(tx, P(0, 1.05)[1]); }
+      x.stroke(); x.restore();
+      path(); x.lineWidth = 7; x.strokeStyle = PALETTE.outline; x.lineJoin = 'round'; x.stroke();
+    }
     // boca: sorriso aberto com dentes e língua (logo abaixo do focinho)
     const L = P(-0.5, 1.37), R = P(0.5, 1.37), topC = P(0, 1.2), botC = P(0, 0.86);
     const mouthPath = () => { x.beginPath(); x.moveTo(...L); x.quadraticCurveTo(...topC, ...R); x.quadraticCurveTo(...botC, ...L); x.closePath(); };
+    if (!angry) {
     mouthPath(); x.fillStyle = PALETTE.mouth; x.fill();
     x.save(); mouthPath(); x.clip();
     const tg = P(0.05, 1.1); x.fillStyle = PALETTE.tongue; x.beginPath(); x.ellipse(tg[0], tg[1] + 12, 80, 34, 0, 0, TAU); x.fill();
     x.fillStyle = PALETTE.teeth; x.beginPath(); x.moveTo(L[0], L[1] - 6); x.quadraticCurveTo(topC[0], topC[1] - 6, R[0], R[1] - 6); x.lineTo(R[0], R[1] + 16); x.quadraticCurveTo(topC[0], topC[1] + 16, L[0], L[1] + 16); x.closePath(); x.fill();
     x.restore();
     mouthPath(); x.lineWidth = 7; x.strokeStyle = PALETTE.outline; x.lineJoin = 'round'; x.stroke();
+    }
     if (paint === 'skull') { // pintura de caveira leve: máscara branca ao redor dos olhos + detalhes verdes (bochechas e focinho continuam)
       for (const s of [-1, 1]) {
         const [cx, cy] = P(s * 0.33, 1.71); const rx = 0.2 * pxH(1.71), ry = 0.21 * pxV;
@@ -153,7 +166,7 @@ function headTexture(tone, beard = null, paint = null) {
       const [fx, fy] = P(0, 1.9); x.fillStyle = '#f7f7f2'; x.beginPath(); x.moveTo(fx, fy - 26); x.lineTo(fx + 20, fy + 8); x.lineTo(fx - 20, fy + 8); x.closePath(); x.fill(); // losango na testa
       x.strokeStyle = '#2e0503'; x.lineWidth = 3; for (const s of [-1, 1]) { const [mx, my] = P(s * 0.55, 1.33); for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(mx + s * k * 10, my - 8); x.lineTo(mx + s * k * 10, my + 8); x.stroke(); } } // pontinhos de costura no canto da boca
     }
-    for (const [p, s] of [[L, -1], [R, 1]]) { x.beginPath(); x.moveTo(p[0] - s * 4, p[1] - 14); x.quadraticCurveTo(p[0] + s * 14, p[1] - 4, p[0] + s * 4, p[1] + 14); x.lineWidth = 6; x.stroke(); }
+    for (const [p, s] of angry ? [] : [[L, -1], [R, 1]]) { x.beginPath(); x.moveTo(p[0] - s * 4, p[1] - 14); x.quadraticCurveTo(p[0] + s * 14, p[1] - 4, p[0] + s * 4, p[1] + 14); x.lineWidth = 6; x.stroke(); }
   });
   texCache.set(key, t); return t;
 }
@@ -342,7 +355,7 @@ export function makeDocao(skinOrId, opts = {}) {
     n.position.set(s * 0.085, snoutY + 0.01, sp.z + snoutDepth - 0.08 + 0.004); n.rotation.set(-0.12, 0, -s * 0.2); head.add(n);
   }
   // olhos grandes: branco + íris marrom + pupila + brilho; sobrancelhas grossas
-  const eyes = [];
+  const eyes = [], brows = [];
   for (const s of [-1, 1]) {
     const th = s * 0.33, ey = 1.7; const n = headNormal(th, ey); const p = headPoint(th, ey, -0.02);
     const eye = new THREE.Group(); eye.position.copy(p); eye.lookAt(p.clone().add(n)); eye.userData.n = n; head.add(eye);
@@ -358,7 +371,7 @@ export function makeDocao(skinOrId, opts = {}) {
     const bp = headPoint(s * 0.36, 1.95, 0.02), bn = headNormal(s * 0.36, 1.95);
     const brow = new THREE.Group(); brow.position.copy(bp); brow.lookAt(bp.clone().add(bn)); head.add(brow);
     const arc = 1.5; const b = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.032, 8, 20, arc), basic(PALETTE.brow));
-    b.rotation.z = (Math.PI - arc) / 2 - s * 0.18; b.position.y = -0.1; b.scale.set(1, 0.8, 0.6); brow.add(b);
+    b.rotation.z = (Math.PI - arc) / 2 - s * 0.18; b.position.y = -0.1; b.scale.set(1, 0.8, 0.6); brow.add(b); brows.push(brow);
   }
 
   // braços: manga (cor da camiseta) + punho escuro + braço + mão-luva (punho fechado)
@@ -515,7 +528,9 @@ export function makeDocao(skinOrId, opts = {}) {
     (obj.userData.anchor === 'head' || ['cap', 'glasses', 'sunglasses', 'headphones'].includes(part.type) ? head : g).add(obj);
   }
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
-  return { group: g, legs, arms, guns, head, skin, flashMats: [skinM, faceM, shirtM, snoutM] };
+  for (const b of brows) b.userData.base = { p: b.position.clone(), q: b.quaternion.clone() };
+  const face = { eyes, brows, faceM, tex: [tone, beard, facePaint], neutralMap: faceM.map, angryMap: null, t: 0, target: 0, hold: 0 };
+  return { group: g, legs, arms, guns, head, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
 }
 
 // Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.
@@ -705,4 +720,32 @@ export function makeKnife(scale = 1, th = 0.004) {
   for (const z of [-0.058, -0.026, 0.066]) for (const sx of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.004, 10), toon('#e8edf2')); r.rotation.z = Math.PI / 2; r.position.set(sx * 0.0165, -0.004, z); g.add(r); }
   for (const sx of [-1, 1]) { const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 0.02), new THREE.MeshBasicMaterial({ map: knifeLogoTex, transparent: true })); lg.position.set(sx * 0.0162, -0.004, 0.022); lg.rotation.y = sx * Math.PI / 2; g.add(lg); }
   g.scale.setScalar(scale); return g;
+}
+
+// ---------- expressão: 'neutral' (sorrisão) e 'angry' (bravo ao atirar/golpear) ----------
+// setExpression(model, 'angry', hold) segura a cara de bravo por `hold` s depois do último chamado; updateExpression(model, dt)
+// faz a mistura (~0,08 s pra entrar, ~0,15 s pra voltar). Só mexe em transform das sobrancelhas/olhos e troca a textura do rosto
+// (variante 'brava' criada uma vez por combinação tom/barba/pintura e reaproveitada): nada de geometria nova por frame.
+const _eq = new THREE.Quaternion(), _ez = new V3(0, 0, 1), _ey = new V3();
+export function setExpression(model, expr = 'neutral', hold = 0.5) {
+  const f = model && model.face; if (!f) return;
+  if (expr === 'angry') { f.target = 1; f.hold = Math.max(f.hold, hold); } else { f.target = 0; f.hold = 0; }
+  model.expression = expr;
+}
+export function updateExpression(model, dt) {
+  const f = model && model.face; if (!f) return;
+  if (f.target && (f.hold -= dt) <= 0) { f.target = 0; model.expression = 'neutral'; }
+  if (f.t === f.target && f.applied) return;
+  f.t = f.target > f.t ? Math.min(f.target, f.t + dt / 0.08) : Math.max(f.target, f.t - dt / 0.15); f.applied = true;
+  const t = f.t * f.t * (3 - 2 * f.t);
+  for (let i = 0; i < f.brows.length; i++) { // sobrancelhas descem, achatam e giram pro centro (V)
+    const b = f.brows[i], s = i === 0 ? -1 : 1, B = b.userData.base;
+    b.quaternion.copy(B.q).multiply(_eq.setFromAxisAngle(_ez, s * 0.7 * t)); b.scale.set(1 + 0.4 * t, 1 - 0.15 * t, 1 + 0.4 * t);
+    _ey.set(0, 1, 0).applyQuaternion(B.q); b.position.copy(B.p).addScaledVector(_ey, -0.1 * t);
+  }
+  for (const e of f.eyes) e.scale.set(1, 1 - 0.42 * t, 1); // aperta os olhos
+  const angry = f.t > 0.5;
+  if (angry && !f.angryMap) f.angryMap = headTexture(...f.tex, true);
+  const map = angry ? f.angryMap : f.neutralMap;
+  if (f.faceM.map !== map) { f.faceM.map = map; f.faceM.emissiveMap = map; }
 }
