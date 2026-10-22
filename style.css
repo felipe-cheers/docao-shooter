@@ -62,7 +62,7 @@ button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
 #timer{font-family:"Arial Black",Impact;font-size:30px;-webkit-text-stroke:1.5px #2a1410;color:#fff}
 #leader{font-size:14px;color:#ffd27a;font-weight:bold;text-shadow:0 2px 0 #000}
 #score{position:fixed;top:14px;left:16px;font-weight:bold;font-size:17px;background:rgba(0,0,0,.4);padding:6px 12px;border-radius:10px}
-#killfeed{position:fixed;top:14px;right:16px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+#killfeed{position:fixed;left:20px;bottom:132px;top:auto;right:auto;display:flex;flex-direction:column-reverse;gap:5px;align-items:flex-start;pointer-events:none;z-index:6}
 .kf{background:rgba(0,0,0,.5);padding:5px 10px;border-radius:8px;font-size:15px}
 .kf b{color:#7DF9FF}.kf .me{color:#ffd27a}.kf i{color:#ff9fb6;font-style:normal}
 #centermsg{position:fixed;top:62%;left:50%;transform:translateX(-50%);font-size:22px;font-weight:bold;text-shadow:0 2px 0 #000;text-align:center}
@@ -115,17 +115,25 @@ button.skinchip.active{outline:3px solid #7DF9FF;outline-offset:2px}
 #crosshair.ads:before,#crosshair.ads:after{background:#ffe08a}
 
 /* loadout: escolha da arma primária */
-.primpick{margin:8px 0 4px;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.06);border:2px dashed rgba(255,210,122,.4)}
-#primList{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-button.primchip{margin:0;padding:6px 8px;font-size:15px;line-height:1.15;background:#3a4a7a;border-width:3px;border-radius:12px;box-shadow:0 3px 0 #2a1410;text-align:left}
-button.primchip small{display:block;font-family:"Trebuchet MS",Arial,sans-serif;font-size:11px;font-weight:bold;color:#cfe;margin-top:2px}
+.primpick{margin:4px 0 2px;padding:6px 8px;border-radius:14px;background:rgba(255,255,255,.06);border:2px dashed rgba(255,210,122,.4)}
+#primList{display:block}
+.wcat{margin-top:8px;text-align:left}
+.wcat .label2{margin:0 0 3px;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.wgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.wgrid.small{grid-template-columns:1fr 1fr}
+@media (max-width:720px){.wgrid{grid-template-columns:1fr 1fr}}
+button.primchip{margin:0;padding:4px 6px;font-size:13px;line-height:1.15;background:#3a4a7a;border-width:3px;border-radius:10px;box-shadow:0 3px 0 #2a1410;text-align:left;min-width:0}
+button.primchip small{display:block;font-family:"Trebuchet MS",Arial,sans-serif;font-size:11px;font-weight:bold;color:#cfe;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 button.primchip.active{background:#e63946;outline:3px solid #ffd27a;outline-offset:1px}
 button.primchip.active small{color:#fff3d6}
 button.primchip kbd{font-family:inherit;color:#ffd27a;margin-right:4px}
+#saberColors{display:flex;justify-content:center;gap:6px;margin-top:4px}
+button.saberchip{width:22px;height:22px;margin:0;padding:0;border-radius:50%;border:2px solid #2a1410;box-shadow:0 2px 0 #2a1410}
+button.saberchip.active{outline:3px solid #ffd27a}
 #deathpick{position:fixed;left:50%;top:calc(62% + 40px);transform:translateX(-50%);text-align:center}
 #deathpick .dl{font-weight:bold;color:#ffd27a;text-shadow:0 2px 0 #000;margin-bottom:6px;font-size:14px}
 #deathList{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;max-width:960px}
-#deathList button.primchip{width:auto;min-width:96px}
+#deathList button.primchip{width:auto;min-width:72px;font-size:12px}
 /* luneta do sniper */
 #scope{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(120,200,255,.06) 0,rgba(120,200,255,.06) 42vh,#050505 42.4vh)}
 #scope .lens{position:absolute;left:50%;top:50%;width:85vh;height:85vh;transform:translate(-50%,-50%);border-radius:50%;box-shadow:inset 0 0 6vh rgba(0,0,0,.85),0 0 0 6px #111}
@@ -247,6 +255,7 @@ button.teambtn small{display:block;font-size:11px;font-family:"Trebuchet MS",Ari
 #deathpick .dcol .dl{margin:0 0 4px}
 @media (max-width:1100px){#deathList{grid-template-columns:repeat(3,1fr)}}
 body.dead #centermsg{top:22%}
+body.dead #killfeed{bottom:auto;top:38%;left:16px}
 .namerow{display:flex;gap:8px;align-items:flex-end;margin:6px 0}.namerow label{flex:1;margin:0}.namerow button{margin:0 0 2px}#lobbyNameMsg{min-height:0;font-size:12px;color:#ffd27a}
 #deathMelee button.primchip{max-width:260px;cursor:default;background:#5a4a3a;outline:3px solid #7DF9FF;outline-offset:1px}
 #deathMelee button.primchip small{color:#e8fbff}

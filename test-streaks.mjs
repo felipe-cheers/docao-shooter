@@ -117,38 +117,44 @@ ok(boom >= before + 3, `três mísseis estouram (${before} → ${boom})`);
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
+const heliOn = await G(() => {
+  const h = window.__docao.heli;
+  const ready = document.getElementById('nukeReady');
+  const card = document.querySelector('#streakBar .streak-card[data-need="7"]');
+  return { up: !!(h && h.alive), hp: h ? Math.round(h.hp) : 0, ready: !!(ready && !ready.hidden), kills: window.__docao.rewardKills, card: card?.className || '' };
+});
+ok(heliOn.up && heliOn.hp >= 200 && !heliOn.ready && heliOn.kills === 7 && heliOn.card.includes('earned'), `7 abates chamam o helicóptero, sem nuke (${JSON.stringify(heliOn)})`);
+
+await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); window.__docao.rewardKill(); });
+await page.waitForTimeout(200);
 const nukeOn = await G(() => {
   const b = document.getElementById('nukeBanner');
   const ready = document.getElementById('nukeReady');
   return { hidden: !b || b.hidden, ready: ready && !ready.hidden, kills: window.__docao.rewardKills, bots: window.__docao.entities.filter((e) => !e.isPlayer && e.alive).length };
 });
-ok(nukeOn.hidden && nukeOn.ready && nukeOn.kills === 7 && nukeOn.bots > 0, `7 abates deixam o rádio pronto, sem estourar ainda (${JSON.stringify(nukeOn)})`);
+ok(nukeOn.hidden && nukeOn.ready && nukeOn.kills === 10 && nukeOn.bots > 0, `10 abates armam o nuke secreto, sem estourar (${JSON.stringify(nukeOn)})`);
 await G(() => window.__docao.callNuke());
 await page.waitForTimeout(200);
 const counting = await G(() => document.getElementById('nukeBanner')?.querySelector('b')?.textContent);
 ok(counting === '5', `apertar o rádio começa a contagem (${counting})`);
+const beforeDie = await G(() => window.__docao.rewardKills);
+ok(beforeDie === 10, `a contagem não soma abate secreto (${beforeDie})`);
+await G(() => window.__docao.kill(window.__docao.player));
+const still = await G(() => ({ at: window.__docao.nukeAt > window.__docao.time, me: window.__docao.player.alive }));
+ok(still.at && !still.me, `morrer depois do F não cancela a contagem (${JSON.stringify(still)})`);
 ok(await until(() => window.__docao.entities.filter((e) => !e.isPlayer && e.alive).length === 0, 15000), 'a contagem do nuke acaba');
 const after = await G(() => ({
   bots: window.__docao.entities.filter((e) => !e.isPlayer && e.alive).length,
-  me: window.__docao.player.alive,
   kills: window.__docao.rewardKills,
 }));
-ok(after.bots === 0 && after.me && after.kills === 7, `nuke mata todo mundo menos você, sem reciclar o contador (${JSON.stringify(after)})`);
+ok(after.bots === 0 && after.kills === 0, `nuke mata os inimigos e não soma abate secreto (${JSON.stringify(after)})`);
 
-await G(() => window.__docao.rewardKill());
+await G(() => { window.__docao.player.alive = true; window.__docao.player.hp = 100; window.__docao.rewardKill(); });
 const mid = await G(() => {
   const card = document.querySelector('#streakBar .streak-card[data-need="3"]');
   return { n: document.querySelector('#streakCount b')?.textContent, card: card?.className || '' };
 });
-ok(mid.n === '8' && mid.card.includes('next'), `depois do 7 o ciclo recomeça (${JSON.stringify(mid)})`);
-await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); });
-await page.waitForTimeout(200);
-const again = await G(() => ({
-  n: document.querySelector('#streakCount b')?.textContent,
-  uav: !document.getElementById('uav').hidden,
-  card: document.querySelector('#streakBar .streak-card[data-need="3"]')?.className || '',
-}));
-ok(again.n === '10' && again.uav && again.card.includes('earned'), `o prêmio de 3 volta no próximo ciclo (${JSON.stringify(again)})`);
+ok(mid.n === '1' && mid.card.includes('next'), `depois do 10 o ciclo recomeça (${JSON.stringify(mid)})`);
 
 await G(() => window.__docao.kill(window.__docao.player));
 await page.waitForTimeout(200);
