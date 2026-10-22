@@ -20,7 +20,7 @@ import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js'
 import { buildNav } from './nav.js';
 import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, activeBacons, edibleBacons, eatBacon, BACON } from './bacon.js';
 import { Net, createRoom, roomInfo } from './net.js';
-import { initChat, chatTyping, chatShown, chatRoomOn, chatConsumeUnlock, chatNoteLocked, openChat, closeChat, chatSeed, chatPush, chatSetRoom, chatSetTeam, chatClear } from './chat.js';
+import { initChat, chatTyping, chatShown, chatRoomOn, chatConsumeUnlock, chatNoteLocked, openChat, closeChat, chatSeed, chatPush, chatSetRoom, chatSetTeam, chatClear, chatUseAll } from './chat.js';
 import { initVoice, voicePtt, voiceCycle, voiceReset, voiceRoster, voiceSignal, voiceTalking, voiceMuted, voiceToggleMute, voiceRefresh } from './voice.js';
 import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
@@ -2433,8 +2433,8 @@ document.addEventListener('wheel', (e) => { // rodinha: primária → pistola �
 });
 function tryOpenChat(e) {
   if (!online || e.repeat || !chatShown() || !chatRoomOn() || state !== 'playing') return false;
-  if (e.code === 'KeyY') return openChat('all');
-  if (e.code === 'KeyU') return openChat(socialTeam() ? 'team' : 'all');
+  if (e.code === 'KeyT') { chatUseAll(); return openChat('all'); }
+  if (e.code === 'KeyY' || e.code === 'KeyU') return openChat(socialTeam() ? 'team' : 'all');
   if ((e.code === 'Enter' || e.code === 'NumpadEnter') && player && player.alive) return openChat('all');
   return false;
 }
