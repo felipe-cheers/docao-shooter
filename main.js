@@ -14,11 +14,14 @@ import { mountStreakUi, setStreakCount, setStreakCycle, openStrikeMap, closeStri
 import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } from './fp-gear.js';
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
-import { MAPS, getMap } from './maps.js';
+import { MAPS, PLAY_MAPS, getMap } from './maps.js';
+import { TRAIN, isTraining, dummyX } from './shared/training.js';
 import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js';
 import { buildNav } from './nav.js';
 import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, activeBacons, edibleBacons, eatBacon, BACON } from './bacon.js';
 import { Net, createRoom, roomInfo } from './net.js';
+import { initChat, chatTyping, chatShown, chatRoomOn, chatConsumeUnlock, chatNoteLocked, openChat, closeChat, chatSeed, chatPush, chatSetRoom, chatSetTeam, chatClear } from './chat.js';
+import { initVoice, voicePtt, voiceCycle, voiceReset, voiceRoster, voiceSignal, voiceTalking, voiceMuted, voiceToggleMute, voiceRefresh } from './voice.js';
 import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
 import { createPhysics } from './shared/physics.js';
@@ -198,9 +201,11 @@ try {
   const savedAds = localStorage.getItem('docao.sensAds'); if (savedAds) $('sensAds').value = savedAds;
   sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
 } catch (e) { /* sem storage */ }
-let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação)
+let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação) | 'explore' (mapa vazio)
 let spawnHold = 'primary'; // arma na mão ao renascer (tela de morte)
 const teamMode = () => mode === 'dom';
+const training = () => isTraining(mode); // Estande do Docão: bots viram alvos
+const exploreMode = () => mode === 'explore';
 const friends = (a, b) => teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0;
 let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
@@ -248,6 +253,13 @@ function respawn(e) {
   e.yaw = Math.atan2(-e.pos.x, -e.pos.z) + Math.PI; e.bonk = false; // olha pro centro
   if (e.model) { e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.target = null; e.wp = null; e.path = null; e.yaw = Math.atan2(-e.pos.x, -e.pos.z); }
   else { e.pitch = 0; $('stamp').classList.remove('show'); onPlayerRespawn(); }
+  if (e.dummy) { e.invulnUntil = gameTime; e.slots = [0, PISTOL, KNIFE]; placeDummy(e); setWeapon(e, PISTOL); }
+}
+// Treino: posição do alvo (parado ou no trilho), sempre de frente pra linha de tiro
+function placeDummy(b) {
+  const d = b.dummy, x = dummyX(d, gameTime), px = b.pos.x;
+  b.pos.set(x, groundAt(x, d.z, (d.y || 0) + 0.3), d.z); b.yaw = d.yaw || 0; b.onGround = true;
+  b.vel.set(0, 0, 0); b.travelV = (x - px);
 }
 
 // ---------------- Pickups ----------------
@@ -259,6 +271,17 @@ function refillAmmo(e) {
     e.reserve[i] = w.rocket ? Math.min(w.reserve, e.reserve[i] + 1) : w.reserve; got = true;
   }
   return got;
+}
+// Exploração: a reserva, os copos e as granadas táticas não acabam, pra dar pra testar sem caçar caixa.
+// O pente continua finito: a recarga acontece do mesmo jeito.
+function refillExplore(e) {
+  for (const i of e.slots) {
+    const w = WEAPONS[i]; if (!w || w.melee || e.reserve[i] >= w.reserve) continue;
+    e.reserve[i] = w.reserve;
+  }
+  if (e.nades < NADE.max) e.nades = NADE.max;
+  if ((e.smokeNades || 0) < 1) e.smokeNades = 1;
+  if ((e.stunNades || 0) < 1) e.stunNades = 1;
 }
 const pickups = [];
 function makePickup(type, x, z, yHint = 0) {
@@ -411,7 +434,7 @@ function nadeBlocked(x, y, z) {
 }
 function throwGrenade(e, origin, vel) {
   if (e.nades <= 0) return null;
-  e.nades--;
+  e.nades--; e.lastNadeT = gameTime;
   if (online && e.isPlayer) { netEv(['n', v3a(origin), v3a(vel)]); sfx.toss(1); return null; } // o copo aparece quando o servidor confirmar
   const mesh = makeCup(1.15); scene.add(mesh);
   const gnd = { owner: e, pos: origin.clone(), vel: vel.clone(), explodeAt: gameTime + NADE.fuse, mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 };
@@ -695,19 +718,19 @@ function damage(t, amount, attacker, wIdx, head, back = false) {
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
   if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
-  if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head }); sfx.hit(); }
+  if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head }); sfx.hit(); if (training()) dmgPopup(t, amount, head); }
   if (t.hp <= 0) { kill(t, attacker, wIdx, head, back); return true; }
   return false;
 }
 
 function kill(t, a, wIdx, head, back = false, noReward = false) {
-  t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.killW = wIdx; t.killBack = !!back;
+  t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + (t.dummy ? TRAIN.respawn : exploreMode() && t.isPlayer ? 1 : RESPAWN_TIME); t.killW = wIdx; t.killBack = !!back;
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head, back);
   sfx.die(t.isPlayer ? 1 : distVol(t.pos));
   if (a && a.isPlayer && a !== t) { sfx.kill(); if (!noReward) { notePlayerKill(t, head); noteWeaponKill(a, wIdx); } }
   if (t.isPlayer) { if (a && a !== t) revengeName = a.name; showStamp(wIdx); onPlayerDeath(); }
-  if (a && a.kills >= KILL_LIMIT && !teamMode()) endGame();
+  if (a && a.kills >= KILL_LIMIT && mode === 'dm') endGame();
 }
 
 function startReload(e) {
@@ -1260,12 +1283,12 @@ function updateHud(dt) {
   const smokeN = $('smokeN'), stunN = $('stunN');
   if (smokeN) smokeN.textContent = p.smokeNades || 0;
   if (stunN) stunN.textContent = p.stunNades || 0;
-  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
+  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
-  const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
-  $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
+  const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'Treino ∞';
+  $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
   const lead = entities.reduce((a, b) => (b.kills > a.kills ? b : a));
-  $('leader').textContent = teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
+  $('leader').textContent = exploreMode() ? 'Mapa vazio · , . ou [ ] trocam a primária' : training() ? 'Estande do Docão · B/N/M trocam a arma · munição infinita' : teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
   updateLeaderboard(dt); tickFeedback(dt);
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
@@ -1820,6 +1843,7 @@ function updateBot(b, dt) {
     return;
   }
   if (b.remote) { interpRemote(b); animateBot(b, dt); return; } // online: posição vem do servidor
+  if (b.dummy) { placeDummy(b); const sp = b.travelV / Math.max(dt, 1e-3); b.vel.x = sp; animateBot(b, dt); b.vel.x = 0; return; } // Treino: não pensa nem atira
   if (b.frozen) { m.group.position.copy(b.pos); m.group.rotation.y = b.yaw; if (b.frozen === 'anim') animateBot(b, dt); return; } // usado só em testes ('anim': parado mas animando)
   finishReload(b);
   b.think -= dt;
@@ -2053,6 +2077,47 @@ function primChip(i, keyHint, onPick, kind) {
 function markPick(kind, i) {
   document.querySelectorAll(`.primchip[data-pick="${kind}"]`).forEach((c) => c.classList.toggle('active', +c.dataset.i === i));
 }
+// ---------------- Treino (Estande do Docão) ----------------
+// B / N / M: próxima primária / secundária / faca-sabre, na hora e com pente cheio (online o servidor faz o mesmo ao receber 'pr')
+function trainSwap(code) {
+  const p = player, cyc = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+  let w;
+  if (code === 'KeyB') { setPrimary(cyc(PRIMARIES, selectedPrimary)); w = selectedPrimary; }
+  else if (code === 'KeyN') { setSecondary(cyc(SECONDARIES, selectedSecondary)); w = selectedSecondary; }
+  else { setMelee(cyc(MELEES, selectedMelee)); w = selectedMelee; }
+  const old = p.slots; p.primary = selectedPrimary; p.secondary = selectedSecondary; p.melee = selectedMelee; p.slots = [p.primary, p.secondary, p.melee];
+  for (const i of p.slots) if (!old.includes(i)) { p.mag[i] = WEAPONS[i].mag; p.reserve[i] = WEAPONS[i].reserve; }
+  p.reloadEnd = 0; p.knifeMode = false; switchWeapon(p, w); if (p.weapon !== w) setWeapon(p, w);
+  flashMsg(`${WEAPONS[w].name} · ${WEAPONS[w].desc}`);
+}
+// munição de reserva infinita e Copo Bomba/fumaça/atordoamento voltam sozinhos (offline e online; online o servidor confere)
+function trainRefill() {
+  const p = player; if (!p || !p.alive) return;
+  for (const i of p.slots) p.reserve[i] = WEAPONS[i].reserve;
+  if (p.nades < NADE.max && gameTime - (p.lastNadeT ?? -9) > TRAIN.nadeRefill + 0.25 && !p.charging) p.nades = NADE.max;
+  if (!online) { p.smokeNades = Math.max(p.smokeNades || 0, 1); p.stunNades = Math.max(p.stunNades || 0, 1); }
+}
+// número de dano subindo em cima do alvo (amarelo = cabeça) + painel "último acerto"
+const dmgPops = [];
+function dmgPopup(t, amount, head) {
+  const n = Math.round(amount); if (!(n > 0) || !t.pos) return;
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const x = cv.getContext('2d');
+  x.font = '900 64px "Arial Black", Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 10; x.strokeStyle = '#2a1410';
+  const txt = head ? `${n}!` : String(n); x.strokeText(txt, 128, 52); x.fillStyle = head ? '#ffd23a' : '#ffffff'; x.fillText(txt, 128, 52);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false }));
+  sp.renderOrder = 999; const s = head ? 0.085 : 0.065; sp.scale.set(s * 2.67, s, 1);
+  sp.position.set(t.pos.x + rand(-0.35, 0.35), t.pos.y + 2.3 + rand(0, 0.25), t.pos.z); scene.add(sp); dmgPops.push({ sp, born: gameTime, vy: 1.1 });
+  const d = player ? Math.round(Math.hypot(t.pos.x - player.pos.x, t.pos.z - player.pos.z)) : 0;
+  const tot = (t.trainTot && gameTime - t.trainLast < 3 ? t.trainTot : 0) + n; t.trainTot = tot; t.trainLast = gameTime;
+  const el = $('trainInfo'); if (el) { el.classList.remove('hidden'); el.innerHTML = `Último: <b class="${head ? 'hd' : ''}">${n}</b> ${head ? 'CABEÇA' : 'corpo'} · ${d} m · ${escapeHtml(t.name)} · seguidos: <b>${tot}</b>`; }
+}
+function updateDmgPops(dt) {
+  for (let i = dmgPops.length - 1; i >= 0; i--) {
+    const q = dmgPops[i], age = gameTime - q.born; q.sp.position.y += q.vy * dt; q.sp.material.opacity = Math.max(0, 1 - Math.max(0, age - 0.5) / 0.4);
+    if (age > 0.9 || age < 0) { scene.remove(q.sp); q.sp.material.map.dispose(); q.sp.material.dispose(); dmgPops.splice(i, 1); }
+  }
+}
 function sendLoadout() { if (online) netEv(['pr', selectedPrimary, selectedSecondary, selectedMelee]); }
 function setPrimary(i) {
   selectedPrimary = i; try { localStorage.setItem('docao.primary', String(i)); } catch (e) { /* sem storage */ }
@@ -2160,7 +2225,7 @@ function loadMap(id) {
   currentMap = map; return map;
 }
 // seletor: mapa salvo no navegador ('random' = aleatório a cada partida)
-let selectedMap = (() => { const v = localStorage.getItem('docao.map'); return v === 'random' || MAPS.some((m) => m.id === v) ? v : MAPS[0].id; })();
+let selectedMap = (() => { const v = localStorage.getItem('docao.map'); return v === 'random' || PLAY_MAPS.some((m) => m.id === v) ? v : MAPS[0].id; })();
 const thumbs = {};
 function mapCard(id) {
   const b = document.createElement('button'); b.className = 'mapcard' + (id === 'random' ? ' random' : ''); b.dataset.map = id;
@@ -2182,7 +2247,7 @@ function selectMap(id) {
   if (id !== 'random') loadMap(id);
   refreshMapUI();
 }
-function buildMapGrid() { const g = $('mapGrid'); g.innerHTML = ''; for (const m of MAPS) g.appendChild(mapCard(m.id)); g.appendChild(mapCard('random')); refreshMapUI(); }
+function buildMapGrid() { const g = $('mapGrid'); g.innerHTML = ''; for (const m of PLAY_MAPS) g.appendChild(mapCard(m.id)); g.appendChild(mapCard('random')); refreshMapUI(); }
 function makeThumbs() { // miniaturas renderizadas da vista aérea, uma por quadro pra não travar o menu
   let i = 0; const next = () => {
     if (i >= MAPS.length) { buildMapGrid(); window.__thumbsReady = true; return; }
@@ -2192,7 +2257,7 @@ function makeThumbs() { // miniaturas renderizadas da vista aérea, uma por quad
 }
 function pickMapForMatch() {
   if (selectedMap !== 'random') return selectedMap;
-  const pool = MAPS.filter((m) => !currentMap || m.id !== currentMap.id); return pool[Math.floor(Math.random() * pool.length)].id;
+  const pool = PLAY_MAPS.filter((m) => !currentMap || m.id !== currentMap.id); return pool[Math.floor(Math.random() * pool.length)].id;
 }
 $('mapBtn').onclick = () => { buildMapGrid(); $('mapModal').classList.remove('hidden'); };
 $('mapClose').onclick = () => $('mapModal').classList.add('hidden');
@@ -2205,20 +2270,35 @@ function clearBots() {
   clearTacticals();
   clearHeli();
   clearBacon(); if (ghost) ghost.model.group.visible = false;
+  for (const q of dmgPops) scene.remove(q.sp); dmgPops.length = 0; $('trainInfo').classList.add('hidden');
+}
+function cycleExplorePrimary(dir) {
+  if (!exploreMode() || !player || !player.alive) return;
+  const cur = PRIMARIES.indexOf(player.primary);
+  const i = PRIMARIES[(cur + dir + PRIMARIES.length) % PRIMARIES.length];
+  setPrimary(i);
+  player.primary = player.nextPrimary = i;
+  player.slots[0] = i;
+  player.mag[i] = WEAPONS[i].mag; player.reserve[i] = WEAPONS[i].reserve;
+  player.reloadEnd = 0;
+  if (player.weapon !== i) switchWeapon(player, i); else setWeapon(player, i);
+  flashMsg(WEAPONS[i].name);
 }
 function startGame(mapId) {
   resetAds();
   initAudio();
-  loadMap(typeof mapId === 'string' ? mapId : pickMapForMatch());
+  loadMap($('modeSel').value === TRAIN.mode ? TRAIN.map : typeof mapId === 'string' ? mapId : pickMapForMatch());
   const name = myName(); saveName(name);
   sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
   try { localStorage.setItem('docao.sens', String(sens)); localStorage.setItem('docao.sensAds', String(sensAds)); } catch (e) { /* sem storage */ }
   revengeName = null; resetFeedback(); resetRewards(); resetMatchCamos();
   clearBots(); gameTime = 0;
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
-  const n = parseInt($('botCount').value) || 5;
-  for (let i = 0; i < n; i++) entities.push(makeEntity(BOT_DEFS[i].name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length]));
-  mode = $('modeSel').value === 'dom' ? 'dom' : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
+  const picked = $('modeSel').value;
+  mode = picked === 'dom' || picked === 'explore' || picked === TRAIN.mode ? picked : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
+  if (training()) (currentMap.dummies || []).forEach((d, i) => { const b = makeEntity(d.name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length]); b.dummy = d; entities.push(b); });
+  else { const n = exploreMode() ? 0 : (parseInt($('botCount').value, 10) || 5);
+    for (let i = 0; i < n; i++) entities.push(makeEntity(BOT_DEFS[i].name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length])); }
   if (teamMode()) { // seu time (escolhido no menu ou automático); bots completam os dois lados
     applyTeam(player, menuTeam >= 0 ? menuTeam : Math.random() < 0.5 ? 0 : 1);
     for (const b of entities) if (!b.isPlayer) { const c = [0, 0]; for (const x of entities) if (x.team === 0 || x.team === 1) c[x.team]++; applyTeam(b, smallerTeam(c)); }
@@ -2229,8 +2309,8 @@ function startGame(mapId) {
   for (const e of entities) respawn(e);
   pickups.forEach((p) => { p.active = true; p.mesh.visible = true; });
   showcase.visible = false;
-  $('killfeed').innerHTML = ''; flashMsg(teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : `Mapa: ${currentMap.name}`); refreshModeHud();
-  $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause').classList.add('hidden'); $('hud').classList.remove('hidden');
+  $('killfeed').innerHTML = ''; flashMsg(exploreMode() ? `Exploração · ${currentMap.name} · , . ou [ ] trocam a primária` : teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : training() ? 'Estande do Docão · B/N/M trocam a arma' : `Mapa: ${currentMap.name}`); refreshModeHud();
+  $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause').classList.add('hidden'); $('hud').classList.remove('hidden'); $('socialHud').classList.add('hidden'); $('overChat').classList.add('hidden');
   camera.clearViewOffset(); state = 'playing'; lockPointer();
 }
 function endGame() {
@@ -2242,8 +2322,9 @@ function endGame() {
   if (teamMode()) { const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1; setTeamWinner(w); }
   else $('winner').textContent = rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0].name} venceu!`;
   $('finalboard').innerHTML = boardHtml();
-  const nm = MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length]; $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
+  const nm = PLAY_MAPS[(PLAY_MAPS.indexOf(currentMap) + 1) % PLAY_MAPS.length]; $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
   ['againBtn', 'nextMapBtn'].forEach((id) => $(id).classList.remove('hidden')); $('overWait').classList.add('hidden');
+  $('overChat').classList.add('hidden');
   $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden');
 }
 function setTeamWinner(w) {
@@ -2255,7 +2336,7 @@ function refreshModeHud() {
   if (teamMode() && player) { $('myTeam').textContent = `Você: Time ${TEAM_NAMES[player.team] || '?'}`; $('myTeam').style.color = TEAM_COLORS[player.team] || '#fff'; }
   $('winner').style.color = '';
 }
-function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
   if (online) leaveOnline();
@@ -2277,8 +2358,8 @@ $('resumeBtn').onclick = resume; $('quitBtn').onclick = toMenu;
 $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); e.stopPropagation(); });
 
 document.addEventListener('pointerlockchange', () => {
-  if (document.pointerLockElement === canvas) { hadLock = true; deathUnlock = false; if ($('centermsg').textContent === RELOCK_MSG) { $('centermsg').textContent = ''; msgTimer = 0; } }
-  else if (state === 'playing' && hadLock && !deathUnlock && !pickingStrike) pause(); // soltar o mouse ao morrer, ou pra escolher o míssil, não pausa
+  if (document.pointerLockElement === canvas) { hadLock = true; deathUnlock = false; chatNoteLocked(); if ($('centermsg').textContent === RELOCK_MSG) { $('centermsg').textContent = ''; msgTimer = 0; } }
+  else if (state === 'playing' && hadLock && !deathUnlock && !pickingStrike && !chatConsumeUnlock()) pause(); // soltar o mouse ao morrer, no chat ou pra escolher o míssil, não pausa
 });
 document.addEventListener('mousemove', (e) => {
   if (state !== 'playing' || document.pointerLockElement !== canvas || !player) return;
@@ -2295,6 +2376,7 @@ document.addEventListener('mousemove', (e) => {
 canvas.addEventListener('mousedown', (e) => {
   if (state !== 'playing') return;
   if (!$('teamPick').classList.contains('hidden')) return; // escolhendo time
+  if (chatTyping()) closeChat(false);
   if (e.button === 2) e.preventDefault(); // senão o navegador solta o mouse ao abrir o menu
   if (e.button === 0 && (document.pointerLockElement || !deathUnlock)) { mouseDown = true; firedThisPress = false; }
   if (e.button === 2 && (document.pointerLockElement || !deathUnlock)) { rightDown = true; rightFired = false; rightStale = false; }
@@ -2311,7 +2393,20 @@ document.addEventListener('wheel', (e) => { // rodinha: primária → pistola �
   if (state !== 'playing' || !player || !player.alive) return;
   const S = player.slots, i = Math.max(0, S.indexOf(player.weapon)), n = S.length; switchWeapon(player, S[(i + (e.deltaY < 0 ? n - 1 : 1)) % n]);
 });
+function tryOpenChat(e) {
+  if (!online || e.repeat || !chatShown() || !chatRoomOn() || state !== 'playing') return false;
+  if (e.code === 'KeyY') return openChat('all');
+  if (e.code === 'KeyU') return openChat(socialTeam() ? 'team' : 'all');
+  if ((e.code === 'Enter' || e.code === 'NumpadEnter') && player && player.alive) return openChat('all');
+  return false;
+}
 document.addEventListener('keydown', (e) => {
+  const tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (chatTyping()) { if (e.code === 'Escape') { e.preventDefault(); closeChat(true); } return; }
+  if (e.code === 'KeyK') voicePtt(true);
+  if (e.code === 'KeyJ' && !e.repeat && online) { e.preventDefault(); voiceCycle(); }
+  if (tryOpenChat(e)) { e.preventDefault(); return; }
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
   if (state === 'playing' && player) {
@@ -2326,14 +2421,16 @@ document.addEventListener('keydown', (e) => {
       if (e.code === 'Digit4' && player.alive && !e.repeat) throwTactical('smoke');
       if (e.code === 'Digit5' && player.alive && !e.repeat) throwTactical('stun');
       if (e.code === 'KeyF' && player.alive && !e.repeat) useStreak();
+      if (training() && player.alive && !e.repeat && (e.code === 'KeyB' || e.code === 'KeyN' || e.code === 'KeyM')) trainSwap(e.code);
+      if (exploreMode() && player.alive && !e.repeat && (e.code === 'Comma' || e.code === 'Period' || e.code === 'BracketLeft' || e.code === 'BracketRight')) cycleExplorePrimary(e.code === 'Period' || e.code === 'BracketRight' ? 1 : -1);
     }
     if (e.code === 'KeyQ' && !e.repeat) startCharge();
     if (e.code === 'Tab') $('tabboard').classList.remove('hidden');
     if (e.code === 'Escape' || e.code === 'KeyP') pause();
   } else if (state === 'paused' && (e.code === 'KeyP')) resume();
 });
-document.addEventListener('keyup', (e) => { keys[e.code] = false; if (e.code === 'KeyQ' && state === 'playing') releaseCharge(); if (e.code === 'Tab') $('tabboard').classList.add('hidden'); });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDown = false; rightDown = false; if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } });
+document.addEventListener('keyup', (e) => { if (e.code === 'KeyK') voicePtt(false); keys[e.code] = false; if (e.code === 'KeyQ' && state === 'playing') releaseCharge(); if (e.code === 'Tab') $('tabboard').classList.add('hidden'); });
+addEventListener('blur', () => { voicePtt(false); for (const k in keys) keys[k] = false; mouseDown = false; rightDown = false; if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } });
 
 // ---------------- Loop ----------------
 const clock = new THREE.Clock(); let menuT = 0;
@@ -2343,12 +2440,13 @@ function loop() {
   if (window.__stopAt != null) dt = Math.max(0, Math.min(dt, window.__stopAt - gameTime)); // testes/screenshots: congela o tempo de jogo num instante exato
   if (state === 'playing' || (online && state === 'paused' && player)) { // online o jogo não pausa
     gameTime += dt;
+    if (exploreMode() && player && player.alive) refillExplore(player);
     if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (!online) for (const e of entities) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
+    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt);
-    if (!online && gameTime >= matchLimit()) endGame();
+    if (!online && !exploreMode() && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
     menuT += dt * 0.25;
     const sp = showcase.position; camera.position.set(sp.x + Math.sin(showCamYaw) * 3.5, showBaseY + 1.25, sp.z + Math.cos(showCamYaw) * 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
@@ -2465,14 +2563,15 @@ let lbT = 0;
 // duração da partida: online vem do servidor (start.limit); offline do select "Tempo" (0 = padrão do modo)
 let offlineMinutes = 0;
 function matchLimit() {
+  if (training()) return Infinity; // Treino: não acaba
   if (online && online.limit) return online.limit;
   return offlineMinutes ? offlineMinutes * 60 : teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT;
 }
 function updateLeaderboard(dt) {
   lbT -= dt; if (lbT > 0) return; lbT = 0.25;
   const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths).slice(0, 10);
-  const head = teamMode() ? `<div class="lbh"><span class="r">Vermelho ${teamScore[0]}</span><span>/${DOM.WIN_CAPS}</span><span class="b">${teamScore[1]} Azul</span></div>` : `<div class="lbh"><span>Placar</span><span>abates</span></div>`;
-  $('lb').innerHTML = head + rows.map((e, i) => `<div class="row${e.isPlayer ? ' me' : ''}${e.alive ? '' : ' dead'}"><span>${i + 1}</span><span class="dot" style="background:${teamMode() && e.team >= 0 ? TEAM_COLORS[e.team] : e.shirt}"></span><span class="n">${escapeHtml(e.name)}</span><span class="k">${scoreOf(e)}</span></div>`).join('');
+  const head = exploreMode() ? `<div class="lbh"><span>Exploração</span><span>só você</span></div>` : teamMode() ? `<div class="lbh"><span class="r">Vermelho ${teamScore[0]}</span><span>/${DOM.WIN_CAPS}</span><span class="b">${teamScore[1]} Azul</span></div>` : `<div class="lbh"><span>Placar</span><span>abates</span></div>`;
+  $('lb').innerHTML = head + rows.map((e, i) => { const pid = online ? (e.isPlayer ? online.myId : (e.netId || 0)) : 0; return `<div class="row${e.isPlayer ? ' me' : ''}${e.alive ? '' : ' dead'}${pid && voiceTalking(pid) ? ' talking' : ''}${pid && voiceMuted(pid) ? ' vmuted' : ''}"${pid ? ` data-pid="${pid}"` : ''}><span>${i + 1}</span><span class="dot" style="background:${teamMode() && e.team >= 0 ? TEAM_COLORS[e.team] : e.shirt}"></span><span class="n">${escapeHtml(e.name)}</span><span class="k">${scoreOf(e)}</span></div>`; }).join('');
 }
 // botões de time (Vermelho / Azul / Automático)
 function teamButtons(el, current, onPick, counts) { // atualiza no lugar: o lobby re-renderiza a cada ping e não pode engolir cliques
@@ -2485,9 +2584,24 @@ function teamButtons(el, current, onPick, counts) { // atualiza no lugar: o lobb
   });
 }
 let menuTeam = -1;
-function refreshMenuMode() { const dom = $('modeSel').value === 'dom'; $('menuTeam').classList.toggle('hidden', !dom); teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); }); }
+const MENU_RULES = {
+  dm: 'Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos',
+  dom: 'Times · capture a zona · o primeiro a completar as capturas vence',
+  treino: 'Estande do Docão: alvos que não atacam e voltam em 2 s. B/N/M trocam a arma, munição infinita, sem tempo.',
+  explore: 'Mapa vazio, só você. Ande e teste as armas. Vírgula, ponto ou [ ] trocam a primária. Munição não acaba e a partida não termina.',
+};
+function refreshMenuMode() {
+  const v = ['dom', 'explore', TRAIN.mode].includes($('modeSel').value) ? $('modeSel').value : 'dm';
+  $('menuTrain').classList.toggle('hidden', v !== TRAIN.mode);
+  $('menuTeam').classList.toggle('hidden', v !== 'dom');
+  $('botCount').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
+  $('timeSel').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
+  $('playBtn').innerHTML = v === 'explore' ? 'EXPLORAR MAPA <small>(sem bots)</small>' : 'JOGAR OFFLINE <small>(bots)</small>';
+  $('menuRules').textContent = MENU_RULES[v];
+  teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); });
+}
 $('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); };
-try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm') $('modeSel').value = m; } catch (e) { /* */ }
+try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm' || m === 'explore' || m === TRAIN.mode) $('modeSel').value = m; } catch (e) { /* */ }
 $('timeSel').onchange = () => { try { localStorage.setItem('docao.time', $('timeSel').value); } catch (e) { /* */ } };
 try { $('timeSel').value = String(normTime(localStorage.getItem('docao.time'))); } catch (e) { /* */ }
 refreshMenuMode();
@@ -2566,6 +2680,29 @@ for (const id of NAME_FIELDS) {
 function sendName() { if (!online || !online.net) return; const n = saveName($('lobbyName').value); online.net.send({ t: 'prof', name: n, skin: selectedSkin, primary: selectedPrimary, secondary: selectedSecondary, melee: selectedMelee }); online.nameSent = n; }
 $('lobbyNameBtn').onclick = () => sendName();
 const roomLink = (code) => { const u = new URL(location.href); u.search = ''; const sv = new URLSearchParams(location.search).get('server'); if (sv) u.searchParams.set('server', sv); u.searchParams.set('sala', code); return u.toString(); };
+function socialTeam() { if (!online) return false; const cfg = (online.lobby && online.lobby.cfg) || online.cfg; return !!(cfg && cfg.mode === 'dom'); }
+function inviteBlurb(code) { return `Bora jogar Docão Shooter! Sala ${code}\n${roomLink(code)}`; }
+function fillInvite(code) { const link = roomLink(code); document.querySelectorAll('.invite-link').forEach((el) => { el.value = link; }); }
+async function copyText(s) {
+  try { await navigator.clipboard.writeText(s); return true; }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = s; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (err) { ok = false; } ta.remove(); return ok;
+  }
+}
+function bindInvite(root) {
+  const toast = root.querySelector('[data-toast]'); let timer = 0;
+  const ping = (msg) => { toast.textContent = msg; clearTimeout(timer); timer = setTimeout(() => { if (toast.textContent === msg) toast.textContent = ''; }, 2200); };
+  const code = () => (online && online.code) || '';
+  root.querySelector('[data-act=link]').onclick = async () => { if (!code()) return; ping((await copyText(roomLink(code()))) ? 'Link copiado!' : 'Não deu para copiar'); };
+  root.querySelector('[data-act=code]').onclick = async () => { if (!code()) return; ping((await copyText(code())) ? 'Código copiado!' : 'Não deu para copiar'); };
+  root.querySelector('[data-act=wa]').onclick = () => { if (!code()) return; window.open('https://wa.me/?text=' + encodeURIComponent(inviteBlurb(code())), '_blank', 'noopener'); };
+  root.querySelector('[data-act=tg]').onclick = () => { if (!code()) return; window.open('https://t.me/share/url?url=' + encodeURIComponent(roomLink(code())) + '&text=' + encodeURIComponent(inviteBlurb(code())), '_blank', 'noopener'); };
+  root.querySelector('[data-act=slack]').onclick = async () => { if (!code()) return; await copyText(inviteBlurb(code())); ping('Mensagem copiada. Cole no Slack.'); window.open('slack://open'); };
+  const native = root.querySelector('[data-act=native]');
+  if (!navigator.share) native.classList.add('hidden');
+  else { native.classList.remove('hidden'); native.onclick = async () => { if (!code()) return; try { await navigator.share({ title: 'Docão Shooter', text: inviteBlurb(code()), url: roomLink(code()) }); } catch (e) { /* cancelou */ } }; }
+}
 
 function joinRoom(code) {
   code = String(code || '').trim().toUpperCase();
@@ -2575,15 +2712,15 @@ function joinRoom(code) {
   online = { code, myId: 0, hostId: 0, ents: new Map(), evq: [], sendAcc: 0, cfg: null, lobby: null, inMatch: false, status: 'connecting' };
   online.net = new Net(code, profile(), { onMessage: onNetMessage, onStatus: onNetStatus });
   history.replaceState(null, '', roomLink(code));
-  $('lobbyCode').textContent = code; $('shareLink').value = roomLink(code);
+  $('lobbyCode').textContent = code; fillInvite(code); chatClear(); voiceReset();
   $('lobbyPlayers').innerHTML = ''; $('lobbyStatus').textContent = 'Conectando…'; $('lobbyInfo').textContent = '';
   $('hostCtl').classList.add('hidden'); $('lobbyWait').classList.add('hidden');
   ['menu', 'onlineModal', 'gameover', 'pause'].forEach((id) => $(id).classList.add('hidden')); $('lobby').classList.remove('hidden');
 }
 function leaveOnline(silent) {
-  const o = online; if (!o) return; online = null; o.net.close();
+  const o = online; if (!o) return; voiceReset(); chatClear(); online = null; o.net.close();
   const u = new URL(location.href); u.searchParams.delete('sala'); history.replaceState(null, '', u.toString());
-  $('lobby').classList.add('hidden'); $('netbar').classList.add('hidden');
+  $('lobby').classList.add('hidden'); $('netbar').classList.add('hidden'); $('socialHud').classList.add('hidden'); $('overChat').classList.add('hidden');
   if (!silent && state !== 'menu') toMenu(); else if (!silent) $('menu').classList.remove('hidden');
 }
 function onNetStatus(st, detail) {
@@ -2599,8 +2736,11 @@ function flashMenuErr(msg) { $('onlineErr').textContent = msg; $('onlineModal').
 function onNetMessage(m) {
   const o = online; if (!o) return;
   switch (m.t) {
-    case 'welcome': o.myId = m.id; o.hostId = m.hostId; o.cfg = m.cfg; break;
+    case 'welcome': o.myId = m.id; o.hostId = m.hostId; o.cfg = m.cfg; voiceReset(); chatSeed(m.chat); chatSetRoom(!m.cfg || m.cfg.chat !== false); chatSetTeam(socialTeam()); break;
     case 'lobby': o.lobby = m; o.hostId = m.hostId; o.cfg = m.cfg; renderLobby(); break;
+    case 'chat': chatPush(m); break;
+    case 'voices': voiceRoster(m.list); break;
+    case 'sig': voiceSignal(m.from, m.kind, m.data); break;
     case 'start': startOnlineMatch(m); break;
     case 's': if (o.inMatch) applySnapshot(m); break;
     case 'p': if (o.inMatch) for (const ev of m.ev) personalEvent(ev); break;
@@ -2616,7 +2756,7 @@ function onNetMessage(m) {
 }
 // ---------- lobby ----------
 function fillMapSelect(sel, value) {
-  if (!sel.options.length) { for (const m of MAPS) sel.add(new Option(m.name, m.id)); sel.add(new Option('Aleatório', 'random')); }
+  if (!sel.options.length) { for (const m of PLAY_MAPS) sel.add(new Option(m.name, m.id)); sel.add(new Option('Aleatório', 'random')); }
   if (value) sel.value = value;
 }
 function renderLobby() {
@@ -2628,21 +2768,21 @@ function renderLobby() {
   const counts = [0, 0]; for (const p of rows) if (p.team === 0 || p.team === 1) counts[p.team]++;
   $('lobbyTeam').classList.toggle('hidden', !dom);
   if (dom) { const me = rows.find((p) => p.id === o.myId); teamButtons($('lobbyTeamBtns'), me ? me.pref : -1, (t) => o.net.send({ t: 'team', team: t }), counts); }
-  $('lobbyInfo').textContent = (dom ? 'DOMINAÇÃO · ' : 'MATA-MATA · ') + $('lobbyInfo').textContent;
+  $('lobbyInfo').textContent = (dom ? 'DOMINAÇÃO · ' : isTraining(cfg.mode) ? 'TREINO (Estande do Docão) · ' : 'MATA-MATA · ') + $('lobbyInfo').textContent;
   $('lobbyPlayers').innerHTML = `<table><tr><th style="text-align:left">Jogadores (${rows.length}/${cfg.max})</th><th>Ping</th></tr>${rows.map((p) =>
-    `<tr class="${p.id === o.myId ? 'me' : ''}"><td style="text-align:left"><span class="dot" style="background:${(getSkin(p.skin).shirt || {}).color || '#d8261c'}"></span>${escapeHtml(p.name)}${p.id === L.hostId ? '<span class="host">★ anfitrião</span>' : ''}${dom && p.team >= 0 ? `<span class="tm${p.team}">${TEAM_NAMES[p.team]}${p.pref < 0 ? ' (auto)' : ''}</span>` : ''}</td><td>${p.id === o.myId ? o.net.ping : p.ping} ms</td></tr>`).join('')}</table>`;
+    `<tr data-pid="${p.bot ? '' : p.id}" class="${p.id === o.myId ? 'me' : ''}${!p.bot && voiceTalking(p.id) ? ' talking' : ''}${!p.bot && voiceMuted(p.id) ? ' vmuted' : ''}"><td style="text-align:left"><span class="dot" style="background:${(getSkin(p.skin).shirt || {}).color || '#d8261c'}"></span>${escapeHtml(p.name)}${p.id === L.hostId ? '<span class="host">★ anfitrião</span>' : ''}${dom && p.team >= 0 ? `<span class="tm${p.team}">${TEAM_NAMES[p.team]}${p.pref < 0 ? ' (auto)' : ''}</span>` : ''}</td><td>${p.id === o.myId ? o.net.ping : p.ping} ms</td></tr>`).join('')}</table>`;
+  chatSetRoom(cfg.chat !== false); chatSetTeam(!!dom); voiceRefresh();
   { const me = L.players.find((p) => p.id === o.myId); const inGame = L.state === 'playing';
     $('lobbyName').disabled = $('lobbyNameBtn').disabled = inGame;
     $('lobbyNameMsg').textContent = me && me.name !== myName() ? `Na sala você aparece como “${me.name}”${inGame ? '' : ' (nome repetido ou ajustado)'}` : inGame ? 'Partida em andamento: o nome muda na próxima partida' : ''; }
   $('hostCtl').classList.toggle('hidden', !isHost); $('lobbyWait').classList.toggle('hidden', isHost || L.state !== 'lobby');
-  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); }
+  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); $('lobbyChatOn').value = cfg.chat === false ? '0' : '1'; }
   if (state === 'over') { const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h); }
 }
-const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode: $('lobbyMode').value, time: +$('lobbyTime').value });
-['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyMode', 'lobbyTime'].forEach((id) => ($(id).onchange = sendCfg));
+const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode: $('lobbyMode').value, time: +$('lobbyTime').value, chat: $('lobbyChatOn').value === '1' });
+['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyMode', 'lobbyTime', 'lobbyChatOn'].forEach((id) => ($(id).onchange = sendCfg));
 $('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
 $('leaveLobby').onclick = () => leaveOnline();
-$('copyLink').onclick = async () => { const v = $('shareLink').value; try { await navigator.clipboard.writeText(v); $('copyLink').textContent = 'Copiado!'; } catch (e) { $('shareLink').select(); } setTimeout(() => ($('copyLink').textContent = 'Copiar link'), 1500); };
 // ---------- menu online ----------
 function onlineTab(create) { $('tabCreate').classList.toggle('active', create); $('tabJoin').classList.toggle('active', !create); $('paneCreate').classList.toggle('hidden', !create); $('paneJoin').classList.toggle('hidden', create); }
 $('onlineBtn').onclick = () => { fillMapSelect($('roomMap'), selectedMap); $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
@@ -2680,7 +2820,7 @@ function startOnlineMatch(m) {
     return;
   }
   resetAds(); loadMap(m.map); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
-  mode = m.mode === 'dom' ? 'dom' : 'dm'; window.__capLog = []; o.limit = m.limit > 0 ? m.limit : 0;
+  mode = m.mode === 'dom' || isTraining(m.mode) ? m.mode : 'dm'; window.__capLog = []; o.limit = m.limit > 0 ? m.limit : 0;
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
   const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
   player = makeEntity(me.name, true, me.skin, '#ffd27a'); player.netId = o.myId; player.sq = 0; player.alive = false; player.respawnAt = Infinity;
@@ -2692,7 +2832,7 @@ function startOnlineMatch(m) {
   if (teamMode() && me.pend) showTeamPick(m.ents);
   pickups.forEach((p, i) => { p.active = !!(m.pk ? m.pk[i] : 1); p.mesh.visible = p.active; });
   showcase.visible = false; $('killfeed').innerHTML = ''; flashMsg(`Mapa: ${currentMap.name}`);
-  ['menu', 'gameover', 'pause', 'lobby', 'onlineModal'].forEach((id) => $(id).classList.add('hidden')); $('hud').classList.remove('hidden');
+  ['menu', 'gameover', 'pause', 'lobby', 'onlineModal'].forEach((id) => $(id).classList.add('hidden')); $('hud').classList.remove('hidden'); $('socialHud').classList.remove('hidden'); $('overChat').classList.add('hidden');
   $('netbar').classList.remove('hidden'); $('netRoom').textContent = 'Sala ' + o.code;
   camera.clearViewOffset(); state = 'playing'; if ($('teamPick').classList.contains('hidden')) lockPointer(); // escolhendo time: mouse livre pros botões
 }
@@ -2747,9 +2887,9 @@ function netEvent(ev) {
     ends.slice(0, 4).forEach(([x, y, z, hit]) => { const end = new V3(x, y, z); tracer(mz, end, !!W.beam); puff(end, hit ? 0xff9fb0 : 0xffffff); });
   } else if (k === 'h') {
     const [, tid, aid, hp, head] = ev; const t = entOf(tid), a = entOf(aid); if (!t) return;
-    t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
+    const prevHp = t.hp; t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
     if (t === player) { hurtFlash(); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
-    if (aid === o.myId && t !== player) { if (hp > 0) feedbackHit({ head: !!head }); sfx.hit(); }
+    if (aid === o.myId && t !== player) { if (hp > 0) feedbackHit({ head: !!head }); sfx.hit(); if (training()) dmgPopup(t, ev[5] ?? Math.max(0, prevHp - hp), !!head); }
   } else if (k === 'ml') { // golpe de faca de alguém: animação + som (o dano vem nos eventos 'h'/'k')
     const [, id, kind, hit] = ev; const e = entOf(id); if (!e) return; const kn = MELEE_KINDS[kind] || 'slash';
     if (e === player) { if (hit) sfx.knifeHit(1); return; }
@@ -2812,6 +2952,7 @@ function onlineEnd(m) {
   else $('winner').textContent = w && w[0] === o.myId ? 'Você venceu! 🏆' : `${w ? w[1] : '???'} venceu!`;
   $('finalboard').innerHTML = boardHtml();
   $('overMap').innerHTML = `Mapa: <b>${escapeHtml(getMap(m.map).name)}</b> · próximo: <b>${escapeHtml(getMap(m.next).name)}</b>`;
+  $('overChat').classList.remove('hidden');
   $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden'); renderLobby();
   const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h);
 }
@@ -2825,6 +2966,48 @@ function showTeamPick(ents) {
 // botões do fim de jogo: offline como antes; online só o anfitrião reinicia
 $('againBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.mapId }) : startGame(currentMap.id));
 $('nextMapBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.endMsg ? online.endMsg.next : 'random' }) : startGame(MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length].id));
+function placeSocialHud() {
+  const kf = $('killfeed'); if (!kf) return;
+  if (!document.body.classList.contains('dead')) { kf.style.top = ''; return; }
+  const tl = $('tl'); kf.style.top = Math.round((tl ? tl.getBoundingClientRect().bottom : 72) + 8) + 'px';
+}
+function paintVoiceMarks() {
+  document.querySelectorAll('[data-pid]').forEach((el) => {
+    const id = +el.dataset.pid; if (!id) return;
+    el.classList.toggle('talking', voiceTalking(id));
+    el.classList.toggle('vmuted', voiceMuted(id));
+  });
+}
+initChat({
+  send: (m) => { if (online && online.net) online.net.send(m); },
+  teamMode: () => socialTeam(),
+  me: () => {
+    if (!online) return null;
+    const id = online.myId;
+    const row = online.lobby && online.lobby.players.find((p) => p.id === id);
+    return { id, name: (player && player.name) || (row && row.name) || 'Você', team: player ? player.team : (row ? row.team : -1), dead: !!(state === 'playing' && player && !player.alive) };
+  },
+  shouldLock: () => state === 'playing' && !!player && player.alive && $('pause').classList.contains('hidden') && $('teamPick').classList.contains('hidden'),
+  lockPointer,
+  clearKeys: () => { for (const k in keys) keys[k] = false; mouseDown = false; rightDown = false; if (player) player.charging = false; },
+});
+initVoice({
+  send: (m) => { if (online && online.net) online.net.send(m); },
+  teamMode: () => socialTeam(),
+  myId: () => (online && online.myId) || 0,
+  onChange: paintVoiceMarks,
+});
+$('lb').addEventListener('click', (ev) => {
+  const row = ev.target.closest('[data-pid]'); if (!row || !online) return;
+  const id = +row.dataset.pid; if (!id || id === online.myId) return;
+  voiceToggleMute(id); paintVoiceMarks();
+});
+$('lobbyPlayers').addEventListener('click', (ev) => {
+  const row = ev.target.closest('tr[data-pid]'); if (!row || !online) return;
+  const id = +row.dataset.pid; if (!id || id === online.myId) return;
+  voiceToggleMute(id); paintVoiceMarks();
+});
+document.querySelectorAll('.invite').forEach(bindInvite);
 // link ?sala=ABCD entra direto
 { const sala = new URLSearchParams(location.search).get('sala'); if (sala) joinRoom(sala); }
 

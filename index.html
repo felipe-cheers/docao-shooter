@@ -22,6 +22,7 @@
   <div id="topbar">
     <div id="timer">5:00</div>
     <div id="leader"></div>
+    <div id="trainInfo" class="hidden"></div>
   </div>
   <div id="tl"><div id="lb"></div><div id="netbar" class="hidden"><span id="netRoom"></span> · <span id="netPing">-- ms</span><span id="netStatus"></span></div></div>
   <div id="domhud" class="hidden"><div id="domScore"><span class="tr">VERMELHO <b id="ts0">0</b></span><span class="vs">×</span><span class="tb"><b id="ts1">0</b> AZUL</span></div>
@@ -50,6 +51,21 @@
     <div class="dcol"><div class="dl">Corpo a corpo:</div><div id="deathMelee"></div></div></div>
     <button id="respawnBtn" disabled>Renascer em 5.0s</button></div>
   <div id="tabboard" class="board hidden"></div>
+  <div id="socialHud" class="hidden">
+    <div id="chat" class="chathud">
+      <div id="chatLog" class="chatlog" data-chat="fade"></div>
+      <form id="chatForm" class="chatform hidden">
+        <span id="chatScopeLabel">Todos</span>
+        <input id="chatInput" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mensagem…">
+      </form>
+    </div>
+    <div class="voicebox" data-voicebox id="voiceHud">
+      <button type="button" class="small" data-voice="off">Mudo</button>
+      <button type="button" class="small" data-voice="all">Todos</button>
+      <button type="button" class="small" data-voice="team">Time</button>
+      <span class="voicehint">J troca a voz · segure K para falar</span>
+    </div>
+  </div>
 </div>
 
 <div id="menu" class="overlay">
@@ -75,8 +91,9 @@
       <button id="mapBtn" class="mapcard current" title="Escolher mapa"><span class="thumb"></span><span class="mtxt"><b id="mapName">Arena da Fazendinha</b><small id="mapDesc"></small></span><span class="mchange">trocar ▸</span></button>
     </div>
     <div class="row">
-      <label>Modo<select id="modeSel"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option></select></label>
+      <label>Modo<select id="modeSel"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option><option value="explore">Exploração</option><option value="treino">Treino · Estande do Docão</option></select></label>
     </div>
+    <div id="menuTrain" class="trainnote hidden">Treino: abre sempre no <b>Estande do Docão</b>. Os alvos não atacam e voltam em 2 s · B/N/M trocam a arma na hora · munição infinita · sem tempo.</div>
     <div id="menuTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="menuTeamBtns"></div></div>
     <div class="row">
       <label>Bots
@@ -97,8 +114,9 @@
       <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida</div>
       <div>Segure Q: Copo Bomba · solte para arremessar</div>
       <div>4: fumaça · 5: atordoamento · F: usa o killstreak que estiver pronto (o de 5 abre o laptop do míssil)</div>
-      <div>Tab placar · Esc pausar</div>
-      <div class="rules">Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos</div>
+      <label class="checkline"><input type="checkbox" data-chat-toggle checked> Mostrar chat</label>
+      <div>Y todos · U time · com o chat aberto, Tab troca todos/time · J troca a voz · K segurar para falar · Tab placar · Esc pausar</div>
+      <div class="rules" id="menuRules">Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos</div>
     </div>
   </div>
 </div>
@@ -118,7 +136,7 @@
     <div class="otabs"><button id="tabCreate" class="otab active">Criar sala</button><button id="tabJoin" class="otab">Entrar na sala</button></div>
     <div id="paneCreate">
       <label>Mapa<select id="roomMap"></select></label>
-      <label>Modo<select id="roomMode"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option></select></label>
+      <label>Modo<select id="roomMode"><option value="dm">Mata-mata</option><option value="dom">Dominação (times)</option><option value="treino">Treino · Estande do Docão</option></select></label>
       <div class="row">
         <label>Máx. jogadores<select id="roomMax"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <label>Completar com bots<select id="roomBots"><option value="1" selected>Sim</option><option value="0">Não</option></select></label>
@@ -138,18 +156,45 @@
 <div id="lobby" class="overlay hidden">
   <div class="panel">
     <h2>Sala <span id="lobbyCode" class="code">----</span></h2>
-    <div class="share"><input id="shareLink" readonly><button id="copyLink" class="small">Copiar link</button></div>
+    <div class="invite" id="lobbyInvite">
+      <input id="shareLink" class="invite-link" readonly>
+      <div class="invite-btns">
+        <button type="button" class="small" data-act="link">Copiar link</button>
+        <button type="button" class="small" data-act="code">Copiar código</button>
+        <button type="button" class="small" data-act="wa">WhatsApp</button>
+        <button type="button" class="small" data-act="tg">Telegram</button>
+        <button type="button" class="small" data-act="slack">Slack</button>
+        <button type="button" class="small hidden" data-act="native">Compartilhar</button>
+      </div>
+      <div class="invite-toast" data-toast></div>
+    </div>
     <div id="lobbyInfo" class="sub"></div>
     <div class="namerow"><label>Seu nome<input id="lobbyName" class="nameField" maxlength="16" autocomplete="nickname" spellcheck="false"></label><button id="lobbyNameBtn" class="small">Trocar</button></div><div id="lobbyNameMsg" class="sub"></div>
     <div id="lobbyTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="lobbyTeamBtns"></div><div class="tpe" id="lobbyTeamErr"></div></div>
     <div id="lobbyPlayers" class="board"></div>
+    <div id="lobbyChat" class="chatpanel">
+      <div class="chatlog" data-chat="keep"></div>
+      <form id="lobbyChatForm" class="chatform">
+        <button type="button" class="small" data-say="all">Todos</button>
+        <button type="button" class="small" data-say="team">Time</button>
+        <input id="lobbyChatInput" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mensagem…">
+      </form>
+      <div id="lobbyChatOff" class="sub hidden">O anfitrião desligou o chat</div>
+    </div>
+    <div class="voicebox" data-voicebox id="lobbyVoice">
+      <button type="button" class="small" data-voice="off">Mudo</button>
+      <button type="button" class="small" data-voice="all">Todos</button>
+      <button type="button" class="small" data-voice="team">Time</button>
+      <span class="voicehint">J troca a voz · segure K para falar</span>
+    </div>
     <div id="hostCtl">
       <div class="row">
         <label>Mapa<select id="lobbyMap"></select></label>
         <label>Máx.<select id="lobbyMax"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <label>Bots<select id="lobbyBots"><option value="1">Sim</option><option value="0">Não</option></select></label>
-        <label>Modo<select id="lobbyMode"><option value="dm">Mata-mata</option><option value="dom">Dominação</option></select></label>
+        <label>Modo<select id="lobbyMode"><option value="dm">Mata-mata</option><option value="dom">Dominação</option><option value="treino">Treino (Estande)</option></select></label>
         <label>Tempo<select id="lobbyTime"><option value="0">Padrão</option><option value="3">3 min</option><option value="5">5 min</option><option value="7">7 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></label>
+        <label>Chat<select id="lobbyChatOn"><option value="1">Sim</option><option value="0">Não</option></select></label>
       </div>
       <button id="startOnline">INICIAR PARTIDA</button>
     </div>
@@ -162,6 +207,25 @@
 <div id="pause" class="overlay hidden">
   <div class="panel small">
     <h2>Pausado</h2>
+    <div class="invite hidden" id="pauseInvite">
+      <input class="invite-link" readonly>
+      <div class="invite-btns">
+        <button type="button" class="small" data-act="link">Copiar link</button>
+        <button type="button" class="small" data-act="code">Copiar código</button>
+        <button type="button" class="small" data-act="wa">WhatsApp</button>
+        <button type="button" class="small" data-act="tg">Telegram</button>
+        <button type="button" class="small" data-act="slack">Slack</button>
+        <button type="button" class="small hidden" data-act="native">Compartilhar</button>
+      </div>
+      <div class="invite-toast" data-toast></div>
+    </div>
+    <label class="checkline"><input type="checkbox" data-chat-toggle checked> Mostrar chat</label>
+    <div class="voicebox hidden" data-voicebox id="pauseVoice">
+      <button type="button" class="small" data-voice="off">Mudo</button>
+      <button type="button" class="small" data-voice="all">Todos</button>
+      <button type="button" class="small" data-voice="team">Time</button>
+      <span class="voicehint">J troca a voz · segure K para falar</span>
+    </div>
     <button id="resumeBtn">CONTINUAR</button>
     <button id="quitBtn" class="secondary">SAIR PRO MENU</button>
   </div>
@@ -175,6 +239,14 @@
     <button id="againBtn">JOGAR DE NOVO</button>
     <button id="nextMapBtn">PRÓXIMO MAPA ▸</button>
     <div id="overWait" class="sub hidden">Aguardando o anfitrião…</div>
+    <div id="overChat" class="chatpanel hidden">
+      <div class="chatlog" data-chat="keep"></div>
+      <form id="overChatForm" class="chatform">
+        <button type="button" class="small" data-say="all">Todos</button>
+        <button type="button" class="small" data-say="team">Time</button>
+        <input id="overChatInput" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mensagem…">
+      </form>
+    </div>
     <button id="menuBtn" class="secondary">MENU</button>
   </div>
 </div>

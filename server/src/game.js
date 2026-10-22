@@ -5,7 +5,8 @@
 //  pickups, Copo Bomba e foguetes (física + explosão), tempo de partida, fim de partida e bots.
 //  O cliente é dono só do próprio movimento (com checagem de velocidade/paredes) e manda eventos de tiro com origem+direção.
 // ============================================================
-import { MAPS, getMap } from '../../maps.js';
+import { MAPS, PLAY_MAPS, getMap } from '../../maps.js';
+import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
@@ -34,7 +35,8 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y, z: p.z });
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm', time: normTime(cfg.time) };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' || isTraining(cfg.mode) ? cfg.mode : 'dm', time: normTime(cfg.time), chat: cfg.chat !== false };
+    this.chatLog = Array.isArray(cfg.chatLog) ? cfg.chatLog.filter((x) => x && typeof x.text === 'string').slice(-30) : [];
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
@@ -44,6 +46,7 @@ export class Game {
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
   syncClock() { if (this.state === 'playing' && this.t0) this.T = Math.max(this.T, this.now() - this.t0); }
   get teamMode() { return this.cfg.mode === 'dom'; }
+  get training() { return isTraining(this.cfg.mode); } // Estande do Docão: bots = alvos parados/andando
   live() { return [...this.ents.values()].filter((e) => e.bot || e.connected); }
   teamCounts(exclude, humansOnly = true) { const c = [0, 0]; for (const e of this.live()) if (e !== exclude && (!humansOnly || !e.bot) && (e.team === 0 || e.team === 1)) c[e.team]++; return c; }
   // escolha de time (lobby, pré-partida ou entrando no meio): -1 = automático. Bloqueia se deixaria 2+ humanos a mais.
@@ -59,20 +62,22 @@ export class Game {
   join({ name, skin, primary, secondary, melee, token }) {
     this.syncClock(); this.purge();
     let e = token ? [...this.ents.values()].find((x) => !x.bot && x.token === token) : null;
-    if (e) { e.connected = true; e.dcAt = 0; } // reconexão: mesmo id e placar
+    if (e) { e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
       if (this.state !== 'lobby' && !this.teamMode) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
       e = this.makeEnt({ name: this.freeName(name), skin, primary, secondary, melee, bot: false });
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
+      e.arrived = true;
     }
     if (!this.hostId || !this.ents.get(this.hostId)?.connected) this.hostId = e.id;
     return { ent: e };
   }
   welcome(e) {
     this.syncClock(); if (this.state === 'playing') this.io.startLoop(); // o loop para quando o último humano sai: volta ao entrar/reconectar
-    this.io.send(e.id, { t: 'welcome', id: e.id, token: e.token, code: this.cfg.code, hostId: this.hostId, cfg: this.cfg, state: this.state, maps: MAPS.map((m) => [m.id, m.name]) });
+    const fresh = !!e.arrived; e.arrived = false;
+    this.io.send(e.id, { t: 'welcome', id: e.id, token: e.token, code: this.cfg.code, hostId: this.hostId, cfg: this.cfg, state: this.state, maps: MAPS.map((m) => [m.id, m.name]), chat: this.chatLog });
     if (this.state === 'lobby') this.sendLobby();
     else {
       this.io.send(e.id, this.startMsg());
@@ -80,17 +85,24 @@ export class Game {
       if (this.state === 'over') this.io.send(e.id, this.endMsg());
     }
     this.sendLobby();
+    if (fresh) this.postChat({ sys: 1, text: `${e.name} entrou` });
+    else if (e.cameBack) this.postChat({ sys: 1, text: `${e.name} voltou` });
+    e.cameBack = false;
+    this.sendVoices();
   }
   leave(id) {
     const e = this.ents.get(id); if (!e) return;
-    e.connected = false; e.dcAt = this.now(); e.alive = false;
+    const name = e.name, bot = e.bot;
+    e.connected = false; e.dcAt = this.now(); e.alive = false; e.voice = 'off';
     if (this.hostId === id) { const h = this.humans()[0]; this.hostId = h ? h.id : 0; }
     if (this.state === 'lobby') this.ents.delete(id);
     else this.events.push(['l', id]);
     this.syncBots(); this.sendLobby();
+    if (!bot) this.postChat({ sys: 1, text: `${name} saiu` });
+    this.sendVoices();
     if (!this.humans().length) this.io.stopLoop();
   }
-  purge() { // remove quem caiu e não voltou
+  purge() { // remove quem caiu e não voltou (o “saiu” já foi pro chat no leave)
     const t = this.now();
     for (const e of [...this.ents.values()]) if (!e.bot && !e.connected && t - e.dcAt > DC_GRACE) this.ents.delete(e.id);
   }
@@ -105,7 +117,7 @@ export class Game {
       primary: prim, nextPrimary: prim, secondary: sec, nextSecondary: sec, melee: mel, nextMelee: mel, slots: [prim, sec, mel], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
-      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0 };
+      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off' };
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
     this.ents.set(id, e); return e;
   }
@@ -117,6 +129,7 @@ export class Game {
   // ---------- bots de preenchimento ----------
   syncBots() {
     if (this.state === 'lobby') return;
+    if (this.training) return this.syncDummies();
     const want = this.cfg.fillBots ? Math.max(0, this.cfg.max - this.humans().length) : 0;
     let bots = [...this.ents.values()].filter((e) => e.bot);
     const tc = () => this.teamCounts(null, false);
@@ -135,10 +148,25 @@ export class Game {
       if (this.state === 'playing') { this.events.push(['j', this.entInfo(b)]); this.spawn(b); }
     }
   }
+  // Treino: um alvo por posição do mapa (independe de max/bots); recria se a lista mudou
+  syncDummies() {
+    const D = (this.map && this.map.dummies) || [], bots = [...this.ents.values()].filter((e) => e.bot);
+    if (bots.length === D.length && bots.every((b, i) => b.dummy === D[i])) return;
+    for (const b of bots) { this.ents.delete(b.id); this.events.push(['l', b.id]); }
+    D.forEach((d) => {
+      const b = this.makeEnt({ name: d.name, skin: pick(SKINS).id, primary: 0, bot: true }); b.name = d.name; b.dummy = d;
+      if (this.state === 'playing') { this.events.push(['j', this.entInfo(b)]); this.spawn(b); }
+    });
+  }
+  placeDummy(b) {
+    const d = b.dummy, x = dummyX(d, this.T), y = this.P.groundAt(x, d.z, (d.y || 0) + 0.3), px = b.pos.x;
+    b.pos = { x, y, z: d.z }; b.vel = { x: 0, y: 0, z: 0 }; b.onGround = true; b.yaw = d.yaw || 0; b.pitch = 0; b.weapon = PISTOL;
+    return x - px;
+  }
   removeOneBot() { const b = [...this.ents.values()].reverse().find((e) => e.bot); if (b) { this.ents.delete(b.id); this.events.push(['l', b.id]); } }
   // ---------- partida ----------
   startMatch(mapId) {
-    const id = mapId === 'random' || !MAPS.some((m) => m.id === mapId) ? pick(MAPS.filter((m) => m.id !== this.mapId)).id : mapId;
+    const id = this.training ? TRAIN.map : mapId === 'random' || !PLAY_MAPS.some((m) => m.id === mapId) ? pick(PLAY_MAPS.filter((m) => m.id !== this.mapId)).id : mapId;
     const map = getMap(id); this.mapId = id; this.map = map;
     const solids = mapSolids(map); this.P = createPhysics(solids, map.size);
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
@@ -171,10 +199,10 @@ export class Game {
     this.io.broadcast(this.startMsg()); this.sendLobby();
     this.io.startLoop();
   }
-  get cfgLimit() { return this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; }
+  get cfgLimit() { return this.training ? Infinity : this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; } // Treino: não acaba
   get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
-  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: this.timeLimit, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.rockets = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
@@ -182,7 +210,7 @@ export class Game {
   endMsg() {
     const rows = [...this.ents.values()].filter((e) => e.bot || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
     const i = MAPS.findIndex((m) => m.id === this.mapId), ts = this.teamScore || [0, 0];
-    return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: MAPS[(i + 1) % MAPS.length].id, hostId: this.hostId };
+    return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: PLAY_MAPS[(PLAY_MAPS.findIndex((m) => m.id === this.mapId) + 1) % PLAY_MAPS.length].id, hostId: this.hostId };
   }
   score(e) { return this.teamMode ? e.kills + 2 * e.caps : e.kills; }
   // ---------- mensagens dos clientes ----------
@@ -200,10 +228,11 @@ export class Game {
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
-        if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
-        this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); break;
+        if ((m.mode === 'dm' || m.mode === 'dom' || isTraining(m.mode)) && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
+        if (typeof m.chat === 'boolean') this.cfg.chat = m.chat;
+        this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); this.sendVoices(); break;
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
-      case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? MAPS[(MAPS.findIndex((x) => x.id === this.mapId) + 1) % MAPS.length].id : this.cfg.map)); break;
+      case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? PLAY_MAPS[(PLAY_MAPS.findIndex((x) => x.id === this.mapId) + 1) % PLAY_MAPS.length].id : this.cfg.map)); break;
       case 'team': {
         if (!this.teamMode) return; const r = this.chooseTeam(e, m.team);
         if (this.state === 'playing') {
@@ -211,11 +240,66 @@ export class Game {
           else if (e.alive) { e.alive = false; e.deaths++; e.respawnAt = this.T + RESPAWN_TIME; this.events.push(['k', 0, e.id, -2, 0, 0, e.deaths]); } // troca no meio: renasce no time novo
           this.events.push(['tm', e.id, e.team]);
         }
-        this.io.send(e.id, { t: 'teamOk', team: r.team, blocked: r.blocked, pref: e.teamPref }); this.sendLobby(); break;
+        this.io.send(e.id, { t: 'teamOk', team: r.team, blocked: r.blocked, pref: e.teamPref }); this.sendLobby(); this.sendVoices(); break;
       }
       case 'lobby': if (!isHost || this.state !== 'over') return; this.state = 'lobby'; for (const b of [...this.ents.values()]) if (b.bot) this.ents.delete(b.id); this.sendLobby(); break;
+      case 'say': this.onSay(e, m); break;
+      case 'voice': {
+        let scope = m.scope === 'all' || m.scope === 'team' ? m.scope : 'off';
+        if (scope === 'team' && !this.teamMode) scope = 'all';
+        e.voice = scope; this.sendVoices(); break;
+      }
+      case 'sig': this.onSig(e, m); break;
       default: break;
     }
+  }
+  cleanChat(raw) {
+    if (typeof raw !== 'string') return '';
+    return raw.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  }
+  hearsChat(h, line) {
+    if (line.sys || h.id === line.id) return true;
+    if (line.dead && !(this.state === 'playing' && !h.alive)) return false;
+    if (line.scope === 'team' && h.team !== line.team) return false;
+    return true;
+  }
+  postChat(line) {
+    const row = { id: line.id || 0, name: line.name || '', team: line.team ?? -1, scope: line.scope === 'team' ? 'team' : 'all', dead: line.dead ? 1 : 0, sys: line.sys ? 1 : 0, text: line.text, at: Date.now() };
+    this.chatLog.push(row); while (this.chatLog.length > 30) this.chatLog.shift();
+    const msg = { t: 'chat', ...row };
+    for (const h of this.humans()) if (this.hearsChat(h, row)) this.io.send(h.id, msg);
+    if (this.io.saveCfg) this.io.saveCfg();
+  }
+  onSay(e, m) {
+    if (this.cfg.chat === false || e.bot) return;
+    const text = this.cleanChat(m.text); if (!text) return;
+    const now = Date.now();
+    const times = e.sayAt = (e.sayAt || []).filter((t) => now - t < 5000);
+    if (times.length >= 4) return;
+    times.push(now);
+    const scope = m.scope === 'team' && this.teamMode ? 'team' : 'all';
+    const dead = this.state === 'playing' && !e.alive ? 1 : 0;
+    this.postChat({ id: e.id, name: e.name, team: e.team, scope, dead, text });
+  }
+  voiceReaches(from, to) {
+    const s = from.voice || 'off'; if (s === 'off' || from === to) return false;
+    if (s === 'all') return true;
+    return s === 'team' && this.teamMode && from.team >= 0 && from.team === to.team;
+  }
+  voicePair(a, b) { return this.voiceReaches(a, b) || this.voiceReaches(b, a); }
+  sendVoices() {
+    this.io.broadcast({ t: 'voices', list: this.humans().map((h) => [h.id, h.voice || 'off', h.team]) });
+  }
+  onSig(e, m) {
+    const other = this.ents.get(m.to | 0);
+    if (!other || other.bot || !other.connected || other.id === e.id || !this.voicePair(e, other)) return;
+    if (m.kind !== 'offer' && m.kind !== 'answer' && m.kind !== 'ice') return;
+    let data = m.data;
+    if (m.kind === 'ice') {
+      if (!data || typeof data !== 'object' || typeof data.candidate !== 'string' || !data.candidate) return;
+      data = { candidate: data.candidate.slice(0, 2000), sdpMid: typeof data.sdpMid === 'string' ? data.sdpMid.slice(0, 32) : null, sdpMLineIndex: Number.isInteger(data.sdpMLineIndex) ? data.sdpMLineIndex : null };
+    } else if (typeof data !== 'string' || data.length < 8 || data.length > 6000 || !data.startsWith('v=0')) return;
+    this.io.send(other.id, { t: 'sig', from: e.id, kind: m.kind, data });
   }
   onUpdate(e, m) {
     if (this.state !== 'playing') return;
@@ -246,7 +330,7 @@ export class Game {
   onEvent(e, ev) {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
-    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; return; }
+    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if (this.training && e.alive) this.equipNow(e); return; }
     if (!e.alive) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
@@ -254,6 +338,12 @@ export class Game {
     if (k === 'n') return this.humanNade(e, ev[1], ev[2]);
     if (k === 'm') return this.humanMelee(e, ev[1], ev[2], ev[3], ev[4], ev[5]);
     if (k === 'sw') return this.clockOk(e, ev[3], SABER) && this.humanSwing(e, ev[1], ev[2]);
+  }
+  // Treino: troca de arma na hora (teclas B/N/M), com pente cheio
+  equipNow(e) {
+    e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; const old = e.slots; e.slots = [e.primary, e.secondary, e.melee];
+    for (const w of e.slots) if (!old.includes(w)) { e.mag[w] = WEAPONS[w].mag; e.reserve[w] = WEAPONS[w].reserve; }
+    if (!e.slots.includes(e.weapon)) e.weapon = e.primary; e.reload = null;
   }
   // cadência: usa o relógio do cliente (tiros chegam agrupados pela rede), mas o relógio do cliente não pode
   // andar mais rápido que o do servidor (speed hack): (tServidor - tCliente) não pode cair mais que 0,75 s abaixo do máximo visto
@@ -319,7 +409,7 @@ export class Game {
   }
   humanNade(e, oA, vA) {
     const o = obj3(oA), v = obj3(vA); if (!this.eyeOk(e, o) || !v || e.nades <= 0 || vlen(v) > 34) return;
-    e.nades--; this.throwNade(e, o, v);
+    e.nades--; e.lastNadeT = this.T; this.throwNade(e, o, v);
   }
   humanSwing(e, oA, dirA) {
     const W = WEAPONS[SABER];
@@ -368,12 +458,12 @@ export class Game {
     if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
     t.hp -= amount; t.lastAttacker = a ? a.id : 0; noteHurt(t, a, this.T); // regen só com dano de outro
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
-    this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0]);
+    this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0, Math.round(amount)]); // [5] = dano (números no Treino)
     if (t.hp <= 0) { this.kill(t, a, w, head, back); return true; }
     return false;
   }
   kill(t, a, w, head, back = false) {
-    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + RESPAWN_TIME; if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
+    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + (t.dummy ? TRAIN.respawn : RESPAWN_TIME); if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
     if (a && a !== t) a.kills++;
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
@@ -381,7 +471,7 @@ export class Game {
     // vira bacon que cura: fica no chão onde morreu pelo mesmo tempo que o bacon aparece no cliente
     this.bacons = this.bacons.filter((b) => b.id !== t.id);
     this.bacons.push({ id: t.id, x: t.pos.x, y: this.P.groundAt(t.pos.x, t.pos.z, t.pos.y + 0.3), z: t.pos.z, born: this.T });
-    if (a && a.kills >= KILL_LIMIT && !this.teamMode) this.pendingEnd = true;
+    if (a && a.kills >= KILL_LIMIT && !this.teamMode && !this.training) this.pendingEnd = true;
   }
   blast(c, owner, o, direct = null) {
     this.events.push(['bm', o.pid || 0, o.kind, arr3(c)]);
@@ -440,6 +530,7 @@ export class Game {
     if (e.bot && Math.random() < 0.3) e.nextPrimary = pick(BOT_PRIMARIES);
     e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.nades = NADE.spawnWith;
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
+    if (e.dummy) { this.placeDummy(e); e.invulnUntil = this.T; e.slots = [0, PISTOL, KNIFE]; }
     e.hist = []; this.pushHist(e); e.lastUpd = this.now();
     if (e.bot) Object.assign(e, { target: null, wp: null, path: null, stuck: 0, reloadEnd: 0 });
     this.events.push(['sp', e.id, arr3(e.pos), r2(e.yaw), e.primary, e.sq]);
@@ -489,6 +580,10 @@ export class Game {
       if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.needRs && !e.rsReq && this.T < e.respawnAt + RS_SAFETY) && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
       if (e.bot) this.pushHist(e);
       if (!e.bot && e.alive) this.progressReload(e);
+      if (this.training && !e.bot && e.alive) { // munição de reserva infinita e Copo Bomba volta sozinho
+        for (const w of e.slots) e.reserve[w] = WEAPONS[w].reserve;
+        if (e.nades < NADE.max && this.T - (e.lastNadeT ?? -9) > TRAIN.nadeRefill) e.nades = NADE.max;
+      }
     }
     this.updatePickups(); this.updateBacons();
     { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) regenStep(e, this.T, rt); }
@@ -540,6 +635,7 @@ export class Game {
   }
   updateBot(b, dt) {
     if (!b.alive) return;
+    if (b.dummy) { this.placeDummy(b); return; } // Treino: alvo não pensa, não mira, não atira
     if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; b.reloadEnd = 0; }
     b.think -= dt;
     if (b.think <= 0) {

@@ -4,6 +4,29 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## Próxima versão (já no ar, 22/10/2026)
+
+**Chat, voz e convite** (PR #4, [@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers))
+- Chat escrito no lobby, na partida e no fim do jogo: Y fala com todos, U só com o time, e Tab troca o canal com a caixa aberta
+- Voz: J troca entre Mudo, Todos e Time; segure K para falar
+- Convite da sala no lobby e na pausa: copiar link ou código, WhatsApp, Telegram, Slack e compartilhar
+
+**Campus HOTMILK e modo Exploração** (PR #5, [@paulo-cheers](https://github.com/paulo-cheers))
+- O mapa HOTMILK virou o campus inteiro: Bloco 01, Bloco 02, estacionamento com catraca, praça e portões
+- Modo Exploração (offline): mapa sem bots pra andar e testar armas
+
+**Treino · Estande do Docão**
+- Novo modo com mapa próprio: alvos que não atacam e voltam em 2 s, números de dano na tela, distâncias de 10 a 50 m, alvos em movimento, área de explosivos, faca/sabre e arena X1
+- B/N/M trocam a arma na hora, munição infinita e sem tempo. Funciona offline e online
+
+**Killstreaks no F e camuflagens** (PR #6, [@rramosjoao](https://github.com/rramosjoao))
+- O killstreak não dispara sozinho: quando fica pronto, aperte F. Com mais de um guardado, o F usa o mais antigo
+- O de 5 abre um laptop e você pilota um míssil em primeira pessoa: sai bem alto, o mouse aponta e a explosão é bem maior
+- No menu, cada arma mostra uma miniatura
+- Camuflagem por partida: 5 abates com a mesma arma dão a de chiqueiro, 10 a de bacon e 15 deixa dourada. Zera na partida nova
+
+---
+
 ## v1.7 — Arsenal do Chiqueiro 🏹🚁 (21/10/2026)
 Leva enorme feita pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #3). Valeu, João! 🐷
 
