@@ -274,7 +274,7 @@ body:has(#menu:not(.hidden)) #streakBar { display: none !important; }
 #bProgFill{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffd27a}
 #bProg.defuse #bProgFill{background:#4da6ff}
 #bProgText{position:relative;display:block;text-align:center;font-size:13px;font-weight:bold;line-height:22px;text-shadow:0 1px 0 #000}
-#bombBanner{position:fixed;top:24%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;animation:bpop .35s ease-out}
+#bombBanner{position:fixed;top:32%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;animation:bpop .35s ease-out}
 #bombBanner .b1{font-family:"Arial Black",Impact;font-size:46px;-webkit-text-stroke:2px #2a1410;text-shadow:0 4px 0 #2a1410}
 #bombBanner .b2{font-size:18px;font-weight:bold;text-shadow:0 2px 0 #000;margin-top:4px}
 @keyframes bpop{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}

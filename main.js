@@ -2205,15 +2205,14 @@ function updateBombGfx(dt) {
   sa.style.color = TEAM_COLORS[atk]; sd.style.color = TEAM_COLORS[1 - atk];
   sa.firstChild.textContent = `ATAQUE · ${TEAM_NAMES[atk].toUpperCase()} `; sd.lastChild.textContent = ` DEFESA · ${TEAM_NAMES[1 - atk].toUpperCase()}`;
   $('bs0').textContent = S.score[atk]; $('bs1').textContent = S.score[1 - atk];
-  const tEl = $('bTimer'); let tt = '';
+  let tt = '';
   if (S.phase === 'prep') tt = `Preparação ${Math.ceil(Math.max(0, S.phaseEnd - gameTime))}`;
   else if (S.phase === 'live') tt = fmtT(Math.max(0, S.phaseEnd - gameTime));
   else if (S.phase === 'planted') tt = `💣 ${Math.max(0, S.explodeAt - gameTime).toFixed(1)} s`;
   else if (S.phase === 'end') tt = S.over ? 'Fim de jogo!' : `Próxima rodada em ${Math.ceil(Math.max(0, S.phaseEnd - gameTime))}`;
   else tt = 'Fim de jogo!';
-  tEl.textContent = tt; tEl.className = S.phase === 'planted' ? 'planted' : S.phase === 'prep' ? 'prep' : '';
   $('timer').textContent = tt; $('timer').style.color = S.phase === 'planted' ? '#ff4d4d' : S.phase === 'prep' ? '#ffd27a' : '';
-  $('leader').textContent = `Bomba (protótipo) · Rodada ${S.round} · primeiro a ${BOMB.WIN}${S.round <= BOMB.HALF ? ` · troca de lado depois da ${BOMB.HALF}ª` : ''}`;
+  $('leader').textContent = `Bomba (protótipo) · Rodada ${S.round} · primeiro a ${BOMB.WIN}${S.round <= BOMB.HALF ? ` · troca após a ${BOMB.HALF}ª` : ''}`;
   let ct = '';
   if (S.planted) ct = `Botijão plantado no ${SITE_NAMES[S.site]}! ${mySide === 1 ? `Segure ${BOMB.KEY_LABEL} perto dele pra desarmar` : 'Proteja até explodir!'}`;
   else if (S.dropped) ct = mySide === 0 ? 'O botijão caiu! Passe por cima pra pegar' : 'O botijão caiu no chão!';
