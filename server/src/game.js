@@ -34,7 +34,8 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y, z: p.z });
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm', time: normTime(cfg.time) };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' ? 'dom' : 'dm', time: normTime(cfg.time), chat: cfg.chat !== false };
+    this.chatLog = Array.isArray(cfg.chatLog) ? cfg.chatLog.filter((x) => x && typeof x.text === 'string').slice(-30) : [];
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
@@ -59,20 +60,22 @@ export class Game {
   join({ name, skin, primary, token }) {
     this.syncClock(); this.purge();
     let e = token ? [...this.ents.values()].find((x) => !x.bot && x.token === token) : null;
-    if (e) { e.connected = true; e.dcAt = 0; } // reconexão: mesmo id e placar
+    if (e) { e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
       if (this.state !== 'lobby' && !this.teamMode) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
       e = this.makeEnt({ name: this.freeName(name), skin, primary, bot: false });
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
+      e.arrived = true;
     }
     if (!this.hostId || !this.ents.get(this.hostId)?.connected) this.hostId = e.id;
     return { ent: e };
   }
   welcome(e) {
     this.syncClock(); if (this.state === 'playing') this.io.startLoop(); // o loop para quando o último humano sai: volta ao entrar/reconectar
-    this.io.send(e.id, { t: 'welcome', id: e.id, token: e.token, code: this.cfg.code, hostId: this.hostId, cfg: this.cfg, state: this.state, maps: MAPS.map((m) => [m.id, m.name]) });
+    const fresh = !!e.arrived; e.arrived = false;
+    this.io.send(e.id, { t: 'welcome', id: e.id, token: e.token, code: this.cfg.code, hostId: this.hostId, cfg: this.cfg, state: this.state, maps: MAPS.map((m) => [m.id, m.name]), chat: this.chatLog });
     if (this.state === 'lobby') this.sendLobby();
     else {
       this.io.send(e.id, this.startMsg());
@@ -80,17 +83,24 @@ export class Game {
       if (this.state === 'over') this.io.send(e.id, this.endMsg());
     }
     this.sendLobby();
+    if (fresh) this.postChat({ sys: 1, text: `${e.name} entrou` });
+    else if (e.cameBack) this.postChat({ sys: 1, text: `${e.name} voltou` });
+    e.cameBack = false;
+    this.sendVoices();
   }
   leave(id) {
     const e = this.ents.get(id); if (!e) return;
-    e.connected = false; e.dcAt = this.now(); e.alive = false;
+    const name = e.name, bot = e.bot;
+    e.connected = false; e.dcAt = this.now(); e.alive = false; e.voice = 'off';
     if (this.hostId === id) { const h = this.humans()[0]; this.hostId = h ? h.id : 0; }
     if (this.state === 'lobby') this.ents.delete(id);
     else this.events.push(['l', id]);
     this.syncBots(); this.sendLobby();
+    if (!bot) this.postChat({ sys: 1, text: `${name} saiu` });
+    this.sendVoices();
     if (!this.humans().length) this.io.stopLoop();
   }
-  purge() { // remove quem caiu e não voltou
+  purge() { // remove quem caiu e não voltou (o “saiu” já foi pro chat no leave)
     const t = this.now();
     for (const e of [...this.ents.values()]) if (!e.bot && !e.connected && t - e.dcAt > DC_GRACE) this.ents.delete(e.id);
   }
@@ -102,7 +112,7 @@ export class Game {
       primary: PRIMARIES.includes(primary) ? primary : 0, nextPrimary: PRIMARIES.includes(primary) ? primary : 0, slots: [0, PISTOL], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
-      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0 };
+      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off' };
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
     this.ents.set(id, e); return e;
   }
@@ -197,8 +207,9 @@ export class Game {
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
-        if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else h.team = -1; } }
-        this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); break;
+        if ((m.mode === 'dm' || m.mode === 'dom') && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
+        if (typeof m.chat === 'boolean') this.cfg.chat = m.chat;
+        this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); this.sendVoices(); break;
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
       case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? MAPS[(MAPS.findIndex((x) => x.id === this.mapId) + 1) % MAPS.length].id : this.cfg.map)); break;
       case 'team': {
@@ -208,11 +219,66 @@ export class Game {
           else if (e.alive) { e.alive = false; e.deaths++; e.respawnAt = this.T + RESPAWN_TIME; this.events.push(['k', 0, e.id, -2, 0, 0, e.deaths]); } // troca no meio: renasce no time novo
           this.events.push(['tm', e.id, e.team]);
         }
-        this.io.send(e.id, { t: 'teamOk', team: r.team, blocked: r.blocked, pref: e.teamPref }); this.sendLobby(); break;
+        this.io.send(e.id, { t: 'teamOk', team: r.team, blocked: r.blocked, pref: e.teamPref }); this.sendLobby(); this.sendVoices(); break;
       }
       case 'lobby': if (!isHost || this.state !== 'over') return; this.state = 'lobby'; for (const b of [...this.ents.values()]) if (b.bot) this.ents.delete(b.id); this.sendLobby(); break;
+      case 'say': this.onSay(e, m); break;
+      case 'voice': {
+        let scope = m.scope === 'all' || m.scope === 'team' ? m.scope : 'off';
+        if (scope === 'team' && !this.teamMode) scope = 'all';
+        e.voice = scope; this.sendVoices(); break;
+      }
+      case 'sig': this.onSig(e, m); break;
       default: break;
     }
+  }
+  cleanChat(raw) {
+    if (typeof raw !== 'string') return '';
+    return raw.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  }
+  hearsChat(h, line) {
+    if (line.sys || h.id === line.id) return true;
+    if (line.dead && !(this.state === 'playing' && !h.alive)) return false;
+    if (line.scope === 'team' && h.team !== line.team) return false;
+    return true;
+  }
+  postChat(line) {
+    const row = { id: line.id || 0, name: line.name || '', team: line.team ?? -1, scope: line.scope === 'team' ? 'team' : 'all', dead: line.dead ? 1 : 0, sys: line.sys ? 1 : 0, text: line.text, at: Date.now() };
+    this.chatLog.push(row); while (this.chatLog.length > 30) this.chatLog.shift();
+    const msg = { t: 'chat', ...row };
+    for (const h of this.humans()) if (this.hearsChat(h, row)) this.io.send(h.id, msg);
+    if (this.io.saveCfg) this.io.saveCfg();
+  }
+  onSay(e, m) {
+    if (this.cfg.chat === false || e.bot) return;
+    const text = this.cleanChat(m.text); if (!text) return;
+    const now = Date.now();
+    const times = e.sayAt = (e.sayAt || []).filter((t) => now - t < 5000);
+    if (times.length >= 4) return;
+    times.push(now);
+    const scope = m.scope === 'team' && this.teamMode ? 'team' : 'all';
+    const dead = this.state === 'playing' && !e.alive ? 1 : 0;
+    this.postChat({ id: e.id, name: e.name, team: e.team, scope, dead, text });
+  }
+  voiceReaches(from, to) {
+    const s = from.voice || 'off'; if (s === 'off' || from === to) return false;
+    if (s === 'all') return true;
+    return s === 'team' && this.teamMode && from.team >= 0 && from.team === to.team;
+  }
+  voicePair(a, b) { return this.voiceReaches(a, b) || this.voiceReaches(b, a); }
+  sendVoices() {
+    this.io.broadcast({ t: 'voices', list: this.humans().map((h) => [h.id, h.voice || 'off', h.team]) });
+  }
+  onSig(e, m) {
+    const other = this.ents.get(m.to | 0);
+    if (!other || other.bot || !other.connected || other.id === e.id || !this.voicePair(e, other)) return;
+    if (m.kind !== 'offer' && m.kind !== 'answer' && m.kind !== 'ice') return;
+    let data = m.data;
+    if (m.kind === 'ice') {
+      if (!data || typeof data !== 'object' || typeof data.candidate !== 'string' || !data.candidate) return;
+      data = { candidate: data.candidate.slice(0, 2000), sdpMid: typeof data.sdpMid === 'string' ? data.sdpMid.slice(0, 32) : null, sdpMLineIndex: Number.isInteger(data.sdpMLineIndex) ? data.sdpMLineIndex : null };
+    } else if (typeof data !== 'string' || data.length < 8 || data.length > 6000 || !data.startsWith('v=0')) return;
+    this.io.send(other.id, { t: 'sig', from: e.id, kind: m.kind, data });
   }
   onUpdate(e, m) {
     if (this.state !== 'playing') return;

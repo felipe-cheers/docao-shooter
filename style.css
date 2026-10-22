@@ -191,8 +191,41 @@ button.otab.active{background:#e63946;outline:3px solid #ffd27a;outline-offset:1
 #joinCode{text-transform:uppercase;font-family:"Arial Black",Impact,sans-serif;font-size:32px;letter-spacing:10px;text-align:center}
 .err{color:#ff7b7b;font-weight:bold;min-height:20px;margin-top:8px}
 .code{font-family:"Arial Black",Impact,sans-serif;color:#ffd27a;letter-spacing:6px;background:#26304f;border:3px solid #2a1410;border-radius:12px;padding:0 12px}
-.share{display:flex;gap:8px;align-items:center;margin:8px 0}.share input{flex:1;font-size:13px;margin:0}
+.invite{margin:8px 0}.invite-link{font-size:12px;margin:0 0 8px}
+.invite-btns{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.invite-toast{min-height:18px;margin-top:6px;color:#7DF9FF;font-size:13px;font-weight:bold}
 button.small{width:auto;margin:0;padding:8px 12px;font-size:14px;border-width:3px;box-shadow:0 3px 0 #2a1410;white-space:nowrap}
+button.small.on{outline:3px solid #7DF9FF;outline-offset:1px}
+label.checkline{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0}
+label.checkline input{width:auto;display:inline-block;margin:0;accent-color:#e63946}
+#hostCtl .row{flex-wrap:wrap}
+#hostCtl .row label{min-width:88px}
+.chatpanel{margin:8px 0;text-align:left}
+.chatlog{max-height:140px;overflow-y:auto;text-align:left;user-select:text}
+.chatform input,.invite-link{user-select:text}
+.chatform{display:flex;gap:6px;align-items:center;margin-top:6px}
+.chatform input{flex:1;margin:0;font-size:14px;padding:6px 8px}
+.cline{font-size:14px;line-height:1.35;text-align:left;background:rgba(0,0,0,.45);border-radius:6px;padding:2px 8px;margin-top:3px}
+.cline i{font-style:normal;color:#ffd27a;font-size:11px;font-weight:bold}
+.cline b.tm0{color:#ff6b6b}.cline b.tm1{color:#6bb8ff}.cline b.tmx{color:#7DF9FF}
+.cline.dead{opacity:.7}.cline em{font-style:normal;color:#ff9fb6;font-size:12px}
+.cline.sys{color:#cfe;background:transparent;font-weight:bold}
+.voicebox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin:8px 0}
+.voicehint{font-size:12px;color:#cfe;font-weight:bold}
+.voicebox.live{outline:2px solid #7DF9FF;border-radius:12px}
+#socialHud{position:fixed;left:16px;bottom:132px;width:min(440px,48vw);z-index:7;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+/* morto: o painel de arma ocupa o fundo. Chat e voz sobem pro canto, longe dos cartões */
+body.dead #socialHud{top:10px;right:14px;bottom:auto;left:auto;width:min(320px,42vw);align-items:flex-end;z-index:12;max-height:38vh}
+body.dead #socialHud .voicebox{margin:0;background:rgba(12,16,32,.9);border:3px solid #2a1410;border-radius:14px;padding:6px 8px}
+body.dead #killfeed{left:16px;right:auto;align-items:flex-start}
+#socialHud .chatform,#socialHud .voicebox,#chat.open .chatlog,#socialHud .chatlog{pointer-events:auto}
+#socialHud .chatlog{max-height:220px}
+#socialHud .cline{background:rgba(0,0,0,.78);text-shadow:0 1px 0 #000}
+#chatScopeLabel{font-family:"Arial Black",Impact,sans-serif;font-size:12px;color:#ffd27a;background:rgba(0,0,0,.55);border-radius:8px;padding:6px 8px}
+#lb .row[data-pid]{pointer-events:auto;cursor:pointer}
+#lb .row.talking,#lobbyPlayers tr.talking td:first-child{box-shadow:inset 0 0 0 2px #7DF9FF}
+#lb .row.vmuted,#lobbyPlayers tr.vmuted{opacity:.45}
+#pause .panel.small{max-width:520px}
 #lobbyPlayers .host{color:#ffd27a;font-size:12px;margin-left:6px}
 #lobbyPlayers .bot{color:#9fd0ff;font-size:12px;margin-left:6px}
 #netbar{position:fixed;top:52px;left:16px;font-weight:bold;font-size:14px;background:rgba(0,0,0,.4);padding:4px 10px;border-radius:8px}
