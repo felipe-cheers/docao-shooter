@@ -24,11 +24,11 @@ export const PHASES = ['prep', 'wave', 'break', 'over'];
 // tipos de zumbi (animatrônicos do Docão). size = escala do corpo (hitbox e modelo).
 export const ZTYPES = ['walker', 'runner', 'tank', 'spitter', 'boss'];
 export const ZOMBIES = {
-  walker: { name: 'Docão Podre', hp: 110, speed: 3.1, dmg: 14, rate: 1.0, reach: 1.75, size: 1, drop: 0.06 },
-  runner: { name: 'Esqueleto Corredor', hp: 55, speed: 6.1, dmg: 8, rate: 0.7, reach: 1.55, size: 0.95, drop: 0.05 },
-  tank: { name: 'Barrigão de Gás', hp: 520, speed: 2.3, dmg: 26, rate: 1.4, reach: 2.1, size: 1.3, drop: 0.3, boom: { radius: 4.8, dmg: 38, knock: 9 } },
-  spitter: { name: 'Cuspidor', hp: 85, speed: 3.2, dmg: 10, rate: 1.2, reach: 1.65, size: 1.05, drop: 0.09, spit: { range: 22, keep: 11, every: 2.6, speed: 15, dmg: 13, radius: 1.8 } },
-  boss: { name: 'Docão Abóbora', hp: 1500, speed: 3.6, dmg: 36, rate: 1.3, reach: 2.7, size: 1.7, drop: 1, spit: { range: 34, keep: 0, every: 4.2, speed: 17, dmg: 26, radius: 3.6, big: 1 } },
+  walker: { name: 'Docão Podre', hp: 110, speed: 4.4, dmg: 14, rate: 1.0, reach: 1.75, size: 1, drop: 0.06 },
+  runner: { name: 'Esqueleto Corredor', hp: 55, speed: 6.6, dmg: 8, rate: 0.7, reach: 1.55, size: 0.95, drop: 0.05 },
+  tank: { name: 'Barrigão de Gás', hp: 520, speed: 3.0, dmg: 26, rate: 1.4, reach: 2.1, size: 1.3, drop: 0.3, boom: { radius: 4.8, dmg: 38, knock: 9 } },
+  spitter: { name: 'Cuspidor', hp: 85, speed: 4.0, dmg: 10, rate: 1.2, reach: 1.65, size: 1.05, drop: 0.09, spit: { range: 22, keep: 11, every: 2.6, speed: 15, dmg: 13, radius: 1.8 } },
+  boss: { name: 'Docão Abóbora', hp: 1500, speed: 4.4, dmg: 36, rate: 1.3, reach: 2.7, size: 1.7, drop: 1, spit: { range: 34, keep: 0, every: 4.2, speed: 17, dmg: 26, radius: 3.6, big: 1 } },
 };
 // poderes especiais (inventário de 3). w = peso no sorteio do drop.
 export const POWERS = {
@@ -51,15 +51,16 @@ const r2 = (v) => Math.round(v * 100) / 100;
 // composição da wave w (1..20) com n jogadores
 export function waveSpec(w, n = 1) {
   n = clamp(n | 0 || 1, 1, INV.MAX_PLAYERS);
-  const total = Math.round((5 + w * 2.4) * (1 + 0.5 * (n - 1)));
+  const total = Math.round((12 + w * 6) * (1 + 0.6 * (n - 1))); // ~2,5× a versão 1 (7→18 na wave 1, 53→132 na 20)
   const mix = { walker: 1, runner: w >= 2 ? 0.14 + 0.022 * w : 0, spitter: w >= 4 ? 0.12 + 0.004 * w : 0, tank: w >= 6 ? 0.05 + 0.006 * w : 0 };
   return {
     w, n, total, mix, boss: w % INV.BOSS_EVERY === 0,
     hpMul: (1 + 0.09 * (w - 1)) * (1 + 0.12 * (n - 1)),
-    spdMul: Math.min(1.38, 1 + 0.02 * (w - 1)),
+    spdMul: Math.min(1.45, 1 + 0.025 * (w - 1)),
     dmgMul: 1 + 0.04 * (w - 1),
-    maxAlive: Math.min(12 + 2 * n + Math.floor(w / 2), 34),
-    spawnEvery: Math.max(0.3, 1.5 - 0.055 * w) / Math.sqrt(n),
+    maxAlive: Math.min(18 + 3 * n + w, 48), // teto de vivos ao mesmo tempo (desempenho); o resto entra em lotes
+    batch: Math.min(6, 2 + Math.floor(w / 5) + Math.floor(n / 3)), // zumbis por lote
+    spawnEvery: Math.max(0.35, 1.3 - 0.045 * w) / Math.sqrt(n),
     bossHp: ZOMBIES.boss.hp * (1 + 0.55 * (w / INV.BOSS_EVERY - 1)) * (1 + 0.5 * (n - 1)),
   };
 }
@@ -189,7 +190,7 @@ export class InvasionCore {
     if (this.bossPending && T >= this.bossAt) { const z = this.spawn('boss'); if (z) { this.bossPending = false; this.bossId = z.id; } }
     if (!this.queue.length || T < this.nextSpawn) return;
     if (this.liveZombies().length >= S.maxAlive) { this.nextSpawn = T + 0.4; return; }
-    const burst = this.queue.length > 6 && this.rnd() < 0.3 ? 3 : 1;
+    const burst = Math.min(S.batch || 1, S.maxAlive - this.liveZombies().length); // lote (sem passar do teto)
     for (let i = 0; i < burst && this.queue.length; i++) if (this.spawn(this.queue[0])) this.queue.shift();
     this.nextSpawn = T + S.spawnEvery * (0.6 + this.rnd() * 0.8);
   }
