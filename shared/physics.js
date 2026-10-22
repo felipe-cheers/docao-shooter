@@ -23,6 +23,23 @@ export function mapSolids(map) {
       case 'cup': if (!p.deco) { const s = p.s || 4; add(p.x - 0.11 * s, y, p.z - 0.11 * s, p.x + 0.11 * s, y + 0.31 * s, p.z + 0.11 * s); } break;
       case 'bus': add(p.x - 5, y, p.z - 1.4, p.x + 5, y + 3.1, p.z + 1.4); break;
       case 'truck': add(p.x - 4, y, p.z - 1.25, p.x + 2, y + 3.2, p.z + 1.25); add(p.x + 2, y, p.z - 1.2, p.x + 4.3, y + 2.6, p.z + 1.2); break;
+      case 'log': { const r = p.r || 0.46, h = p.h || 6; add(p.x - r, y, p.z - r, p.x + r, y + h, p.z + r); break; }
+      case 'bench': {
+        const c = Math.cos(p.rot || 0), s = Math.sin(p.rot || 0), hx = 0.85, z0 = -0.25, z1 = 0.32;
+        let x0 = Infinity, x1 = -Infinity, a0 = Infinity, a1 = -Infinity;
+        for (const lx of [-hx, hx]) for (const lz of [z0, z1]) {
+          const wx = p.x + lx * c + lz * s, wz = p.z - lx * s + lz * c;
+          x0 = Math.min(x0, wx); x1 = Math.max(x1, wx); a0 = Math.min(a0, wz); a1 = Math.max(a1, wz);
+        }
+        add(x0, y, a0, x1, y + 0.95, a1); break;
+      }
+      case 'flowerbed': { const r = 0.95; add(p.x - r, y, p.z - r, p.x + r, y + 0.62, p.z + r); break; }
+      case 'car': {
+        const L = 4.05, W = 1.68, seg = 1.9;
+        add(p.x - W / 2, y + 0.08, p.z - L / 2, p.x + W / 2, y + 1.12, p.z - L / 2 + seg);
+        add(p.x - W / 2, y + 0.08, p.z + L / 2 - seg, p.x + W / 2, y + 1.12, p.z + L / 2);
+        add(p.x - 0.72, y + 0.9, p.z - 0.85, p.x + 0.72, y + 1.28, p.z + 0.85); break;
+      }
       case 'tree': add(p.x - 0.4, y, p.z - 0.4, p.x + 0.4, y + 3, p.z + 0.4); break;
       case 'silo': { const q = p.r * 0.9; add(p.x - q, y, p.z - q, p.x + q, y + p.h, p.z + q); break; }
       case 'hay': add(p.x - 1, y, p.z - 0.6, p.x + 1, y + 1.2, p.z + 0.6); break;
