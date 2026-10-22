@@ -40,7 +40,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------- Constantes ----------------
 // ---------------- Constantes (regras em shared/rules.js) ----------------
-const BASE_FOV = 75, ADS_TIME = 0.15, ADS_SPEED = 0.6; // mira (Shift)
+const BASE_FOV = 75, ADS_TIME = 0.15, ADS_SPEED = 0.6; // mira (botão direito)
 const COLORS = { skin: 0xF7A531, snout: 0xF58A6E, cheek: 0xFF7FA0, hoof: 0x7a4535, outline: 0x2a1410, red: 0xe63946, cyan: 0x7DF9FF };
 
 // ---------------- Renderer / cenas ----------------
@@ -1720,7 +1720,7 @@ function knifeAnim(dt) {
   kr.position.set(px, py, pz); kr.rotation.set(rx, ry, 0); kp.rotation.z = rz;
 }
 
-// ---------------- Mira (Shift) ----------------
+// ---------------- Mira (botão direito) ----------------
 const hpBar = document.getElementById('hpbar');
 const adsVig = document.getElementById('adsvig'), crossEl = document.getElementById('crosshair');
 function updateAds(dt, want) {
@@ -1800,11 +1800,11 @@ function updatePlayer(dt) {
     updateAds(dt, false);
     return;
   }
-  // mira com zoom: segura Shift ou o botão direito (com a faca o botão direito é a estocada). No ferrolho da sniper a luneta desce pra mão aparecer.
+  // mira com zoom: segura o botão direito (Shift agacha; com a faca o botão direito é a estocada). No ferrolho da sniper a luneta desce pra mão aparecer.
   const guiding = !!predator;
-  stepCrouch(p, !guiding && !chatTyping() && (keys.ControlLeft || keys.ControlRight) ? 1 : 0, dt, PHYS);
+  stepCrouch(p, !guiding && !chatTyping() && (keys.ShiftLeft || keys.ShiftRight) ? 1 : 0, dt, PHYS);
   const bolting = fp.actionT > 0 && WEAPONS[p.weapon].bolt;
-  updateAds(dt, !guiding && !bolting && p.weapon !== KNIFE && p.weapon !== SABER && (keys.ShiftLeft || keys.ShiftRight || rightDown) && p.reloadEnd <= gameTime && p.switchEnd <= gameTime);
+  updateAds(dt, !guiding && !bolting && p.weapon !== KNIFE && p.weapon !== SABER && rightDown && p.reloadEnd <= gameTime && p.switchEnd <= gameTime);
   saberSfx.hum(p.weapon === SABER && !guiding);
   fwd.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); right.set(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
   const wish = new V3();
@@ -2443,7 +2443,7 @@ function refreshModeHud() {
   if (teamMode() && player) { $('myTeam').textContent = `Você: Time ${TEAM_NAMES[player.team] || '?'}`; $('myTeam').style.color = TEAM_COLORS[player.team] || '#fff'; }
   $('winner').style.color = '';
 }
-function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.Space = keys.ShiftLeft = keys.ShiftRight = keys.ControlLeft = keys.ControlRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.Space = keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
   if (online) leaveOnline();
@@ -2514,7 +2514,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyK') voicePtt(true);
   if (e.code === 'KeyJ' && !e.repeat && online) { e.preventDefault(); voiceCycle(); }
   if (tryOpenChat(e)) { e.preventDefault(); return; }
-  if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code) || (state === 'playing' && (e.code === 'ControlLeft' || e.code === 'ControlRight' || e.ctrlKey))) e.preventDefault();
+  if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   if (e.code !== 'Space' || !e.repeat) keys[e.code] = true;
   if (state === 'playing' && player) {
     if (e.code === 'KeyR') startReload(player);

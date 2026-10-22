@@ -18,17 +18,17 @@ try {
   await page.selectOption('#modeSel', 'explore');
   await page.evaluate(() => window.__docao.startGame('arena'));
   const waitStance = (c) => page.waitForFunction((v) => Math.abs(window.__docao.player.crouch - v) < 1e-3, c, { timeout: 120000 });
-  await page.keyboard.down('ControlLeft'); await waitStance(1);
+  await page.keyboard.down('ShiftLeft'); await waitStance(1);
   const camera = await page.evaluate(() => { const g = window.__docao; return g.camera.position.y - g.player.pos.y; });
   assert.ok(camera >= 1.04 - 1e-6 && camera <= 1.1, `câmera agachada: ${camera}`);
-  console.log('OK Ctrl esquerdo abaixa personagem e câmera');
-  await page.keyboard.down('ControlRight'); await page.keyboard.up('ControlLeft');
+  console.log('OK Shift esquerdo abaixa personagem e câmera');
+  await page.keyboard.down('ShiftRight'); await page.keyboard.up('ShiftLeft');
   assert.equal(await page.evaluate(() => window.__docao.player.crouch), 1);
-  await page.keyboard.up('ControlRight'); await waitStance(0);
-  console.log('OK ambos os Controls funcionam; soltar os dois levanta');
-  await page.keyboard.down('ControlRight'); await waitStance(1);
+  await page.keyboard.up('ShiftRight'); await waitStance(0);
+  console.log('OK ambos os Shifts funcionam; soltar os dois levanta');
+  await page.keyboard.down('ShiftRight'); await waitStance(1);
   await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await waitStance(0);
-  await page.keyboard.up('ControlRight');
+  await page.keyboard.up('ShiftRight');
   console.log('OK perder foco libera agachamento');
 
   // Segurar Espaço e soltar Ctrl no ar não deve rearmar o pulo ao aterrissar.
@@ -46,8 +46,8 @@ try {
   });
   await page.keyboard.down('Space');
   await page.waitForFunction(() => !window.__docao.player.onGround, null, { timeout: 120000 });
-  await page.keyboard.down('ControlLeft'); await waitStance(1);
-  await page.keyboard.up('ControlLeft'); await waitStance(0);
+  await page.keyboard.down('ShiftLeft'); await waitStance(1);
+  await page.keyboard.up('ShiftLeft'); await waitStance(0);
   // Repetição do sistema operacional enquanto Espaço continua pressionado.
   await page.keyboard.down('Space');
   await page.waitForFunction(() => window.__docao.time > window.__jumpTrace.start + 1.8, null, { timeout: 120000 });
@@ -79,11 +79,11 @@ try {
     await page.waitForFunction(() => window.__docao.online?.myId > 0, null, { timeout: 120000 });
     peer.send(JSON.stringify({ t: 'start', map: 'arena' }));
     await page.waitForFunction(() => window.__docao.state === 'playing' && window.__docao.player?.alive && window.__docao.online?.inMatch, null, { timeout: 120000 });
-    await page.keyboard.down('ControlLeft'); await waitStance(1);
+    await page.keyboard.down('ShiftLeft'); await waitStance(1);
     const localId = await page.evaluate(() => window.__docao.online.myId);
     await until(() => messages.some((m) => m.t === 's' && m.e.some((e) => e[0] === localId && e[10] === 1)));
     console.log('OK postura do teclado chega ao snapshot do servidor');
-    await page.keyboard.up('ControlLeft'); await waitStance(0);
+    await page.keyboard.up('ShiftLeft'); await waitStance(0);
     await until(() => messages.some((m) => m.t === 's' && m.e.some((e) => e[0] === id)));
     const spawn = messages.filter((m) => m.t === 's').flatMap((m) => m.ev).find((ev) => ev[0] === 'sp' && ev[1] === id);
     assert.ok(spawn, 'spawn do observador recebido');
