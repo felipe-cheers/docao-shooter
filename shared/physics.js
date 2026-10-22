@@ -168,6 +168,43 @@ export function createPhysics(solids, size) {
     if (f0 <= 1e-4) return t0; if (f1 > 0) return null;
     return t0 + (f0 / (f0 - f1)) * (t1 - t0);
   }
+  // igual ao rayWorld, mas devolve a caixa atingida (penetração de parede). { t, s } ou null; s = null é o chão
+  function rayWorldS(o, d, far) {
+    let best = far, hs = null, hit = false;
+    if (d.y < -1e-6) { const t = -o.y / d.y; if (t > 0 && t < best) { best = t; hit = true; hs = null; } }
+    const seen = new Set(); const steps = Math.ceil(far / (GRID * 0.5)) + 1;
+    for (let i = 0; i <= steps; i++) {
+      const t = Math.min(far, i * GRID * 0.5); if (t > best + GRID) break;
+      for (const s of solidsAt(o.x + d.x * t, o.z + d.z * t)) { if (seen.has(s)) continue; seen.add(s); const r = rayBox(o, d, s); if (r !== null && r < best) { best = r; hit = true; hs = s; } }
+    }
+    return hit ? { t: best, s: hs } : null;
+  }
+  // igual ao rayWorld, mas devolve também a normal da superfície atingida (disco quica nela). { t, n } ou null
+  function rayWorldN(o, d, far) {
+    let best = far, n = null;
+    if (d.y < -1e-6) { const t = -o.y / d.y; if (t > 0 && t < best) { best = t; n = { x: 0, y: 1, z: 0 }; } }
+    const seen = new Set(); const steps = Math.ceil(far / (GRID * 0.5)) + 1;
+    for (let i = 0; i <= steps; i++) {
+      const t = Math.min(far, i * GRID * 0.5); if (t > best + GRID) break;
+      for (const s of solidsAt(o.x + d.x * t, o.z + d.z * t)) {
+        if (seen.has(s)) continue; seen.add(s);
+        const r = rayBox(o, d, s); if (r === null || r >= best) continue;
+        best = r; n = boxNormal(o, d, s, r);
+      }
+    }
+    return n ? { t: best, n } : null;
+  }
+  function boxNormal(o, d, s, t) {
+    const p = { x: o.x + d.x * t, y: o.y + d.y * t, z: o.z + d.z * t };
+    if (s.ramp) { // cunha: normal do plano de cima (diferença finita no topAt)
+      const top = topAt(s, p.x, p.z);
+      if (Math.abs(p.y - top) < 0.08) { const e = 0.05, gx = (topAt(s, p.x + e, p.z) - topAt(s, p.x - e, p.z)) / (2 * e), gz = (topAt(s, p.x, p.z + e) - topAt(s, p.x, p.z - e)) / (2 * e), L = Math.hypot(gx, 1, gz); return { x: -gx / L, y: 1 / L, z: -gz / L }; }
+    }
+    // face de entrada: o eixo cujo plano está mais perto do ponto
+    let ax = 'x', bestD = Infinity, sign = 1;
+    for (const k of ['x', 'y', 'z']) for (const [v, sg] of [[s.min[k], -1], [s.max[k], 1]]) { const dd = Math.abs(p[k] - v); if (dd < bestD && d[k] * sg < 0) { bestD = dd; ax = k; sign = sg; } }
+    return { x: ax === 'x' ? sign : 0, y: ax === 'y' ? sign : 0, z: ax === 'z' ? sign : 0 };
+  }
   const losClear = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz); if (L < 1e-6) return true; return rayWorld(a, { x: dx / L, y: dy / L, z: dz / L }, L - 0.3) === null; };
   function nadeBlocked(x, y, z) {
     for (const sd of solidsAt(x, z)) if (x > sd.min.x - NADE.r && x < sd.max.x + NADE.r && z > sd.min.z - NADE.r && z < sd.max.z + NADE.r && y > sd.min.y - NADE.r) {
@@ -184,7 +221,7 @@ export function createPhysics(solids, size) {
     if (ny <= g) { pos.y = g; vel.y = Math.abs(vel.y) > 1.2 ? -vel.y * 0.42 : 0; vel.x *= 0.72; vel.z *= 0.72; return true; }
     pos.y = ny; return false;
   }
-  return { solids, solidsAt, topAt, collides, overlapping, depenetrate, groundAt, ceilingAt, moveEntity, rayWorld, losClear, nadeBlocked, stepNade };
+  return { solids, solidsAt, topAt, collides, overlapping, depenetrate, groundAt, ceilingAt, moveEntity, rayWorld, rayWorldN, rayWorldS, losClear, nadeBlocked, stepNade };
 }
 
 export function raySphere(o, d, c, r) {

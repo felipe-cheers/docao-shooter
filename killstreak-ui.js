@@ -5,6 +5,7 @@ const REWARDS = [
   { need: 3, name: 'Olho da granja', icon: 'eye' },
   { need: 5, name: 'Míssil da granja', icon: 'missiles' },
   { need: 7, name: 'Gavião da granja', icon: 'heli' },
+  { need: 10, name: 'Chopper da granja', icon: 'heli gunner' },
 ];
 
 const CSS = `
@@ -33,16 +34,8 @@ const CSS = `
 }
 #streakBar .streak-sq{
   width:54px;height:54px;box-sizing:border-box;position:relative;flex:none;
-  background:rgba(18,10,12,.94);border:2px solid #ff2a2a;border-radius:3px;
-  box-shadow:0 0 8px rgba(255,40,40,.85),inset 0 0 0 1px rgba(0,0,0,.55);
-}
-#streakBar .streak-chevron{
-  position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);
-  font-family:"Segoe UI",Arial,sans-serif;font-size:18px;font-weight:700;
-  line-height:1;color:#fff;opacity:0;text-shadow:0 1px 2px #000;
-}
-#streakBar .streak-chevron.right{
-  position:static;transform:none;width:12px;text-align:center;flex:none;
+  background:rgba(18,14,14,.9);border:2px solid #5a4a4c;border-radius:3px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.55);
 }
 #streakBar .streak-pips{
   width:22px;height:54px;flex:none;display:flex;flex-direction:column;
@@ -110,21 +103,18 @@ const CSS = `
   content:"";position:absolute;left:1px;top:3px;width:26px;height:2px;background:currentColor;border-radius:1px;
 }
 #streakBar .streak-glyph.heli{color:#ffd27a}
-#streakBar .streak-card.locked{opacity:.62}
-#streakBar .streak-card.locked .streak-sq{
-  border-color:#8a2430;box-shadow:0 0 5px rgba(160,24,36,.4);
+#streakBar .streak-glyph.heli.gunner{color:#9fe0ff}
+#streakBar .streak-glyph.heli.gunner{box-shadow:inset 0 -3px 0 -1px transparent}
+#streakBar .streak-glyph.heli.gunner::before{border-radius:2px 7px 2px 2px;box-shadow:-5px 6px 0 -3px currentColor}
+/* todos neutros; só brilha o que está guardado pra usar (F) */
+#streakBar .streak-card{opacity:.85}
+#streakBar .streak-card.ready{opacity:1;color:#fff}
+#streakBar .streak-card.ready .streak-sq{
+  border-color:#ff4a4a;background:rgba(48,12,16,.96);
+  box-shadow:0 0 14px #ff2a2a,0 0 3px #fff;animation:streakReady 1.1s ease-in-out infinite;
 }
-#streakBar .streak-card.next{opacity:1;color:#fff}
-#streakBar .streak-card.next .streak-chevron{opacity:1}
-#streakBar .streak-card.next .streak-sq{
-  border-color:#ff4a4a;background:rgba(42,10,14,.96);
-  box-shadow:0 0 14px #ff2a2a,0 0 2px #fff;
-}
-#streakBar .streak-card.earned{opacity:1;color:#fff}
-#streakBar .streak-card.earned .streak-sq{
-  border-color:#ff3b3b;background:rgba(48,12,16,.96);
-  box-shadow:0 0 12px #ff2a2a,0 0 3px #ff2a2a;
-}
+@keyframes streakReady{50%{box-shadow:0 0 22px #ff2a2a,0 0 5px #fff}}
+@media (prefers-reduced-motion:reduce){#streakBar .streak-card.ready .streak-sq{animation:none}}
 #nukeReady{
   position:absolute;right:0;bottom:calc(100% + 6px);
   pointer-events:none;user-select:none;white-space:nowrap;
@@ -199,6 +189,7 @@ const CSS = `
 
 let currentCount = 0;
 let currentCycle = 0;
+let currentReady = [];
 let strike = null;
 let listening = false;
 
@@ -259,14 +250,6 @@ function ensureBar() {
       card.className = 'streak-card locked';
       card.dataset.need = String(reward.need);
       card.title = reward.name;
-      const chevron = document.createElement('span');
-      chevron.className = 'streak-chevron';
-      chevron.setAttribute('aria-hidden', 'true');
-      chevron.textContent = '<';
-      const chevR = document.createElement('span');
-      chevR.className = 'streak-chevron right';
-      chevR.setAttribute('aria-hidden', 'true');
-      chevR.textContent = '>';
       const sq = document.createElement('div');
       sq.className = 'streak-sq';
       const num = document.createElement('b');
@@ -275,7 +258,7 @@ function ensureBar() {
       const pips = document.createElement('div');
       pips.className = 'streak-pips';
       for (let i = 0; i < segmentOf(reward.need); i++) pips.appendChild(document.createElement('i'));
-      card.append(chevron, sq, chevR, pips);
+      card.append(sq, pips);
       bar.appendChild(card);
     }
   }
@@ -345,8 +328,8 @@ function ensureNuke() {
 // próximo = menor need com faltam > 0; faltam 0 = earned; o resto = locked
 function segmentOf(need) {
   if (need <= 3) return 3;
-  if (need <= 5) return 2;
-  return 2;
+  if (need <= 7) return 2;
+  return 3; // 10: do 7 ao 10
 }
 
 function remainingFor(need, cycle) {
@@ -394,6 +377,14 @@ function applyCycle(cycle) {
   });
 }
 
+// ready = ids guardados ('uav', 'missile', 'heli'); o card brilha enquanto tiver um pra usar
+const READY_ID = { 3: 'uav', 5: 'missile', 7: 'heli', 10: 'gunner' };
+function applyReady(ids) {
+  document.querySelectorAll('#streakBar .streak-card').forEach((card) => {
+    card.classList.toggle('ready', ids.includes(READY_ID[card.dataset.need]));
+  });
+}
+
 function applyCount(n) {
   const node = byId('streakCount');
   if (!node) return;
@@ -412,6 +403,7 @@ function ensureDom() {
   ensureNuke();
   bindMap();
   applyCycle(currentCycle);
+  applyReady(currentReady);
   applyCount(currentCount);
   return true;
 }
@@ -599,6 +591,11 @@ export function setStreakCount(n) {
 export function setStreakCycle(cycle) {
   const value = Number(cycle);
   currentCycle = Number.isFinite(value) ? value : 0;
+  ensureDom();
+}
+
+export function setStreakReady(ids) {
+  currentReady = Array.isArray(ids) ? ids.slice() : [];
   ensureDom();
 }
 
