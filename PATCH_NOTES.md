@@ -30,6 +30,8 @@ Ainda **não está no site**. Modo estilo Valorant, com o Docão:
 - **Mapa novo: Rodízio do Docão**, feito pro modo (o padrão dele). É comprido: o Ataque leva uns 21 s pra chegar num site e a Defesa uns 8 s, com três rotas (Rua do Espeto, Avenida da Linguiça e Beco da Farofa).
 - **Sites e spawns feitos à mão** em 9 mapas, com o Ataque nascendo longe dos sites. O **HOTMILK** entrou no rodízio (A no estacionamento sudoeste, B no pátio sudeste, uns 18 s pro Ataque). O **Pátio Ferrugem** ficou fora por ser pequeno e o **Estande** é só do Treino.
 - **Killstreaks e rodadas:** a sequência e os streaks guardados passam pra rodada seguinte (trocar de rodada não é morrer). O que está no ar acaba na virada: o Gavião vai embora, e o míssil e o Fim da chapa ainda na contagem voltam pro F. Na preparação o F não funciona.
+- **Instruções claras na tela:** aviso grande com a tecla (*"Segure E para plantar o botijão"*, *"Segure E para desarmar"*, *"Leve o botijão até o A ou o B"* com a distância), barra com os segundos, faixa de começo de rodada explicando o objetivo do seu lado e um bloco **Como jogar** no menu.
+- **Troca de arma toda rodada:** na preparação abrem as cartas de arma da tela de morte. **1–9** troca a primária na hora, **G** solta o mouse pra clicar, **Enter/Esc/Pronto** fecham, e elas somem sozinhas no VALENDO.
 - Funciona offline e online, com chat, voz e killstreaks online da v1.8.
 
 ---

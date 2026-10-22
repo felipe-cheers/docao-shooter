@@ -29,7 +29,7 @@ import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/co
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
 import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
-import { BOMB, W_BOMB, SIDE_NAMES, SITE_NAMES, attackTeam, sideOf, bombLayout, newBombState, startRound, stepBomb, blastVictims, unpackBomb, spawnList, botObjective, bombFrozen, bombCanUse, plantNow } from './shared/bomb.js';
+import { BOMB, W_BOMB, SIDE_NAMES, SITE_NAMES, attackTeam, sideOf, bombLayout, newBombState, startRound, stepBomb, blastVictims, unpackBomb, spawnList, botObjective, bombFrozen, bombCanUse, plantNow, siteAt } from './shared/bomb.js';
 import { makeBotijao, makeSiteMark } from './bomb-gfx.js';
 import { KS_KILL_NAME, heliPos } from './shared/killstreaks.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
@@ -2171,7 +2171,7 @@ function updateDmgPops(dt) {
     if (age > 0.9 || age < 0) { scene.remove(q.sp); q.sp.material.map.dispose(); q.sp.material.dispose(); dmgPops.splice(i, 1); }
   }
 }
-function sendLoadout() { if (online) netEv(['pr', selectedPrimary, selectedSecondary, selectedMelee]); }
+function sendLoadout() { if (bombPick) { bombEquipNow(); renderBLoad(); } if (online) netEv(['pr', selectedPrimary, selectedSecondary, selectedMelee]); } // Bomba: na preparação a troca vale na hora
 function setPrimary(i) {
   selectedPrimary = i; try { localStorage.setItem('docao.primary', String(i)); } catch (e) { /* sem storage */ }
   if (player) player.nextPrimary = i;
@@ -2448,6 +2448,7 @@ document.addEventListener('mouseup', (e) => {
 });
 document.addEventListener('wheel', (e) => { // rodinha: primária → pistola → faca (e volta)
   if (state !== 'playing' || !player || !player.alive) return;
+  if (bombPick) { const P = PRIMARIES, i = P.indexOf(selectedPrimary); setPrimary(P[(i + (e.deltaY < 0 ? P.length - 1 : 1)) % P.length]); return; } // Bomba: rodinha escolhe a primária
   const S = player.slots, i = Math.max(0, S.indexOf(player.weapon)), n = S.length; switchWeapon(player, S[(i + (e.deltaY < 0 ? n - 1 : 1)) % n]);
 });
 function tryOpenChat(e) {
@@ -2463,13 +2464,20 @@ document.addEventListener('keydown', (e) => {
   if (chatTyping()) { if (e.code === 'Escape') { e.preventDefault(); closeChat(true); } return; }
   if (e.code === 'KeyK') voicePtt(true);
   if (e.code === 'KeyJ' && !e.repeat && online) { e.preventDefault(); voiceCycle(); }
+  if (state === 'playing' && isBomb() && bombFrozen(bombS) && player && player.alive && !e.repeat) { // Bomba, preparação: painel de troca de arma
+    if (e.code === 'KeyB') { if (bombPick) closeBombPick(); else openBombPick(); return; }
+    if (bombPick && (e.code === 'Enter' || e.code === 'NumpadEnter')) { e.preventDefault(); closeBombPick(); return; }
+    if (bombPick && e.code === 'KeyN') { setSecondary(SECONDARIES[(SECONDARIES.indexOf(selectedSecondary) + 1) % SECONDARIES.length]); return; }
+    if (bombPick && e.code === 'KeyM') { setMelee(MELEES[(MELEES.indexOf(selectedMelee) + 1) % MELEES.length]); return; }
+    if (bombPick && e.code === 'KeyG') { deathUnlock = true; if (document.pointerLockElement) document.exitPointerLock(); return; } // solta o mouse pra clicar
+  }
   if (tryOpenChat(e)) { e.preventDefault(); return; }
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
   if (state === 'playing' && player) {
     if (e.code === 'KeyR') startReload(player);
     if (!player.alive && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat && requestRespawn()) keys[e.code] = false; // Espaço não vira pulo ao renascer
-    if (!player.alive && /^Digit[1-9]$/.test(e.code)) { const pick = PRIMARIES[+e.code.slice(5) - 1]; if (pick != null) setPrimary(pick); } // escolha na tela de morte
+    if ((!player.alive || bombPick) && /^Digit[1-9]$/.test(e.code)) { const pick = PRIMARIES[+e.code.slice(5) - 1]; if (pick != null) setPrimary(pick); } // escolha na tela de morte
     else {
       if (e.code === 'Digit1') switchWeapon(player, player.slots[0]);
       if (e.code === 'Digit2') switchWeapon(player, player.slots[1]);
@@ -2646,7 +2654,7 @@ const MENU_RULES = {
   dm: 'Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos',
   dom: 'Times · capture a zona · o primeiro a completar as capturas vence',
   treino: 'Estande do Docão: alvos que não atacam e voltam em 2 s. B/N/M trocam a arma, munição infinita, sem tempo.',
-  bomb: `Bomba (protótipo, estilo Valorant) · Ataque planta o Botijão no A ou B, Defesa desarma · renascimento normal · primeiro a ${BOMB.WIN} rodadas, troca de lado depois da 12ª`,
+  bomb: `💣 COMO JOGAR · Bomba (protótipo, estilo Valorant)\n🔥 Ataque: leve o Botijão até o site A ou B e segure ${BOMB.KEY_LABEL} por ${BOMB.PLANT} s pra plantar. Ele explode em ${BOMB.FUSE} s.\n🛡️ Defesa: impeça a plantação ou segure ${BOMB.KEY_LABEL} por ${BOMB.DEFUSE} s perto do Botijão pra desarmar.\n🔁 ${BOMB.PREP} s de preparação por rodada (dá pra trocar de arma com 1–9) · renascimento normal · primeiro a ${BOMB.WIN} rodadas · troca de lado depois da ${BOMB.HALF}ª.`,
   explore: 'Mapa vazio, só você. Ande e teste as armas. Vírgula, ponto ou [ ] trocam a primária. Munição não acaba e a partida não termina.',
 };
 function refreshMenuMode() {
@@ -3109,6 +3117,42 @@ function clearBombGfx() {
   for (const id of ['bombhud', 'bProg', 'bombBanner', 'siteMark0', 'siteMark1', 'bombMark']) { const el = $(id); if (el) el.classList.add('hidden'); }
   $('timer').style.color = '';
 }
+// Bomba: painel compacto de troca de arma na preparação de cada rodada (miniaturas das armas). Vale na hora (online o
+// servidor só aceita na preparação). Fecha sozinho no VALENDO; B fecha/abre, Enter fecha. Não solta o mouse (G solta, se quiser clicar).
+let bombPick = false;
+function bLoadTile(i, key, on, pick) {
+  const w = WEAPONS[i], b = document.createElement('button'); b.className = 'bltile' + (on ? ' on' : ''); b.dataset.w = i;
+  b.innerHTML = `${key ? `<i>${key}</i>` : ''}<span>${escapeHtml(w.chip || w.short || w.name)}</span>`; b.title = w.name;
+  if (weaponThumbs[i]) b.style.backgroundImage = `url("${weaponThumbs[i]}")`;
+  b.onclick = (ev) => { ev.stopPropagation(); pick(i); }; return b;
+}
+function renderBLoad() {
+  const pr = $('bLoadPri'), se = $('bLoadSec'), me = $('bLoadMel'); pr.innerHTML = se.innerHTML = me.innerHTML = '';
+  PRIMARIES.forEach((i, k) => pr.appendChild(bLoadTile(i, k < 9 ? String(k + 1) : '', i === selectedPrimary, setPrimary)));
+  SECONDARIES.forEach((i) => se.appendChild(bLoadTile(i, i === selectedSecondary ? 'N' : '', i === selectedSecondary, setSecondary)));
+  MELEES.forEach((i) => me.appendChild(bLoadTile(i, i === selectedMelee ? 'M' : '', i === selectedMelee, setMelee)));
+}
+function openBombPick() {
+  if (!player || !isBomb() || !bombFrozen(bombS)) return;
+  bombPick = true; document.body.classList.add('bombpick'); renderBLoad(); $('bLoad').classList.remove('hidden');
+  window.__bombPicks = (window.__bombPicks || 0) + 1;
+}
+function closeBombPick() {
+  if (!bombPick) return; bombPick = false; document.body.classList.remove('bombpick'); $('bLoad').classList.add('hidden');
+  if (state === 'playing' && player && player.alive && document.pointerLockElement !== canvas && deathUnlock) lockPointer();
+}
+function updateBLoad() {
+  if (!bombPick) return; if (!isBomb() || !bombFrozen(bombS)) { closeBombPick(); return; }
+  const left = Math.max(0, bombS.phaseEnd - gameTime); $('bLoadFill').style.width = (100 * left / BOMB.PREP).toFixed(1) + '%';
+  $('bLoadT').textContent = `rodada começa em ${Math.ceil(left)} s`;
+}
+function bombEquipNow() {
+  const p = player; if (!p || !p.alive) return;
+  const old = p.slots.slice(); p.primary = p.nextPrimary = selectedPrimary; p.secondary = p.nextSecondary = selectedSecondary; p.melee = p.nextMelee = selectedMelee; p.slots = [p.primary, p.secondary, p.melee];
+  for (const i of p.slots) if (!old.includes(i)) { p.mag[i] = WEAPONS[i].mag; p.reserve[i] = WEAPONS[i].reserve; }
+  const w = old[0] !== p.primary ? p.primary : old[1] !== p.secondary ? p.secondary : old[2] !== p.melee ? p.melee : p.weapon;
+  p.reloadEnd = 0; p.knifeMode = false; switchWeapon(p, w); if (p.weapon !== w) setWeapon(p, w);
+}
 // Bomba, rodada nova: a sequência e os streaks guardados continuam (trocar de rodada não é morrer), mas o que estava
 // no ar acaba: o Gavião vai embora, e o míssil pilotado e o Fim da chapa ainda na contagem voltam pro banco (F de novo).
 function bombRoundStreaks() {
@@ -3117,7 +3161,7 @@ function bombRoundStreaks() {
   if (netNukeAt) { netNukeAt = 0; hideNuke(); }
   removeHeli(); clearStrikes();
 }
-function endBomb() { clearBombGfx(); bombS = null; bombL = null; }
+function endBomb() { closeBombPick(); clearBombGfx(); bombS = null; bombL = null; }
 function startBombOffline() {
   setupBomb(bombLayout(nav, SPAWNS, currentMap, groundAt), newBombState());
   return startRound(bombS, gameTime, entities); // rodada 1: os respawns logo depois já usam o lado certo
@@ -3152,12 +3196,12 @@ function onBombEvent(ev) {
   const raw = (id) => { const e = byBid(id); return e ? e.name : '???'; };
   const mySide = player ? sideOf(S, player.team) : -1;
   if (k === 'round') {
-    bombRoundStreaks();
+    bombRoundStreaks(); openBombPick();
     const meCarry = player && ev[3] === player.id;
-    bombBanner(`Rodada ${ev[1]}`, mySide >= 0 ? `Você está no ${SIDE_NAMES[mySide]}${meCarry ? ' · VOCÊ está com o botijão!' : ''} · preparação de ${BOMB.PREP} s` : '', '#fff', 3);
+    bombBanner(`Rodada ${ev[1]} · ${mySide === 0 ? 'ATAQUE' : mySide === 1 ? 'DEFESA' : ''}`, mySide === 0 ? `Leve o botijão até o A ou o B e segure ${BOMB.KEY_LABEL} por ${BOMB.PLANT} s pra plantar${meCarry ? ' · VOCÊ está com o botijão!' : ''}` : mySide === 1 ? `Impeça a plantação ou segure ${BOMB.KEY_LABEL} por ${BOMB.DEFUSE} s no botijão pra desarmar` : '', mySide >= 0 ? TEAM_COLORS[player.team] : '#fff', 5);
   } else if (k === 'swap') {
     bombBanner('Troca de lado!', `Agora o time ${TEAM_NAMES[attackTeam(S.round)]} ataca${mySide >= 0 ? ` · você está no ${SIDE_NAMES[mySide]}` : ''}`, '#ffd27a', 4);
-  } else if (k === 'go') { flashMsg(mySide === 0 ? 'VALENDO! Leve o botijão até o A ou o B 🔥' : mySide === 1 ? 'VALENDO! Defenda o A e o B 🛡️' : 'VALENDO!'); sfx.pickup(); }
+  } else if (k === 'go') { closeBombPick(); flashMsg(mySide === 0 ? 'VALENDO! Leve o botijão até o A ou o B 🔥' : mySide === 1 ? 'VALENDO! Defenda o A e o B 🛡️' : 'VALENDO!'); sfx.pickup(); }
   else if (k === 'pick') addFeedLine(`${nm(ev[1])} pegou o botijão`, `${raw(ev[1])} pegou o botijão`);
   else if (k === 'drop') addFeedLine(`${nm(ev[1])} deixou o botijão cair!`, `${raw(ev[1])} deixou o botijão cair`);
   else if (k === 'plant') {
@@ -3239,6 +3283,7 @@ function updateBombGfx(dt) {
   else if (c && c === me) ct = `Você está com o botijão! Leve até o A ou o B e segure ${BOMB.KEY_LABEL} (${BOMB.PLANT} s)`;
   else if (c) ct = `Botijão: ${c.name}${mySide === 0 ? ' (escolte!)' : ''}`;
   $('bCarrier').textContent = ct;
+  bombPrompt(S, me, mySide, c); updateBLoad();
   $('bSide').textContent = me && mySide >= 0 ? `Você: ${SIDE_NAMES[mySide]} · Time ${TEAM_NAMES[me.team]}` : '';
   $('bSide').style.color = me ? TEAM_COLORS[me.team] || '#fff' : '#fff';
   // barra de plantar/desarmar
@@ -3253,6 +3298,33 @@ function updateBombGfx(dt) {
     const hot = S.planted && S.site === i; placeMark(mk, new V3(s.x, s.y + 3, s.z), hot ? '#ff4d4d' : '#ffd27a', Math.round(Math.hypot(s.x - me.pos.x, s.z - me.pos.z)) + ' m'); });
   const bm = $('bombMark'), showMk = !hide && S.bomb && (S.planted || (S.dropped && mySide === 0));
   if (showMk) placeMark(bm, new V3(S.bomb.x, S.bomb.y + 1.6, S.bomb.z), S.planted ? '#ff4d4d' : '#ffd27a', Math.round(Math.hypot(S.bomb.x - me.pos.x, S.bomb.z - me.pos.z)) + ' m'); else bm.classList.add('hidden');
+}
+// instrução grande no meio da tela: o que fazer agora e com qual tecla
+function bombPrompt(S, me, mySide, c) {
+  const el = $('bPrompt'), K = `<kbd>${BOMB.KEY_LABEL}</kbd>`; let p1 = '', p2 = '', cls = 'soft';
+  const dTo = (q) => Math.round(Math.hypot(q.x - me.pos.x, q.z - me.pos.z));
+  const sitesTxt = () => bombL.sites.map((s) => `${s.name} ${dTo(s)} m`).join(' · ');
+  if (me && me.alive && state === 'playing' && mySide >= 0) {
+    const can = bombCanUse(S, me, bombL.sites);
+    if (S.phase === 'prep') { p1 = mySide === 0 ? '🔥 ATAQUE: leve o botijão até o A ou o B' : '🛡️ DEFESA: proteja o A e o B'; p2 = mySide === 0 ? `Lá dentro, segure ${K} por ${BOMB.PLANT} s pra plantar` : `Plantaram? Segure ${K} por ${BOMB.DEFUSE} s no botijão pra desarmar`; }
+    else if (S.phase === 'live' && mySide === 0) {
+      if (c === me && S.planter === me.id && S.plantProg > 0) { p1 = ''; }
+      else if (c === me && can) { p1 = `Segure ${K} para plantar o botijão`; p2 = `${BOMB.PLANT} s parado dentro do site ${SITE_NAMES[siteAt(bombL.sites, me.pos)] || ''}`; cls = 'hot'; }
+      else if (c === me) { p1 = '💣 Você está com o botijão! Leve até o A ou o B'; p2 = sitesTxt(); }
+      else if (S.dropped && S.bomb) { p1 = 'O botijão caiu! Passe por cima pra pegar'; p2 = `${dTo(S.bomb)} m`; }
+      else if (c) { p1 = `Escolte ${escapeHtml(c.name)} até o A ou o B`; p2 = sitesTxt(); }
+    } else if (S.phase === 'live' && mySide === 1) { p1 = 'Defenda o A e o B'; p2 = `Não deixe o Ataque plantar · ${sitesTxt()}`; }
+    else if (S.phase === 'planted' && S.bomb) {
+      const left = Math.max(0, S.explodeAt - gameTime).toFixed(0), sn = SITE_NAMES[S.site] || '';
+      if (mySide === 1 && S.defuser === me.id) p1 = '';
+      else if (mySide === 1 && can) { p1 = `Segure ${K} para desarmar`; p2 = `${BOMB.DEFUSE} s${S.defuseProg >= BOMB.HALF_DEFUSE ? ' (metade já salva)' : ` · passou de ${String(BOMB.HALF_DEFUSE).replace('.', ',')} s fica salvo`} · explode em ${left} s`; cls = 'hot'; }
+      else if (mySide === 1) { p1 = `Corra pro ${sn} e desarme o botijão!`; p2 = `${dTo(S.bomb)} m · explode em ${left} s`; }
+      else { p1 = `Proteja o botijão no ${sn}!`; p2 = `Explode em ${left} s · ${dTo(S.bomb)} m`; }
+    }
+  }
+  el.classList.toggle('hidden', !p1); if (!p1) return;
+  el.className = cls + (mySide === 1 ? ' def' : ''); el.querySelector('.bp1').innerHTML = p1; el.querySelector('.bp2').innerHTML = p2;
+  window.__bombPrompt = el.textContent;
 }
 const inSiteNear = (s, p) => Math.hypot(s.x - p.pos.x, s.z - p.pos.z) < BOMB.SITE_R && Math.abs(p.pos.y - s.y) < 3;
 // ganchos de teste do Modo Bomba (offline)

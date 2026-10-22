@@ -345,7 +345,7 @@ export class Game {
   onEvent(e, ev) {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
-    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if (this.training && e.alive) this.equipNow(e); return; }
+    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if ((this.training || bombFrozen(this.bomb)) && e.alive) this.equipNow(e); return; } // Treino e preparação da Bomba: troca na hora
     if (!e.alive) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);

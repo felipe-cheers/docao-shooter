@@ -24,7 +24,13 @@ console.log(JSON.stringify(s0));
 ok(s0.round === 1 && s0.phase === 'prep' && s0.team === 0, 'rodada 1, preparação, Ana no Vermelho (Ataque)');
 const sp = await G(() => { const g = window.__docao, L = g.bomb.L, p = g.player.pos, d = (l) => Math.min(...l.map((i) => Math.hypot(L.pts[i].x - p.x, L.pts[i].z - p.z))); return { map: g.map.id, pts: !!L.pts, atk: d(L.atk), def: d(L.def) }; });
 ok(sp.pts && sp.atk < 1 && sp.def > 20, `servidor manda os spawns do modo Bomba e a Ana nasce no lado do Ataque (${JSON.stringify(sp)})`);
+ok(await until(() => !document.getElementById('bLoad').classList.contains('hidden')), 'online: painel de troca de arma na preparação');
+const w0 = await G(() => window.__docao.player.primary); await A.keyboard.press('Digit5'); await wait(400);
+const w1 = await G(() => ({ p: window.__docao.player.primary, w: window.__docao.player.weapon }));
+ok(w1.p !== w0 && w1.w === w1.p, `online: tecla 5 na preparação troca a primária (${w0} → ${w1.p})`);
 ok(await until(() => window.__docao.bomb.S.phase === 'live', 15000), 'servidor libera a rodada depois de 10 s');
+ok(await until(() => document.getElementById('bLoad').classList.contains('hidden'), 3000), 'online: VALENDO fecha o painel');
+ok(await G((p) => window.__docao.player.primary === p && window.__docao.player.slots[0] === p, w1.p), 'online: a arma trocada continua depois do VALENDO');
 const S1 = await G(() => window.__docao.bomb.S.carrier === window.__docao.player.id);
 if (S1) { // Ana carrega: teleporta pro A (só com ALLOW_TEST) e segura E
   await G(() => { const g = window.__docao, p = g.player, s = g.bomb.L.sites[0]; p.pos.set(s.x, s.y, s.z); p.vel.set(0, 0, 0); p.invulnUntil = 1e9; g.online.net.send({ t: 'testGod', s: 30 }); g.online.net.send({ t: 'u', sq: p.sq, tp: 1, p: [s.x, s.y, s.z], v: [0, 0, 0], y: 0, pi: 0, g: 1, w: p.weapon }); });

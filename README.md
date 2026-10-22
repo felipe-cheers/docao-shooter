@@ -165,6 +165,8 @@ Estilo Valorant, com o Docão. Time **Vermelho × Azul**, um lado **ataca** e o 
 | 🏁 **Vitória** | **primeiro a 13 rodadas**. Depois da **12ª**, os lados trocam (faixa **"Troca de lado!"**) |
 | ♻️ **Renascimento** | **normal** (5 s + RENASCER), sempre no spawn do seu lado. A rodada **não** acaba por eliminação |
 
+- **Instruções na tela:** um aviso grande no meio da tela diz o que fazer agora e com qual tecla: *"Leve o botijão até o A ou o B"* com a distância de cada site, *"Segure **E** para plantar o botijão"* quando você está dentro do site, *"Segure **E** para desarmar"* quando é da Defesa e está perto do Botijão plantado, e a barra com os segundos que faltam. A faixa do começo da rodada explica o objetivo do seu lado.
+- **Troca de arma a cada rodada:** na preparação abrem as mesmas cartas de arma da tela de morte. **1–9** troca a primária na hora (com pente cheio), **G** solta o mouse pra clicar na secundária ou no corpo a corpo, e **Enter**, **Esc** ou **Pronto** fecham. As cartas fecham sozinhas no VALENDO, então quem não quer trocar não precisa fazer nada.
 - **Plantar:** um atacante carrega o Botijão (aparece nas costas dele). Dentro do site, segure **E** por **4 s**, parado. Se o carregador morrer, o Botijão **cai no chão** e qualquer atacante pega passando por cima.
 - **Plantado:** o Botijão **bipa cada vez mais rápido** e **explode em 45 s**, matando todo mundo a até **16 m**.
 - **Desarmar:** o defensor segura **E** perto do Botijão por **7 s**. Passou da metade (**3,5 s**), o progresso fica salvo se soltar.
