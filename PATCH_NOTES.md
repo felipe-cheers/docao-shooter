@@ -4,7 +4,23 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## Próxima versão (já no ar, 22/10/2026)
+## Resumo de 21 e 22/10/2026
+Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
+- **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados
+- **v1.3 · Bacon & Nomes:** morte vira bacon e cada jogador escolhe o nome
+- **v1.4 · Pururucado:** kill feed com frases de porco
+- **v1.4.1 · Mira, snipers e prêmios** ([@rramosjoao](https://github.com/rramosjoao), PRs #1 e #2): mira no botão direito, três snipers, abates seguidos, fumaça, atordoamento e prêmios de 3, 5 e 7
+- **v1.5 · Churrasco Moggado:** faca de churrasqueiro e animações de recarga
+- **v1.5.1 a v1.5.7:** botão RENASCER, 3 skins novas, salas com até 10 jogadores, tempo da partida configurável, captura da Dominação mais lenta, Docão não fica mais preso na parede, piso e mira sem piscar
+- **v1.6 · Bacon Restaurador:** bacon cura 10 de vida
+- **v1.6.1 · Respiro:** vida regenera fora de combate
+- **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
+- **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
+
+---
+
+## v1.8 — Míssil Pilotado 🚀 (22/10/2026)
+Versão de muita gente: valeu, Janor, Paulo e João! 🐷
 
 **Chat, voz e convite** (PR #4, [@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers))
 - Chat escrito no lobby, na partida e no fim do jogo: Y fala com todos, U só com o time, e Tab troca o canal com a caixa aberta
@@ -12,6 +28,7 @@ Jogue em **https://docao.mvalentim.dev**
 - Convite da sala no lobby e na pausa: copiar link ou código, WhatsApp, Telegram, Slack e compartilhar
 
 **Campus HOTMILK e modo Exploração** (PR #5, [@paulo-cheers](https://github.com/paulo-cheers))
+- Mapa HOTMILK com o Bloco 01 e o Bloco 02 (prédios de três andares com corredor, escada e vão entre eles)
 - O mapa HOTMILK virou o campus inteiro: Bloco 01, Bloco 02, estacionamento com catraca, praça e portões
 - Modo Exploração (offline): mapa sem bots pra andar e testar armas
 
@@ -115,6 +132,14 @@ Agora são **17 skins**. Chegaram três novas no fim da lista:
 - Correção: a skin do Docão volta a aparecer no menu logo no começo.
 - Correção: na **Vizinhança Cheers** a câmera do menu ficava dentro do ônibus e a skin não aparecia; agora ela procura um ângulo livre em qualquer mapa. A barra de prêmios por abate não aparece mais por cima do Docão no menu.
 - **Tela de morte compacta**, ancorada embaixo: todas as armas cabem mesmo em telas menores.
+
+## v1.4.1 — Mira, snipers e prêmios 🎯 (21/10/2026)
+Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PRs #1 e #2).
+- O botão direito mira em todas as armas. Na sniper abre a luneta, e no ferrolho a mão do Docão puxa o ferrolho
+- Três snipers: Torresmo (meio), Canhão do Barril (pesada, pouca bala) e Carabina da Granja (leve e rápida), cada uma com a sua luneta. O menu ganhou o slider Mirando
+- Acerto mostra o X, os pontos (+10, +100, +150) e medalhas. Abates seguidos: Dupla na chapa, Trio frito, Ultra na brasa, Fantástico e Incrível
+- Granada de fumaça (tecla 4) e de atordoamento (tecla 5)
+- Prêmios por abates sem morrer: no 3 um minimapa que gira com você, no 5 um tablet para marcar 3 mísseis, no 7 o rádio que derruba todo mundo
 
 ## v1.4 — "Pururucado" (21/10/2026)
 - **Kill feed novo:** "carimbou" virou **"pururucou"**, com frases engraçadas sorteadas a cada abate:
