@@ -31,6 +31,40 @@ try {
   await page.keyboard.up('ControlRight');
   console.log('OK perder foco libera agachamento');
 
+  // Segurar Espaço e soltar Ctrl no ar não deve rearmar o pulo ao aterrissar.
+  await page.evaluate(() => {
+    const g = window.__docao, p = g.player;
+    p.pos.set(-30, 0, -25); p.vel.set(0, 0, 0); p.onGround = true;
+    window.__jumpTrace = { start: g.time, takeoffs: 0, grounded: true, active: true };
+    const sample = () => {
+      const t = window.__jumpTrace; if (!t.active) return;
+      if (t.grounded && !p.onGround && p.vel.y > 0) t.takeoffs++;
+      t.grounded = p.onGround;
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.keyboard.down('Space');
+  await page.waitForFunction(() => !window.__docao.player.onGround, null, { timeout: 120000 });
+  await page.keyboard.down('ControlLeft'); await waitStance(1);
+  await page.keyboard.up('ControlLeft'); await waitStance(0);
+  // Repetição do sistema operacional enquanto Espaço continua pressionado.
+  await page.keyboard.down('Space');
+  await page.waitForFunction(() => window.__docao.time > window.__jumpTrace.start + 1.8, null, { timeout: 120000 });
+  const jump = await page.evaluate(() => {
+    window.__jumpTrace.active = false;
+    const p = window.__docao.player;
+    return { takeoffs: window.__jumpTrace.takeoffs, grounded: p.onGround, vy: p.vel.y };
+  });
+  await page.keyboard.up('Space');
+  assert.equal(jump.takeoffs, 1, 'uma pressão em Espaço deve gerar somente um pulo');
+  assert.equal(jump.grounded, true); assert.equal(jump.vy, 0);
+  // Aterrissar não bloqueia um novo pulo intencional.
+  await page.keyboard.down('Space');
+  await page.waitForFunction(() => !window.__docao.player.onGround && window.__docao.player.vel.y > 0, null, { timeout: 120000 });
+  await page.keyboard.up('Space');
+  console.log('OK pular/agachar/soltar no ar não repete pulos; novo toque ainda pula');
+
   if (SERVER) {
     const api = SERVER.replace(/^ws/, 'http');
     const r = await fetch(api + '/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ map: 'arena', max: 2, fillBots: false }) });

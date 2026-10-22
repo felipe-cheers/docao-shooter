@@ -247,6 +247,7 @@ function pickSpawn(e) {
 }
 function respawn(e) {
   e.pos.copy(pickSpawn(e)); e.vel.set(0, 0, 0); e.crouch = 0; e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
+  if (e.isPlayer) keys.Space = false;
   if (!e.isPlayer && Math.random() < 0.3) e.nextPrimary = BOT_PRIMARIES[Math.floor(Math.random() * BOT_PRIMARIES.length)]; // bots às vezes trocam de primária, nunca pro sabre
   e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE;
   e.slots = [e.primary, e.secondary, e.melee]; e.knifeMode = false; e.prevWeapon = e.primary;
@@ -1789,6 +1790,8 @@ function releaseBow(p) {
 }
 function updatePlayer(dt) {
   const p = player;
+  // Consome o toque mesmo no ar: segurar Espaço não rearma o pulo ao aterrissar.
+  const jumpPressed = !!keys.Space; keys.Space = false;
   if (!p.alive) {
     saberSfx.hum(false);
     if (p.charging) { p.charging = false; arcLine.visible = arcMark.visible = false; }
@@ -1810,7 +1813,7 @@ function updatePlayer(dt) {
   if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
   const acc = p.onGround ? 14 : 4;
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
-  if (!guiding && keys.Space && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
+  if (!guiding && jumpPressed && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
   moveEntity(p, dt);
   const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 * stanceScale(p.crouch) : 0;
   camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
@@ -2440,7 +2443,7 @@ function refreshModeHud() {
   if (teamMode() && player) { $('myTeam').textContent = `Você: Time ${TEAM_NAMES[player.team] || '?'}`; $('myTeam').style.color = TEAM_COLORS[player.team] || '#fff'; }
   $('winner').style.color = '';
 }
-function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.ShiftLeft = keys.ShiftRight = keys.ControlLeft = keys.ControlRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.Space = keys.ShiftLeft = keys.ShiftRight = keys.ControlLeft = keys.ControlRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
   if (online) leaveOnline();
@@ -2512,7 +2515,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyJ' && !e.repeat && online) { e.preventDefault(); voiceCycle(); }
   if (tryOpenChat(e)) { e.preventDefault(); return; }
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code) || (state === 'playing' && (e.code === 'ControlLeft' || e.code === 'ControlRight' || e.ctrlKey))) e.preventDefault();
-  keys[e.code] = true;
+  if (e.code !== 'Space' || !e.repeat) keys[e.code] = true;
   if (state === 'playing' && player) {
     if (e.code === 'KeyR') startReload(player);
     if (!player.alive && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat && requestRespawn()) keys[e.code] = false; // Espaço não vira pulo ao renascer
@@ -3020,7 +3023,7 @@ function netEvent(ev) {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
     e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.crouch = 0; e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
     e.primary = prim; e.secondary = e.secondary ?? PISTOL; e.melee = e.melee ?? KNIFE; e.slots = [prim, e.secondary, e.melee]; e.mag = WEAPONS.map((x) => x.mag); e.reserve = WEAPONS.map((x) => x.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.nades = NADE.spawnWith; setWeapon(e, prim);
-    if (e === player) { player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; player.secondary = selectedSecondary; player.melee = selectedMelee; player.slots = [prim, selectedSecondary, selectedMelee]; player.onGround = true; $('stamp').classList.remove('show'); if (spawnHold === 'secondary') setWeapon(player, selectedSecondary); $('teamPick').classList.add('hidden'); onPlayerRespawn(); }
+    if (e === player) { keys.Space = false; player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; player.secondary = selectedSecondary; player.melee = selectedMelee; player.slots = [prim, selectedSecondary, selectedMelee]; player.onGround = true; $('stamp').classList.remove('show'); if (spawnHold === 'secondary') setWeapon(player, selectedSecondary); $('teamPick').classList.add('hidden'); onPlayerRespawn(); }
     else { e.yaw = yaw; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = [{ t: performance.now() / 1000 - INTERP_DELAY, x: pos[0], y: pos[1], z: pos[2], yaw }]; }
   } else if (k === 'pk') { const p = pickups[ev[1]]; if (p) { p.active = !!ev[2]; p.mesh.visible = p.active; } }
   else if (k === 'nd') {
