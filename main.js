@@ -16,6 +16,7 @@ import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
 import { MAPS, PLAY_MAPS, INV_MAPS, getMap } from './maps.js';
 import { INV, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
+import { createInvMusic } from './invasion-music.js';
 import { makeZombie, animateZombie, dieZombie, applyHalloweenPalette, buildHalloween, makeFogWall, makeDropMesh, tickDrop, makeSpitMesh, makePowerPumpkin, makeRing, tickRing, makeLanternCone, setGhostLook } from './invasion-gfx.js';
 import { TRAIN, isTraining, dummyX } from './shared/training.js';
 import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js';
@@ -213,7 +214,8 @@ const exploreMode = () => mode === 'explore';
 const invMode = () => isInvasion(mode); // Invasão 🎃: co-op contra zumbis (shared/invasion.js)
 let inv = null, invNet = null; // offline: InvasionCore local · online: estado lido do snapshot (parseState)
 const invGfx = { hal: null, fog: null, drops: new Map(), projs: new Map(), rings: [], cones: new Map(), inv: [], sel: 0 };
-let invZid = 1000;
+let invZid = 1000, invMusic = null; // trilha de terror procedural (invasion-music.js)
+function invMusicOn(on) { if (on) { if (!actx) initAudio(); if (!actx) return; if (!invMusic) invMusic = createInvMusic(actx, master); invMusic.start(); } else if (invMusic) invMusic.stop(); }
 const friends = (a, b) => (invMode() ? !!(a && b && a !== b && !a.zt === !b.zt) : teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0);
 let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
@@ -3295,7 +3297,7 @@ function invApplyLook(on) {
   if (!currentMap) return;
   if (on) { applyHalloweenPalette(scene, hemi, sun, currentMap); fpHemi.intensity = 1.2; invGfx.hal = buildHalloween(currentMap, nav, groundAt); scene.add(invGfx.hal); }
   else { applyPalette(scene, hemi, sun, currentMap); fpHemi.intensity = currentMap.palette.stars ? 1.25 : 1.8; }
-  document.body.classList.toggle('invmode', !!on);
+  document.body.classList.toggle('invmode', !!on); invMusicOn(!!on);
   ['invhud', 'invPowers'].forEach((id) => $(id).classList.toggle('hidden', !on)); if (!on) document.body.classList.remove('invout', 'ghostfx'); if (!on) { $('invBoss').classList.add('hidden'); $('invOut').classList.add('hidden'); $('fogVeil').style.opacity = '0'; invClosePick(); }
   invGfx.inv = []; invGfx.sel = 0; invRenderSlots();
 }
@@ -3304,6 +3306,7 @@ function invTick(dt) {
   if (!invMode()) return;
   if (!online && inv && state === 'playing') inv.step(dt);
   const v = invView(); if (!v) return;
+  if (invMusic && invMusic.on) { if (v.phase === 'over') invMusic.stop(3); else { invMusic.setLevel(v.phase === 'wave' ? (v.bossId || v.wave % INV.BOSS_EVERY === 0 ? 2 : 1) : 0); invMusic.tick(); } }
   if (invGfx.hal) invGfx.hal.userData.tick(gameTime);
   invGfx.fog.update(v.fog, gameTime, v.phase === 'wave' || v.phase === 'break');
   for (const d of invGfx.drops.values()) tickDrop(d.m, gameTime, d.born);
@@ -3422,6 +3425,6 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   swingSaber: () => swingSaber(player),
   // Invasão 🎃
   get inv() { return inv; }, get invView() { return invView(); }, get invInv() { return invGfx.inv.slice(); }, get invSel() { return invGfx.sel; }, get invDrops() { return [...invGfx.drops.keys()]; }, get invPick() { return invPick; },
-  invUse: () => invUsePower(), invCycle: () => invCycle(), invOpenPick: () => invOpenPick(), invEquipNow, INV, POWERS, ZOMBIES, INV_MAPS, makeZombieEnt, get invHal() { return invGfx.hal; },
+  invUse: () => invUsePower(), invCycle: () => invCycle(), invOpenPick: () => invOpenPick(), invEquipNow, INV, POWERS, ZOMBIES, INV_MAPS, makeZombieEnt, get invHal() { return invGfx.hal; }, get invMusic() { return invMusic && { on: invMusic.on, level: invMusic.level }; },
   invGive: (list) => { if (inv && player) { player.inv = list.slice(0, INV.INV_MAX); invSetInv(player.inv.map((k) => POWER_KEYS.indexOf(k))); } else if (online) online.net.send({ t: 'testInv', give: list }); },
 };

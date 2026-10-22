@@ -14,6 +14,9 @@ const errors = [], fails = []; const ok = (c, msg) => { console.log((c ? 'OK   '
   ok(tot.every((s, i) => i === 0 || (s.total >= tot[i - 1].total && s.hpMul > tot[i - 1].hpMul)), '20 waves: cada uma com mais zumbis e mais vida que a anterior');
   ok(tot.filter((s) => s.boss).map((s) => s.w).join() === '5,10,15,20', 'chefão Docão Abóbora nas waves 5, 10, 15 e 20');
   ok(waveSpec(1, 4).total > waveSpec(1, 1).total && waveSpec(1, 10).n === 10 && waveSpec(1, 50).n === 10, 'mais jogadores = wave maior (limite de 10)');
+  ok(waveSpec(1, 1).total === 18 && waveSpec(20, 1).total === 132 && waveSpec(1, 4).total === 50, `zumbis por wave: 18 (w1) → 132 (w20) solo; 50 na w1 com 4 jogadores`);
+  ok(tot.every((s) => s.maxAlive <= 48 && s.batch >= 2 && s.batch <= 6) && waveSpec(20, 10).maxAlive === 48, 'teto de vivos (≤ 48) e lotes de 2–6');
+  ok(waveSpec(20, 1).spdMul > waveSpec(1, 1).spdMul && waveSpec(20, 1).spdMul <= 1.45, 'velocidade cresce com a wave (até 1,45×)');
   const q1 = waveQueue(waveSpec(1)), q12 = waveQueue(waveSpec(12));
   ok(q1.every((k) => k === 'walker'), 'wave 1 só tem Docão Podre (walker)');
   ok(['runner', 'spitter', 'tank'].every((k) => q12.includes(k) || waveSpec(12).mix[k] > 0), 'wave 12 mistura corredor, cuspidor e barrigão');
@@ -68,6 +71,9 @@ ok(ff.knock, 'rocket jump ainda empurra');
 // força a wave 1
 await G(() => { const g = window.__docao; g.inv.phaseEnd = g.time; });
 ok(await until(() => window.__docao.invView.phase === 'wave' && window.__docao.entities.some((e) => e.zt && e.alive), 25000), 'wave 1 começou e zumbis nasceram');
+ok(await until(() => window.__docao.invMusic && window.__docao.invMusic.on && window.__docao.invMusic.level === 1, 5000), 'trilha de terror tocando (intensidade de wave)');
+ok(await until(() => window.__docao.entities.filter((e) => e.zt && e.alive).length >= 2, 15000), 'zumbis entram em lote');
+ok(await G(() => window.__docao.invView.remaining >= 15 && window.__docao.entities.filter((e) => e.zt && e.alive).length <= window.__docao.inv.spec.maxAlive), 'wave 1 com ~18 zumbis e vivos dentro do teto');
 ok(await G(() => document.getElementById('invWaveN').textContent.includes('WAVE 1/20')), 'HUD mostra WAVE 1/20');
 await page.screenshot({ path: `${SHOTS}/wave-banner.png` });
 // zumbis nascem na borda (longe do jogador)
@@ -77,6 +83,7 @@ ok(zd >= 14, `zumbis nascem longe do jogador (${zd.toFixed(1)} m)`);
 await G(() => { const g = window.__docao; g.inv.queue = []; for (const z of g.entities.filter((e) => e.zt && e.alive)) g.damage(z, 1e5, g.player, 0, false); });
 ok(await until(() => window.__docao.invView.phase === 'break', 6000), 'wave limpa → pausa entre waves');
 ok(await G(() => window.__docao.invView.left > 12 && window.__docao.invView.left <= 15), 'pausa de ~15 s');
+ok(await until(() => window.__docao.invMusic.level === 0, 3000), 'música acalma na pausa');
 ok(await G(() => window.__docao.invPick && !document.getElementById('iLoad').classList.contains('hidden')), 'painel de troca de arma abre na pausa');
 await page.keyboard.press('Digit3'); await wait(200);
 const swapped = await G(() => { const g = window.__docao; return g.player.primary === g.selectedPrimary && g.player.slots[0] === g.selectedPrimary; });
@@ -146,7 +153,8 @@ await page.screenshot({ path: `${SHOTS}/fim-wave.png` });
 
 // ---------- 6) vitória na wave 20 ----------
 await G(() => window.__docao.startGame('rodizio')); await wait(800);
-await G(() => { const g = window.__docao, I = g.inv; I.startWave(20); I.queue = []; I.bossPending = false; for (const z of I.zombies) if (z.alive) g.damage(z, 1e6, g.player, 0, false); });
+await G(() => window.__docao.inv.startWave(20)); ok(await until(() => window.__docao.invMusic.level === 2, 4000), 'música mais intensa na wave do chefão');
+await G(() => { const g = window.__docao, I = g.inv; I.queue = []; I.bossPending = false; for (const z of I.zombies) if (z.alive) g.damage(z, 1e6, g.player, 0, false); });
 ok(await until(() => window.__docao.state === 'over', 20000), 'wave 20 limpa → vitória');
 ok(/sobreviveram às 20 waves/i.test(await G(() => document.getElementById('winner').textContent)), 'tela de vitória');
 
@@ -189,6 +197,7 @@ await wait(400);
 await page.selectOption('#modeSel', 'dm'); await wait(500);
 await G(() => window.__docao.startGame('arena')); await wait(1000);
 const base = await G(() => { const g = window.__docao; return { mode: g.mode, bots: g.entities.filter((e) => !e.isPlayer).length, zt: g.entities.some((e) => e.zt), hal: !!g.invHal, cls: document.body.classList.contains('invmode'), hud: document.getElementById('invhud').classList.contains('hidden') }; });
+ok(await G(() => !window.__docao.invMusic || !window.__docao.invMusic.on), 'música para fora da Invasão');
 ok(base.mode === 'dm' && base.bots > 0 && !base.zt && !base.hal && !base.cls && base.hud, 'Mata-mata continua igual (bots, sem zumbi, sem decoração, sem HUD da Invasão)');
 
 console.log('\nerros de página:', errors.length ? errors.slice(0, 12).join('\n') : 'nenhum');
