@@ -677,4 +677,5 @@ export const MAPS = [];
   });
 }
 
+export const BOMB_MAP = 'rodizio'; // mapa padrão do modo Bomba (menu, criar sala, lobby)
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];

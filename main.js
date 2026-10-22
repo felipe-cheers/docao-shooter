@@ -9,7 +9,7 @@ import { mountStreakUi, setStreakCount, setStreakCycle, openStrikeMap, closeStri
 import { makeTablet, poseTablet, makeRadio, poseRadio } from './fp-gear.js';
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
-import { MAPS, getMap } from './maps.js';
+import { MAPS, getMap, BOMB_MAP } from './maps.js';
 import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js';
 import { buildNav } from './nav.js';
 import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, activeBacons, edibleBacons, eatBacon, BACON } from './bacon.js';
@@ -1732,7 +1732,7 @@ function teamButtons(el, current, onPick, counts) { // atualiza no lugar: o lobb
 }
 let menuTeam = -1;
 function refreshMenuMode() { const dom = $('modeSel').value !== 'dm'; /* Dominação e Bomba: escolhe o time */ $('menuTeam').classList.toggle('hidden', !dom); teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); }); }
-$('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); };
+$('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } if ($('modeSel').value === 'bomb' && state === 'menu') selectMap(BOMB_MAP); refreshMenuMode(); }; // Bomba: já troca pro mapa feito pra ela
 try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm' || m === 'bomb') $('modeSel').value = m; } catch (e) { /* */ }
 $('timeSel').onchange = () => { try { localStorage.setItem('docao.time', $('timeSel').value); } catch (e) { /* */ } };
 try { $('timeSel').value = String(normTime(localStorage.getItem('docao.time'))); } catch (e) { /* */ }
@@ -1881,12 +1881,14 @@ function renderLobby() {
 }
 const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode: $('lobbyMode').value, time: +$('lobbyTime').value });
 ['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyMode', 'lobbyTime'].forEach((id) => ($(id).onchange = sendCfg));
+$('lobbyMode').onchange = () => { if ($('lobbyMode').value === 'bomb') $('lobbyMap').value = BOMB_MAP; sendCfg(); }; // Bomba: mapa padrão
+$('roomMode').onchange = () => { if ($('roomMode').value === 'bomb') $('roomMap').value = BOMB_MAP; };
 $('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
 $('leaveLobby').onclick = () => leaveOnline();
 $('copyLink').onclick = async () => { const v = $('shareLink').value; try { await navigator.clipboard.writeText(v); $('copyLink').textContent = 'Copiado!'; } catch (e) { $('shareLink').select(); } setTimeout(() => ($('copyLink').textContent = 'Copiar link'), 1500); };
 // ---------- menu online ----------
 function onlineTab(create) { $('tabCreate').classList.toggle('active', create); $('tabJoin').classList.toggle('active', !create); $('paneCreate').classList.toggle('hidden', !create); $('paneJoin').classList.toggle('hidden', create); }
-$('onlineBtn').onclick = () => { fillMapSelect($('roomMap'), selectedMap); $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
+$('onlineBtn').onclick = () => { fillMapSelect($('roomMap'), selectedMap); if ($('roomMode').value === 'bomb' && selectedMap === 'random') $('roomMap').value = BOMB_MAP; $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
 $('onlineClose').onclick = () => { $('onlineModal').classList.add('hidden'); $('menu').classList.remove('hidden'); };
 $('tabCreate').onclick = () => onlineTab(true); $('tabJoin').onclick = () => { onlineTab(false); $('joinCode').focus(); };
 $('createBtn').onclick = async () => {

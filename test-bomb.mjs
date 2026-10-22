@@ -7,16 +7,24 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message + ' ' + e.stack));
-await page.addInitScript((map) => { localStorage.setItem('docao.primary', '0'); localStorage.setItem('docao.map', map); localStorage.setItem('docao.name', 'Matheus'); }, process.env.MAP || 'arena');
+await page.addInitScript((map) => { localStorage.setItem('docao.primary', '0'); localStorage.setItem('docao.map', map); localStorage.setItem('docao.name', 'Matheus'); }, 'arena');
 await page.goto(SITE, { waitUntil: 'load' }); await page.waitForTimeout(1500);
 const G = (fn, a) => page.evaluate(fn, a); const wait = (ms) => page.waitForTimeout(ms);
 const until = async (fn, ms = 8000, a) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await page.evaluate(fn, a)) return true; await wait(100); } return false; };
-await page.selectOption('#modeSel', 'bomb'); await page.click('#menuTeamBtns .teambtn.t0'); await page.selectOption('#botCount', '5');
+await page.selectOption('#modeSel', 'bomb'); // escolher Bomba já troca pro mapa feito pra ela (Rodízio do Docão); MAP=id força outro
+ok(await G(() => window.__docao.map.id === 'rodizio'), 'modo Bomba no menu: mapa padrão vira o Rodízio do Docão');
+if (process.env.MAP) await G((id) => window.__docao.selectMap(id), process.env.MAP);
+await page.click('#menuTeamBtns .teambtn.t0'); await page.selectOption('#botCount', '5');
 await G(() => document.getElementById('playBtn').click()); await wait(1500);
 const st = await G(() => { const g = window.__docao, B = g.bomb, S = B.S; return { mode: g.mode, round: S.round, phase: S.phase, carrier: S.carrier, team: g.player.team, sites: B.L.sites.map((s) => [s.name, +s.x.toFixed(1), +s.z.toFixed(1)]), teams: g.entities.map((e) => e.team), hud: !document.getElementById('bombhud').classList.contains('hidden'), banner: document.querySelector('#bombBanner .b1').textContent }; });
 console.log(JSON.stringify(st));
 ok(st.mode === 'bomb' && st.round === 1 && st.phase === 'prep' && st.carrier > 0, 'Bomba offline: rodada 1 em preparação, alguém carrega o botijão');
 ok(st.hud && /Rodada 1/.test(st.banner), 'HUD da Bomba + faixa "Rodada 1"');
+// lados: cada Docão nasce nos spawns do seu lado (map.bomb.atk / def), longe/perto dos sites
+const sideChk = () => G(() => { const g = window.__docao, B = g.bomb, L = B.L, S = B.S, src = L.pts || g.spawns;
+  return g.entities.map((e) => { const side = B.sideOf(S, e.team), pool = (side === 0 ? L.atk : L.def).map((i) => src[i]); return { side, d: Math.min(...pool.map((p) => Math.hypot(p.x - e.pos.x, p.z - e.pos.z))) }; }); });
+const sc1 = await sideChk();
+ok(sc1.every((r) => r.d < 0.6), `rodada 1: todo mundo nasce no spawn do seu lado (${sc1.map((r) => r.side + ':' + r.d.toFixed(1)).join(' ')})`);
 ok(st.teams.filter((t) => t === 0).length === 3 && st.teams.filter((t) => t === 1).length === 3, 'times 3 × 3');
 // preparação: parado
 const p0 = await G(() => window.__docao.player.pos.toArray()); await page.keyboard.down('KeyW'); await wait(700); await page.keyboard.up('KeyW');
@@ -65,6 +73,8 @@ await wait(500); // (estava no fim da rodada: pular = começa a 13ª)
 const sw = await G(() => { const g = window.__docao, S = g.bomb.S; return { round: S.round, atk: g.bomb.attackTeam(S.round), mySide: g.bomb.sideOf(S, g.player.team), banners: (window.__bombBanners || []).slice(-3), b1: document.querySelector('#bombBanner .b1').textContent, carrierTeam: (g.entities.find((e) => e.id === S.carrier) || {}).team }; });
 ok(sw.round === 13 && sw.atk === 1 && sw.mySide === 1 && sw.carrierTeam === 1, `rodada 13: Azul ataca, você (Vermelho) defende (${JSON.stringify(sw)})`);
 ok(sw.b1 === 'Troca de lado!', 'faixa "Troca de lado!"');
+const sc13 = await sideChk(), red13 = await G(() => window.__docao.entities.map((e) => e.team));
+ok(sc13.every((r) => r.d < 0.6) && sc13.every((r, i) => r.side === (red13[i] === 0 ? 1 : 0)), `rodada 13: Vermelho nasce do lado da Defesa e Azul do Ataque (${sc13.map((r) => r.side + ':' + r.d.toFixed(1)).join(' ')})`);
 await page.screenshot({ path: `${SHOTS}/30-bomba-troca.png` });
 // 5) fim aos 13
 await G(() => { const g = window.__docao; g.bomb.setRound(14, 12, 8); g.bomb.skip(); }); await wait(300); // 14ª: prep → ao vivo
