@@ -523,4 +523,146 @@ export const MAPS = [];
   });
 }
 
+// ---------- 8) HOTMILK (Bloco 01 em caixas: hall ao sul, corredor central, salas a oeste, escritórios a leste, 3 andares) ----------
+// Planta medida no tour público: ~63 m × ~18 m, três pisos. Não é a malha do scan — é o mesmo tipo de caixa dos outros mapas.
+{
+  const H = 3.3, boxes = [];
+  const col = { wall: '#e7e1d6', wall2: '#d7c4a4', inner: '#cfc6b8', floor: '#d5cfc4', roof: '#3c4248', roof2: '#2c3238', stair: '#8d3a3a', trim: '#2f6b45' };
+  const facade = '#c9c2b4', wood = '#c4a574', green = '#2f6b45', red = '#e23b3b';
+  // no helper, 'n' é o lado z0 (o hall) e 's' é o lado z1. Vão largo nos três andares.
+  const link = [0, 1, 2].map((f) => ({ s: 'n', a: -6.6, b: 6.6, k: 'wide', f }));
+  const wins = [-24, -8, 10, 24].map((x) => ({ s: 's', a: x - 1.6, b: x + 1.6, k: 'win', f: 1 }));
+  boxes.push(...building(-31, -3, 31, 11.6, { col, floors: 3, H, t: 0.4, parapet: 0.9, ops: [...link, ...wins,
+    { s: 's', a: -22, b: -18, k: 'win' }, { s: 's', a: -6, b: -2, k: 'win' }, { s: 's', a: 4, b: 8, k: 'win' }, { s: 's', a: 18, b: 22, k: 'win' },
+    { s: 'w', a: 2, b: 4, k: 'win' }, { s: 'e', a: 2, b: 4, k: 'win' }],
+  inner: [
+    // térreo: corredor (z 1,05–4,35) com salas dos dois lados; o miolo abre pro hall
+    { axis: 'x', s0: -30.4, s1: -8.6, line: 1.05, ops: [{ a: -27.4, b: -25.6 }, { a: -19.8, b: -18 }, { a: -12.8, b: -11 }] },
+    { axis: 'x', s0: 8.6, s1: 30.4, line: 1.05, ops: [{ a: 11.2, b: 13 }, { a: 18.6, b: 20.4 }, { a: 25.4, b: 27.2 }] },
+    { axis: 'x', s0: -30.4, s1: -8.6, line: 4.35, ops: [{ a: -27.4, b: -25.6 }, { a: -19.8, b: -18 }, { a: -12.8, b: -11 }] },
+    { axis: 'x', s0: 8.6, s1: 30.4, line: 4.35, ops: [{ a: 11.2, b: 13 }, { a: 18.6, b: 20.4 }, { a: 25.4, b: 27.2 }] },
+    ...[-22.6, -15.2].flatMap((x) => [{ axis: 'z', s0: -2.6, s1: 0.85, line: x, ops: [] }, { axis: 'z', s0: 4.55, s1: 11.15, line: x, ops: [] }]),
+    ...[16, 23.4].flatMap((x) => [{ axis: 'z', s0: -2.6, s1: 0.85, line: x, ops: [] }, { axis: 'z', s0: 4.55, s1: 11.15, line: x, ops: [] }]),
+    // andar 1 e 2: menos salas, paredes cruzadas pra quebrar a linha de visão (o corredor do térreo continua aberto)
+    { axis: 'z', s0: -2.5, s1: 11.15, line: -12, f: 1, ops: [{ a: 7.2, b: 9.2 }] },
+    { axis: 'z', s0: -2.5, s1: 11.15, line: 14, f: 1, ops: [{ a: 7.2, b: 9.2 }] },
+    { axis: 'z', s0: -2.5, s1: 11.15, line: -4, f: 2, ops: [{ a: -1.2, b: 0.8 }] },
+    { axis: 'z', s0: -2.5, s1: 11.15, line: 16, f: 2, ops: [{ a: 8.4, b: 10.4 }] },
+  ] }));
+  boxes.push(...building(-8, -13, 8, -3, { col, floors: 3, H, t: 0.4, parapet: 0.9, noWall: ['s0', 's1', 's2'],
+    ops: [{ s: 'n', a: -1.8, b: 1.8 }, { s: 'n', a: -6.2, b: -3.4, k: 'win' }, { s: 'n', a: 3.4, b: 6.2, k: 'win' },
+      { s: 'w', a: -11, b: -8, k: 'win' }, { s: 'e', a: -6, b: -4, k: 'win' },
+      { s: 'n', a: -5, b: -1.5, f: 1, k: 'win' }, { s: 'n', a: 1.5, b: 5, f: 1, k: 'win' },
+      { s: 'w', a: -10, b: -6, f: 1, k: 'win' }, { s: 'e', a: -10, b: -6, f: 1, k: 'win' }],
+    stairs: [{ f: 0, r: [-1.6, -11.5, 1.6, -4.0], axis: 'z', dir: 1 }, { f: 1, r: [2.0, -11.5, 5.2, -4.0], axis: 'z', dir: 1 }] }));
+  // laje-ponte: o hall e a barra são dois prédios, o piso de cima tem que encontrar no vão
+  boxes.push(B(-7.2, -3.7, 7.2, -2.3, 0.3, col.floor, H - 0.3), B(-7.2, -3.7, 7.2, -2.3, 0.3, col.floor, 2 * H - 0.3));
+  // fora da planta (os lados do hall) vira fachada fechada; sobra só o recuo da porta
+  boxes.push(B(-34, 11.6, 34, 15, 11, facade), B(-34, -15, -3.4, -13, 11, facade), B(3.4, -15, 34, -13, 11, facade));
+  boxes.push(B(-34, -13, -31, 11.6, 11, facade), B(31, -13, 34, 11.6, 11, facade));
+  boxes.push(B(-31, -13, -8, -3, 11, facade), B(8, -13, 31, -3, 11, facade));
+  // hall: recepção, sofá vermelho, parede verde, elevador (shaft fechado) ao lado da escada de piso vermelho
+  boxes.push(B(-7.2, -8.7, -4.4, -7.3, 1.1, wood), B(-7.5, -9.4, -6.9, -5.2, 2.5, wood));
+  boxes.push(B(-6.4, -11.5, -3.0, -10.6, 0.55, red), B(-6.6, -11.3, -5.6, -9.3, 0.75, red), B(-3.5, -11.3, -2.6, -9.4, 0.75, red));
+  boxes.push(B(-5.4, -10.9, -4.0, -9.7, 0.85, green));
+  boxes.push(B(6.45, -11.6, 7.25, -6.6, 2.9, green));
+  boxes.push(B(-7.3, -6.3, -5.4, -4.3, 3 * H, '#2a2a2a'));
+  // móveis baixos nas salas e colunas no corredor (encostadas na parede sul, a linha do meio fica livre)
+  for (const [x, z] of [[-28.2, -1.6], [-18.5, 7.2], [-13.2, 8.6], [12.5, 7.2], [27.2, -1.6], [25.5, 8.4]]) boxes.push(crate(x, z, 1.0, 1.05, wood));
+  for (const x of [-20, -6, 10, 22]) boxes.push(B(x - 0.35, 1.35, x + 0.35, 1.9, 2.4, '#4a463f'));
+  for (const [x, z, y] of [[-21, 7, H], [1, 6.5, H], [22, 7, H], [-14, 6, 2 * H], [6, 7, 2 * H], [22, 5.5, 2 * H]]) boxes.push(crate(x, z, 1.3, 1.15, wood, y));
+  MAPS.push({
+    id: 'hotmilk', name: 'HOTMILK', desc: 'Bloco 01 em três andares: hall de entrada ao sul (recepção, sofá e escada), corredor central comprido, salas a oeste e escritórios a leste.',
+    size: [34, 15], wallH: 8, wallColor: [facade, '#b7b09f'], laneMin: 35,
+    palette: { sky: '#9ec8ea', fog: ['#c5d3df', 45, 120], hemi: ['#ffffff', '#b7a48a', 1.45], sun: ['#fff6e4', 1.5], ground: '#b7b1a6', tiles: ['#d2cbc0', '#c5beb2', 48, 16], clouds: true, stars: false,
+      lights: [['#fff4dd', 0, 2.6, -8, 16, 28], ['#fff4dd', -18, 2.5, 2.7, 12, 18], ['#fff4dd', 18, 2.5, 2.7, 12, 18], ['#fff4dd', 0, 2.6 + H, 3, 14, 20], ['#fff6e0', 4, 2.6 + 2 * H, 4, 14, 18]] },
+    ...fin(boxes),
+    props: [
+      { t: 'sign', x: 6.35, y: 2.15, z: -9.2, w: 3.4, h: 0.85, rot: Math.PI / 2, text: 'HOTMILK', bg: '#1e3d28', fg: '#ffffff' },
+      { t: 'sign', x: 0, y: 2.4, z: -12.55, w: 2.6, h: 0.6, rot: 0, text: 'BLOCO 01', bg: '#2a2a2a', fg: '#ffffff' },
+    ],
+    spawns: [[-28, 2.7], [28, 2.7], [-25, 8.2], [19, 7.6], [-24.5, -1.6], [21, -1.6], [-3.2, -7.4], [6.8, -5.5],
+      [-26, 8, H], [18, 5, H], [0, 2.7, H], [-18, 8, 2 * H], [6, 4, 2 * H], [22, 2.7, 2 * H]],
+    pickups: [['health', 0.6, -12.15], ['health', 0, 2.7], ['health', -24, 7, H], ['health', 6, 3, 2 * H],
+      ['ammo', -24, 8.4], ['ammo', 25, -1.5], ['ammo', 24, 6, H], ['ammo', -18, 4, 2 * H],
+      ['grenade', 6.6, -5.0], ['grenade', -17, 8.5], ['grenade', 4, 8, H], ['grenade', 20, 8, 2 * H]],
+    showcase: [-4.2, 0, -9.5], view: [0.4, 0, -12.2, Math.PI, -0.08], openMax: 7,
+    test: { stairs: { from: [0, 0, -12.4], to: [0, H, -3.7], level: H }, under: { from: [-24, 0, 2.7], to: [18, 0, 2.7], ceil: 3.0 }, roof: { from: [3.6, H, -12.2], to: [3.6, 2 * H, -3.7], level: 2 * H } },
+  });
+}
+
+// ---------- 9) HOTMILK Bloco 02 (hall a oeste + salão a leste, 3 andares) ----------
+// Planta do tour HUB HOTMILK - BLOCO 02 (metros). Cinco pisos no scan, áreas 180 / 213 / 212 / 431 / 402 m².
+// O térreo é um hall em L (recepção, escada, ala); os dois de cima são um salão ~20×22 m com recorte ao sul.
+// A escada fica no mesmo núcleo em todos os pisos. Aqui são 3 andares de 3,3 m: o salão se repete para o vão
+// existir em todos, e o eixo longo passa de ~30 m (união das câmeras) para caber um corredor de 35 m.
+{
+  const H = 3.3, boxes = [];
+  const col = { wall: '#e7e1d6', wall2: '#d7c4a4', inner: '#cfc6b8', floor: '#d5cfc4', roof: '#3c4248', roof2: '#2c3238', stair: '#8d3a3a', trim: '#2f6b45' };
+  const facade = '#c9c2b4', wood = '#c4a574', green = '#2f6b45', red = '#e23b3b';
+  // 'e' do hall é o lado x1; 'w' do salão é o lado x0. O mesmo vão nos três andares.
+  const linkH = [0, 1, 2].map((f) => ({ s: 'e', a: -8.2, b: 3.2, k: 'wide', f }));
+  const linkS = [0, 1, 2].map((f) => ({ s: 'w', a: -8.2, b: 3.2, k: 'wide', f }));
+  const doors = [{ a: -2.4, b: -0.8 }, { a: 5.6, b: 7.2 }, { a: 13.4, b: 15.0 }, { a: 18.0, b: 19.6 }];
+  boxes.push(...building(-18, -11, -6.2, 4, { col, floors: 3, H, t: 0.4, parapet: 0.9,
+    ops: [...linkH, { s: 'n', a: -15.4, b: -12.2 }, { s: 'w', a: -6, b: -3, k: 'win', f: 1 }, { s: 'w', a: 0.4, b: 2.6, k: 'win', f: 2 }],
+    stairs: [{ f: 0, r: [-16.6, -7.2, -8.4, -4.0], axis: 'x', dir: 1 }, { f: 1, r: [-16.6, -2.0, -8.4, 1.2], axis: 'x', dir: 1 }] }));
+  boxes.push(...building(-6.2, -9, 22, 13, { col, floors: 3, H, t: 0.4, parapet: 0.9,
+    ops: [...linkS,
+      { s: 's', a: -1, b: 3, k: 'win', f: 1 }, { s: 's', a: 8, b: 12, k: 'win', f: 1 }, { s: 's', a: 16, b: 20, k: 'win', f: 2 },
+      { s: 'e', a: -2, b: 2, k: 'win' }, { s: 'e', a: 6, b: 10, k: 'win', f: 1 }, { s: 'n', a: 4, b: 8, k: 'win', f: 1 }],
+    inner: [0, 1, 2].flatMap((f) => [
+      { axis: 'x', s0: -5.4, s1: 21.4, line: -1.2, f, ops: doors },
+      { axis: 'x', s0: -5.4, s1: 21.4, line: 4.6, f, ops: doors },
+      { axis: 'z', s0: -8.5, s1: -1.05, line: 2.2, f, ops: [] },
+      { axis: 'z', s0: -8.5, s1: -1.05, line: 9.2, f, ops: [] },
+      { axis: 'z', s0: -8.5, s1: -1.05, line: 16.2, f, ops: [] },
+      { axis: 'z', s0: 4.45, s1: 12.4, line: 0.4, f, ops: [] },
+      { axis: 'z', s0: 4.45, s1: 12.4, line: 8.4, f, ops: [] },
+      { axis: 'z', s0: 4.45, s1: 12.4, line: 15.4, f, ops: [] },
+    ]).concat([
+      { axis: 'z', s0: -1.35, s1: 4.75, line: 4.8, f: 1, ops: [{ a: 2.7, b: 4.3 }] },
+      { axis: 'z', s0: -1.35, s1: 4.75, line: 13.2, f: 2, ops: [{ a: -0.8, b: 0.8 }] },
+    ]) }));
+  // laje-ponte no vão dos dois prédios (a rampa acaba antes, no hall)
+  boxes.push(B(-7.05, -8.6, -5.35, 3.5, 0.3, col.floor, H - 0.3), B(-7.05, -8.6, -5.35, 3.5, 0.3, col.floor, 2 * H - 0.3));
+  for (const y of [0, H, 2 * H]) boxes.push({ wp: [-7.4, y, 2.4] }, { wp: [-5.4, y, 2.4] }, { wp: [-7.5, y, -5.6] }, { wp: [-7.5, y, -0.4] });
+  // fora da planta vira fachada; sobra o recuo da porta sul do hall
+  boxes.push(B(-24, -15, -18, 15, 11, facade), B(22, -15, 24, 15, 11, facade));
+  boxes.push(B(-18, -15, -15.6, -11, 11, facade), B(-12.0, -15, -6.2, -11, 11, facade));
+  boxes.push(B(-6.2, -15, 22, -9, 11, facade));
+  boxes.push(B(-18, 4, -6.2, 15, 11, facade), B(-6.2, 13, 22, 15, 11, facade));
+  // hall: balcão, painel verde, sofá. Poço fechado no canto do salão.
+  boxes.push(B(-17.6, -10.6, -16.2, -9.3, 1.1, wood), B(-16.2, -10.6, -15.2, -9.5, 1.05, green));
+  boxes.push(B(-17.6, 3.05, -15.4, 3.6, 0.7, red));
+  boxes.push(B(20.3, -8.6, 21.6, -6.4, 3 * H, '#2a2a2a'));
+  for (const [x, z] of [[-1.2, -5.2], [6.2, -5.6], [12.4, -5.0], [18.6, -5.4], [-2.2, 8.2], [4.6, 9.0], [11.6, 8.4], [18.8, 9.2]]) {
+    boxes.push(crate(x, z, 1.2, 1.1, wood), crate(x + 0.4, z + 0.3, 1.15, 1.1, wood, H), crate(x - 0.3, z - 0.2, 1.15, 1.1, wood, 2 * H));
+  }
+  // encostados na parede do corredor, fora do eixo das portas (senão tapam a saída da sala)
+  for (const x of [-4.6, 3.2, 10.4, 16.0]) boxes.push(crate(x, -0.45, 1.0, 1.05, wood), crate(x, 3.95, 1.0, 1.05, wood));
+  MAPS.push({
+    id: 'hotmilk-bloco-2', name: 'HOTMILK Bloco 02', desc: 'Bloco 02 em três andares: hall de entrada a oeste (recepção, sofá e escada) ligado por um vão ao salão de escritórios, com salas dos dois lados do corredor.',
+    size: [24, 15], wallH: 8, wallColor: [facade, '#b7b09f'], laneMin: 35,
+    palette: { sky: '#9ec8ea', fog: ['#c5d3df', 45, 120], hemi: ['#ffffff', '#b7a48a', 1.45], sun: ['#fff6e4', 1.5], ground: '#b7b1a6', tiles: ['#d2cbc0', '#c5beb2', 48, 16], clouds: true, stars: false,
+      lights: [['#fff4dd', -12, 2.6, -4, 16, 22], ['#fff4dd', 8, 2.6, 2, 18, 24], ['#fff4dd', 8, 2.6 + H, 2, 16, 22], ['#fff6e0', 4, 2.6 + 2 * H, 4, 16, 20]] },
+    ...fin(boxes),
+    props: [
+      { t: 'sign', x: -13.8, y: 2.3, z: -10.45, w: 2.8, h: 0.7, rot: 0, text: 'BLOCO 02', bg: '#1e3d28', fg: '#ffffff' },
+    ],
+    spawns: [[-16.2, 2.4], [-10, 2.4], [-3.2, 2.4], [3.2, 2.4], [10.2, 2.4], [17.2, 2.4], [-14.2, -8.8], [7.4, -4.2],
+      [-13.2, 2.6, H], [1.2, 7.6, H], [14.0, -4.4, H], [18.4, 8.2, H],
+      [-16.6, 2.8, 2 * H], [6.4, 7.4, 2 * H], [14.4, 2.6, 2 * H]],
+    pickups: [['health', -14.4, -8.6], ['health', 6.0, 7.8, H], ['health', -3.6, 8.2, 2 * H],
+      ['ammo', 17.0, -3.6], ['ammo', -3.4, -5.2, H], ['ammo', 16.4, 8.6, 2 * H],
+      ['grenade', 4.2, -5.4], ['grenade', 16.6, 2.6, H], ['grenade', 8.4, -4.8, 2 * H]],
+    showcase: [-14, 0, -6], view: [-13.8, 0, -13.2, 0, -0.06], openMax: 7,
+    test: {
+      stairs: { from: [-17.05, 0, -5.6], to: [-7.5, H, -5.6], level: H },
+      roof: { from: [-17.05, H, -0.4], to: [-7.5, 2 * H, -0.4], level: 2 * H },
+      under: { from: [-16, 0, 2.4], to: [19, 0, 2.4], ceil: 3.0 },
+    },
+  });
+}
+
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
