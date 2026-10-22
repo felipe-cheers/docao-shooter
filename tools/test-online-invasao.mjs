@@ -51,7 +51,7 @@ for (const [p, n] of [[A, 'Ana'], [B, 'Beto']]) ok(await until(p, () => window._
 await until(A, () => !!window.__docao.invHal, 5000);
 const s0 = await G(A, () => { const g = window.__docao; return { humans: g.entities.filter((e) => !e.zt).length, bots: g.entities.filter((e) => e.bot && !e.zt).length, hal: !!g.invHal, ph: g.invView.phase }; });
 ok(s0.humans === 2 && s0.bots === 0, 'online: só jogadores de verdade, sem bots');
-ok(s0.hal && s0.ph === 'prep', 'online: decoração de Halloween e preparação');
+ok(s0.hal && (s0.ph === 'prep' || s0.ph === 'wave'), 'online: decoração de Halloween e partida começando (prep/wave 1)');
 ok(await until(A, () => { const v = window.__docao.invView; return [...v.lives.values()].length === 2 && [...v.lives.values()].every((s) => s.lives === 2); }), '2 vidas pra cada um (estado do servidor)');
 // 2) wave 1: zumbis aparecem nos dois
 await T(A, { wave: 1, fog: NOFOG });
