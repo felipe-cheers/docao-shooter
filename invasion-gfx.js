@@ -167,7 +167,7 @@ export function dieZombie(m, z, T) {
 // ---------------- decoração de Halloween ----------------
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function seeded(seed) { let a = seed || 1; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-export const HALLOWEEN_PAL = { sky: '#140a24', fog: ['#2a1840', 24, 110], hemi: ['#9a8ad8', '#221a2c', 1.05], sun: ['#ff9a4a', 0.95] };
+export const HALLOWEEN_PAL = { sky: '#140a24', fog: ['#2a1840', 24, 110], hemi: ['#9a8ad8', '#221a2c', 0.85], sun: ['#ff9a4a', 0.75] };
 // noite: céu, neblina e luz (o mapa base não muda; sair do modo chama applyPalette de novo)
 export function applyHalloweenPalette(scene, hemi, sun, map) {
   const P = HALLOWEEN_PAL; scene.background = new THREE.Color(P.sky); scene.fog = new THREE.Fog(P.fog[0], P.fog[1], P.fog[2]);

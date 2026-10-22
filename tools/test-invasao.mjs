@@ -150,33 +150,38 @@ await G(() => { const g = window.__docao, I = g.inv; I.startWave(20); I.queue = 
 ok(await until(() => window.__docao.state === 'over', 20000), 'wave 20 limpa → vitória');
 ok(/sobreviveram às 20 waves/i.test(await G(() => document.getElementById('winner').textContent)), 'tela de vitória');
 
-// ---------- 7) tipos de zumbi + chefão ----------
+// ---------- 7) tipos de zumbi + chefão (screenshots sem HUD) ----------
+const hud = (on) => G((v) => { document.getElementById('hud').style.visibility = v ? '' : 'hidden'; }, on);
 await G(() => window.__docao.startGame('rodizio')); await wait(800);
 const types = await G(() => {
   const g = window.__docao, I = g.inv, p = g.player; I.phase = 'break'; I.phaseEnd = 1e9; window.__stopAt = g.time + 0.05;
-  const out = []; ['walker', 'runner', 'tank', 'spitter', 'boss'].forEach((t, i) => { const z = I.spawn(t); z.pos.set(-6 + i * 3.2, 0, -6); z.yaw = 0; z.stunUntil = 1e9; out.push([t, z.model.group.children.length, +z.size]); });
-  p.pos.set(0, 0, 4); return out;
+  // praça aberta: o ponto do nav com mais vizinhos livres na frente (zumbis em fila + câmera)
+  const good = g.nav.good.filter((n) => n.y < 0.5); let c = good[0], bc = -1;
+  for (let i = 0; i < 400; i++) { const q = good[Math.floor(Math.random() * good.length)]; let k = 0; for (const n of good) if (Math.abs(n.y - q.y) < 0.4 && Math.abs(n.x - q.x) < 9 && n.z - q.z > -3 && n.z - q.z < 13) k++; if (k > bc) { bc = k; c = q; } }
+  const out = []; ['walker', 'runner', 'tank', 'spitter', 'boss'].forEach((t, i) => { const z = I.spawn(t); const x = c.x - 6.4 + i * 3.2; z.pos.set(x, g.groundAt(x, c.z, c.y + 1), c.z); z.yaw = 0; z.stunUntil = 0; z.target = null; out.push([t, z.model.group.children.length, +z.size]); });
+  for (const z of I.zombies) { z.spd = 0; } p.pos.set(c.x, c.y, c.z + 30); window.__line = { x: c.x, y: c.y, z: c.z }; return out;
 });
 ok(types.length === 5 && new Set(types.map((t) => t[2])).size >= 4, `5 tipos de zumbi com silhuetas diferentes (${types.map((t) => t[0] + '×' + t[2]).join(', ')})`);
-await G(() => { const g = window.__docao; for (const z of g.inv.zombies) { z.pos.y = g.groundAt(z.pos.x, z.pos.z, 1); } window.__cam = { p: [0.5, 2.2, 3.2], t: [0.5, 1.3, -6], fov: 62 }; });
+await hud(false);
+await G(() => { const L = window.__line; window.__cam = { p: [L.x + 0.3, L.y + 2.3, L.z + 9.5], t: [L.x + 0.3, L.y + 1.4, L.z], fov: 62 }; });
 await wait(900); await page.screenshot({ path: `${SHOTS}/zumbis-tipos.png` });
-await G(() => { window.__cam = { p: [5.5, 2.4, -2.2], t: [6.8, 1.7, -6], fov: 55 }; }); await wait(500);
+await G(() => { const L = window.__line; window.__cam = { p: [L.x + 7.6, L.y + 2.7, L.z + 4.6], t: [L.x + 6.4, L.y + 2.0, L.z], fov: 55 }; }); await wait(500);
 await page.screenshot({ path: `${SHOTS}/chefao-docao-abobora.png` });
-// Rodízio de Halloween visto de cima (noite, lua, abóboras, velas, névoa no chão)
+// Rodízio de Halloween (noite, lua laranja, abóboras, velas, névoa no chão)
 await G(() => { window.__cam = { p: [-30, 26, 62], t: [0, 0, 10], fov: 70 }; }); await wait(700);
 await page.screenshot({ path: `${SHOTS}/rodizio-halloween.png` });
-await G(() => { window.__cam = { p: [8, 3.2, 30], t: [-4, 1, 14], fov: 70 }; }); await wait(500);
+await G(() => { const L = window.__line; window.__cam = { p: [L.x - 8, L.y + 3.5, L.z + 16], t: [L.x, L.y + 1, L.z], fov: 72 }; }); await wait(500);
 await page.screenshot({ path: `${SHOTS}/rodizio-halloween-chao.png` });
 await G(() => { window.__cam = null; window.__stopAt = null; });
 
 // ---------- 8) mapa novo: Fazenda Mal-Assombrada ----------
 await G(() => window.__docao.startGame('fazenda-assombrada')); await wait(1200);
 ok(await G(() => window.__docao.map.id === 'fazenda-assombrada' && !!window.__docao.invHal), 'Fazenda Mal-Assombrada abre na Invasão (com decoração)');
-await G(() => { window.__stopAt = window.__docao.time + 0.05; window.__cam = { p: [34, 30, 40], t: [0, 0, 0], fov: 70 }; }); await wait(800);
+await hud(false); await G(() => { window.__stopAt = window.__docao.time + 0.05; window.__cam = { p: [34, 30, 40], t: [0, 0, 0], fov: 70 }; }); await wait(800);
 await page.screenshot({ path: `${SHOTS}/fazenda-assombrada.png` });
 await G(() => { window.__cam = { p: [-4, 2.4, 16], t: [0, 3, 0], fov: 70 }; }); await wait(500);
 await page.screenshot({ path: `${SHOTS}/fazenda-assombrada-casarao.png` });
-await G(() => { window.__cam = null; window.__stopAt = null; });
+await G(() => { window.__cam = null; window.__stopAt = null; }); await hud(true);
 
 // ---------- 9) modos base intactos ----------
 await G(() => window.__docao.endGame()); await G(() => document.getElementById('menuBtn').click());

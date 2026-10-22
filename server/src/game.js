@@ -770,6 +770,7 @@ export class Game {
     if (m.lives != null) e.lives = m.lives | 0;
     if (m.hurt) this.damage(e, m.hurt, null, 0, false);
     if (m.fog) Object.assign(I.fog, m.fog, { t0: 0, t1: 0 });
+    if (m.hold) I.phaseEnd = this.T + 1e6; // segura a pausa/preparação (testes lentos)
   }
   // ---------- bots (mesma lógica dos bots offline, sem Three.js) ----------
   randomWaypoint() { const n = this.nav.randomNode(); return n ? { x: n.x, y: n.y, z: n.z } : { x: rand(-10, 10), y: 0, z: rand(-10, 10) }; }
