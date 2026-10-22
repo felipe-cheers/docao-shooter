@@ -269,3 +269,8 @@ body.dead #killfeed{bottom:auto;top:38%;left:16px}
 
 /* barra de prêmios por abate só na partida: no menu ela cobria o Docão da vitrine */
 body:has(#menu:not(.hidden)) #streakBar { display: none !important; }
+
+/* Treino (Estande do Docão) */
+#trainInfo{display:inline-block;margin-top:4px;background:rgba(20,10,8,.62);color:#fff;padding:4px 12px;border-radius:8px;font-size:14px;white-space:nowrap;pointer-events:none}
+#trainInfo b{color:#fff;font-size:16px}#trainInfo b.hd{color:#ffd23a}
+.trainnote{margin:6px 0;padding:6px 10px;border-radius:8px;background:rgba(242,201,76,.18);font-size:13px;line-height:1.35}
