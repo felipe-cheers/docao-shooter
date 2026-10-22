@@ -22,7 +22,7 @@ const fails = [], errors = []; const ok = (c, m) => { console.log((c ? 'OK   ' :
     if (Math.abs(inspectPose(0.3, prof).ry - prof.a.ry) > 0.05 || Math.abs(inspectPose(0.71, prof).ry - prof.b.ry) > 0.05) bad.push(name + ':lados');
   }
   ok(bad.length === 0, `curva: começa e termina em zero, sem salto, lados A e B certos${bad.length ? ' — ' + bad.join(' ') : ''}`);
-  const want = { 0: 'rifle', 1: 'rifle', 2: 'sniper', 3: 'rocket', 4: 'pistol', 5: 'sniper', 6: 'sniper', 7: 'knife', 8: 'saber', 11: 'pistol', 13: 'bow', 14: 'bow', 16: 'disc', 17: 'saber', 18: 'rifle', 19: 'bow', 20: 'heavy' };
+  const want = { 0: 'rifle', 1: 'rifle', 2: 'sniper', 3: 'rocket', 4: 'pistol', 5: 'sniper', 6: 'sniper', 7: 'knife', 8: 'saber', 11: 'pistol', 13: 'bow', 14: 'bow', 16: 'disc', 17: 'saber', 18: 'rifle', 19: 'bow', 20: 'heavy', 21: 'lmg' };
   const wrong = Object.entries(want).filter(([i, k]) => WEAPONS[i] && inspectKind(WEAPONS[i]) !== k).map(([i, k]) => `${WEAPONS[i].key}=${inspectKind(WEAPONS[i])}≠${k}`);
   ok(wrong.length === 0 && WEAPONS.every((w) => INSPECT_PROFILES[inspectKind(w)]), `perfil por arma (${WEAPONS.length} armas)${wrong.length ? ' — ' + wrong.join(' ') : ''}`);
   if (WEAPONS.length < 21) console.log('AVISO: WEAPONS tem só', WEAPONS.length, 'armas');

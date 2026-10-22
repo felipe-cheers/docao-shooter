@@ -23,7 +23,7 @@ export function regenStep(e, now, dt) {
 export const BACON_ITEM = { heal: 10, radius: 1.2, dy: 1.0, from: 0.3, life: 3.45 };
 export const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, RADIUS = 0.42, HEIGHT = 2.0, EYE = 1.6;
 
-// Armas. Primárias (menu): 0 Fuzil, 1 Calibre 12 (pump), 12 Semi, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Faca 7, sabre 8. Secundária: 4 pistola, 11 furadeira, 13 besta, 14 arco, 19 estilingue. 18 lança-milho, 20 minigun (só código). A besta e o arco são fracas de propósito: um tiro no corpo não mata.
+// Armas. Primárias (menu): 0 Fuzil, 21 Metralhadora do Chiqueiro, 1 Calibre 12 (pump), 12 Semi, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Faca 7, sabre 8. Secundária: 4 pistola, 11 furadeira, 13 besta, 14 arco, 19 estilingue. 18 lança-milho, 20 minigun (só código). A besta e o arco são fracas de propósito: um tiro no corpo não mata.
 export const WEAPONS = [
   { key: 'rifle', name: 'Fuzil Pururuca', short: 'Fuzil Pururuca', chip: 'Fuzil', mag: 30, reserve: 120, dmg: 20, headMul: 2, rate: 0.1, auto: true, pellets: 1, spread: 0.01, reload: 1.6, range: 140, recoil: 0.018, adsFov: 40, adsSpread: 0.12, flashZ: -0.76,
     desc: 'Automático · 30/120 · 20 dano' },
@@ -86,24 +86,28 @@ export const WEAPONS = [
   // 20 · Minigun do Galpão: fora do Arsenal (código "minigun" no chat). Embala 0,6 s, ~22 tiros/s, esquenta e trava; anda a 60%, sem zoom.
   { key: 'minigun', name: 'Minigun do Galpão', short: 'Minigun', chip: 'Minigun', mag: 150, reserve: 300, dmg: 12, headMul: 1.4, rate: 0.045, auto: true, pellets: 1, spread: 0.03, reload: 4.2, range: 120, recoil: 0.006, adsFov: 75, adsSpread: 1, flashZ: -0.86,
     falloff: [14, 45, 0.55], spin: { up: 0.6, down: 0.9, heat: 0.0115, cool: 0.5 }, heavy: true, noAds: true, move: 0.6, desc: 'Embala 0,6 s · ~22 tiros/s · esquenta e trava · anda 40% mais devagar' },
+  // 21 · Metralhadora do Chiqueiro: fita grande, automática. DPS abaixo do fuzil (15 / 0,08 s = 187 contra 200). Anda 5% mais devagar. Sem heavy/spin (cairia na inspeção da minigun); perfil próprio lmg.
+  { key: 'lmg', name: 'Metralhadora do Chiqueiro', short: 'Metralhadora', chip: 'LMG', mag: 100, reserve: 300, dmg: 15, headMul: 1.6, rate: 0.08, auto: true, pellets: 1, spread: 0.024, reload: 3.1, range: 130, recoil: 0.012, adsFov: 48, adsSpread: 0.22, flashZ: -0.95,
+    falloff: [18, 55, 0.5], move: 0.95, inspect: 'lmg', desc: 'Fita · 100/300 · anda 5% mais devagar · menos dano por segundo que o fuzil' },
 ];
 // Penetração e collateral (regra em shared/penetration.js). pen = metros de parede fina por bala (caixote conta 45%);
 // pierce = corpos extras que a bala atravessa; pierceMul = dano que sobra a cada corpo. Sem entrada = não atravessa nada.
-const PEN_STATS = { rifle: [0.35], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4] };
+const PEN_STATS = { rifle: [0.35], lmg: [0.4], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4] };
 for (const w of WEAPONS) { const s = PEN_STATS[w.key]; w.pen = s ? s[0] : 0; w.pierce = s ? s[1] || 0 : 0; w.pierceMul = s ? s[2] ?? 1 : 1; }
 export const UZI = 9, P90 = 10, NAIL = 11, SEMI = 12;
 export const CROSS = 13, BOW = 14, FAMAS = 15, DISC_W = 16, SABER2 = 17;
 export const CORN_W = 18;
 export const EGG_W = 19; // Estilingue de Ovo
 export const MINIGUN = 20; // fora do Arsenal: só pelo código "minigun" no chat
+export const LMG = 21; // Metralhadora do Chiqueiro
 export const isSaber = (i) => !!(WEAPONS[i] && WEAPONS[i].saber); // Sabre (8) ou Sabre Duplo (17)
-export const PRIMARIES = [0, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
+export const PRIMARIES = [0, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
 export const SECONDARIES = [PISTOL, NAIL, CROSS, BOW, EGG_W];
 export const MELEES = [KNIFE, SABER, SABER2];
-export const BOT_PRIMARIES = [0, UZI, P90, FAMAS, 1, SEMI, 2, 5, 6, 3, CORN_W];
+export const BOT_PRIMARIES = [0, LMG, UZI, P90, FAMAS, 1, SEMI, 2, 5, 6, 3, CORN_W];
 // Menu: cada grupo é uma escolha. primary = uma primária. melee = faca ou sabre. secondary = pistola, furadeira, besta, arco ou estilingue.
 export const CATEGORIES = [
-  { id: 'rajada', title: 'Rajada', pick: 'primary', weapons: [0, UZI, P90, FAMAS] },
+  { id: 'rajada', title: 'Rajada', pick: 'primary', weapons: [0, LMG, UZI, P90, FAMAS] },
   { id: 'escopeta', title: 'Escopeta', pick: 'primary', weapons: [1, SEMI] },
   { id: 'precisao', title: 'Precisão', pick: 'primary', weapons: [2, 5, 6] },
   { id: 'explosivo', title: 'Explosivo', pick: 'primary', weapons: [3, CORN_W] },
@@ -139,5 +143,5 @@ export const BOT_DEFS = [
   { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' }, { name: 'Linguiça' }, { name: 'Quindim' }, { name: 'Coxinha' }, { name: 'Pururuca' },
 ];
 
-export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16]; // 9 mini uzi perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam)
+export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16]; // 9 mini uzi perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam), 21 metralhadora no meio
 export const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b', '#9fd0ff', '#ffa3d8', '#b8f2e6', '#ffe9a8'];

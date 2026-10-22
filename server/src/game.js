@@ -343,6 +343,17 @@ export class Game {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
     if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if (this.training && e.alive) this.equipNow(e); return; }
+    // pausa: troca o loadout. Treino equipa na hora. Fora do treino, morre (sem abate) e nasce neste tick.
+    if (k === 'px') {
+      const okP = PRIMARIES.includes(ev[1]), okS = SECONDARIES.includes(ev[2]), okM = MELEES.includes(ev[3]);
+      if (okP) e.nextPrimary = ev[1]; if (okS) e.nextSecondary = ev[2]; if (okM) e.nextMelee = ev[3];
+      if (!e.alive || !okP || !okS || !okM) return;
+      if (this.training) { this.equipNow(e); return; }
+      if (e.slots[0] === e.nextPrimary && e.slots[1] === e.nextSecondary && e.slots[2] === e.nextMelee) return;
+      this.kill(e, null, e.weapon, false); // atacante null: deaths++, ninguém ganha o abate
+      e.respawnAt = this.T; e.rsReq = true; // o laço spawna humano quando rsReq e T >= respawnAt, sem os 5 s
+      return;
+    }
     if (!e.alive) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
@@ -391,9 +402,9 @@ export class Game {
   // impacto do míssil pilotado: precisa ter um míssil no ar e o ponto tem que ser alcançável desde o lançamento
   missileImpact(e, cA) {
     const M = e.ksMissile, c = obj3(cA); if (!M || !c) return;
-    const fly = this.T - M.T0 - PREDATOR.laptop, slack = 6 + clamp(e.ping / 1000, 0, 0.5) * PREDATOR.speed;
+    const fly = this.T - M.T0 - PREDATOR.laptop, cap = PREDATOR.speed * (PREDATOR.boost || 1), slack = 6 + clamp(e.ping / 1000, 0, 0.5) * cap;
     const [hx, hz] = this.map.size;
-    if (fly < -0.4 || fly > PREDATOR.life + 2 || dist(M.start, c) > PREDATOR.speed * Math.max(0, fly) + slack || Math.abs(c.x) > hx + 2 || Math.abs(c.z) > hz + 2 || c.y > M.start.y + 1) { e.rejectedShots = (e.rejectedShots || 0) + 1; e.ksMissile = null; return; }
+    if (fly < -0.4 || fly > PREDATOR.life + 2 || dist(M.start, c) > cap * Math.max(0, fly) + slack || Math.abs(c.x) > hx + 2 || Math.abs(c.z) > hz + 2 || c.y > M.start.y + 1) { e.rejectedShots = (e.rejectedShots || 0) + 1; e.ksMissile = null; return; }
     e.ksMissile = null;
     this.blast(c, e, { radius: PREDATOR.radius, maxDmg: PREDATOR.maxDmg, selfMul: PREDATOR.selfMul, knock: PREDATOR.knock, lift: PREDATOR.lift, wIdx: W_NADE, kind: 'p', ks: 'p' });
   }
