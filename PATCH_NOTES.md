@@ -16,6 +16,18 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.6.1 · Respiro:** vida regenera fora de combate
 - **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
 - **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
+- **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
+
+---
+
+## v1.8.1 — Streak de verdade 💥 (22/10/2026)
+
+- Online, o míssil pilotado, o Gavião e o Fim da chapa agora matam de verdade. Antes eles apareciam só na tela de quem usou
+- Quem decide é o servidor: ele conta a sua sequência, confere se você ganhou o prêmio e se o míssil chegou onde dava pra chegar, e só então aplica o dano
+- Todo mundo vê a explosão do míssil, o Gavião voando e atirando e a contagem e o clarão do Fim da chapa
+- Os outros jogadores (e os bots) podem atirar no Gavião e derrubá-lo
+- O kill feed mostra o nome do prêmio: [Míssil da granja], [Gavião da granja] e [Fim da chapa]
+- Igual ao offline: abates do Gavião valem 25 pontos e não contam pra sequência, o Fim da chapa também não conta, e morrer depois de puxar o rádio não cancela
 
 ---
 

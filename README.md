@@ -262,6 +262,7 @@ Abates seguidos sem morrer enchem a barra da direita. Quando um prêmio fica pro
 
 - Depois do 10º abate a sequência recomeça.
 - Os abates do Gavião e da nuke não contam pra sequência. Cada abate do Gavião vale 25 pontos.
+- **Online** quem manda é o servidor: ele conta a sequência, confere o prêmio e aplica o dano do míssil, do Gavião e do Fim da chapa, e todo mundo vê o efeito. Os outros jogadores podem derrubar o Gavião.
 - **Pontos:** +10 por acerto, +100 por abate e +150 por abate na cabeça.
 
 ### 🎨 Camuflagens (valem pra partida)
@@ -415,6 +416,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | `tools/stuck-repro.mjs`: ninguém fica preso na parede | `test-treino.mjs`, `test-faca.mjs`, `test-bacon.mjs` | `test-online-nextmap.mjs` |
 | | `test-mira.mjs`, `test-reload.mjs`, `test-respawn.mjs` | `test-faca-online.mjs`, `test-treino-online.mjs` |
 | | `test-nextmap.mjs`, `test-skin-start.mjs` | `test-prod.mjs`, `test-prod-dom.mjs` |
+| | | `tools/test-killstreak-online.mjs`: míssil, Gavião e nuke online |
 
 Exemplo do online:
 
@@ -509,7 +511,7 @@ Ideias, bugs e sugestões de mapa ou skin são bem-vindos nas issues. 🐷
 ## ⚠️ Limitações conhecidas
 
 - A **fumaça** e o **atordoamento** só funcionam offline.
-- Os **killstreaks** rodam no cliente. Online o servidor ainda não aplica o dano do míssil, do Gavião nem da nuke.
+- Online o **Olho da granja** (minimapa) é calculado no seu próprio jogo. O míssil, o Gavião e o Fim da chapa são decididos pelo servidor.
 - A colisão é feita de caixas alinhadas, por isso os andares são ligados por rampas (não há escada de mão) e barris e silos colidem como quadrados.
 - Os bots não fazem rocket jump nem pulam entre telhados.
 
