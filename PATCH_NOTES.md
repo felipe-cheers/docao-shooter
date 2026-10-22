@@ -19,8 +19,16 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
 - **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
 - **v1.8.3 · Comanda da Fazendinha** ([@hiro-cheers](https://github.com/hiro-cheers), PR #8): menu inicial novo com cenário de fazendinha ao entardecer
+- **v1.8.4 · Agachadinha** ([@felipe-cheers](https://github.com/felipe-cheers), PR #9): Shift agacha com hitbox sincronizada no online, mira só no botão direito e um pulo por toque no Espaço
 
 ---
+
+## v1.8.4 — Agachadinha 🐖 (22/10/2026)
+Feito pelo **[@felipe-cheers](https://github.com/felipe-cheers)** (PR #9).
+- Segure **Shift** (esquerdo ou direito) para agachar, com animação e câmera mais baixa. O Docão anda mais devagar e só levanta se houver espaço acima da cabeça.
+- A mira com zoom agora fica só no **botão direito** do mouse (o Shift virou o agachar).
+- A hitbox acompanha a transição ao agachar e levantar, inclusive nos tiros, golpes de faca e explosões. A postura também é sincronizada no multiplayer, e o servidor confere a troca.
+- Corrigido o pulo que se repetia ao pular, agachar e soltar o agachar no ar. Cada pressão em Espaço agora dispara apenas um pulo.
 
 ## v1.8.3 — Comanda da Fazendinha 🌅 (22/10/2026)
 Feito pelo **[@hiro-cheers](https://github.com/hiro-cheers)** (PR #8).

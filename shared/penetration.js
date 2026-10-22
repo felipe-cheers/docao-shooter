@@ -6,6 +6,7 @@
 //  caixote = caixa solta ≤ 2,05 m. Chão, laje, rampa, muro de 1 m, contêiner, ônibus e o limite do mapa seguram a bala.
 // ============================================================
 import { HITBOXES } from './physics.js';
+import { stanceScale } from './stance.js';
 export const PEN = { thin: 0.65, crate: 2.05, wood: 0.45, loss: 0.15, slope: 0.45, minMul: 0.2, maxWalls: 3, eps: 1e-3, heliMin: 0.15 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const at = (o, d, t) => ({ x: o.x + d.x * t, y: o.y + d.y * t, z: o.z + d.z * t });
@@ -34,17 +35,24 @@ export function sphereSpan(o, d, c, r) {
   if (h < 0) return null; const q = Math.sqrt(h); return [-b - q, -b + q];
 }
 export function falloffMul(W, t) { if (!W.falloff) return 1; const [n0, n1, mn] = W.falloff; return clamp(1 - (t - n0) / (n1 - n0) * (1 - mn), mn, 1); }
-// P = createPhysics(...); targets = [{ e, p }] (p = pés, já voltados no tempo no servidor); helis = [{ h, c, r }] (o mesmo h pode vir 2×)
+// agachado: o corpo achata na vertical (igual ao rayHitboxes de physics.js); devolve [entrada, saída] no raio original
+function bodySpan(o, d, p, y, r, crouch) {
+  const s = stanceScale(crouch); if (s >= 0.9999) return sphereSpan(o, d, { x: p.x, y: p.y + y, z: p.z }, r);
+  const L = Math.hypot(d.x, d.y / s, d.z); if (L < 1e-9) return null;
+  const sp = sphereSpan({ x: o.x, y: p.y + (o.y - p.y) / s, z: o.z }, { x: d.x / L, y: d.y / s / L, z: d.z / L }, { x: p.x, y: p.y + y, z: p.z }, r);
+  return sp ? [sp[0] / L, sp[1] / L] : null;
+}
+// P = createPhysics(...); targets = [{ e, p, crouch }] (p = pés, já voltados no tempo no servidor; crouch 0..1); helis = [{ h, c, r }] (o mesmo h pode vir 2×)
 // devolve { hits: [{ e, t, head, dmg, walls, bodies }], heli: { h, t, dmg } | null, end, stop: 'far'|'wall'|'body'|'heli', holes: [{ p, n, out }] }
 export function traceShot(P, o, d, W, targets, helis = [], scale = 1) {
   const far = W.range, out = { hits: [], heli: null, end: far, stop: 'far', holes: [] }, done = new Set();
   let t0 = 0, mul = 1, left = W.pen || 0, walls = 0, bodies = 0;
   for (let it = 0; it < 8; it++) {
     const wh = P.rayWorldS(at(o, d, t0), d, far - t0), wallT = wh ? t0 + wh.t : far, seg = [];
-    for (const { e, p } of targets) {
+    for (const { e, p, crouch } of targets) {
       if (done.has(e)) continue; let b = null;
       for (const [y, r, head] of HITBOXES) {
-        const sp = sphereSpan(o, d, { x: p.x, y: p.y + y, z: p.z }, r); if (!sp || sp[1] <= t0) continue;
+        const sp = bodySpan(o, d, p, y, r, crouch || 0); if (!sp || sp[1] <= t0) continue;
         const t = sp[0] >= t0 ? sp[0] : t0 > 0 ? t0 : sp[1]; // encostado do outro lado da parede: entra no início do trecho; colado no cano: raiz de trás (igual ao raySphere)
         if (t > 0 && t < wallT && (!b || t < b.t)) b = { e, t, head };
       }

@@ -129,13 +129,20 @@ ok(r.s === null && r.rl, 'R recarrega e cancela a inspeção');
 await G(() => { const g = window.__docao; g.player.reloadEnd = 0; g.player.mag[0] = g.WEAPONS[0].mag; });
 // cancelar mirando
 await equip(0); await G(() => window.__docao.inspect()); await waitGame(0.4);
-await page.keyboard.down('ShiftLeft'); await waitGame(0.3);
+await page.mouse.move(640, 360); await page.mouse.down({ button: 'right' }); await waitGame(0.3);
 r = await G(() => ({ s: window.__docao.inspecting, ads: window.__docao.ads }));
-ok(r.s === null && r.ads > 0, `mirar (Shift) cancela (ads ${r.ads.toFixed(2)})`);
+ok(r.s === null && r.ads > 0, `mirar (botão direito) cancela (ads ${r.ads.toFixed(2)})`);
 // bloqueio: mirando não começa
 await waitGame(0.4);
 ok(await G(() => window.__docao.inspect()) === false, 'mirando não dá pra inspecionar');
-await page.keyboard.up('ShiftLeft'); await waitGame(0.5);
+await page.mouse.up({ button: 'right' }); await waitGame(0.5);
+// Shift agora agacha: agachar não cancela a inspeção
+await equip(0); await G(() => window.__docao.inspect()); await waitGame(0.3);
+await page.keyboard.down('ShiftLeft'); await waitGame(0.4);
+r = await G(() => ({ s: window.__docao.inspecting, crouch: window.__docao.player.crouch || 0 }));
+await page.keyboard.up('ShiftLeft'); await waitGame(0.6);
+ok(r.s !== null && r.crouch > 0.5, `agachar (Shift) não cancela a inspeção (crouch ${r.crouch.toFixed(2)})`);
+await G(() => window.__docao.stopInspect && window.__docao.stopInspect(true)); await waitGame(2.4);
 // cancelar trocando (tecla 2) e com o V
 await equip(0); await G(() => window.__docao.inspect()); await waitGame(0.4);
 await page.keyboard.press('Digit2');

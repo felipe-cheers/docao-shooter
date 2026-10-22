@@ -1,6 +1,6 @@
 // Docão Shooter — jogo original de tiro em primeira pessoa com o Docão (mascote Cheers).
 import * as THREE from 'three';
-import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife } from './docao.js';
+import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, setCrouchPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife } from './docao.js';
 import { makeFPSniper, poseSniperBolt } from './sniper-view.js';
 import { makeFPSaber, makeWorldSaber, setSaberColor, poseSaber } from './saber-view.js';
 import { makeFPCrossbow, makeFPBow, poseDraw, poseRelease, makeFlightShaft } from './bow-view.js';
@@ -26,7 +26,8 @@ import { initChat, chatTyping, chatShown, chatRoomOn, chatConsumeUnlock, chatNot
 import { initVoice, voicePtt, voiceCycle, voiceReset, voiceRoster, voiceSignal, voiceTalking, voiceMuted, voiceToggleMute, voiceRefresh } from './voice.js';
 import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
-import { createPhysics } from './shared/physics.js';
+import { createPhysics, rayHitboxes } from './shared/physics.js';
+import { CROUCH, crouchAmount, stanceScale, eyeHeight, stepCrouch } from './shared/stance.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
@@ -46,7 +47,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------- Constantes ----------------
 // ---------------- Constantes (regras em shared/rules.js) ----------------
-const BASE_FOV = 75, ADS_TIME = 0.15, ADS_SPEED = 0.6; // mira (Shift)
+const BASE_FOV = 75, ADS_TIME = 0.15, ADS_SPEED = 0.6; // mira (botão direito)
 const COLORS = { skin: 0xF7A531, snout: 0xF58A6E, cheek: 0xFF7FA0, hoof: 0x7a4535, outline: 0x2a1410, red: 0xe63946, cyan: 0x7DF9FF };
 
 // ---------------- Renderer / cenas ----------------
@@ -128,7 +129,7 @@ function raySphere(o, d, c, r) {
   const b = ox * d.x + oy * d.y + oz * d.z, cc = ox * ox + oy * oy + oz * oz - r * r, h = b * b - cc;
   if (h < 0) return -1; const sq = Math.sqrt(h); let t = -b - sq; if (t < 0) t = -b + sq; return t;
 }
-const center = (e, y = 1.0) => new V3(e.pos.x, e.pos.y + y, e.pos.z);
+const center = (e, y = 1.0) => new V3(e.pos.x, e.pos.y + y * stanceScale(e.crouch), e.pos.z);
 
 // ---------------- Áudio sintetizado ----------------
 let actx = null, master = null, noiseBuf = null, menuMuted = false;
@@ -243,7 +244,7 @@ const keys = {}; let mouseDown = false, firedThisPress = false;
 
 function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
   const skin = getSkin(skinId);
-  const e = { name, isPlayer, skinId: skin.id, float: !!skin.float, floatPh: Math.random() * 6, nextWisp: 0, shirt: (skin.shirt && skin.shirt.color) || '#d8261c', tag, pos: new V3(), vel: new V3(), yaw: 0, pitch: 0, onGround: false, hp: 100, alive: true,
+  const e = { name, isPlayer, skinId: skin.id, float: !!skin.float, floatPh: Math.random() * 6, nextWisp: 0, shirt: (skin.shirt && skin.shirt.color) || '#d8261c', tag, pos: new V3(), vel: new V3(), yaw: 0, pitch: 0, crouch: 0, onGround: false, hp: 100, alive: true,
     kills: 0, deaths: 0, invulnUntil: 0, weapon: 0, primary: 0, nextPrimary: 0, mag: WEAPONS.map(() => 0), reserve: WEAPONS.map(() => 0), reloadEnd: 0, nextFire: 0, switchEnd: 0, actionEnd: 0,
     respawnAt: 0, deathAt: 0, fxDeath: 0, lastAttacker: null, flashUntil: 0, nades: 0, smokeNades: 0, stunNades: 0, stunUntil: 0, charging: false, chargeStart: 0, nextNade: 0, gunKills: WEAPONS.map(() => 0) };
   e.nextPrimary = isPlayer ? selectedPrimary : BOT_PRIMARIES[Math.floor(Math.random() * BOT_PRIMARIES.length)];
@@ -274,7 +275,8 @@ function pickSpawn(e) {
   return best;
 }
 function respawn(e) {
-  e.pos.copy(pickSpawn(e)); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
+  e.pos.copy(pickSpawn(e)); e.vel.set(0, 0, 0); e.crouch = 0; e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
+  if (e.isPlayer) keys.Space = false;
   if (!e.isPlayer && Math.random() < 0.3) e.nextPrimary = BOT_PRIMARIES[Math.floor(Math.random() * BOT_PRIMARIES.length)]; // bots às vezes trocam de primária, nunca pro sabre
   e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE;
   e.slots = [e.primary, e.secondary, e.melee]; e.knifeMode = false; e.prevWeapon = e.primary;
@@ -874,7 +876,7 @@ function updateRockets(dt) {
     for (const e of entities) {
       if (!e.alive || (e === r.owner && gameTime - r.born < 0.3)) continue;
       if (friends(e, r.owner)) continue;
-      const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD); if (t !== null && (hitT === null || t < hitT)) { hitT = t; hitE = e; } // casco do Docão
+      const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD, e.crouch); if (t !== null && (hitT === null || t < hitT)) { hitT = t; hitE = e; } // casco do Docão
     }
     if (wh && hitE && wh.distance < hitT) hitE = null;
     if (hitT !== null || gameTime - r.born > 6) {
@@ -905,7 +907,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
   const w = WEAPONS[wIdx]; const res = { hit: false, kill: false, kills: 0, wall: false };
   const scale = wIdx === BOW ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
   const hitsBy = new Map(), dirs = [], heliDmg = new Map(), skies = shooter === player ? [] : skyHelis();
-  const targets = entities.filter((e) => e !== shooter && e.alive && !friends(e, shooter)).map((e) => ({ e, p: e.pos })); // time: bala atravessa o companheiro
+  const targets = entities.filter((e) => e !== shooter && e.alive && !friends(e, shooter)).map((e) => ({ e, p: e.pos, crouch: e.crouch || 0 })); // time: bala atravessa o companheiro; agachado achata o corpo
   const helis = skies.map((sh) => ({ h: sh, c: sh.pos, r: heliR(sh) }));
   for (let p = 0; p < w.pellets; p++) {
     const d = dir.clone(); d.x += (Math.random() - 0.5) * 2 * spread; d.y += (Math.random() - 0.5) * 2 * spread; d.z += (Math.random() - 0.5) * 2 * spread; d.normalize(); dirs.push(d);
@@ -2107,7 +2109,7 @@ function inspectStep(p, dt) {
   const s = fp.ins; if (!s) return INS_ZERO;
   if (!p.alive || p.weapon !== s.wpn || state !== 'playing') { stopInspect(true); return INS_ZERO; } // trocou/morreu: corta seco (o saque já anima)
   const click = mouseDown || rightDown || (clickLatch && performance.now() - clickLatch < 250);
-  if (!s.out && (click || keys.ShiftLeft || keys.ShiftRight || p.reloadEnd > gameTime || p.switchEnd > gameTime || p.charging || p.bowDraw || p.eggDraw || fp.actionT > 0 || gunner || predator || radioCall)) stopInspect(false);
+  if (!s.out && (click || p.reloadEnd > gameTime || p.switchEnd > gameTime || p.charging || p.bowDraw || p.eggDraw || fp.actionT > 0 || gunner || predator || radioCall)) stopInspect(false);
   if (s.out) { s.fade -= dt / INSPECT_FADE; if (s.fade <= 0) { fp.ins = null; return INS_ZERO; } }
   else {
     s.hold = !!keys.KeyI && s.t >= INSPECT_DUR * INSPECT_HOLD; // segurando I: fica olhando o lado B
@@ -2380,7 +2382,7 @@ function knifeAnim(dt) {
   kr.position.set(px, py, pz); kr.rotation.set(rx, ry, 0); kp.rotation.z = rz;
 }
 
-// ---------------- Mira (Shift) ----------------
+// ---------------- Mira (botão direito) ----------------
 const hpBar = document.getElementById('hpbar');
 const adsVig = document.getElementById('adsvig'), crossEl = document.getElementById('crosshair');
 function updateAds(dt, want) {
@@ -2493,6 +2495,8 @@ function releaseEgg(p) {
 }
 function updatePlayer(dt) {
   const p = player;
+  // Consome o toque mesmo no ar: segurar Espaço não rearma o pulo ao aterrissar.
+  const jumpPressed = !!keys.Space; keys.Space = false;
   if (!p.alive) {
     saberSfx.hum(false);
     if (p.charging) { p.charging = false; arcLine.visible = arcMark.visible = false; }
@@ -2501,23 +2505,24 @@ function updatePlayer(dt) {
     updateAds(dt, false);
     return;
   }
-  // mira com zoom: segura Shift ou o botão direito (com a faca o botão direito é a estocada). No ferrolho da sniper a luneta desce pra mão aparecer.
+  // mira com zoom: segura o botão direito (Shift agacha; com a faca o botão direito é a estocada). No ferrolho da sniper a luneta desce pra mão aparecer.
   const guiding = !!predator || !!gunner;
+  stepCrouch(p, !guiding && !chatTyping() && (keys.ShiftLeft || keys.ShiftRight) ? 1 : 0, dt, PHYS);
   const bolting = fp.actionT > 0 && WEAPONS[p.weapon].bolt;
-  updateAds(dt, !guiding && !bolting && p.weapon !== KNIFE && !isSaber(p.weapon) && !WEAPONS[p.weapon].noAds && (keys.ShiftLeft || keys.ShiftRight || rightDown) && p.reloadEnd <= gameTime && p.switchEnd <= gameTime); // minigun sem zoom: o botão direito só embala
+  updateAds(dt, !guiding && !bolting && p.weapon !== KNIFE && !isSaber(p.weapon) && !WEAPONS[p.weapon].noAds && rightDown && p.reloadEnd <= gameTime && p.switchEnd <= gameTime); // minigun sem zoom: o botão direito só embala
   if (p.weapon !== MINIGUN && p.mgHeat) { p.mgHeat = Math.max(0, p.mgHeat - WEAPONS[MINIGUN].spin.cool * dt); if (p.mgHeat <= 0) p.mgHot = false; } // guardada também esfria
   saberSfx.hum(isSaber(p.weapon) && !guiding);
   fwd.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); right.set(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
   const wish = new V3();
   if (!guiding && (keys.KeyW || keys.ArrowUp)) wish.add(fwd); if (!guiding && (keys.KeyS || keys.ArrowDown)) wish.sub(fwd);
   if (!guiding && (keys.KeyD || keys.ArrowRight)) wish.add(right); if (!guiding && (keys.KeyA || keys.ArrowLeft)) wish.sub(right);
-  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (1 - (1 - ADS_SPEED) * ads)); // faca corre; sabre (move 0.7) anda 30% mais devagar
+  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
   const acc = p.onGround ? 14 : 4;
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
-  if (!guiding && keys.Space && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
+  if (!guiding && jumpPressed && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
   moveEntity(p, dt);
-  const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 : 0;
-  camera.position.set(p.pos.x, p.pos.y + EYE + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
+  const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 * stanceScale(p.crouch) : 0;
+  camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
   if (shake > 0) {
     if (!guiding) { camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.25)); camera.rotation.z += rand(-1, 1) * shake * 0.05; }
     shake = Math.max(0, shake - dt * 1.8);
@@ -2673,6 +2678,7 @@ function animateBot(b, dt) { // visual: andar, flutuar, piscar ao levar dano, bo
   } else m.group.position.set(b.pos.x, b.pos.y + (b.onGround ? Math.abs(Math.sin(b.walk)) * 0.07 : 0), b.pos.z);
   m.group.rotation.y = b.yaw;
   m.legs[0].rotation.x = Math.sin(b.walk) * 0.6 * Math.min(1, speed); m.legs[1].rotation.x = -m.legs[0].rotation.x;
+  setCrouchPose(m, b.crouch);
   const flashing = gameTime < b.flashUntil;
   for (const mat of m.flashMats) mat.emissive.copy(flashing ? FLASH : mat.userData.baseEmissive);
   b.bubble.visible = gameTime < b.invulnUntil;
@@ -3162,7 +3168,7 @@ function refreshModeHud() {
   if (teamMode() && player) { $('myTeam').textContent = `Você: Time ${TEAM_NAMES[player.team] || '?'}`; $('myTeam').style.color = TEAM_COLORS[player.team] || '#fff'; }
   $('winner').style.color = '';
 }
-function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; player.eggDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.Space = keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; player.eggDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
   if (online) leaveOnline();
@@ -3235,7 +3241,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyJ' && !e.repeat && online) { e.preventDefault(); voiceCycle(); }
   if (tryOpenChat(e)) { e.preventDefault(); return; }
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
-  keys[e.code] = true;
+  if (e.code !== 'Space' || !e.repeat) keys[e.code] = true;
   if (state === 'playing' && player && gunner) { // no Chopper: 1/2 trocam a arma dele, F sai
     if (e.code === 'Digit1') setGunnerMode('mini');
     if (e.code === 'Digit2') setGunnerMode('sniper');
@@ -3277,7 +3283,7 @@ function loop() {
   if (state === 'playing' || (online && state === 'paused' && player)) { // online o jogo não pausa
     gameTime += dt;
     if (exploreMode() && player && player.alive) refillExplore(player);
-    if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
+    if (state === 'playing') updatePlayer(dt); else if (player.alive) { stepCrouch(player, 0, dt, PHYS); player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
     updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateDiscs(dt); updateCorn(dt); updateEggs(dt); updatePokeFx(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
@@ -3686,7 +3692,7 @@ function startOnlineMatch(m) {
 function netTick(dt) {
   const o = online; if (!o || !o.inMatch || !player) return;
   o.sendAcc += dt; if (o.sendAcc < 1 / SEND_HZ) return; o.sendAcc = 0;
-  const p = player, msg = { t: 'u', sq: p.sq, y: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping };
+  const p = player, msg = { t: 'u', sq: p.sq, y: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3), c: +p.crouch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping };
   if (p.alive) { msg.p = v3a(p.pos); msg.v = v3a(p.vel); }
   if (o.evq.length) { msg.ev = o.evq; o.evq = []; }
   o.net.send(msg);
@@ -3701,6 +3707,7 @@ function interpRemote(e) {
   const nx = a.x + (b.x - a.x) * k, ny = a.y + (b.y - a.y) * k, nz = a.z + (b.z - a.z) * k;
   const span = Math.max(1e-3, b.t - a.t); e.vel.set((b.x - a.x) / span, (b.y - a.y) / span, (b.z - a.z) / span);
   e.pos.set(nx, ny, nz);
+  e.crouch = crouchAmount((a.crouch || 0) + ((b.crouch || 0) - (a.crouch || 0)) * Math.min(1, k));
   let dy = b.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw = a.yaw + dy * Math.min(1, k);
 }
 function applySnapshot(s) {
@@ -3709,7 +3716,7 @@ function applySnapshot(s) {
   o.tmap.push({ t: now, T: s.T }); if (o.tmap.length > 40) o.tmap.shift();
   if (s.d && zone) { const d = s.d; Object.assign(zone, { x: d[0], y: d[1], z: d[2], progress: d[3], team: d[4], contested: !!d[5], counts: [d[6], d[7]] }); teamScore = [d[8], d[9]]; }
   for (const ev of s.ev) netEvent(ev);
-  for (const [id, x, y, z, yaw, pitch, w, fl, hp, ping] of s.e) {
+  for (const [id, x, y, z, yaw, pitch, w, fl, hp, ping, crouch = 0] of s.e) {
     const e = o.ents.get(id); if (!e) continue;
     e.ping = ping; e.hp = hp; e.onGround = !!(fl & 4); e.regenOn = !!(fl & 16); // 16: regenerando (servidor novo)
     if (e === player) continue;
@@ -3719,7 +3726,7 @@ function applySnapshot(s) {
     if (w !== e.weapon) setWeapon(e, w);
     e.invulnUntil = fl & 2 ? gameTime + 0.15 : 0; e.reloadEnd = fl & 8 ? gameTime + 0.15 : 0;
     if ((fl & 8) && !e.wasRl) { e.reloadStartT = gameTime; const W = WEAPONS[w]; if (W && !W.shellReload && !W.melee) reloadSfx(W, distVol(e.pos) * 0.5); } e.wasRl = !!(fl & 8);
-    e.buf.push({ t: now, x, y, z, yaw });
+    e.buf.push({ t: now, x, y, z, yaw, crouch: crouchAmount(crouch) });
     if (e.buf.length > 30) e.buf.shift();
   }
 }
@@ -3754,9 +3761,9 @@ function netEvent(ev) {
     if (t === player) { if (a && a !== player) revengeName = a.name; onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
   } else if (k === 'sp') {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
-    e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
+    e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.crouch = 0; e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
     e.primary = prim; e.secondary = e.secondary ?? PISTOL; e.melee = e.melee ?? KNIFE; e.slots = [prim, e.secondary, e.melee]; e.mag = WEAPONS.map((x) => x.mag); e.reserve = WEAPONS.map((x) => x.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.nades = NADE.spawnWith; e.mgSpin = 0; e.mgHeat = 0; e.mgHot = false; e.mgWant = false; e.mgFiring = false; e.mgSpinOn = false; setWeapon(e, prim);
-    if (e === player) { eggSplatUntil = 0; player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; player.secondary = selectedSecondary; player.melee = selectedMelee; player.slots = [prim, selectedSecondary, selectedMelee]; player.onGround = true; $('stamp').classList.remove('show'); if (spawnHold === 'secondary') setWeapon(player, selectedSecondary); $('teamPick').classList.add('hidden'); onPlayerRespawn(); }
+    if (e === player) { keys.Space = false; eggSplatUntil = 0; player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; player.secondary = selectedSecondary; player.melee = selectedMelee; player.slots = [prim, selectedSecondary, selectedMelee]; player.onGround = true; $('stamp').classList.remove('show'); if (spawnHold === 'secondary') setWeapon(player, selectedSecondary); $('teamPick').classList.add('hidden'); onPlayerRespawn(); }
     else { e.yaw = yaw; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = [{ t: performance.now() / 1000 - INTERP_DELAY, x: pos[0], y: pos[1], z: pos[2], yaw }]; }
   } else if (k === 'pk') { const p = pickups[ev[1]]; if (p) { p.active = !!ev[2]; p.mesh.visible = p.active; } }
   else if (k === 'nd') {
@@ -3894,7 +3901,7 @@ document.querySelectorAll('.invite').forEach(bindInvite);
 { const sala = new URLSearchParams(location.search).get('sala'); if (sala) joinRoom(sala); }
 
 // ganchos para testes automatizados
-window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
+window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,
