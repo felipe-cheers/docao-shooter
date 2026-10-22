@@ -5,7 +5,8 @@
 //  pickups, Copo Bomba e foguetes (física + explosão), tempo de partida, fim de partida e bots.
 //  O cliente é dono só do próprio movimento (com checagem de velocidade/paredes) e manda eventos de tiro com origem+direção.
 // ============================================================
-import { MAPS, PLAY_MAPS, getMap } from '../../maps.js';
+import { MAPS, PLAY_MAPS, INV_MAPS, getMap } from '../../maps.js';
+import { INV, isInvasion, InvasionCore, POWER_KEYS, scaleHit, modelAim } from '../../shared/invasion.js';
 import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
@@ -37,7 +38,7 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y * stanceScale(e.
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' || isTraining(cfg.mode) ? cfg.mode : 'dm', time: normTime(cfg.time), chat: cfg.chat !== false };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' || isTraining(cfg.mode) || isInvasion(cfg.mode) ? cfg.mode : 'dm', time: normTime(cfg.time), chat: cfg.chat !== false };
     this.chatLog = Array.isArray(cfg.chatLog) ? cfg.chatLog.filter((x) => x && typeof x.text === 'string').slice(-30) : [];
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
@@ -48,6 +49,7 @@ export class Game {
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
   syncClock() { if (this.state === 'playing' && this.t0) this.T = Math.max(this.T, this.now() - this.t0); }
   get teamMode() { return this.cfg.mode === 'dom'; }
+  get invasion() { return isInvasion(this.cfg.mode); } // Modo Invasão: co-op contra zumbis (shared/invasion.js)
   get training() { return isTraining(this.cfg.mode); } // Estande do Docão: bots = alvos parados/andando
   live() { return [...this.ents.values()].filter((e) => e.bot || e.connected); }
   teamCounts(exclude, humansOnly = true) { const c = [0, 0]; for (const e of this.live()) if (e !== exclude && (!humansOnly || !e.bot) && (e.team === 0 || e.team === 1)) c[e.team]++; return c; }
@@ -67,7 +69,7 @@ export class Game {
     if (e) { e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
-      if (this.state !== 'lobby' && !this.teamMode) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
+      if (this.state !== 'lobby' && !this.teamMode && !this.invasion) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
       e = this.makeEnt({ name: this.freeName(name), skin, primary, secondary, melee, bot: false });
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
@@ -123,14 +125,16 @@ export class Game {
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
     this.ents.set(id, e); return e;
   }
-  entInfo(e) { return { id: e.id, name: e.name, skin: e.skin, bot: e.bot, tag: e.tag, kills: e.kills, deaths: e.deaths, alive: e.alive, primary: e.primary, w: e.weapon, team: e.team, caps: e.caps, pend: e.pendingTeam ? 1 : 0 }; }
+  entInfo(e) { const o = { id: e.id, name: e.name, skin: e.skin, bot: e.bot, tag: e.tag, kills: e.kills, deaths: e.deaths, alive: e.alive, primary: e.primary, w: e.weapon, team: e.team, caps: e.caps, pend: e.pendingTeam ? 1 : 0 };
+    if (e.zt) { o.zt = e.zt; o.hp = Math.round(e.hp); o.mx = Math.round(e.maxHp || 100); } return o; }
   sendLobby() {
     this.io.broadcast({ t: 'lobby', cfg: this.cfg, hostId: this.hostId, state: this.state, mapId: this.mapId,
-      players: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => ({ id: e.id, name: e.name, skin: e.skin, bot: e.bot, ping: e.ping, kills: e.kills, deaths: e.deaths, team: e.team, pref: e.teamPref })) });
+      players: [...this.ents.values()].filter((e) => (e.bot && !e.zt) || e.connected).map((e) => ({ id: e.id, name: e.name, skin: e.skin, bot: e.bot, ping: e.ping, kills: e.kills, deaths: e.deaths, team: e.team, pref: e.teamPref })) });
   }
   // ---------- bots de preenchimento ----------
   syncBots() {
     if (this.state === 'lobby') return;
+    if (this.invasion) return; // Invasão: sem bots de jogador (os zumbis são do core)
     if (this.training) return this.syncDummies();
     const want = this.cfg.fillBots ? Math.max(0, this.cfg.max - this.humans().length) : 0;
     let bots = [...this.ents.values()].filter((e) => e.bot);
@@ -168,7 +172,9 @@ export class Game {
   removeOneBot() { const b = [...this.ents.values()].reverse().find((e) => e.bot); if (b) { this.ents.delete(b.id); this.events.push(['l', b.id]); } }
   // ---------- partida ----------
   startMatch(mapId) {
-    const id = this.training ? TRAIN.map : mapId === 'random' || !PLAY_MAPS.some((m) => m.id === mapId) ? pick(PLAY_MAPS.filter((m) => m.id !== this.mapId)).id : mapId;
+    const LIST = this.mapList;
+    const id = this.training ? TRAIN.map : mapId === 'random' || !LIST.some((m) => m.id === mapId) ? (this.invasion && mapId !== 'random' ? INV.DEFAULT_MAP : pick(LIST.filter((m) => m.id !== this.mapId)).id) : mapId;
+    if (this.invasion) for (const b of [...this.ents.values()]) if (b.bot) { this.ents.delete(b.id); } // começa sem zumbi velho/bot
     const map = getMap(id); this.mapId = id; this.map = map;
     const solids = mapSolids(map); this.P = createPhysics(solids, map.size);
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
@@ -197,22 +203,25 @@ export class Game {
     this.syncBots();
     if (this.teamMode) { for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = -1; for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = smallerTeam(this.teamCounts(null, false)); }
     this.teamScore = [0, 0]; this.zone = this.teamMode ? newZoneState(pickZone(this.nav)) : null;
-    for (const e of this.ents.values()) if (e.bot || e.connected) this.spawn(e, true);
+    this.inv = this.invasion ? this.makeInvasion() : null; if (this.inv) this.inv.start();
+    let si = 0; for (const e of this.ents.values()) if (e.bot || e.connected) { if (this.inv && !e.bot) e.firstSpawn = si++; this.spawn(e, true); }
     this.io.broadcast(this.startMsg()); this.sendLobby();
     this.io.startLoop();
   }
-  get cfgLimit() { return this.training ? Infinity : this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; } // Treino: não acaba
+  get mapList() { return this.invasion ? INV_MAPS : PLAY_MAPS; }
+  get cfgLimit() { return this.training || this.invasion ? Infinity : this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; } // Treino: não acaba
   get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
-  startMsg() { return { t: 'start', mode: this.cfg.mode, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, POWER_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.rockets = []; this.helis = []; this.nukes = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
   endMsg() {
-    const rows = [...this.ents.values()].filter((e) => e.bot || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
+    const rows = [...this.ents.values()].filter((e) => (e.bot && !e.zt) || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
     const i = MAPS.findIndex((m) => m.id === this.mapId), ts = this.teamScore || [0, 0];
-    return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: PLAY_MAPS[(PLAY_MAPS.findIndex((m) => m.id === this.mapId) + 1) % PLAY_MAPS.length].id, hostId: this.hostId };
+    return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: this.mapList[(this.mapList.findIndex((m) => m.id === this.mapId) + 1) % this.mapList.length].id, hostId: this.hostId,
+      inv: this.inv ? { wave: this.inv.wave, won: this.inv.won ? 1 : 0, kills: this.inv.kills } : undefined };
   }
   score(e) { return this.teamMode ? e.kills + 2 * e.caps : e.kills; }
   // ---------- mensagens dos clientes ----------
@@ -227,15 +236,17 @@ export class Game {
          if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; if (PRIMARIES.includes(m.primary)) e.nextPrimary = m.primary; if (SECONDARIES.includes(m.secondary)) e.nextSecondary = m.secondary; if (MELEES.includes(m.melee)) e.nextMelee = m.melee; if (this.state === 'lobby') { e.primary = e.nextPrimary; e.secondary = e.nextSecondary; e.melee = e.nextMelee; } this.sendLobby(); break;
       case 'cfg': if (!isHost) return;
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
+        if (isInvasion(m.mode) && m.max) m.max = Math.min(m.max | 0, INV.MAX_PLAYERS);
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
-        if ((m.mode === 'dm' || m.mode === 'dom' || isTraining(m.mode)) && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
+        if ((m.mode === 'dm' || m.mode === 'dom' || isTraining(m.mode) || isInvasion(m.mode)) && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
         if (typeof m.chat === 'boolean') this.cfg.chat = m.chat;
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); this.sendVoices(); break;
       case 'testKs': if (this.test && this.state === 'playing' && e.alive) { const n = clamp(m.n | 0, 0, 30); for (let i = 0; i < n; i++) this.streakKill(e); } break; // só testes (ALLOW_TEST=1)
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
-      case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? PLAY_MAPS[(PLAY_MAPS.findIndex((x) => x.id === this.mapId) + 1) % PLAY_MAPS.length].id : this.cfg.map)); break;
+      case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? this.mapList[(this.mapList.findIndex((x) => x.id === this.mapId) + 1) % this.mapList.length].id : this.cfg.map)); break;
+      case 'testInv': if (this.test && this.inv && this.state === 'playing') this.testInv(e, m); break; // só testes (ALLOW_TEST=1)
       case 'team': {
         if (!this.teamMode) return; const r = this.chooseTeam(e, m.team);
         if (this.state === 'playing') {
@@ -316,7 +327,7 @@ export class Game {
         stepCrouch(e, m.c, dt, this.P);
         const horiz = Math.hypot(p.x - e.pos.x, p.z - e.pos.z);
         const knocked = this.T - e.lastKnock < 2.5;
-        const maxH = (SPEED * 1.35 + (knocked ? 22 : 0)) * dt + 0.6;
+        const maxH = (SPEED * 1.35 * (e.ghostUntil > this.T ? 1.4 : 1) + (knocked ? 22 : 0)) * dt + 0.6;
         const [hx, hz] = this.map.size;
         const inside = Math.abs(p.x) <= hx && Math.abs(p.z) <= hz && p.y >= -0.5 && p.y < 45;
         if (this.test && m.tp) { e.pos = p; e.lastKnock = this.T; }
@@ -336,7 +347,7 @@ export class Game {
   onEvent(e, ev) {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
-    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if (this.training && e.alive) this.equipNow(e); return; }
+    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if ((this.training || (this.inv && (this.inv.phase === 'break' || this.inv.phase === 'prep'))) && e.alive) this.equipNow(e); return; }
     if (!e.alive) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
@@ -346,6 +357,7 @@ export class Game {
     if (k === 'sw') return this.clockOk(e, ev[3], SABER) && this.humanSwing(e, ev[1], ev[2]);
     if (k === 'ks') return this.useStreak(e, ev[1], ev[2]);
     if (k === 'ms') return this.missileImpact(e, ev[1]);
+    if (k === 'pw' && this.inv) { const o = obj3(ev[2]), d = obj3(ev[3]); this.inv.usePower(e, ev[1] | 0, this.eyeOk(e, o) && d && vlen(d) > 0.5 ? { o, d: norm(d) } : null); return; } // poder da Invasão (slot, olho, direção)
   }
   // ---------- killstreaks (servidor autoritativo; regras em shared/killstreaks.js) ----------
   resetStreak(e) { e.ksKills = 0; e.ksBank = { missile: 0, heli: 0, nuke: 0 }; e.ksMissile = null; }
@@ -525,7 +537,7 @@ export class Game {
     for (const d of dirs) {
       const wall = this.P.rayWorld(o, d, W.range); const wallD = wall ?? W.range; let best = null;
       for (const { t, p, crouch } of targets) {
-        const hit = rayHitboxes(o, d, p, crouch);
+        const hit = t.zt ? scaleHit(o, d, p, t.size, (oo, pp) => rayHitboxes(oo, d, pp, crouch)) : rayHitboxes(o, d, p, crouch);
         if (hit && hit.t < wallD && (!best || hit.t < best.tt)) best = { t, tt: hit.t, head: hit.head };
       }
       let hb = null; // Gavião inimigo na frente (bala para nele). O cliente desenha o Gavião no tempo de jogo (sem atraso de interpolação): vale o ping ou o rewind dos jogadores
@@ -547,9 +559,10 @@ export class Game {
     for (const [t, h] of hits) this.damage(t, h.dmg, shooter, w, h.head);
     return hits;
   }
-  friends(a, b) { return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
+  friends(a, b) { if (this.invasion) return !!(a && b && a !== b && !a.zt === !b.zt); return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
   damage(t, amount, a, w, head, back = false, ks = null) {
     if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
+    if (this.invasion && !t.zt && a && !a.zt && !a.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
     t.hp -= amount; t.lastAttacker = a ? a.id : 0; noteHurt(t, a, this.T); // regen só com dano de outro
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
     this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0, Math.round(amount)]); // [5] = dano (números no Treino)
@@ -558,6 +571,7 @@ export class Game {
   }
   // ks: abate de killstreak ('p' míssil, 'h' Gavião, 'x' nuke) → ev[8]; Gavião e nuke não contam pra sequência
   kill(t, a, w, head, back = false, ks = null) {
+    if (this.inv && t.zt) return this.killZombie(t, a, w, head, back, ks);
     t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + (t.dummy ? TRAIN.respawn : RESPAWN_TIME); if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
     if (a && a !== t) { a.kills++; if (a.alive && ks !== 'h' && ks !== 'x') this.streakKill(a); }
     this.resetStreak(t); // morreu: sequência zera (míssil no ar cai junto); o nuke já puxado continua
@@ -568,7 +582,8 @@ export class Game {
     // vira bacon que cura: fica no chão onde morreu pelo mesmo tempo que o bacon aparece no cliente
     this.bacons = this.bacons.filter((b) => b.id !== t.id);
     this.bacons.push({ id: t.id, x: t.pos.x, y: this.P.groundAt(t.pos.x, t.pos.z, t.pos.y + 0.3), z: t.pos.z, born: this.T });
-    if (a && a.kills >= KILL_LIMIT && !this.teamMode && !this.training) this.pendingEnd = true;
+    if (this.inv && !t.bot && !this.inv.onPlayerDeath(t)) { t.respawnAt = Infinity; t.needRs = false; } // Invasão: sem vidas = fica assistindo
+    if (a && a.kills >= KILL_LIMIT && !this.teamMode && !this.training && !this.invasion) this.pendingEnd = true;
   }
   blast(c, owner, o, direct = null) {
     this.events.push(['bm', o.pid || 0, o.kind, arr3(c)]);
@@ -576,7 +591,7 @@ export class Game {
       if (!hl.alive || !this.heliFoe(hl, owner)) continue;
       const d = dist(c, this.heliAt(hl)), reach = o.radius + HELI.hit * 0.4; if (d < reach) this.hurtHeli(hl, o.maxDmg * (0.35 + 0.65 * (1 - d / reach)), owner);
     }
-    const hits = explosionHits(c, o, this.live(), (a, b) => this.P.losClear(a, b), owner, this.teamMode, direct);
+    const hits = explosionHits(c, o, this.invasion ? this.live().filter((x) => x.zt || x === owner) : this.live(), (a, b) => this.P.losClear(a, b), owner, this.teamMode, direct);
     for (const h of hits) {
       const e = h.e; e.lastKnock = this.T;
       if (e.bot) { e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; }
@@ -618,6 +633,10 @@ export class Game {
   }
   // ---------- renascimento e pickups ----------
   pickSpawn(e) {
+    if (this.inv && !e.bot) { // Invasão: começa junto (spawns do mapa em ordem); renasce perto de um aliado, dentro da área segura
+      if (e.firstSpawn != null) { const s = this.spawns[e.firstSpawn % this.spawns.length]; e.firstSpawn = null; return s; }
+      const p = this.inv.spawnPoint(e, e.reviveAt || null); e.reviveAt = null; if (p) return { x: p.x, y: this.P.groundAt(p.x, p.z, p.y + 0.3), z: p.z };
+    }
     let best = this.spawns[0], bd = -Infinity;
     for (const s of this.spawns) {
       let md = 1e9, seen = false; const eye = { x: s.x, y: s.y + 1.5, z: s.z };
@@ -676,7 +695,7 @@ export class Game {
     if (this.state !== 'playing') return;
     const t = this.now(); let dt = clamp(t - this.lastTick, 0, 0.25); this.lastTick = t;
     this.T = t - this.t0; this.purge();
-    while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot) this.updateBot(e, h); this.stepProjectiles(h); this.stepHelis(h); }
+    while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot && !e.zt) this.updateBot(e, h); if (this.inv) this.inv.step(h); this.stepProjectiles(h); this.stepHelis(h); }
     this.stepNukes();
     for (const e of this.ents.values()) {
       if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.needRs && !e.rsReq && this.T < e.respawnAt + RS_SAFETY) && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
@@ -690,7 +709,7 @@ export class Game {
     this.updatePickups(); this.updateBacons();
     { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) regenStep(e, this.T, rt); }
     if (this.zone) this.updateZone(TICK_DT(this));
-    const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
+    const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, iv: this.inv ? this.inv.stateArr() : undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
       (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping, r2(e.crouch)]), ev: this.events };
     this.events = [];
     this.io.broadcast(snap);
@@ -705,6 +724,52 @@ export class Game {
       this.events.push(['zc', got, this.teamScore[0], this.teamScore[1], [r2(nz.x), r2(nz.y), r2(nz.z)], [...this.live()].filter((e) => e.caps).map((e) => [e.id, e.caps])]);
       if (this.teamScore[got] >= DOM.WIN_CAPS) this.pendingEnd = true;
     }
+  }
+  // ---------- Modo Invasão (regras e simulação em shared/invasion.js) ----------
+  makeInvasion() {
+    const g = this;
+    return new InvasionCore({
+      T: () => g.T, P: g.P, nav: g.nav, size: g.map.size,
+      players: () => g.humans(),
+      spawnZombie(type, pos) {
+        const z = g.makeEnt({ name: '', skin: SKINS[0].id, primary: 0, bot: true }); z.zt = type;
+        z.name = ({ walker: 'Docão Podre', runner: 'Esqueleto Corredor', tank: 'Barrigão de Gás', spitter: 'Cuspidor', boss: 'Docão Abóbora' })[type] || 'Zumbi';
+        z.pos = { x: pos.x, y: pos.y, z: pos.z }; z.vel = { x: 0, y: 0, z: 0 }; z.alive = true; z.team = 1; z.invulnUntil = 0; z.weapon = KNIFE; z.slots = [KNIFE]; z.hist = []; z.respawnAt = Infinity;
+        z.yaw = Math.atan2(-pos.x, -pos.z); g.pushHist(z);
+        return z;
+      },
+      spawned(z) { g.events.push(['j', g.entInfo(z)]); }, // depois do core preencher vida/tipo
+      removeZombie(z) { if (g.ents.delete(z.id)) g.events.push(['l', z.id]); },
+      hurtPlayer(p, dmg, src) { g.damage(p, dmg, src || { fog: true, id: 0, zt: 'fog' }, src ? KNIFE : W_NADE, false, false, src ? null : 'fog'); },
+      hurtZombie(z, dmg, by, kind) { g.damage(z, dmg, by, W_NADE, false, false, 'i' + POWER_KEYS.indexOf(kind)); },
+      knock(e, v) { e.lastKnock = g.T; if (e.bot) { e.vel.x += v.x; e.vel.z += v.z; e.vel.y = Math.max(e.vel.y, v.y); e.onGround = false; } else g.toMe(e, ['kn', arr3(v)]); },
+      heal(p, hp) { p.hp = Math.min(100, p.hp + hp); g.toMe(p, ['heal', Math.round(p.hp)]); },
+      revive(p, at) { p.needRs = false; p.rsReq = false; p.respawnAt = g.T + 0.4; p.reviveAt = at; },
+      invChanged(p) { g.toMe(p, ['inv', p.inv.map((k) => POWER_KEYS.indexOf(k))]); },
+      emit(ev) { g.events.push(ev); },
+      aimOf(p) { return { o: center(p, EYE), d: modelAim(p.yaw, p.pitch) }; },
+      over() { g.pendingEnd = true; },
+    });
+  }
+  killZombie(t, a, w, head, back, ks) {
+    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = Infinity;
+    if (a && a !== t && !a.zt) { a.kills++; if (a.alive && ks !== 'h' && ks !== 'x') this.streakKill(a); }
+    const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
+    if (ks) { while (ev.length < 8) ev.push(0); ev.push(ks); }
+    this.events.push(ev);
+    this.inv.onZombieDeath(t, a);
+  }
+  // testes automatizados (ALLOW_TEST=1): pula pra uma wave, dá poderes, mata zumbis
+  testInv(e, m) {
+    const I = this.inv;
+    if (m.give) { e.inv = m.give.filter((k) => POWER_KEYS.includes(k)).slice(0, INV.INV_MAX); I.A.invChanged(e); }
+    if (m.wave) { for (const z of I.zombies) if (z.alive) { z.alive = false; this.ents.delete(z.id); this.events.push(['l', z.id]); } I.zombies = []; I.queue = []; I.bossPending = false; I.startWave(m.wave | 0); }
+    if (m.killAll) for (const z of [...I.zombies]) if (z.alive) this.damage(z, 1e6, e, 0, false);
+    if (m.clearQueue) { I.queue = []; I.bossPending = false; }
+    if (m.drop) I.drop({ x: e.pos.x + 2, y: e.pos.y, z: e.pos.z }, false);
+    if (m.lives != null) e.lives = m.lives | 0;
+    if (m.hurt) this.damage(e, m.hurt, null, 0, false);
+    if (m.fog) Object.assign(I.fog, m.fog, { t0: 0, t1: 0 });
   }
   // ---------- bots (mesma lógica dos bots offline, sem Three.js) ----------
   randomWaypoint() { const n = this.nav.randomNode(); return n ? { x: n.x, y: n.y, z: n.z } : { x: rand(-10, 10), y: 0, z: rand(-10, 10) }; }

@@ -536,6 +536,216 @@ export const MAPS = [];
   });
 }
 
+// ---------- 8) Rodízio do Docão (feito pro modo Bomba: Ataque nasce longe ao norte, Defesa perto dos sites ao sul) ----------
+//  Três rotas do curral do Ataque (z > 60) até a faixa dos sites (z < -24):
+//   • oeste "Rua do Espeto" (zigue-zague de muros + Casa da Vó estreitando a rua) → A principal;
+//   • meio "Avenida da Linguiça" → Praça da Brasa (churrasqueira gigante) → porta da Cozinha → A ou B pela cozinha;
+//   • leste "Beco da Farofa" (zigue-zague + Bar do Torresmo) → B principal.
+//  Conectores pelos quarteirões: Casa do Seu Torresmo / Açougue Central (oeste ↔ meio) e Depósito / Padaria Pão de Alho (meio ↔ leste).
+//  A = Quintal do Espeto (oeste), B = Varanda da Costela (leste); a Defesa nasce no pátio sul, a uns 45 m de cada site.
+{
+  const H = 3.5, boxes = [];
+  const brick = '#b5523b', brick2 = '#9c4532', cream = '#f0dcb4', cream2 = '#e3c99a', terra = '#d9825b', terra2 = '#c96f4a', stone = '#cfc2a8', stone2 = '#b9ab90';
+  const wood = '#8b5a2b', wood2 = '#6b4423', crateC = '#9c6b3a', crateC2 = '#b07a45', metal = '#3a3a40', ember = '#ff7a2e', mustard = '#f2c94c';
+  const casa = (w, w2, roof = brick, roof2 = brick2) => ({ wall: w, wall2: w2, inner: '#f7e7c6', floor: '#c9a46a', roof, roof2, stair: wood, trim: stone });
+  const C = (x, z, s = 1.6, h = 1.6, c = crateC, y0 = 0) => boxes.push(crate(x, z, s, h, c, y0));
+  const G = (a, b, h = 4.2) => door(a, b, h); // portão com verga
+  const WH = 10; // muros/quarteirões: mais altos que telhado + mureta + pulo (ninguém sobe neles)
+
+  // ===== muros que cortam o mapa de lado a lado =====
+  // norte: curral do Ataque → três portões
+  boxes.push(...wallX(-46, 46, 60.5, 1, WH, brick, [G(-40, -33), G(-3.5, 3.5), G(33, 40)]));
+  // sul da faixa do meio: A principal, porta da Cozinha, B principal
+  boxes.push(...wallX(-46, 46, -23, 1, WH, brick, [G(-41, -35), G(-2, 2, 3.2), G(35, 41)]));
+  // sul dos sites: saídas do pátio da Defesa (pro A, Cozinha, pro B)
+  boxes.push(...wallX(-46, 46, -59, 1, WH, brick2, [G(-31, -24), G(-2.5, 2.5, 3.2), G(24, 31)]));
+
+  // ===== faixa de aproximação (z 22..60) =====
+  // rua oeste: zigue-zague
+  boxes.push(B(-46, 46.6, -33, 47.4, 3.4, stone), B(-41, 34.6, -28, 35.4, 3.4, stone));
+  C(-44, 52); C(-31, 55, 1.4, 1.2, crateC2); C(-36, 41, 2, 1.4); C(-44.5, 41); C(-30, 29, 1.6, 1.6, crateC2); C(-38, 27, 1.4, 1.0);
+  // quarteirão oeste: Casa do Seu Torresmo (2 andares + telhado) liga a rua oeste ao meio
+  boxes.push(...building(-28, 44, -12, 60, { col: casa(cream, cream2), floors: 2,
+    ops: [{ s: 'w', a: 50, b: 52.2 }, { s: 'e', a: 46, b: 48.2 }, { s: 'w', a: 54, b: 57, k: 'win' }, { s: 'e', a: 52, b: 56, k: 'win' },
+      { s: 'w', a: 45.5, b: 48.5, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 49.5, b: 53, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 55, b: 58, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-24, 52.5, -22, 58.5], axis: 'z', dir: 1 }, { f: 1, r: [-16.5, 45, -14.5, 51], axis: 'z', dir: -1 }],
+    inner: [{ axis: 'z', s0: 44.5, s1: 59.5, line: -19, ops: [{ a: 49, b: 51 }] }] }));
+  boxes.push(B(-28, 22, -12, 44, WH, terra)); // Frigorífico (maciço)
+  C(-14, 49, 1.2, 1.0, crateC2, H); C(-26, 46, 1.2, 1.0, crateC, H);
+  // meio: Avenida da Linguiça (bancas e muretas desencontradas) e o quiosque do caldo de cana com telhado
+  boxes.push(B(-12, 39.6, -1, 40.4, 3.4, stone), B(1, 31.6, 12, 32.4, 3.4, stone), B(-12, 25.6, -5, 26.4, 1.3, stone));
+  boxes.push(...building(-5, 44, 5, 51, { col: casa(terra, terra2, wood2, wood2), floors: 1, H: 3.2, ops: [{ s: 'n', a: -1, b: 1 }, { s: 's', a: -1, b: 1 }, { s: 'w', a: 46.5, b: 48.5, k: 'win' }, { s: 'e', a: 46.5, b: 48.5, k: 'win' }],
+    roofGaps: [{ s: 'e', a: 49, b: 50.6 }] }));
+  boxes.push(R(5, 48.8, 8.5, 50.6, 0, 3.2, 'x', -1, wood));
+  C(-9, 56); C(9, 54, 1.6, 1.4, crateC2); C(8, 42, 1.4, 1.2); C(-8, 34, 1.6, 1.6, crateC2); C(5, 24, 2, 1.4); C(-2, 29, 1.2, 1.0);
+  // quarteirão leste: Depósito de Carvão (maciço) + Bar do Torresmo (2 andares, liga o meio ao beco leste)
+  boxes.push(B(12, 38, 28, 60, WH, terra2));
+  boxes.push(...building(12, 22, 28, 38, { col: casa(cream2, cream, '#7a3b2e', '#5e2d23'), floors: 2,
+    ops: [{ s: 'w', a: 24, b: 26.2 }, { s: 'e', a: 32, b: 34.2 }, { s: 'w', a: 29, b: 32, k: 'win' }, { s: 'e', a: 25, b: 28, k: 'win' }, { s: 'n', a: 15, b: 19, k: 'win' },
+      { s: 'w', a: 30, b: 34, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 24, b: 28, f: 1, k: 'win', lo: 0.9 }, { s: 'n', a: 20, b: 25, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [16, 31.5, 22, 33.5], axis: 'x', dir: 1 }, { f: 1, r: [15, 23.5, 21, 25.5], axis: 'x', dir: -1 }],
+    inner: [{ axis: 'x', s0: 12.5, s1: 27.5, line: 30, ops: [{ a: 18, b: 20 }] }] }));
+  C(14, 29, 1.2, 1.0, crateC2, H);
+  // beco leste: zigue-zague e barris
+  boxes.push(B(28, 48.6, 41, 49.4, 3.4, stone), B(33, 36.6, 46, 37.4, 3.4, stone));
+  C(43, 55, 1.6, 1.4, crateC2); C(31, 52); C(44.5, 43, 2, 1.4); C(37, 42); C(31, 30, 1.4, 1.2); C(42, 26);
+
+  // ===== faixa do meio (z -22.5..22) =====
+  // rua oeste: Casa da Vó (2 andares) estreita a rua (8 m) e dá telhado olhando o A principal
+  boxes.push(...building(-46, -7, -36, 7, { col: casa(mustard, '#e0b43c'), floors: 2,
+    ops: [{ s: 'e', a: -2, b: 0.2 }, { s: 'e', a: 3, b: 5.5, k: 'win' }, { s: 'e', a: -6, b: -3.5, k: 'win' }, { s: 'n', a: -42, b: -39, k: 'win' }, { s: 's', a: -42, b: -39, k: 'win' },
+      { s: 'e', a: -5, b: -1, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 2, b: 6, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: -44, b: -40, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-45.5, -5, -43.6, 1], axis: 'z', dir: -1 }, { f: 1, r: [-41, -1, -39, 5], axis: 'z', dir: 1 }] }));
+  C(-31, 14, 1.6, 1.4); C(-33, -14, 2, 1.6, crateC2); C(-44, 16); C(-44, -15, 1.4, 1.2); C(-29.5, 2, 1.2, 1.0, crateC2);
+  // quarteirão oeste do meio: Açougue Central (2 andares, liga rua oeste ↔ praça; janelas do 2º andar olham a praça)
+  boxes.push(B(-28, 12, -12, 22, WH, brick2), B(-28, -22.5, -12, -12, WH, brick2));
+  boxes.push(...building(-28, -12, -12, 12, { col: casa('#e8a06a', terra), floors: 2,
+    ops: [{ s: 'w', a: -9, b: -6.8 }, { s: 'e', a: 4, b: 6.2 }, { s: 'w', a: 3, b: 7, k: 'win' }, { s: 'e', a: -6, b: -2, k: 'win' },
+      { s: 'e', a: -9, b: -5, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: 1, b: 5, f: 1, k: 'win', lo: 0.9 }, { s: 'w', a: -4, b: 0, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-25, 2, -23, 8], axis: 'z', dir: 1 }, { f: 1, r: [-16, -10, -14, -4], axis: 'z', dir: -1 }],
+    inner: [{ axis: 'z', s0: -11.5, s1: 11.5, line: -20, ops: [{ a: -3, b: -1 }] }, { axis: 'x', s0: -19.85, s1: -12.5, line: 0, ops: [{ a: -17, b: -15 }] }] }));
+  C(-25, -4, 1.4, 1.2, crateC2); C(-14.5, 8, 1.2, 1.0); C(-24, 3, 1.2, 1.0, crateC, H);
+  // Praça da Brasa: churrasqueira gigante com chaminé (quebra a linha do meio), mesas de piquenique
+  boxes.push(B(-4, -4, 4, 4, 1.1, brick), B(-3.6, -3.6, 3.6, 3.6, 0.15, metal, 1.1), B(-1.2, -1.2, 1.2, 1.2, 6.5, brick2, 1.25), B(-1.6, -1.6, 1.6, 1.6, 0.5, stone, 7.75));
+  boxes.push(B(-10, 12, -6, 13.2, 0.9, wood), B(6, 12, 10, 13.2, 0.9, wood), B(-10, -13.2, -6, -12, 0.9, wood), B(6, -13.2, 10, -12, 0.9, wood));
+  C(-9, 4, 1.6, 1.4, crateC2); C(9, -4, 1.6, 1.4, crateC2); C(-3, 17); C(3, -17); C(10, 19, 1.4, 1.2); C(-10, -19, 1.4, 1.2);
+  // quarteirão leste do meio: Padaria Pão de Alho (1 andar, telhado pela rampa do beco) liga a praça ↔ beco leste
+  boxes.push(B(12, 10, 28, 22, WH, terra), B(12, -22.5, 28, -10, WH, terra));
+  boxes.push(...building(12, -10, 28, 10, { col: casa(cream, cream2, '#c96f4a', '#a85a3a'), floors: 1, H: 3.4,
+    ops: [{ s: 'w', a: -6, b: -3.8 }, { s: 'e', a: 3, b: 5.2 }, { s: 'w', a: 2, b: 6, k: 'win' }, { s: 'e', a: -6, b: -2, k: 'win' }],
+    roofGaps: [{ s: 'e', a: 6.5, b: 9.5 }], inner: [{ axis: 'z', s0: -9.5, s1: 9.5, line: 20, ops: [{ a: -1, b: 1 }] }] }));
+  boxes.push(R(28, 6.5, 33, 9.5, 0, 3.4, 'x', -1, wood));
+  C(15, 6, 1.2, 1.0, crateC2); C(25, -6, 1.4, 1.0); C(22, 2, 1.2, 1.0, crateC, 3.4);
+  // beco leste do meio: barricada e caixotes
+  boxes.push(B(36, -2, 46, -1.2, 3.4, stone), B(28, 14.6, 38, 15.4, 3.4, stone));
+  C(31, -12, 1.6, 1.6, crateC2); C(43, -14); C(43, 8, 1.4, 1.2); C(38, 20, 1.6, 1.4);
+
+  // ===== faixa dos sites (z -58.5..-23.5) =====
+  // divisórias entre os sites e a Cozinha (porta dos CTs no meio de cada uma)
+  boxes.push(...wallZ(-58.5, -23.5, -14, 1, WH, stone2, [G(-45, -41)]), ...wallZ(-58.5, -23.5, 14, 1, WH, stone2, [G(-45, -41)]));
+  // Cozinha do Rodízio: no centro, portas pro norte (meio), pro sul (Defesa) e pros dois lados
+  boxes.push(...building(-9, -50, 9, -29, { col: casa('#f7e7c6', cream2, metal, '#2a2a30'), floors: 1, H: 3.6, parapet: 0,
+    ops: [{ s: 'n', a: -1.5, b: 1.5 }, { s: 's', a: -1.5, b: 1.5 }, { s: 'w', a: -44, b: -42 }, { s: 'e', a: -44, b: -42 }, { s: 'w', a: -36, b: -33, k: 'win' }, { s: 'e', a: -36, b: -33, k: 'win' }],
+    inner: [{ axis: 'x', s0: -8.5, s1: 8.5, line: -38, ops: [{ a: -6, b: -4 }, { a: 4, b: 6 }] }] }));
+  boxes.push(B(-6, -48, 6, -46.5, 1.0, '#9aa3a8'), B(-7.5, -34, -4.5, -31.5, 1.1, metal), B(4.5, -34, 7.5, -31.5, 1.1, metal)); // bancada e fogões
+  C(-11.5, -28, 1.4, 1.2); C(11.5, -54, 1.4, 1.2, crateC2); C(-11.5, -55, 1.2, 1.0);
+  // ---- A: Quintal do Espeto ----  site em (-30, -42)
+  boxes.push(...building(-46, -58.5, -36, -48, { col: casa(cream, '#e8cfa6', brick, brick2), floors: 2, // Casa do Churrasqueiro (olha o site de cima)
+    ops: [{ s: 'n', a: -40.5, b: -38.5 }, { s: 'e', a: -56, b: -54 }, { s: 'n', a: -45, b: -42, k: 'win' }, { s: 'e', a: -52, b: -49.5, k: 'win' },
+      { s: 'n', a: -44.5, b: -37, f: 1, k: 'win', lo: 0.9 }, { s: 'e', a: -57, b: -50, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [-45.3, -57.5, -43.4, -51.5], axis: 'z', dir: -1 }] }));
+  boxes.push(B(-24, -30, -17, -26, 1.2, stone), R(-24, -33, -21, -30, 0, 1.2, 'z', 1, stone), C(-19, -28, 1.6, 1.4, crateC2, 1.2)); // palanque perto da entrada
+  boxes.push(B(-37.8, -36, -37.0, -31, 1.3, stone), B(-27, -49.8, -22, -49.0, 1.3, stone)); // muretas
+  C(-34, -45, 2, 1.6); C(-25.5, -38, 1.6, 1.6, crateC2); C(-25.5, -38, 1.2, 1.0, crateC, 1.6); C(-31, -53); C(-17, -46, 1.4, 1.2); C(-43, -28, 2, 1.6, crateC2); C(-44, -40, 1.4, 1.2);
+  // ---- B: Varanda da Costela ----  site em (30, -42)
+  boxes.push(...building(36, -58.5, 46, -46, { col: casa('#9be8f0', '#86d8e2', '#12233a', '#1d3557'), floors: 2, // Bar da Costela, com varanda
+    ops: [{ s: 'w', a: -51, b: -49 }, { s: 'n', a: 38, b: 40 }, { s: 'w', a: -56, b: -53.5, k: 'win' },
+      { s: 'n', a: 41.5, b: 43.7, f: 1 }, { s: 'w', a: -57, b: -49, f: 1, k: 'win', lo: 0.9 }],
+    stairs: [{ f: 0, r: [43.4, -57.5, 45.3, -51.5], axis: 'z', dir: -1 }] }));
+  boxes.push(...balcony(40, -46, 45.5, -43, H, '#c9a46a', wood2, 'n'));
+  boxes.push(B(30, -56, 36, -51, 1.2, stone), R(26, -56, 30, -53, 0, 1.2, 'x', 1, stone), C(33.5, -53.5, 1.6, 1.4, crateC2, 1.2)); // degrau alto dos fundos
+  boxes.push(B(22.2, -36, 23.0, -31, 1.3, stone), B(35, -35.8, 40, -35.0, 1.3, stone));
+  C(26, -46, 2, 1.6); C(34, -38.5, 1.6, 1.6, crateC2); C(34, -38.5, 1.2, 1.0, crateC, 1.6); C(18, -30, 1.4, 1.2); C(43, -30, 2, 1.6); C(17, -52, 1.4, 1.2, crateC2);
+
+  // ===== pátios das bases =====
+  // curral do Ataque (norte)
+  C(-30, 66, 2, 1.6); C(-14, 64, 1.6, 1.4, crateC2); C(14, 64, 1.6, 1.4, crateC2); C(30, 66, 2, 1.6); C(-40, 74, 1.6, 1.4); C(40, 74, 1.6, 1.4); C(0, 64, 1.4, 1.2); C(-20, 76); C(20, 76); C(-7, 70.5, 1.6, 1.4, crateC2); C(7, 70.5, 1.6, 1.4, crateC2); C(-30, 75, 1.4, 1.2); C(30, 75, 1.4, 1.2);
+  // pátio da Defesa (sul)
+  C(-30, -66, 2, 1.6); C(-12, -64, 1.6, 1.4, crateC2); C(12, -64, 1.6, 1.4, crateC2); C(30, -66, 2, 1.6); C(-40, -74, 1.6, 1.4); C(40, -74, 1.6, 1.4); C(0, -63, 1.4, 1.2); C(-20, -76); C(20, -76); C(-7, -71.5, 1.6, 1.4, crateC2); C(7, -71.5, 1.6, 1.4, crateC2); C(-30, -75, 1.4, 1.2); C(30, -75, 1.4, 1.2);
+
+  const kegs = [[-44, 58], [-43, 58], [44, 58], [-17, 60.8 - 2.6], [-45, 21], [-45, 20], [45, -21], [44, -21], [-16, -26], [16, -26], [-45, -46], [45, -44], [-10.5, -57], [10.5, -57]].map(([x, z]) => ({ t: 'keg', x, z }));
+  const spA = [[-24, 70], [-12, 72], [0, 70], [12, 72], [24, 70], [-6, 76], [6, 76], [-34, 70], [34, 70], [-18, 66], [18, 66]];
+  const spD = [[-16, -67], [-6, -69], [6, -69], [16, -67], [0, -74], [-24, -72], [24, -72], [-36, -68], [36, -68], [-10, -76], [10, -76]];
+  MAPS.push({
+    id: 'rodizio', name: 'Rodízio do Docão', desc: 'Feito pro modo Bomba: três rotas compridas do curral do Ataque até o Quintal do Espeto (A) e a Varanda da Costela (B), com zigue-zagues, casas de dois andares com telhado, Praça da Brasa e a Cozinha da Defesa no meio.',
+    size: [46, 80], wallH: WH, wallColor: [brick, brick2],
+    palette: { sky: '#8fd3ff', fog: ['#ffe3c0', 60, 170], hemi: ['#fff4e0', '#8f6a3a', 1.6], sun: ['#ffe8c8', 2.3], ground: '#d9b98a', tiles: ['#dcbf92', '#cfb083', 92, 46], clouds: true },
+    ...fin(boxes), props: [...kegs,
+      { t: 'stall', x: -6, z: 36, c: '#e63946' }, { t: 'stall', x: 6, z: 46 - 6, c: '#f2c94c' }, { t: 'stall', x: -36, z: 22, c: '#7DF9FF' }, { t: 'stall', x: 36, z: 24, c: '#e63946' },
+      { t: 'tree', x: -44, z: 78 - 4 - 4 }, { t: 'tree', x: 44, z: 70 }, { t: 'tree', x: -44, z: -70 }, { t: 'tree', x: 44, z: -62 }, { t: 'tree', x: -8, z: 8 }, { t: 'tree', x: 8, z: -8 },
+      { t: 'truck', x: 30, z: 4, c: '#e63946' }, { t: 'hay', x: -40, z: 10 }, { t: 'hay', x: -32, z: -4 }, { t: 'jar', x: -18, z: -32 }, { t: 'jar', x: 20, z: -40 },
+      { t: 'awning', x0: 40, z0: -46, x1: 45.5, z1: -43, y: 6.6, c: '#12233a' }, { t: 'awning', x0: -36, z0: -48 - 0 + 0, x1: -33, z1: -45, y: 3.0, c: '#e63946' },
+      { t: 'sign', x: 0, y: 6.2, z: 61.05, w: 9, h: 1.6, rot: 0, text: 'RODÍZIO DO DOCÃO', bg: '#8b2f1c', fg: '#ffe7b0' },
+      { t: 'sign', x: -30, y: 6.4, z: -23.55 + 0.0 - 0.0, w: 6, h: 1.4, rot: Math.PI, text: 'A · ESPETO', bg: '#8b2f1c', fg: '#ffe7b0' },
+      { t: 'sign', x: 30, y: 6.4, z: -23.55, w: 6, h: 1.4, rot: Math.PI, text: 'B · COSTELA', bg: '#12233a', fg: '#7DF9FF' },
+      { t: 'sign', x: -20, y: 5.5, z: 21.99 + 0.07, w: 6, h: 1.2, rot: 0, text: 'AÇOUGUE', bg: '#8b2f1c', fg: '#ffe7b0' },
+      { t: 'sign', x: 20, y: 5.5, z: 22.06, w: 6, h: 1.2, rot: 0, text: 'PÃO DE ALHO', bg: '#6b4423', fg: '#ffe7b0' },
+      { t: 'sign', x: 0, y: 5.0, z: -28.94, w: 6, h: 1.2, rot: 0, text: 'COZINHA', bg: '#3a3a40', fg: '#ffd27a' },
+      { t: 'banner', x: 0, y: 5.5, z: -58.45, c: '#2f80ed', rot: 0 }, { t: 'banner', x: 12, y: 5.5, z: 59.95, c: '#e63946', rot: Math.PI }],
+    spawns: [...spA.slice(0, 5), ...spD.slice(0, 5), [-40, 40], [40, 40], [0, 10 + 8], [-32, -10], [32, -10], [-40, -36], [42, -39], [0, -40]],
+    bomb: { sites: [[-30, 0, -42], [30, 0, -42]], atk: spA, def: spD },
+    pickups: [['health', -36, 52], ['health', 36, 52], ['health', 0, 20], ['health', -20, -4, H], ['health', -30, -56], ['health', 31, -52.5, 1.2],
+      ['ammo', 0, 56], ['ammo', -40, 0], ['ammo', 40, 0], ['ammo', 0, -44], ['ammo', -16, 55, H], ['ammo', 20, 30, H],
+      ['grenade', -33, 31], ['grenade', 35, 30], ['grenade', 0, -18], ['grenade', -40, -50.5, H], ['grenade', 0, 66], ['grenade', 0, -66]],
+    showcase: [0, 0, 30], view: [0, 0, 58, 0, -0.02], openMax: 8, laneMin: 35,
+    test: { stairs: { from: [-23, 0, 51.5], to: [-23, H, 59], level: H }, under: { from: [-26.5, 0, 48], to: [-20.5, 0, 48], ceil: 3.2 }, roof: { from: [-15.5, H, 52], to: [-15.5, 2 * H, 44.2], level: 2 * H } },
+  });
+}
+
+// ---------- 🎃 Fazenda Mal-Assombrada (feito pro Modo Invasão: noite de Halloween) ----------
+//  Casarão de dois andares no meio (escada pro 1º andar e pro telhado), celeiro velho a noroeste, cemitério com mausoléu
+//  a nordeste, capela em ruínas a sudoeste e milharal a sudeste. Os zumbis saem da névoa pelas bordas.
+{
+  const H = 3.5, boxes = [], props = [];
+  const wood = '#5a3e2b', wood2 = '#4a3222', roofC = '#3a2a3e', roofC2 = '#2e2032', stone = '#7d7a72', stone2 = '#6a675f', tomb = '#8c8a85', moss = '#556b2f', corn = '#b59a3a', corn2 = '#a08a30', hayC = '#c9a64a';
+  const casa = { wall: '#6b5844', wall2: '#5e4c3a', inner: '#7a6650', floor: '#4a3a2c', roof: roofC, roof2: roofC2, stair: wood, trim: '#2a1d14' };
+  // casarão (meio)
+  boxes.push(...building(-9, -7, 9, 7, { col: casa, floors: 2,
+    ops: [{ s: 'n', a: -1.2, b: 1.2 }, { s: 's', a: -1.2, b: 1.2 }, { s: 'w', a: -1, b: 1 }, { s: 'e', a: -1, b: 1 },
+      { s: 'n', a: -7, b: -4.5, k: 'win' }, { s: 'n', a: 4.5, b: 7, k: 'win' }, { s: 's', a: -7, b: -4.5, k: 'win' }, { s: 's', a: 4.5, b: 7, k: 'win' },
+      ...['n', 's'].flatMap((q) => [{ s: q, a: -6, b: -2.5, f: 1, k: 'win', lo: 0.9 }, { s: q, a: 2.5, b: 6, f: 1, k: 'win', lo: 0.9 }]), ...['w', 'e'].map((q) => ({ s: q, a: -2, b: 2, f: 1, k: 'win', lo: 0.9 }))],
+    stairs: [{ f: 0, r: [-8, -6.5, -2, -4.5], axis: 'x', dir: 1 }, { f: 1, r: [2, 4.5, 8, 6.5], axis: 'x', dir: -1 }] }));
+  boxes.push(B(-9.6, 7, 9.6, 9.5, 0.3, wood2, 0), B(-9.6, 9.2, -9.3, 9.5, 2.6, wood), B(9.3, 9.2, 9.6, 9.5, 2.6, wood), B(-9.8, 7, 9.8, 9.8, 0.25, roofC, 2.6)); // varanda
+  boxes.push(crate(-6, 3, 1.4, 1.0, '#7a5a3a'), crate(6, -3, 1.2, 1.2, '#7a5a3a'), crate(5, 2, 1.0, 0.9, '#7a5a3a', H), crate(-5, 1, 1.4, 0.9, '#7a5a3a', H));
+  // celeiro velho (noroeste): portão largo pro sul, porta a leste, fardos dentro
+  boxes.push(...building(-37, -37, -21, -23, { col: { wall: '#6e2f25', wall2: '#5e271f', floor: '#4a3a2c', roof: '#3a1f1a', roof2: '#2e1814' }, floors: 1, H: 5,
+    ops: [{ s: 's', a: -31, b: -27, k: 'wide' }, { s: 'e', a: -31, b: -29 }, { s: 'n', a: -34, b: -31, k: 'win', lo: 2, hi: 3.4 }, { s: 'w', a: -32, b: -28, k: 'win', lo: 2, hi: 3.4 }], parapet: 0 }));
+  boxes.push(B(-35.5, -35.5, -32, -33, 1.2, hayC), B(-35.5, -33, -33.5, -31, 1.2, hayC), B(-25, -35.5, -22.5, -33, 2.4, hayC), crate(-24, -27, 1.6, 1.4, '#7a5a3a'));
+  // cemitério (nordeste): mureta com portões, lápides, cruzes e o mausoléu
+  boxes.push(...wallX(15, 39, -13.5, 0.5, 1.1, stone, [{ a: 22, b: 25, y0: 0, y1: 9 }, { a: 31, b: 33, y0: 0, y1: 9 }]));
+  boxes.push(...wallZ(-39, -13.5, 15, 0.5, 1.1, stone, [{ a: -30, b: -27, y0: 0, y1: 9 }]));
+  for (let x = 18.5; x <= 36; x += 3.5) for (let z = -34; z <= -17; z += 4) {
+    if (x > 25 && x < 35 && z < -27) continue; // espaço do mausoléu
+    if ((Math.round(x * 3 + z) % 3) === 0) { boxes.push(B(x - 0.09, z - 0.09, x + 0.09, z + 0.09, 1.5, stone2), B(x - 0.45, z - 0.09, x + 0.45, z + 0.09, 0.16, stone2, 0.95)); }
+    else boxes.push(B(x - 0.5, z - 0.16, x + 0.5, z + 0.16, 1.05, tomb), B(x - 0.55, z + 0.25, x + 0.55, z + 1.6, 0.14, moss));
+  }
+  boxes.push(...building(26, -38, 34, -30, { col: { wall: '#8d8a82', wall2: '#7d7a72', floor: '#5a5650', roof: '#4a4744', roof2: '#3a3836' }, floors: 1, H: 3.8,
+    ops: [{ s: 's', a: 29, b: 31 }], parapet: 0.6 }));
+  boxes.push(B(28.5, -30, 31.5, -29.4, 0.25, stone, 0), B(27.6, -29.6, 28.2, -29.0, 3.9, stone), B(31.8, -29.6, 32.4, -29.0, 3.9, stone));
+  // capela em ruínas (sudoeste): sem telhado, paredes com janelões
+  boxes.push(...building(-35, 17, -23, 33, { col: { wall: '#9a9488', wall2: '#8a8478', floor: '#5a5650' }, floors: 1, H: 4.6, roof: false,
+    ops: [{ s: 'n', a: -30.2, b: -27.8 }, { s: 'e', a: 24, b: 26 }, { s: 'w', a: 21, b: 24, k: 'win', lo: 1.4, hi: 3.6 }, { s: 'w', a: 27, b: 30, k: 'win', lo: 1.4, hi: 3.6 }, { s: 'e', a: 28, b: 31, k: 'win', lo: 1.4, hi: 3.6 }] }));
+  boxes.push(B(-31, 29.5, -27, 31, 1.0, stone2), B(-29.15, 30, -28.85, 30.3, 2.6, stone2, 1.0), B(-29.9, 30, -28.1, 30.3, 0.25, stone2, 2.8)); // altar e cruz
+  for (const z of [21, 24, 27]) boxes.push(B(-33, z, -30.5, z + 0.6, 0.55, wood), B(-27.5, z, -25, z + 0.6, 0.55, wood)); // bancos
+  // poço e carroça
+  boxes.push(B(-14, 15, -12, 17, 0.9, stone), B(-14.1, 15.8, -13.9, 16.2, 2.3, wood), B(-12.1, 15.8, -11.9, 16.2, 2.3, wood), B(-14.4, 15.4, -11.6, 16.6, 0.2, roofC, 2.3));
+  boxes.push(B(9, 15, 13, 17.2, 1.0, wood), B(9, 15, 13, 15.2, 1.6, wood2, 1.0), B(9, 17, 13, 17.2, 1.6, wood2, 1.0), crate(11, 16.1, 1.2, 1.0, hayC, 1.0));
+  // milharal (sudeste): fileiras com corredores
+  for (let z = 16.5, r = 0; z <= 37; z += 2.8, r++) for (let x = 16 + (r % 2) * 2.2; x < 38.5; x += 6) boxes.push(B(x, z, Math.min(38.5, x + 4), z + 0.7, 2.3, r % 2 ? corn : corn2));
+  // cercas, fardos e caixotes pelo campo
+  const fence = (x0, z0, x1, z1) => { boxes.push(B(x0, z0, x1, z1, 1.1, wood)); };
+  fence(-19, -12, -12, -11.8); fence(-19, 11.8, -12, 12); fence(12, -12, 19, -11.8); fence(-4, 21, 4, 21.2); fence(-4, -21.2, 4, -21); fence(-24, -4, -23.8, 4); fence(23.8, -4, 24, 4);
+  boxes.push(crate(-16, -4, 1.6, 1.4, hayC), crate(16, 5, 1.6, 1.4, hayC), crate(-6, -17, 1.4, 1.2, '#7a5a3a'), crate(7, -17, 1.6, 1.6, hayC), crate(-21, 9, 1.4, 1.2, '#7a5a3a'), crate(20, -8, 1.4, 1.2, '#7a5a3a'));
+  boxes.push(crate(0, 27, 1.6, 1.4, hayC), crate(-8, 33, 1.4, 1.2, '#7a5a3a'), crate(30, 0, 1.6, 1.4, hayC), crate(-32, 6, 1.6, 1.4, hayC), crate(-10, -30, 1.6, 1.4, hayC), crate(6, -33, 1.4, 1.2, '#7a5a3a'));
+  // espantalhos (poste + braço)
+  for (const [x, z] of [[-15, 24], [24, 10], [-26, -12], [6, 36]]) boxes.push(B(x - 0.1, z - 0.1, x + 0.1, z + 0.1, 2.5, wood2), B(x - 0.9, z - 0.07, x + 0.9, z + 0.07, 0.14, wood2, 1.85));
+  props.push({ t: 'tree', x: -40, z: 0 }, { t: 'tree', x: 40, z: -4 }, { t: 'tree', x: -4, z: -40 }, { t: 'tree', x: 2, z: 40 }, { t: 'tree', x: -18, z: -18 }, { t: 'tree', x: 18, z: -6 }, { t: 'tree', x: -40, z: 38 }, { t: 'tree', x: 40, z: -40 }, { t: 'tree', x: 13, z: 40 });
+  props.push({ t: 'hay', x: -18, z: 4 }, { t: 'hay', x: 17, z: -15 }, { t: 'hay', x: -6, z: 24 }, { t: 'hay', x: 27, z: 12 }, { t: 'keg', x: 10.5, z: 9 }, { t: 'keg', x: -10.5, z: 9 });
+  props.push({ t: 'sign', x: 0, y: 4.0, z: 9.65, w: 8, h: 1.3, rot: 0, text: 'FAZENDA MAL-ASSOMBRADA', bg: '#2a1410', fg: '#ff9a2e' });
+  props.push({ t: 'sign', x: 23.5, y: 2.2, z: -13.2, w: 4, h: 0.9, rot: 0, text: 'CEMITÉRIO', bg: '#1a1420', fg: '#c9a4ff' });
+  MAPS.push({
+    id: 'fazenda-assombrada', name: 'Fazenda Mal-Assombrada', desc: '🎃 Feito pro Modo Invasão: casarão de dois andares no meio, celeiro velho, cemitério com mausoléu, capela em ruínas e milharal. Os zumbis saem da névoa.',
+    invasionOnly: true, size: [42, 42], wallH: 3, wallColor: ['#3a2f2a', '#2e2420'],
+    palette: { sky: '#1a1030', fog: ['#2b1d40', 28, 110], hemi: ['#a89ad8', '#2e2438', 1.25], sun: ['#ffb27a', 1.0], ground: '#3e3b2c', tiles: ['#46422f', '#3a3728', 84, 28], stars: true,
+      lights: [['#ff8a2a', 0, 2.4, 9.4, 6, 14], ['#a070ff', 30, 3, -26, 5, 16], ['#ff8a2a', -29, 3.2, -22, 4, 14], ['#ff8a2a', -29, 3, 30, 4, 14]] },
+    ...fin(boxes), props,
+    spawns: [[0, 12], [12, 0], [0, -12], [-12, 0], [9, 10], [-9, 10.5], [10, -10], [-10, -10], [3, 13], [-3, -13]],
+    pickups: [['health', -14, 0], ['health', 14, 0], ['health', 0, -16], ['ammo', 0, 15], ['ammo', -20, -20], ['ammo', 20, 20], ['ammo', -4, 4, H], ['grenade', -20, 14], ['grenade', 20, -20], ['grenade', 4, -4, H]],
+    showcase: [0, 0, 15], view: [0, 1.6, 22, 0, -0.04], openMax: 9, laneMin: 30,
+    test: { stairs: { from: [-7.8, 0, -5.5], to: [0, H, -5.5], level: H }, under: { from: [-6, 0, 2], to: [6, 0, 2], ceil: 3.2 }, roof: { from: [7.9, H, 5.5], to: [0, 2 * H, 5.5], level: 2 * H } },
+  });
+}
+
 // ---------- HOTMILK: interiores dos dois blocos ----------
 const HM = { H: 3.3, col: { wall: '#e7e1d6', wall2: '#d7c4a4', inner: '#cfc6b8', floor: '#d5cfc4', roof: '#3c4248', roof2: '#2c3238', stair: '#8d3a3a', trim: '#2f6b45' }, facade: '#c9c2b4', wood: '#c4a574', green: '#2f6b45', red: '#e23b3b' };
 
@@ -947,4 +1157,8 @@ function flipHotmilkZ(part, cz) {
 
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
 // mapas jogáveis nas listas/rodízio (o Estande só abre no modo Treino)
-export const PLAY_MAPS = MAPS.filter((m) => !m.training);
+// Modo Invasão: o Rodízio do Docão e a Fazenda Mal-Assombrada só abrem na Invasão (os outros modos continuam com os mapas de sempre)
+const INV_ONLY = new Set(['rodizio', 'fazenda-assombrada']);
+export const PLAY_MAPS = MAPS.filter((m) => !m.training && !m.invasionOnly && !INV_ONLY.has(m.id));
+// mapas da Invasão: os dois feitos pra ela primeiro, depois os de sempre (com decoração de Halloween só nesse modo)
+export const INV_MAPS = [...MAPS.filter((m) => INV_ONLY.has(m.id)), ...PLAY_MAPS];

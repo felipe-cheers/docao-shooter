@@ -214,7 +214,7 @@ export class InvasionCore {
     Object.assign(z, { zt: type, zi: ZTYPES.indexOf(type), hp, maxHp: hp, alive: true, spd: st.speed * S.spdMul * (0.92 + this.rnd() * 0.16), dmgMul: S.dmgMul, size: st.size,
       nextAtk: this.T + 0.6, nextSpit: this.T + 1 + this.rnd() * st.rate, stunUntil: 0, target: null, retarget: 0, node: null, nodeAt: -9, stuck: 0, removeAt: Infinity, lastLos: false, losAt: -9 });
     z.vel.x = z.vel.y = z.vel.z = 0; z.onGround = true; z.crouch = 0;
-    this.zombies.push(z); return z;
+    this.zombies.push(z); if (this.A.spawned) this.A.spawned(z); return z;
   }
   visible(p) { return p.alive && !(p.ghostUntil > this.T); }
   buildFlow() {
