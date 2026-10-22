@@ -3289,7 +3289,7 @@ function invApplyLook(on) {
   if (on) { applyHalloweenPalette(scene, hemi, sun, currentMap); fpHemi.intensity = 1.2; invGfx.hal = buildHalloween(currentMap, nav, groundAt); scene.add(invGfx.hal); }
   else { applyPalette(scene, hemi, sun, currentMap); fpHemi.intensity = currentMap.palette.stars ? 1.25 : 1.8; }
   document.body.classList.toggle('invmode', !!on);
-  ['invhud', 'invPowers'].forEach((id) => $(id).classList.toggle('hidden', !on)); if (!on) { $('invBoss').classList.add('hidden'); $('invOut').classList.add('hidden'); $('fogVeil').style.opacity = '0'; invClosePick(); }
+  ['invhud', 'invPowers'].forEach((id) => $(id).classList.toggle('hidden', !on)); if (!on) document.body.classList.remove('invout', 'ghostfx'); if (!on) { $('invBoss').classList.add('hidden'); $('invOut').classList.add('hidden'); $('fogVeil').style.opacity = '0'; invClosePick(); }
   invGfx.inv = []; invGfx.sel = 0; invRenderSlots();
 }
 // ---------- por quadro ----------
@@ -3338,7 +3338,7 @@ function invHud(v, me, dt) {
   // vidas
   if (me) $('invLives').innerHTML = `${'❤'.repeat(Math.max(0, me.lives))}<span class="lost">${'❤'.repeat(Math.max(0, INV.LIVES - me.lives))}</span>`;
   const out = !!(me && me.out && player && !player.alive);
-  $('invOut').classList.toggle('hidden', !out);
+  $('invOut').classList.toggle('hidden', !out); document.body.classList.toggle('invout', out); // sem vidas: some a tela de morte normal
   if (out) { const mates = entities.filter((e) => !e.zt && e !== player && e.alive); $('invOutTxt').textContent = mates.length ? `Assistindo ${mates[0].name} · um aliado pode te reviver com a ✨ Ressurreição` : 'Ninguém de pé…'; }
   // névoa: fora da área segura = tela roxa + seta pro centro
   let outside = false;
