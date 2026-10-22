@@ -20,7 +20,7 @@ import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js'
 import { buildNav } from './nav.js';
 import { initBacon, spawnBacon, updateBacon, clearBacon, popModel, baconStats, activeBacons, edibleBacons, eatBacon, BACON } from './bacon.js';
 import { Net, createRoom, roomInfo } from './net.js';
-import { initChat, chatTyping, chatShown, chatRoomOn, chatConsumeUnlock, chatNoteLocked, openChat, closeChat, chatSeed, chatPush, chatSetRoom, chatSetTeam, chatClear } from './chat.js';
+import { initChat, chatTyping, chatShown, chatRoomOn, chatConsumeUnlock, chatNoteLocked, openChat, closeChat, chatSeed, chatPush, chatSetRoom, chatSetTeam, chatClear, chatUseAll } from './chat.js';
 import { initVoice, voicePtt, voiceCycle, voiceReset, voiceRoster, voiceSignal, voiceTalking, voiceMuted, voiceToggleMute, voiceRefresh } from './voice.js';
 import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
@@ -2453,8 +2453,8 @@ document.addEventListener('wheel', (e) => { // rodinha: primária → pistola �
 });
 function tryOpenChat(e) {
   if (!online || e.repeat || !chatShown() || !chatRoomOn() || state !== 'playing') return false;
-  if (e.code === 'KeyY') return openChat('all');
-  if (e.code === 'KeyU') return openChat(socialTeam() ? 'team' : 'all');
+  if (e.code === 'KeyT') { chatUseAll(); return openChat('all'); }
+  if (e.code === 'KeyY' || e.code === 'KeyU') return openChat(socialTeam() ? 'team' : 'all');
   if ((e.code === 'Enter' || e.code === 'NumpadEnter') && player && player.alive) return openChat('all');
   return false;
 }
@@ -2466,7 +2466,6 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyJ' && !e.repeat && online) { e.preventDefault(); voiceCycle(); }
   if (state === 'playing' && isBomb() && bombFrozen(bombS) && player && player.alive && !e.repeat) { // Bomba, preparação: painel de troca de arma
     if (e.code === 'KeyB') { if (bombPick) closeBombPick(); else openBombPick(); return; }
-    if (bombPick && (e.code === 'Enter' || e.code === 'NumpadEnter')) { e.preventDefault(); closeBombPick(); return; }
     if (bombPick && e.code === 'KeyN') { setSecondary(SECONDARIES[(SECONDARIES.indexOf(selectedSecondary) + 1) % SECONDARIES.length]); return; }
     if (bombPick && e.code === 'KeyM') { setMelee(MELEES[(MELEES.indexOf(selectedMelee) + 1) % MELEES.length]); return; }
     if (bombPick && e.code === 'KeyG') { deathUnlock = true; if (document.pointerLockElement) document.exitPointerLock(); return; } // solta o mouse pra clicar
@@ -2747,7 +2746,7 @@ for (const id of NAME_FIELDS) {
 function sendName() { if (!online || !online.net) return; const n = saveName($('lobbyName').value); online.net.send({ t: 'prof', name: n, skin: selectedSkin, primary: selectedPrimary, secondary: selectedSecondary, melee: selectedMelee }); online.nameSent = n; }
 $('lobbyNameBtn').onclick = () => sendName();
 const roomLink = (code) => { const u = new URL(location.href); u.search = ''; const sv = new URLSearchParams(location.search).get('server'); if (sv) u.searchParams.set('server', sv); u.searchParams.set('sala', code); return u.toString(); };
-function socialTeam() { if (!online) return false; const cfg = (online.lobby && online.lobby.cfg) || online.cfg; return !!(cfg && cfg.mode === 'dom'); }
+function socialTeam() { if (!online) return false; const cfg = (online.lobby && online.lobby.cfg) || online.cfg; return !!(cfg && (cfg.mode === 'dom' || cfg.mode === 'bomb')); } // Dominação e Bomba: chat e voz do time
 function inviteBlurb(code) { return `Bora jogar Docão Shooter! Sala ${code}\n${roomLink(code)}`; }
 function fillInvite(code) { const link = roomLink(code); document.querySelectorAll('.invite-link').forEach((el) => { el.value = link; }); }
 async function copyText(s) {
@@ -3118,7 +3117,7 @@ function clearBombGfx() {
   $('timer').style.color = '';
 }
 // Bomba: painel compacto de troca de arma na preparação de cada rodada (miniaturas das armas). Vale na hora (online o
-// servidor só aceita na preparação). Fecha sozinho no VALENDO; B fecha/abre, Enter fecha. Não solta o mouse (G solta, se quiser clicar).
+// servidor só aceita na preparação). Fecha sozinho no VALENDO; B fecha/abre. Não solta o mouse (G solta, se quiser clicar).
 let bombPick = false;
 function bLoadTile(i, key, on, pick) {
   const w = WEAPONS[i], b = document.createElement('button'); b.className = 'bltile' + (on ? ' on' : ''); b.dataset.w = i;

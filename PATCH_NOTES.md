@@ -17,6 +17,7 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
 - **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
 - **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
+- **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
 
 ---
 
@@ -31,10 +32,16 @@ Ainda **não está no site**. Modo estilo Valorant, com o Docão:
 - **Sites e spawns feitos à mão** em 9 mapas, com o Ataque nascendo longe dos sites. O **HOTMILK** entrou no rodízio (A no estacionamento sudoeste, B no pátio sudeste, uns 18 s pro Ataque). O **Pátio Ferrugem** ficou fora por ser pequeno e o **Estande** é só do Treino.
 - **Killstreaks e rodadas:** a sequência e os streaks guardados passam pra rodada seguinte (trocar de rodada não é morrer). O que está no ar acaba na virada: o Gavião vai embora, e o míssil e o Fim da chapa ainda na contagem voltam pro F. Na preparação o F não funciona.
 - **Instruções claras na tela:** aviso grande com a tecla (*"Segure E para plantar o botijão"*, *"Segure E para desarmar"*, *"Leve o botijão até o A ou o B"* com a distância), barra com os segundos, faixa de começo de rodada explicando o objetivo do seu lado e um bloco **Como jogar** no menu.
-- **Troca de arma toda rodada:** na preparação abrem as cartas de arma da tela de morte. **1–9** troca a primária na hora, **G** solta o mouse pra clicar, **Enter/Esc/Pronto** fecham, e elas somem sozinhas no VALENDO.
+- **Troca de arma toda rodada:** na preparação aparece um painel compacto embaixo, com as miniaturas das armas (primária, secundária e corpo a corpo) e uma barra até a rodada começar. **1–9** ou a rodinha trocam a primária na hora, **N** a secundária, **M** faca/sabre, **G** solta o mouse se quiser clicar e **B** fecha/reabre. Dá pra olhar em volta com ele aberto, e ele some sozinho no VALENDO. Online, o servidor só aceita a troca na preparação.
 - Funciona offline e online, com chat, voz e killstreaks online da v1.8.
 
 ---
+
+## v1.8.2 — Chat no canto 💬 (22/10/2026)
+Feito pelo **[@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers)** (PR #7).
+- O histórico do chat fica aberto durante a partida, no canto superior direito, e desce sozinho quando chega mensagem nova
+- **T** abre o chat para todos; **Y** ou **U** abre só para o time na Dominação. O Tab volta a ser só o placar
+- Os botões de voz saíram de cima do feed de abates e foram para o lado do chat
 
 ## v1.8.1 — Streak de verdade 💥 (22/10/2026)
 
