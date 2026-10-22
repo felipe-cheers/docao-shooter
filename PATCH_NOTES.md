@@ -4,6 +4,10 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## Próxima versão
+- Segure **Ctrl** (esquerdo ou direito) para agachar, com animação e câmera mais baixa. O Docão anda mais devagar e só levanta se houver espaço acima da cabeça.
+- A hitbox acompanha a transição ao agachar e levantar, inclusive nos tiros, golpes de faca e explosões. A postura também é sincronizada no multiplayer.
+
 ## Resumo de 21 e 22/10/2026
 Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados

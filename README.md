@@ -79,6 +79,7 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **W A S D** (ou setas) | andar |
 | **Mouse** | mirar |
 | **Espaço** | pular |
+| **Ctrl** (segurar, esquerdo ou direito) | agachar: câmera e corpo abaixam, anda mais devagar; só levanta quando há espaço |
 | **Clique esquerdo** | atirar · golpe da faca · corte do sabre · segurar = puxar a corda do arco |
 | **Botão direito** ou **Shift** | mirar com zoom (luneta nas snipers) · **com a faca na mão: estocada** |
 | **R** | recarregar |
@@ -409,6 +410,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | Sem navegador | Offline (navegador) | Online (precisa do `wrangler dev`) |
 |---|---|---|
 | `test-shared.mjs`: regras compartilhadas | `test.mjs`: fluxo geral | `test-online.mjs` |
+| `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Ctrl, câmera e animação | |
 | `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-dom.mjs` |
 | `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-idle.mjs` |
 | `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-names.mjs` |
