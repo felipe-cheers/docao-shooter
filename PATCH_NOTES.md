@@ -4,17 +4,6 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## Próxima versão
-
-- Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
-
-- A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.
-
-- O menu virou a comanda da fazendinha: papel de açougue, placas de madeira e o botão Jogar. Arsenal e visual são acessados pelas placas junto do Docão; ajustes e áudio ficam no canto superior direito.
-- O Docão fica de frente na vitrine. Os botões de jogar continuam à mão, mesmo ao escolher armas ou skins, e o menu se adapta a telas menores.
-
----
-
 ## Resumo de 21 e 22/10/2026
 Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados
@@ -28,8 +17,23 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
 - **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
 - **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
+- **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
+- **v1.8.3 · Comanda da Fazendinha** ([@hiro-cheers](https://github.com/hiro-cheers), PR #8): menu inicial novo com cenário de fazendinha ao entardecer
 
 ---
+
+## v1.8.3 — Comanda da Fazendinha 🌅 (22/10/2026)
+Feito pelo **[@hiro-cheers](https://github.com/hiro-cheers)** (PR #8).
+- Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
+- A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.
+- O menu virou a comanda da fazendinha: papel de açougue, placas de madeira e o botão Jogar. Arsenal e visual são acessados pelas placas junto do Docão; ajustes e áudio ficam no canto superior direito.
+- O Docão fica de frente na vitrine. Os botões de jogar continuam à mão, mesmo ao escolher armas ou skins, e o menu se adapta a telas menores.
+
+## v1.8.2 — Chat no canto 💬 (22/10/2026)
+Feito pelo **[@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers)** (PR #7).
+- O histórico do chat fica aberto durante a partida, no canto superior direito, e desce sozinho quando chega mensagem nova
+- **T** abre o chat para todos; **Y** ou **U** abre só para o time na Dominação. O Tab volta a ser só o placar
+- Os botões de voz saíram de cima do feed de abates e foram para o lado do chat
 
 ## v1.8.1 — Streak de verdade 💥 (22/10/2026)
 
