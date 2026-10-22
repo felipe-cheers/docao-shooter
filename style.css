@@ -355,3 +355,13 @@ body.bombpick #bPrompt{display:none}
 #trainInfo{display:inline-block;margin-top:4px;background:rgba(20,10,8,.62);color:#fff;padding:4px 12px;border-radius:8px;font-size:14px;white-space:nowrap;pointer-events:none}
 #trainInfo b{color:#fff;font-size:16px}#trainInfo b.hd{color:#ffd23a}
 .trainnote{margin:6px 0;padding:6px 10px;border-radius:8px;background:rgba(242,201,76,.18);font-size:13px;line-height:1.35}
+
+/* Bomba + chat fixo no canto (v1.8.2): chat mais estreito e baixo, placar/tempo da bomba centrado no espaço livre entre o placar da esquerda e o chat */
+body.bombmode #socialHud{width:min(300px,32vw)}
+body.bombmode #socialHud .chatlog{max-height:20vh;min-height:80px}
+body.bombmode:has(#socialHud:not(.hidden)) #bombhud,body.bombmode:has(#socialHud:not(.hidden)) #topbar{left:calc((210px + 100vw - 24px - min(300px,32vw)) / 2);max-width:calc(100vw - 234px - min(300px,32vw) - 10px);width:max-content}
+/* painel de troca aberto: esconde o que ficaria por baixo dele (o próprio painel mostra a arma escolhida) */
+body.bombpick #score,body.bombpick #nades,body.bombpick #tac,body.bombpick #slots,body.bombpick #wname{visibility:hidden}
+#bLoad{width:min(660px,66vw);bottom:62px} /* acima da barra de VIDA e da munição */
+#bLoad .bltiles{flex:1;min-width:0}
+#bLoad .bltile{flex:1 1 0;min-width:0;max-width:62px}

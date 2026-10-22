@@ -33,7 +33,7 @@ Ainda **não está no site**. Modo estilo Valorant, com o Docão:
 - **Killstreaks e rodadas:** a sequência e os streaks guardados passam pra rodada seguinte (trocar de rodada não é morrer). O que está no ar acaba na virada: o Gavião vai embora, e o míssil e o Fim da chapa ainda na contagem voltam pro F. Na preparação o F não funciona.
 - **Instruções claras na tela:** aviso grande com a tecla (*"Segure E para plantar o botijão"*, *"Segure E para desarmar"*, *"Leve o botijão até o A ou o B"* com a distância), barra com os segundos, faixa de começo de rodada explicando o objetivo do seu lado e um bloco **Como jogar** no menu.
 - **Troca de arma toda rodada:** na preparação aparece um painel compacto embaixo, com as miniaturas das armas (primária, secundária e corpo a corpo) e uma barra até a rodada começar. **1–9** ou a rodinha trocam a primária na hora, **N** a secundária, **M** faca/sabre, **G** solta o mouse se quiser clicar e **B** fecha/reabre. Dá pra olhar em volta com ele aberto, e ele some sozinho no VALENDO. Online, o servidor só aceita a troca na preparação.
-- Funciona offline e online, com chat, voz e killstreaks online da v1.8.
+- Funciona offline e online, com chat, voz e killstreaks online da v1.8. **Chat no canto da v1.8.2 junto:** T fala com todos, Y/U com o seu time (na Bomba o time é o seu lado), e na Bomba o painel do chat fica mais estreito e o placar/tempo da rodada se ajeita no espaço livre, sem ficar um por cima do outro. As teclas da Bomba (E, e B/N/M/G/1–9 só na preparação) não brigam com T/Y/U/J/K/F/V/Q/R.
 
 ---
 

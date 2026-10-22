@@ -26,6 +26,10 @@ const sp = await G(() => { const g = window.__docao, L = g.bomb.L, p = g.player.
 ok(sp.pts && sp.atk < 1 && sp.def > 20, `servidor manda os spawns do modo Bomba e a Ana nasce no lado do Ataque (${JSON.stringify(sp)})`);
 ok(await until(() => !document.getElementById('bLoad').classList.contains('hidden')), 'online: painel de troca de arma na preparação');
 const w0 = await G(() => window.__docao.player.primary); await A.keyboard.press('Digit5'); await wait(400);
+await A.screenshot({ path: `${SHOTS}/36-bomba-online-troca-chat.png` });
+// chat fixo no canto (v1.8.2) não pode cobrir o placar/tempo da bomba nem o painel de troca
+const ov = await G(() => { const r = (id) => document.getElementById(id).getBoundingClientRect(), hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom; const c = r('socialHud'); return { hud: hit(c, r('bombhud')), top: hit(c, r('topbar')), load: hit(c, r('bLoad')) }; });
+ok(!ov.hud && !ov.top && !ov.load, `chat do canto não cobre o HUD da bomba nem o painel (${JSON.stringify(ov)})`);
 const w1 = await G(() => ({ p: window.__docao.player.primary, w: window.__docao.player.weapon }));
 ok(w1.p !== w0 && w1.w === w1.p, `online: tecla 5 na preparação troca a primária (${w0} → ${w1.p})`);
 ok(await until(() => window.__docao.bomb.S.phase === 'live', 15000), 'servidor libera a rodada depois de 10 s');

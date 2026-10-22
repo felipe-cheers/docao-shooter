@@ -1342,7 +1342,7 @@ function updateHud(dt) {
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
   if (!p.alive) cm.textContent = `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''} · ${respawnReady(p) ? (rsSent ? 'renascendo...' : 'clique em RENASCER (ou Espaço)') : Number.isFinite(p.respawnAt) ? `renasce em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'aguarde...'}`;
-  else if (msgTimer > 0) msgTimer -= dt; // mensagem (ex.: "Mapa: …") tem prioridade
+  else if (msgTimer > 0) { msgTimer -= dt; if (cm.textContent.startsWith('Você foi ')) cm.textContent = ''; } // mensagem (ex.: "Mapa: …") tem prioridade; tira o "Você foi pururucado" que sobrou de antes de nascer
   else if (gameTime < p.invulnUntil) cm.textContent = 'PROTEGIDO';
   else cm.textContent = '';
   if (!$('tabboard').classList.contains('hidden')) $('tabboard').innerHTML = boardHtml();
@@ -2389,7 +2389,7 @@ function setTeamWinner(w) {
   el.textContent = w < 0 ? `Empate! ${teamScore[0]} × ${teamScore[1]}` : `Time ${TEAM_NAMES[w]} venceu! ${teamScore[0]} × ${teamScore[1]}${player && player.team === w ? ' 🏆' : ''}`;
 }
 function refreshModeHud() {
-  $('domhud').classList.toggle('hidden', mode !== 'dom'); $('bombhud').classList.toggle('hidden', mode !== 'bomb');
+  $('domhud').classList.toggle('hidden', mode !== 'dom'); $('bombhud').classList.toggle('hidden', mode !== 'bomb'); document.body.classList.toggle('bombmode', mode === 'bomb');
   if (teamMode() && player) { $('myTeam').textContent = `Você: Time ${TEAM_NAMES[player.team] || '?'}`; $('myTeam').style.color = TEAM_COLORS[player.team] || '#fff'; }
   $('winner').style.color = '';
 }
@@ -3275,7 +3275,7 @@ function updateBombGfx(dt) {
   else if (S.phase === 'end') tt = S.over ? 'Fim de jogo!' : `Próxima rodada em ${Math.ceil(Math.max(0, S.phaseEnd - gameTime))}`;
   else tt = 'Fim de jogo!';
   $('timer').textContent = tt; $('timer').style.color = S.phase === 'planted' ? '#ff4d4d' : S.phase === 'prep' ? '#ffd27a' : '';
-  $('leader').textContent = `Bomba (protótipo) · Rodada ${S.round} · primeiro a ${BOMB.WIN}${S.round <= BOMB.HALF ? ` · troca após a ${BOMB.HALF}ª` : ''}`;
+  $('leader').textContent = `Bomba · Rodada ${S.round} · primeiro a ${BOMB.WIN}${S.round <= BOMB.HALF ? ` · troca após a ${BOMB.HALF}ª` : ''}`;
   let ct = '';
   if (S.planted) ct = `Botijão plantado no ${SITE_NAMES[S.site]}! ${mySide === 1 ? `Segure ${BOMB.KEY_LABEL} perto dele pra desarmar` : 'Proteja até explodir!'}`;
   else if (S.dropped) ct = mySide === 0 ? 'O botijão caiu! Passe por cima pra pegar' : 'O botijão caiu no chão!';
