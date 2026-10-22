@@ -4,6 +4,18 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## Próxima versão
+
+- Menu com nova logo, lettering cartoon, moldura irregular de madeira, campos padronizados e carimbo suíno. A chama do título tem animação discreta.
+- Jogar e Juntar a Porcada ficam lado a lado, com menor destaque visual para a ação online.
+- Docão fica sobre uma caixa de armas 3D, com madeira quente, ferragens e inscrição pintada. Trocar Visual é uma mala de figurinos apoiada na quina.
+- O Arsenal abre a tampa e leva a câmera ao interior da caixa, onde as armas aparecem em bandejas de madeira.
+- A mala abre pela lateral e revela um provador com forro verde e prévia 3D do figurino selecionado.
+- Chão e paisagem têm profundidade e paralaxe durante as transições. Fechar ou Esc faz o caminho inverso; a preferência por movimento reduzido pula a viagem.
+- Layout adaptado para telas estreitas, navegação por teclado e foco restaurado ao sair dos menus.
+
+---
+
 ## Resumo de 21 e 22/10/2026
 Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados
