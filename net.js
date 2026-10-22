@@ -22,7 +22,7 @@ export class Net {
   }
   connect() {
     const p = this.profile, tok = sessionStorage.getItem(tokKey(this.code)) || '';
-    const qs = new URLSearchParams({ name: p.name, skin: p.skin, primary: String(p.primary), token: tok });
+    const qs = new URLSearchParams({ name: p.name, skin: p.skin, primary: String(p.primary), secondary: String(p.secondary ?? ''), melee: String(p.melee ?? ''), token: tok });
     let ws; try { ws = new WebSocket(`${SERVER_URL}/ws/${this.code}?${qs}`); } catch (e) { this.h.onStatus('error', 'URL do servidor inválida'); return; }
     this.ws = ws; this.h.onStatus(this.tries ? 'reconnecting' : 'connecting');
     ws.onopen = () => { this.sendPing(); };

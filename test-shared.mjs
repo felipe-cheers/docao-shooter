@@ -33,6 +33,7 @@ ok(dh.dmg < 120 && Math.abs(dh2.dmg - 120) < 1e-6, 'foguete que bateu no casco (
 // sniper
 ok(sniperSpread(true, 0, false) === 0 && sniperSpread(true, 1.2, false) === 0, 'Sniper com luneta parado/quase parado: dispersão 0');
 ok(sniperSpread(true, 6, false) > 0 && sniperSpread(true, 6, false) < 0.02 && sniperSpread(false, 0, false) <= 0.03, 'Sniper andando / sem luneta: dispersão pequena');
+ok(sniperSpread(false, 0, false, true) >= 0.1 && sniperSpread(true, 0, false, true) === 0, 'Torresmo sem luneta abre; com luneta parado continua reto');
 // zona
 const z1 = newZoneState({ x: 0, y: 0, z: 0 }); stepZone(z1, [1, 0], 1); const z2 = newZoneState({ x: 0, y: 0, z: 0 }); stepZone(z2, [2, 0], 1);
 ok(Math.abs(z1.progress - 1 / 25) < 1e-9 && Math.abs(z2.progress - 1 / 24) < 1e-9, `progresso com 1 = 1/25 e com 2 = 1/24 por s (${z1.progress.toFixed(4)} → ${z2.progress.toFixed(4)}/s)`);

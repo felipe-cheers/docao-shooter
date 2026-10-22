@@ -110,7 +110,7 @@ ok(dot > 0.99999, `raio sai exatamente pelo centro da mira (cos = ${dot.toFixed(
 ok(Math.abs(shot.pitch - 0.05) < 1e-6 && Math.abs(shot.yaw - 0.3) < 1e-6, 'sem coice deslocando a mira depois do tiro');
 await until(() => window.__docao.time >= window.__docao.player.nextFire + 0.05 && window.__docao.ads < 0.05, 20000); await page.mouse.down(); await wait(80); await page.mouse.up(); await wait(100);
 await until(() => window.__lastShot && window.__lastShot.spread > 0, 5000);
-ok(await G(() => window.__lastShot.spread > 0 && window.__lastShot.spread <= 0.03), `sem luneta: dispersão pequena (${await G(() => window.__lastShot.spread)})`);
+ok(await G(() => window.__lastShot.spread >= 0.1), `Torresmo sem luneta: dispersão larga (${await G(() => window.__lastShot.spread)})`);
 // ---- tela de morte clicável
 await G(() => { window.__docao.player.invulnUntil = 0; window.__docao.kill(window.__docao.player); }); await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 6000); // câmera do bacon (1,1 s de jogo) antes dos cartões
 const dstate = await G(() => ({ lock: !!document.pointerLockElement, state: window.__docao.state, pick: !document.getElementById('deathpick').classList.contains('hidden') }));

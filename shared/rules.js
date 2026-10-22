@@ -23,12 +23,12 @@ export function regenStep(e, now, dt) {
 export const BACON_ITEM = { heal: 10, radius: 1.2, dy: 1.0, from: 0.3, life: 3.45 };
 export const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, RADIUS = 0.42, HEIGHT = 2.0, EYE = 1.6;
 
-// Armas. Primárias (menu): 0 Fuzil, 1 Calibre 12, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Secundária: 4 Pistolinha.
+// Armas. Primárias (menu): 0 Fuzil, 1 Calibre 12 (pump), 12 Semi, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Faca 7, sabre 8. Secundária: 4 pistola, 11 furadeira, 13 besta, 14 arco. A besta e o arco são fracas de propósito: um tiro no corpo não mata.
 export const WEAPONS = [
   { key: 'rifle', name: 'Fuzil Pururuca', short: 'Fuzil Pururuca', chip: 'Fuzil', mag: 30, reserve: 120, dmg: 20, headMul: 2, rate: 0.1, auto: true, pellets: 1, spread: 0.01, reload: 1.6, range: 140, recoil: 0.018, adsFov: 40, adsSpread: 0.12, flashZ: -0.76,
     desc: 'Automático · 30/120 · 20 dano' },
-  { key: 'shotgun', name: 'Escopeta Chiqueiro · Calibre 12', short: 'Calibre 12', chip: 'Calibre 12', mag: 8, reserve: 32, dmg: 15, headMul: 1.5, rate: 0.8, auto: false, pellets: 8, spread: 0.06, reload: 0.45, shellReload: true, reloadStart: 0.25, range: 45, recoil: 0.07, adsFov: 55, adsSpread: 0.6, flashZ: -0.86,
-    falloff: [7, 30, 0.3], pump: true, desc: 'Calibre 12 · pump · 8/32 · forte de perto' },
+  { key: 'shotgun', name: 'Escopeta Chiqueiro · Calibre 12', short: 'Calibre 12', chip: 'Calibre 12', mag: 8, reserve: 32, dmg: 18, headMul: 1.5, rate: 0.8, auto: false, pellets: 8, spread: 0.06, reload: 0.45, shellReload: true, reloadStart: 0.25, range: 45, recoil: 0.07, adsFov: 55, adsSpread: 0.6, flashZ: -0.86,
+    falloff: [7, 30, 0.3], pump: true, desc: 'Calibre 12 · pump · 8/32 · bem forte de perto' },
   // Intermediária: ferrolho clássico, 1 tiro no corpo (ref. Intervention).
   { key: 'sniper', name: 'Sniper Torresmo', short: 'Sniper Torresmo', chip: 'Torresmo', mag: 5, reserve: 20, dmg: 100, headMul: 1.5, rate: 1.15, auto: false, pellets: 1, spread: 0.07, reload: 2.3, range: 220, recoil: 0.055, adsFov: 13, adsSpread: 0, flashZ: -1.1,
     scope: true, bolt: true, beam: true, scopeStyle: 'torresmo', desc: 'Ferrolho médio · 5/20 · 1 tiro no corpo · botão direito = luneta' },
@@ -44,9 +44,45 @@ export const WEAPONS = [
     scope: true, bolt: true, beam: true, scopeStyle: 'carabina', desc: 'Ferrolho rápido · 10/40 · fraca no corpo · luneta aberta' },
   // 7 · Faca de churrasqueiro: corpo a corpo, sempre no slot 3 (sem munição). Regras de acerto em shared/melee.js
   { key: 'knife', name: 'Faca de churrasqueiro', short: 'Faca', chip: 'Faca', mag: 0, reserve: 0, dmg: 40, headMul: 1, rate: 0.42, auto: true, pellets: 0, spread: 0, reload: 0, range: 1.6, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
-    melee: true, desc: 'Sempre equipada · golpe 40 · estocada 75 (botão direito) · pelas costas mata' },
+    melee: true, desc: 'Golpe 40 · estocada no botão direito · pelas costas mata' },
+  // 8 · Sabre de Luz: corpo a corpo, no lugar da faca se você escolher. Um corte na frente mata.
+  { key: 'sabre', name: 'Sabre de Luz', short: 'Sabre de Luz', chip: 'Sabre', mag: 0, reserve: 0, dmg: 100, headMul: 1, rate: 0.48, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.5, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
+    melee: true, reach: 2.5, arc: 0.95,
+    move: 0.7, desc: 'Corte na frente · 1 golpe · troca a faca · anda mais devagar' },
+  // 9 · Mini uzi: rajada muito rápida, curta, abre de perto.
+  { key: 'uzi', name: 'Mini Uzi do Leitão', short: 'Mini Uzi', chip: 'Uzi', mag: 25, reserve: 100, dmg: 11, headMul: 1.6, rate: 0.055, auto: true, pellets: 1, spread: 0.03, reload: 1.35, range: 70, recoil: 0.036, adsFov: 55, adsSpread: 0.5, flashZ: -0.52,
+    falloff: [8, 28, 0.35], desc: 'Rajada rápida · 25/100 · forte de perto' },
+  // 10 · Compacta no estilo P90: carregador grande em cima, rajada mais estável.
+  { key: 'p90', name: 'P90 da Granja', short: 'P90', chip: 'P90', mag: 50, reserve: 150, dmg: 14, headMul: 1.5, rate: 0.07, auto: true, pellets: 1, spread: 0.016, reload: 1.7, range: 110, recoil: 0.024, adsFov: 48, adsSpread: 0.28, flashZ: -0.55,
+    falloff: [16, 48, 0.45], desc: 'Compacta · 50/150 · rajada estável' },
+  // 11 · Furadeira de prego: opção de secundária. Um prego por clique.
+  { key: 'prego', name: 'Furadeira de Prego', short: 'Furadeira', chip: 'Prego', mag: 16, reserve: 64, dmg: 18, headMul: 1.4, rate: 0.11, auto: false, pellets: 1, spread: 0.02, reload: 1.25, range: 40, recoil: 0.02, adsFov: 58, adsSpread: 0.55, flashZ: -0.48,
+    falloff: [6, 22, 0.25], desc: 'Secundária · um prego por clique · forte de perto' },
+  // 12 · Escopeta semi: sem pump. Cada tiro é mais fraco que a Calibre 12, mas o próximo sai bem antes.
+  { key: 'semi', name: 'Escopeta Semi do Leitão', short: 'Semi', chip: 'Semi', mag: 8, reserve: 32, dmg: 13, headMul: 1.5, rate: 0.36, auto: false, pellets: 8, spread: 0.075, reload: 1.4, range: 40, recoil: 0.048, adsFov: 58, adsSpread: 0.7, flashZ: -0.72,
+    falloff: [6, 22, 0.25], desc: 'Semi · 8/32 · atira rápido · mais fraca que a pump' },
+  // 13 · Besta: secundária de um virote. Não mata no corpo (vida 100).
+  { key: 'besta', name: 'Besta do Leitão', short: 'Besta', chip: 'Besta', mag: 1, reserve: 10, dmg: 38, headMul: 1.35, rate: 0.45, auto: false, pellets: 1, spread: 0.004, reload: 1.35, range: 80, recoil: 0.045, adsFov: 58, adsSpread: 0.45, flashZ: -0.7,
+    falloff: [12, 40, 0.45], desc: 'Secundária · um virote · recarrega armando a corda' },
+  // 14 · Arco: secundária mais fraca, corda mais rápida que a besta.
+  { key: 'arco', name: 'Arco da Granja', short: 'Arco', chip: 'Arco', mag: 1, reserve: 16, dmg: 26, headMul: 1.4, rate: 0.35, auto: false, pellets: 1, spread: 0.015, reload: 0.85, range: 65, recoil: 0.03, adsFov: 62, adsSpread: 0.55, flashZ: -0.55,
+    falloff: [10, 36, 0.4], draw: 0.7, desc: 'Secundária · segura o clique para puxar a corda · solta mais forte' },
 ];
-export const PRIMARIES = [0, 1, 2, 5, 6, 3], PISTOL = 4, KNIFE = 7, W_NADE = -1;
+export const UZI = 9, P90 = 10, NAIL = 11, SEMI = 12;
+export const CROSS = 13, BOW = 14;
+export const PRIMARIES = [0, UZI, P90, 1, 2, 5, 6, 3, SEMI], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
+export const SECONDARIES = [PISTOL, NAIL, CROSS, BOW];
+export const MELEES = [KNIFE, SABER];
+export const BOT_PRIMARIES = [0, UZI, P90, 1, SEMI, 2, 5, 6, 3];
+// Menu: cada grupo é uma escolha. primary = uma primária. melee = faca ou sabre. secondary = pistola, furadeira, besta ou arco.
+export const CATEGORIES = [
+  { id: 'rajada', title: 'Rajada', pick: 'primary', weapons: [0, UZI, P90] },
+  { id: 'escopeta', title: 'Escopeta', pick: 'primary', weapons: [1, SEMI] },
+  { id: 'precisao', title: 'Precisão', pick: 'primary', weapons: [2, 5, 6] },
+  { id: 'explosivo', title: 'Explosivo', pick: 'primary', weapons: [3] },
+  { id: 'faca', title: 'Faca', pick: 'melee', weapons: [KNIFE, SABER] },
+  { id: 'secundaria', title: 'Secundária', pick: 'secondary', weapons: [PISTOL, NAIL, CROSS, BOW] },
+];
 // Faca: golpe (clique) e estocada (botão direito). range = alcance até a superfície do corpo; cone = meia-abertura (rad).
 // Pelas costas (atacante atrás da vítima: cos(frente da vítima, vítima→atacante) < backDot) = morte instantânea.
 export const MELEE = {
@@ -54,6 +90,14 @@ export const MELEE = {
   stab: { dmg: 75, range: 1.8, cone: 0.36, rate: 1.0 },
   backDot: -0.4, backDmg: 1000, speedMul: 1.15, draw: 0.2,
 };
+export const SABER_COLORS = [
+  { id: 'vermelho', hex: '#ff2a2a' },
+  { id: 'azul', hex: '#3d7eff' },
+  { id: 'verde', hex: '#39e07a' },
+  { id: 'roxo', hex: '#b44dff' },
+  { id: 'amarelo', hex: '#ffe14a' },
+  { id: 'branco', hex: '#f4fbff' },
+];
 
 // Copo Bomba (granada)
 export const NADE = { max: 3, spawnWith: 1, fuse: 2.5, charge: 1.2, radius: 6, maxDmg: 130, selfMul: 0.4, grav: -20, r: 0.14, pickupRespawn: 20, knock: 14, lift: 7 };
@@ -62,5 +106,5 @@ export const BOT_DEFS = [
   { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' }, { name: 'Linguiça' }, { name: 'Quindim' }, { name: 'Coxinha' }, { name: 'Pururuca' },
 ];
 
-export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2]; // distância preferida dos bots por arma (7 = faca)
+export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14]; // 9 mini uzi perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco
 export const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b', '#9fd0ff', '#ffa3d8', '#b8f2e6', '#ffe9a8'];
