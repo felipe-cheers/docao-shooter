@@ -78,7 +78,14 @@ ok(await G(() => document.getElementById('invWaveN').textContent.includes('WAVE 
 await page.screenshot({ path: `${SHOTS}/wave-banner.png` });
 // zumbis nascem na borda (longe do jogador)
 const zd = await G(() => { const g = window.__docao, p = g.player; return Math.min(...g.entities.filter((e) => e.zt).map((e) => e.pos.distanceTo(p.pos))); });
-ok(zd >= 14, `zumbis nascem longe do jogador (${zd.toFixed(1)} m)`);
+ok(zd >= 11.5, `zumbis nascem a 12+ m do jogador (${zd.toFixed(1)} m)`);
+{ // espalhados pelo mapa (não só na borda) e quase sempre fora da visão do jogador — mesma regra no servidor
+  const r = await G(() => { const g = window.__docao, I = g.inv, p = g.player, out = []; for (let i = 0; i < 40; i++) out.push(I.spawnPos()); const [hx, hz] = g.map.size;
+    const inner = out.filter((q) => Math.abs(q.x) < hx - 8 && Math.abs(q.z) < hz - 8).length, near = out.filter((q) => Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < 11.5).length;
+    const seen = out.filter((q) => g.visible({ pos: new g.V3(q.x, q.y, q.z), crouch: 0 })).length; return { inner, near, seen }; });
+  ok(r.inner >= 10 && r.near === 0, `nascem em pontos aleatórios do mapa (${r.inner}/40 longe da borda, ${r.near} perto do jogador)`);
+  ok(r.seen <= 8, `nascem fora da visão do jogador (${r.seen}/40 visíveis)`);
+}
 // mata a wave inteira → pausa
 await G(() => { const g = window.__docao; g.inv.queue = []; for (const z of g.entities.filter((e) => e.zt && e.alive)) g.damage(z, 1e5, g.player, 0, false); });
 ok(await until(() => window.__docao.invView.phase === 'break', 6000), 'wave limpa → pausa entre waves');

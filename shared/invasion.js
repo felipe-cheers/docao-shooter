@@ -16,7 +16,7 @@ export const INV = {
   mode: 'inv', WAVES: 20, PREP: 12, BREAK: 15, LIVES: 2, INV_MAX: 3,
   DROP_LIFE: 35, PICK_R: 1.5, BOSS_EVERY: 5, RES_PER_BLOCK: 4, BLOCK: 5,
   FOG_MIN_R: 11, FOG_SHRINK: 32, FOG_DPS: 5, FOG_DPS_WAVE: 0.5,
-  MAX_PLAYERS: 10, DEFAULT_MAP: 'rodizio', ZOMBIE_LINGER: 2.4,
+  MAX_PLAYERS: 10, DEFAULT_MAP: 'rodizio', ZOMBIE_LINGER: 2.4, SPAWN_MIN: 12,
 };
 export const isInvasion = (m) => m === INV.mode;
 export const PHASES = ['prep', 'wave', 'break', 'over'];
@@ -194,16 +194,18 @@ export class InvasionCore {
     for (let i = 0; i < burst && this.queue.length; i++) if (this.spawn(this.queue[0])) this.queue.shift();
     this.nextSpawn = T + S.spawnEvery * (0.6 + this.rnd() * 0.8);
   }
+  // onde nasce um zumbi: ponto ALEATÓRIO andável do mapa inteiro (nav.good = chão alcançável, fora de parede),
+  // a pelo menos SPAWN_MIN m de todo jogador vivo e, se der, fora da linha de visão deles (sem susto à queima-roupa)
   spawnPos() {
-    const good = (this.A.nav && this.A.nav.good) || [], H = this.A.players().filter((p) => p.alive), F = this.fog;
+    const good = (this.A.nav && this.A.nav.good) || [], H = this.A.players().filter((p) => p.alive), P = this.A.P;
     let best = null, bs = -1e9;
-    for (let i = 0; i < 90 && good.length; i++) {
+    for (let i = 0; i < 60 && good.length; i++) {
       const nd = good[Math.floor(this.rnd() * good.length)];
-      let dp = 1e9; for (const p of H) dp = Math.min(dp, d3(nd, p.pos)); if (dp < 15) continue;
-      const dc = hyp(nd.x - F.cx, nd.z - F.cz), edge = Math.min(this.hx - Math.abs(nd.x), this.hz - Math.abs(nd.z));
-      // na borda: perto da borda da névoa (sai da névoa) ou da borda do mapa; nem longe demais dos jogadores
-      const s = -Math.min(Math.abs(dc - F.r * 0.92), edge * 1.5) * 0.7 - Math.max(0, dp - 42) * 0.9 - (nd.y > 1.5 ? 6 : 0) + this.rnd() * 5;
-      if (s > bs) { bs = s; best = nd; }
+      let dp = 1e9; for (const p of H) dp = Math.min(dp, d3(nd, p.pos)); if (dp < INV.SPAWN_MIN) continue;
+      let seen = false;
+      if (P && P.losClear && dp < 45) for (const p of H) { if (d3(nd, p.pos) < 45 && P.losClear({ x: p.pos.x, y: p.pos.y + 1.6, z: p.pos.z }, { x: nd.x, y: nd.y + 1.2, z: nd.z })) { seen = true; break; } }
+      const s = this.rnd() * 10 - (seen ? 25 : 0) - Math.max(0, dp - 50) * 0.4; // aleatório; escondido; não longe demais da ação
+      if (s > bs) { bs = s; best = nd; } if (!seen && dp <= 50 && i > 8) break;
     }
     return best ? { x: best.x, y: best.y, z: best.z } : null;
   }
