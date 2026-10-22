@@ -80,7 +80,7 @@ export function feedbackPoints() {
   return points;
 }
 
-function showHit(kill, head) {
+function showHit(kill, head, wall = false) {
   const el = $('hitmarker');
   if (!el || !el.classList) return;
   if (hitTimer) {
@@ -93,6 +93,7 @@ function showHit(kill, head) {
   el.classList.add('show');
   if (kill) el.classList.add('kill');
   if (head) el.classList.add('head');
+  if (wall) el.classList.add('wall'); // acerto pela parede: hitmarker laranja
   if (el.style) el.style.opacity = '1';
   hitTimer = later(() => {
     el.classList.remove('show');
@@ -168,10 +169,17 @@ export function feedbackAward(amount) {
   popPoints(n, 'kill');
 }
 
+// medalha avulsa (Collateral: várias mortes numa bala só)
+export function feedbackMedal(title, sub) {
+  points += 50;
+  pushMedal(title, sub);
+}
+
 export function feedbackHit(info) {
   const head = !!(info && info.head);
+  const wall = !!(info && info.wall);
   points += 10;
-  showHit(false, head);
+  showHit(false, head, wall);
   popPoints(10, head ? 'head' : '');
 }
 
@@ -179,9 +187,10 @@ export function feedbackKill(info) {
   const head = !!(info && info.head);
   const dist = info ? info.dist : undefined;
   const isRevenge = !!(info && info.revenge);
+  const wall = !!(info && info.wall);
   points += head ? 150 : 100;
   revenge = isRevenge;
-  showHit(true, head);
+  showHit(true, head, wall);
   popPoints(head ? 150 : 100, head ? 'kill head' : 'kill');
 
   const seen = new Set();
@@ -199,6 +208,7 @@ export function feedbackKill(info) {
   if (typeof dist === 'number' && Number.isFinite(dist) && dist >= 35) award('Do telhado', 'de bem longe');
   if (typeof dist === 'number' && Number.isFinite(dist) && dist <= 5) award('Na brasa', 'quase encostado');
   if (isRevenge) award('Devolução', 'olho por olho');
+  if (wall) award('Pela parede', 'atravessou a parede');
 
   const t = now();
   streakCount = lastKillAt && t - lastKillAt <= STREAK_MS ? streakCount + 1 : 1;

@@ -18,6 +18,15 @@ const until = async (fn, ms = 12000) => {
   }
   return false;
 };
+// UAV e Gavião: F puxa o rádio, fala por 1 s e só então o streak entra
+const callRadio = async () => {
+  await G(() => window.__docao.useStreak());
+  await page.waitForTimeout(400);
+  const mid = await G(() => ({ call: !!window.__docao.radioCall, radio: !!document && window.__docao.radioCall !== null }));
+  ok(mid.call, `F abre o rádio e chama antes de soltar o streak (${JSON.stringify(mid)})`);
+  ok(await until(() => !window.__docao.radioCall, 40000), 'a chamada no rádio termina');
+  await page.waitForTimeout(200);
+};
 await G(() => {
   const g = window.__docao;
   g.startGame('arena');
@@ -75,8 +84,8 @@ const armed = await G(() => ({
   promptOn: document.getElementById('nukeReady') && !document.getElementById('nukeReady').hidden,
 }));
 ok(armed.n === '3' && armed.shown && !armed.uav && armed.promptOn && armed.prompt.includes('Olho'), `3 abates deixam o minimapa pronto, sem ligar (${JSON.stringify(armed)})`);
-await G(() => window.__docao.useStreak());
-await page.waitForTimeout(200);
+await callRadio();
+
 const uav = await G(() => ({
   uav: !document.getElementById('uav').hidden,
   time: document.getElementById('uavTime')?.textContent,
@@ -106,6 +115,17 @@ const aim = await page.evaluate(() => {
   return { above, below, low: card('3'), high: card('7'), left: document.querySelector('#streakBar .streak-card[data-need="3"] b').textContent };
 });
 ok(aim.above > 0 && aim.above > aim.below, `inimigo na frente fica em cima no minimapa (${JSON.stringify(aim)})`);
+// yaw 0 olha pra −Z; a direita do Docão é +X (a mesma do D no teclado). Inimigo em +X tem que aparecer à direita no minimapa.
+await G(() => { const g = window.__docao; let i = 0; for (const e of g.entities) { if (e.isPlayer) continue; e.pos.set(i === 0 ? 6 : 90, 0, i === 0 ? 0 : 90); i++; } });
+await page.waitForTimeout(250);
+const side = await page.evaluate(() => {
+  const c = document.querySelector('#uav canvas'), ctx = c.getContext('2d'), w = c.width, h = c.height, cx = w / 2, cy = h / 2;
+  const red = (x, y) => { const d = ctx.getImageData(x | 0, y | 0, 1, 1).data; return d[0] > 180 && d[0] > d[1] + 40 && d[0] > d[2] + 40; };
+  let right = 0, left = 0;
+  for (let y = cy - 24; y < cy + 24; y += 3) { for (let x = cx + 10; x < cx + (w - cx) * 0.65; x += 3) if (red(x, y)) right++; for (let x = cx * 0.35; x < cx - 10; x += 3) if (red(x, y)) left++; }
+  return { right, left };
+});
+ok(side.right > 0 && side.right > side.left, `inimigo à direita fica à direita no minimapa (${JSON.stringify(side)})`);
 ok(aim.high < aim.low && aim.left === '0', `barra de baixo pra cima, o de 3 já foi (${JSON.stringify(aim)})`);
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); });
@@ -157,8 +177,8 @@ const heliWait = await G(() => {
   return { up: !!(h && h.alive), prompt, kills: window.__docao.rewardKills };
 });
 ok(!heliWait.up && heliWait.prompt.includes('Gavião') && heliWait.kills === 7, `7 abates deixam o helicóptero pronto (${JSON.stringify(heliWait)})`);
-await G(() => window.__docao.useStreak());
-await page.waitForTimeout(200);
+await callRadio();
+
 const heliOn = await G(() => {
   const h = window.__docao.heli;
   const ready = document.getElementById('nukeReady');
@@ -169,18 +189,26 @@ ok(heliOn.up && heliOn.hp >= 200 && !heliOn.ready && heliOn.kills === 7 && heliO
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
+const gunReady = await G(() => ({ prompt: document.getElementById('nukeReady')?.textContent || '', ready: [...document.querySelectorAll('#streakBar .streak-card.ready')].map((c) => c.dataset.need), kills: window.__docao.rewardKills }));
+ok(gunReady.kills === 10 && gunReady.prompt.includes('Chopper') && gunReady.ready.join() === '10', `10 abates armam o Chopper da granja (${JSON.stringify(gunReady)})`);
+await callRadio();
+const gunOn = await G(() => ({ on: !!window.__docao.gunner, hud: !document.getElementById('gunnerHud').hidden, hp: window.__docao.gunHeli && window.__docao.gunHeli.hp }));
+ok(gunOn.on && gunOn.hud && gunOn.hp === 560, `F chama o Chopper e a câmera vai pra ele (${JSON.stringify(gunOn)})`);
+await G(() => window.__docao.endGunner(true));
+await G(() => { for (let i = 0; i < 5; i++) window.__docao.rewardKill(); });
+await page.waitForTimeout(200);
 const nukeOn = await G(() => {
   const b = document.getElementById('nukeBanner');
   const ready = document.getElementById('nukeReady');
   return { hidden: !b || b.hidden, ready: ready && !ready.hidden, kills: window.__docao.rewardKills, bots: window.__docao.entities.filter((e) => !e.isPlayer && e.alive).length };
 });
-ok(nukeOn.hidden && nukeOn.ready && nukeOn.kills === 10 && nukeOn.bots > 0, `10 abates armam o nuke secreto, sem estourar (${JSON.stringify(nukeOn)})`);
+ok(nukeOn.hidden && nukeOn.ready && nukeOn.kills === 15 && nukeOn.bots > 0, `15 abates armam o nuke secreto, sem estourar (${JSON.stringify(nukeOn)})`);
 await G(() => window.__docao.useStreak());
 await page.waitForTimeout(200);
 const counting = await G(() => document.getElementById('nukeBanner')?.querySelector('b')?.textContent);
 ok(counting === '5', `apertar o rádio começa a contagem (${counting})`);
 const beforeDie = await G(() => window.__docao.rewardKills);
-ok(beforeDie === 10, `a contagem não soma abate secreto (${beforeDie})`);
+ok(beforeDie === 15, `a contagem não soma abate secreto (${beforeDie})`);
 await G(() => window.__docao.kill(window.__docao.player));
 const still = await G(() => ({ at: window.__docao.nukeAt > window.__docao.time, me: window.__docao.player.alive }));
 ok(still.at && !still.me, `morrer depois do F não cancela a contagem (${JSON.stringify(still)})`);
@@ -196,12 +224,31 @@ const mid = await G(() => {
   const card = document.querySelector('#streakBar .streak-card[data-need="3"]');
   return { n: document.querySelector('#streakCount b')?.textContent, card: card?.className || '' };
 });
-ok(mid.n === '1' && mid.card.includes('next'), `depois do 10 o ciclo recomeça (${JSON.stringify(mid)})`);
+ok(mid.n === '1' && mid.card.includes('next'), `depois do 15 o ciclo recomeça (${JSON.stringify(mid)})`);
 
 await G(() => window.__docao.kill(window.__docao.player));
 await page.waitForTimeout(200);
 const dead = await G(() => document.getElementById('streakCount').hidden);
 ok(dead, 'morrer zera o número de seguidos');
+
+// cards: sem setas; só brilha (ready) o que está guardado pra usar; o guardado sobrevive à morte
+await G(() => { const g = window.__docao; g.respawn(g.player); g.player.invulnUntil = g.time + 9999; });
+await page.waitForTimeout(300);
+const cardState = () => G(() => ({ chev: document.querySelectorAll('#streakBar .streak-chevron').length, ready: [...document.querySelectorAll('#streakBar .streak-card.ready')].map((c) => c.dataset.need), bank: window.__docao.streakReady }));
+let cs = await cardState();
+ok(cs.chev === 0 && cs.ready.length === 0, `sem setas e nada brilhando sem streak guardado (${JSON.stringify(cs)})`);
+await G(() => { for (let i = 0; i < 3; i++) window.__docao.rewardKill(); });
+cs = await cardState();
+ok(cs.ready.join() === '3' && cs.bank.join() === 'uav', `3 abates: só o Olho da granja brilha (${JSON.stringify(cs)})`);
+await G(() => window.__docao.kill(window.__docao.player));
+await page.waitForTimeout(200);
+cs = await cardState();
+ok(cs.ready.join() === '3' && cs.bank.join() === 'uav', `morreu: o streak ganho continua guardado (${JSON.stringify(cs)})`);
+await G(() => { const g = window.__docao; g.respawn(g.player); g.player.invulnUntil = g.time + 9999; });
+await page.waitForTimeout(300);
+await G(() => window.__docao.useStreak());
+cs = await cardState();
+ok(cs.ready.length === 0 && cs.bank.length === 0, `renasceu e usou com F: para de brilhar (${JSON.stringify(cs)})`);
 
 if (errors.length) console.log('erros:', errors.slice(0, 8).join('\n'));
 ok(errors.length === 0, 'sem erro no console');
