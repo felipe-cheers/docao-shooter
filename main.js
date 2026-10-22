@@ -29,6 +29,7 @@ import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/co
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
 import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
+import { KS_KILL_NAME, heliPos } from './shared/killstreaks.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 
 const V3 = THREE.Vector3;
@@ -805,7 +806,7 @@ let rewardKills = 0, nukeAt = 0, uavLive = false, pickingStrike = false, nukeRea
 let streakReady = [];
 let tabletWant = 0, radioWant = 0, laptopWant = 0, tabletK = 0, radioK = 0, laptopK = 0;
 let heli = null;
-const HELI = { hp: 280, life: 30, height: 17, hit: 3.1, dmg: 16, rate: 0.22 };
+const HELI = { hp: 280, life: 30, height: 17, hit: 3.1, dmg: 16, rate: 0.22, points: 25 }; // mesmos números de shared/killstreaks.js (servidor)
 function syncRewardHud() {
   setStreakCount(rewardKills);
   setStreakCycle(streakCycle(rewardKills));
@@ -967,7 +968,36 @@ function removeHeli() {
   const hud = document.getElementById('heliHud');
   if (hud) hud.hidden = true;
 }
-function clearHeli() { removeHeli(); }
+function clearHeli() { removeHeli(); clearNetHelis(); netNukeAt = 0; }
+// ---------- killstreaks online: o servidor decide (eventos 'hl'/'hh'/'hx'/'hs', 'nk'/'nb', 'bm' tipo 'p'); aqui é só o visual ----------
+const netHelis = new Map(); let netNukeAt = 0;
+function clearNetHelis() { for (const h of netHelis.values()) scene.remove(h.mesh); netHelis.clear(); }
+function netHeliSpawn([, id, oid, ang, orbit, born, until, hp]) {
+  if (netHelis.has(id)) return; const mesh = makeHeliMesh(); scene.add(mesh);
+  const owner = entOf(oid), h = { id, owner, mesh, ang, orbit, born, until, hp, max: HELI.hp, alive: true, crash: false, dieT: 0, pos: new V3(), vel: new V3() };
+  const p = heliPos(h, gameTime); h.pos.set(p.x, p.y, p.z); mesh.position.copy(h.pos); netHelis.set(id, h);
+  if (owner === player) { ensureHeliHud().hidden = false; flashMsg('Gavião da granja'); } else if (owner) flashMsg(`${owner.name} chamou o Gavião`);
+}
+function netHeliDown(id, crash) {
+  const h = netHelis.get(id); if (!h || !h.alive) return;
+  h.alive = false; h.crash = !!crash; h.dieT = crash ? 0.9 : 1.25; if (crash) flashMsg('Derrubaram o gavião');
+}
+function updateNetHelis(dt) {
+  for (const h of [...netHelis.values()]) {
+    const ud = h.mesh.userData; if (ud.rotor) ud.rotor.rotation.y += dt * 26; if (ud.tailR) ud.tailR.rotation.x += dt * 32;
+    const mine = h.owner === player, hud = mine ? ensureHeliHud() : null;
+    if (!h.alive) {
+      h.pos.y += dt * (h.crash ? -20 : 16); h.mesh.rotation.z += dt * (h.crash ? 2.4 : 0); h.mesh.position.copy(h.pos); h.dieT -= dt;
+      if (hud) hud.hidden = true;
+      if (h.dieT <= 0 || h.pos.y < 0.5) { if (h.crash) blastFx(h.pos.clone(), 5); scene.remove(h.mesh); netHelis.delete(h.id); }
+      continue;
+    }
+    const prev = h.pos.clone(), p = heliPos(h, gameTime); h.pos.set(p.x, p.y + Math.sin(gameTime * 1.6) * 0.35, p.z);
+    h.vel.copy(h.pos).sub(prev).multiplyScalar(1 / Math.max(dt, 0.001)); h.mesh.position.copy(h.pos);
+    if (h.vel.lengthSq() > 0.04) h.mesh.lookAt(h.pos.clone().add(h.vel));
+    if (hud) { hud.hidden = false; const bar = hud.querySelector('span'); if (bar) bar.style.width = Math.max(0, h.hp / h.max * 100) + '%'; const tm = hud.querySelector('small'); if (tm) tm.textContent = Math.max(0, Math.ceil(h.until - gameTime)) + 's'; }
+  }
+}
 function hurtHeli(amount) {
   if (!heli || !heli.alive || !(amount > 0)) return;
   heli.hp = Math.max(0, heli.hp - amount);
@@ -1013,7 +1043,7 @@ function heliShoot() {
   best.hp -= HELI.dmg;
   best.lastAttacker = player;
   best.flashUntil = gameTime + 0.08;
-  if (best.hp <= 0) { kill(best, player, 0, false, false, true); feedbackAward(25); }
+  if (best.hp <= 0) { kill(best, player, 0, false, false, true); feedbackAward(HELI.points); }
 }
 function updateHeli(dt) {
   if (!heli) return;
@@ -1112,6 +1142,7 @@ function grantPredator() {
     pos: new V3(x, ground + PREDATOR.height, z), yaw, pitch: -1.05, nextSmoke: 0,
   };
   laptopWant = 1;
+  if (online) netEv(['ks', 'p', v3a(predator.pos)]); // online: o servidor confere o míssil e aplica a explosão
   mesh.position.copy(predator.pos);
   flashMsg('Laptop aberto · segura o mouse');
   if (state === 'playing' && !document.pointerLockElement) lockPointer();
@@ -1144,6 +1175,7 @@ function missileHit(from, to) {
 function endPredator(at) {
   const where = at.clone();
   clearPredator();
+  if (online) { netEv(['ms', v3a(where)]); refreshStreakPrompt(); return; } // a explosão (e o dano) vem do servidor
   blast(where, player, { radius: PREDATOR.radius, maxDmg: PREDATOR.maxDmg, selfMul: PREDATOR.selfMul, knock: PREDATOR.knock, lift: PREDATOR.lift, wIdx: W_NADE });
   refreshStreakPrompt();
 }
@@ -1181,6 +1213,7 @@ function updatePredator(dt) {
 function startNukeCountdown() {
   nukeReady = false; radioWant = 1;
   nukeAt = gameTime + 5; showNukeCount(5); flashMsg('Fim da chapa');
+  if (online) netEv(['ks', 'x']);
   refreshStreakPrompt();
 }
 function useStreak() {
@@ -1190,7 +1223,7 @@ function useStreak() {
   refreshStreakPrompt();
   if (id === 'uav') grantUav();
   else if (id === 'missile') grantPredator();
-  else if (id === 'heli') grantHeli();
+  else if (id === 'heli') { if (online) { netEv(['ks', 'h']); flashMsg('Gavião a caminho'); } else grantHeli(); }
   else if (id === 'nuke') startNukeCountdown();
 }
 function grantNuke() { bankStreak('nuke'); }
@@ -1231,10 +1264,15 @@ function updateRewards(dt) {
     if (!tickUav(dt)) uavLive = false;
   }
   updateHeli(dt);
+  if (online) {
+    updateNetHelis(dt);
+    if (netNukeAt && !nukeAt) { const l = Math.ceil(netNukeAt - gameTime); if (l > 0) showNukeCount(l); }
+  }
   if (!nukeAt) return;
   const left = Math.ceil(nukeAt - gameTime);
   if (left > 0) showNukeCount(left);
   if (gameTime < nukeAt) return;
+  if (online) { nukeAt = 0; radioWant = 0; if (!netNukeAt) hideNuke(); return; } // online: o servidor detona (evento 'nb')
   nukeAt = 0; radioWant = 0; hideNuke(); sfx.boom(1); shake = Math.max(shake, 1.2); nukeFlash();
   const victims = entities.filter((e) => e.alive && !e.isPlayer && !friends(e, player));
   for (const e of victims) kill(e, player, W_NADE, false, false, true);
@@ -1248,14 +1286,14 @@ const KILL_PHRASES = [
 const SELF_PHRASES = [(t) => `${t} se pururucou`, (t) => `${t} virou bacon sozinho`, (t) => `${t} se jogou na frigideira`, (t) => `${t} fritou no próprio óleo`];
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 function showStamp(wIdx) { const s = $('stamp'); s.textContent = wIdx === KNIFE ? 'MOGGADO!' : 'PURURUCADO!'; s.classList.remove('show'); void s.offsetWidth; s.classList.add('show'); }
-function addKillFeed(a, t, wIdx, head, back = false) {
+function addKillFeed(a, t, wIdx, head, back = false, label = null) {
   const div = document.createElement('div'); div.className = 'kf' + (wIdx === KNIFE ? ' knife' : '');
   const nm = (e) => `<b class="${e.isPlayer ? 'me' : ''}">${escapeHtml(e.name)}</b>`;
   const knife = wIdx === KNIFE && a && a !== t; // faca: frase fixa "moggou"
   div.innerHTML = knife ? `${nm(a)} moggou ${nm(t)} <i>[Faca${back ? ' · pelas costas!' : ''}]</i>`
-    : a && a !== t ? `${pick(KILL_PHRASES)(nm(a), nm(t))} <i>[${WEAPON_SHORT(wIdx)}${head ? ' · direto no focinho!' : ''}]</i>` : pick(SELF_PHRASES)(nm(t));
+    : a && a !== t ? `${pick(KILL_PHRASES)(nm(a), nm(t))} <i>[${label || WEAPON_SHORT(wIdx)}${head ? ' · direto no focinho!' : ''}]</i>` : pick(SELF_PHRASES)(nm(t));
   // log canônico p/ testes (o texto exibido varia; faca é fixo)
-  { const L = (window.__feedLog ||= []); L.push(knife ? `${a.name} moggou ${t.name} [Faca${back ? ' · pelas costas!' : ''}]` : a && a !== t ? `${a.name} pururucou ${t.name} [${WEAPON_SHORT(wIdx)}]` : `${t.name} se pururucou`); if (L.length > 20) L.shift(); }
+  { const L = (window.__feedLog ||= []); L.push(knife ? `${a.name} moggou ${t.name} [Faca${back ? ' · pelas costas!' : ''}]` : a && a !== t ? `${a.name} pururucou ${t.name} [${label || WEAPON_SHORT(wIdx)}]` : `${t.name} se pururucou`); if (L.length > 20) L.shift(); }
   const kf = $('killfeed'); kf.prepend(div); while (kf.children.length > 6) kf.lastChild.remove();
   setTimeout(() => div.remove(), 6000);
 }
@@ -2896,11 +2934,12 @@ function netEvent(ev) {
     e.swingT = 0; e.swingKind = kn; e.invulnUntil = 0; sfx.knife(distVol(e.pos) * 0.8, kn); if (hit) sfx.knifeHit(distVol(e.pos) * 0.7);
   } else if (k === 'k') {
     // ev[7] (servidor novo): 1 = faca, 2 = faca pelas costas. ev[3] vem como pistola pra clientes antigos.
-    const [, aid, tid, w0, head, aK, tD, mk] = ev; const a = entOf(aid), t = entOf(tid); if (!t) return; const w = mk ? KNIFE : w0, back = mk === 2;
+    // ev[8] (servidor novo): killstreak 'p' míssil, 'h' Gavião, 'x' nuke. Gavião e nuke não contam pra sequência (Gavião vale 25 pts).
+    const [, aid, tid, w0, head, aK, tD, mk, ks] = ev; const a = entOf(aid), t = entOf(tid); if (!t) return; const w = mk ? KNIFE : w0, back = mk === 2;
     if (a) a.kills = aK; t.deaths = tD; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.lastAttacker = a || null; t.killW = w; t.killBack = back;
     if (w === -2) { t.fxDeath = t.deathAt; return; } // trocou de time (sem bacon)
-    addKillFeed(a, t, w, head, back); sfx.die(t === player ? 1 : distVol(t.pos));
-    if (a === player && t !== player) { sfx.kill(); notePlayerKill(t, !!head); if (w >= 0) noteWeaponKill(player, w); }
+    addKillFeed(a, t, w, head, back, KS_KILL_NAME[ks] || null); sfx.die(t === player ? 1 : distVol(t.pos));
+    if (a === player && t !== player) { sfx.kill(); if (ks === 'h' || ks === 'x') { if (ks === 'h') feedbackAward(HELI.points); } else { notePlayerKill(t, !!head); if (w >= 0) noteWeaponKill(player, w); } }
     if (t === player) { if (a && a !== player) revengeName = a.name; onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
   } else if (k === 'sp') {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
@@ -2920,8 +2959,15 @@ function netEvent(ev) {
   } else if (k === 'bm') {
     const [, pid, kind, c] = ev;
     const list = kind === 'n' ? grenades : rockets; const i = list.findIndex((x) => x.pid === pid && pid); if (i >= 0) { scene.remove(list[i].mesh); list.splice(i, 1); }
-    blastFx(a3v(c), kind === 'n' ? NADE.radius : WEAPONS[3].rocket.radius);
-  } else if (k === 'zc') {
+    blastFx(a3v(c), kind === 'n' ? NADE.radius : kind === 'p' ? PREDATOR.radius : WEAPONS[3].rocket.radius);
+    if (kind === 'p') shake = Math.max(shake, 0.9);
+  }
+  else if (k === 'hl') netHeliSpawn(ev);
+  else if (k === 'hh') { const h = netHelis.get(ev[1]); if (h) h.hp = ev[2]; }
+  else if (k === 'hx') netHeliDown(ev[1], ev[2]);
+  else if (k === 'hs') { const h = netHelis.get(ev[1]); if (h) { const from = h.pos.clone(); from.y -= 0.4; tracer(from, a3v(ev[2]), false); sfx.rifle(distVol(h.pos) * 0.45); } }
+  else if (k === 'nk') { const [, oid, at] = ev; if (oid !== o.myId) { netNukeAt = at; const e = entOf(oid); flashMsg(`${e ? e.name : 'Alguém'} puxou o rádio · Fim da chapa`); showNukeCount(Math.max(1, Math.ceil(at - gameTime))); } }
+  else if (k === 'nb') { netNukeAt = 0; if (!nukeAt) hideNuke(); sfx.boom(1); shake = Math.max(shake, 1.2); nukeFlash(); window.__nukeBooms = (window.__nukeBooms || 0) + 1; } else if (k === 'zc') {
     const [, team, s0, s1, nz, caps] = ev; teamScore = [s0, s1];
     for (const [id, c] of caps || []) { const e = entOf(id); if (e) e.caps = c; }
     onZoneCaptured(team, { x: nz[0], y: nz[1], z: nz[2] });
@@ -3020,5 +3066,5 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   DOM, applyTeam, damage, kill: (e) => kill(e, null, 0, false), V3, KNIFE, MELEE, switchWeapon, quickKnife, knifeAttack, meleeHit, modelYaw, get fpBoltHand() { const g = fp.guns[player ? player.weapon : -1]; return !!(g && g.userData.boltHand && g.userData.boltHand.visible && fp.sRound.parent === g); }, get menuPreviewX() { return menuPreviewX; }, get previewScreen() { if (!preview || !showcase.visible) return null; const v = showcase.position.clone(); v.y += 0.9; v.project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, skin: selectedSkin, kids: preview.group.children.length }; }, get fpKnife() { return { t: fp.knifeT, kind: fp.knifeKind, visible: fp.kr.visible }; }, get bacon() { return baconStats; }, los: (a, b) => losClear(new V3(...a), new V3(...b)), activeBacons, BACON, get deathCam() { return deathCamState; },
   blastAt: (x, y, z, kind = 'r', owner) => blast(new V3(x, y, z), owner || player, kind === 'n' ? { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE } : { ...WEAPONS[3].rocket, wIdx: 3 }),
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()),
-  rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical('smoke'), throwStun: () => throwTactical('stun'), get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
+  rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, get netHelis() { return [...netHelis.values()].map((h) => ({ id: h.id, owner: h.owner ? h.owner.name : '', hp: h.hp, alive: h.alive, pos: h.pos.toArray() })); }, get netNukeAt() { return netNukeAt; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical('smoke'), throwStun: () => throwTactical('stun'), get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
   swingSaber: () => swingSaber(player) };
