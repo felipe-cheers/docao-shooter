@@ -116,7 +116,7 @@ const hb = await G(() => !!window.__docao.heli); await G(() => window.__docao.bo
 const ha = await G(() => ({ heli: !!window.__docao.heli, rk: window.__docao.rewardKills, round: window.__docao.bomb.S.round }));
 ok(hb && !ha.heli && ha.rk === 3 && ha.round === 5, `rodada nova: Gavião vai embora e a sequência continua (${JSON.stringify(ha)})`);
 await G(() => window.__docao.entities.forEach((e) => (e.frozen = false)));
-await G(() => window.__docao.bomb.skip()); await wait(300); await G(() => window.__docao.bomb.skip()); await wait(300); // rodada 5 → fim (tempo)
+await G(() => window.__docao.bomb.skip()); await until(() => window.__docao.bomb.S.phase === 'live', 5000); await G(() => window.__docao.bomb.skip()); await until(() => window.__docao.bomb.S.phase === 'end', 5000); // rodada 5 → fim (tempo)
 // 4) troca de lado depois da 12ª
 await G(() => { const g = window.__docao; g.applyTeam(g.player, 0); g.bomb.setRound(12, 6, 5); g.bomb.skip(); });
 await wait(500); // (estava no fim da rodada: pular = começa a 13ª)
