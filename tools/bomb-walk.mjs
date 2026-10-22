@@ -18,9 +18,13 @@ for (const map of MAPS) {
   console.log(`\n=== ${map.id} (${map.name})${map.bomb ? ' · layout à mão' : ' · layout automático'}`);
   L.sites.forEach((s) => { const fl = nav.good.filter((n) => Math.abs(n.y - s.y) < 0.4 && Math.hypot(n.x - s.x, n.z - s.z) <= BOMB.SITE_R).length;
     console.log(`  site ${s.name} (${s.x.toFixed(1)}, ${s.y.toFixed(1)}, ${s.z.toFixed(1)}) · ${fl} nós andáveis dentro do raio`); if (fl < 6) fails.push(`${map.id}: site ${s.name} com pouco chão (${fl})`); });
+  for (const [side, idx] of [['Ataque', L.atk], ['Defesa', L.def]]) for (const i of idx) { const q = src[i], n = nav.nearest(q.x, q.y, q.z);
+    if (P.collides(q.x, q.y, q.z) || !n || Math.hypot(n.x - q.x, n.z - q.z) > 2.2 || Math.abs(n.y - q.y) > 0.5) fails.push(`${map.id}: spawn do ${side} inválido em (${q.x}, ${q.y.toFixed(1)}, ${q.z})`);
+    for (const s of L.sites) if (Math.hypot(q.x - s.x, q.z - s.z) < BOMB.SITE_R + 2) fails.push(`${map.id}: spawn do ${side} em cima do site ${s.name}`); }
   const out = {};
   for (const [side, idx] of [['Ataque', L.atk], ['Defesa', L.def]]) for (const s of L.sites) {
     const d = idx.map((i) => len(src[i], s)).filter(Number.isFinite); if (d.length < idx.length) fails.push(`${map.id}: ${side} sem caminho até ${s.name} (${idx.length - d.length})`);
+    if (process.env.VERBOSE) console.log(`    ${side}→${s.name} por spawn:`, idx.map((i) => `(${src[i].x},${src[i].z}) ${len(src[i], s).toFixed(0)}`).join(' · '));
     const mn = Math.min(...d), avg = d.reduce((a, b) => a + b, 0) / d.length; out[side + s.name] = { mn, avg };
     console.log(`  ${side.padEnd(6)} → ${s.name}: ${avg.toFixed(0)} m em média (mín ${mn.toFixed(0)}) · ${(avg / SPEED).toFixed(1)} s andando (mín ${(mn / SPEED).toFixed(1)} s; bots ${(avg / BOT_SPEED).toFixed(1)} s)`);
   }

@@ -175,6 +175,7 @@ export const MAPS = [];
     ...fin(boxes), props: [{ t: 'logoSign', x: 0, y: 5.2, z: -27.98, rot: 0 }, { t: 'logoSign', x: 0, y: 5.2, z: 27.98, rot: Math.PI },
       { t: 'hay', x: -19, z: -26.5 }, { t: 'hay', x: 19, z: 26.5 }, { t: 'hay', x: -3, z: 25 }, { t: 'hay', x: 3, z: -25.5 }, { t: 'truck', x: -16, z: 21, c: '#e63946' }, { t: 'truck', x: 16, z: -21, c: '#2f80ed' },
       { t: 'tree', x: -24.5, z: -21.5 }, { t: 'tree', x: 24.5, z: 21.5 }, { t: 'tree', x: -9, z: -26 }, { t: 'tree', x: 9, z: 26 }],
+    bomb: { sites: [[21, 0, -17], [22.5, 0, 16.5]], atk: [[-28, 0], [-26.5, -10], [-26.5, 10], [-28, -3, 3.5], [-30, 20], [-30, -20]], def: [[28, 0], [26.5, 10], [26.5, -10], [28, 3, 3.5], [30, -4], [30, 5]] }, // Bomba: Ataque na base oeste, Defesa na leste; A nordeste, B sudeste
     spawns: [[-28, 0], [28, 0], [-26.5, -10], [26.5, 10], [-26.5, 10], [26.5, -10], [-17, -25], [17, 25], [-21, 25], [21, -25], [-28, -3, 3.5], [28, 3, 3.5]],
     pickups: [['health', 0, 0], ['health', -26, 3], ['health', 26, -3], ['health', 0, -20], ['health', 2.4, 19, 4.4],
       ['ammo', 2, -4.5, 3.5], ['ammo', -2, 4.5, 3.5], ['ammo', -14.5, -11], ['ammo', 14.5, 11], ['ammo', -27, 3, 7], ['ammo', 27, -3, 7],
@@ -209,7 +210,8 @@ export const MAPS = [];
   // longo: portões e muro
   boxes.push(...wallX(22, 40, 4, 1, 6, wall2, [door(28.5, 31.5, 3.4)]), B(22, 5, 23, 22, 6, wall), C(34, 8, 2, 2), C(37, 15, 2, 1.4, cr2), C(26, 18, 1.6, 1.6), B(36, -8, 40, -4, 1.6, cr));
   // A: plataforma com caixotes, casa do A (2 andares, janela pra plataforma, terraço)
-  boxes.push(B(22, -26, 36, -12, 1.2, '#e0c08a'), R(28, -12, 32, -8, 0, 1.2, 'z', -1, '#e0c08a'), C(26, -18, 2, 2, cr, 1.2), C(31, -22, 2, 1.4, cr2, 1.2), C(33.5, -15, 1.6, 1.6, cr, 1.2), C(24, -14, 1.4, 1.2, cr2, 1.2));
+  boxes.push(B(22, -26, 36, -12, 1.2, '#e0c08a'), R(28, -12, 32, -8, 0, 1.2, 'z', -1, '#e0c08a'), R(18.5, -23, 22, -19.5, 0, 1.2, 'x', 1, '#d6b47a'), // degrau da plataforma do A pro lado do CT
+   C(26, -18, 2, 2, cr, 1.2), C(31, -22, 2, 1.4, cr2, 1.2), C(33.5, -15, 1.6, 1.6, cr, 1.2), C(24, -14, 1.4, 1.2, cr2, 1.2));
   boxes.push(...building(22, -35, 36, -26, { col: casa, floors: 2,
     ops: [{ s: 'w', a: -31, b: -29 }, { s: 's', a: 25, b: 27, f: 0 }, { s: 's', a: 31, b: 35, f: 1, k: 'win', lo: 0.9 }, { s: 's', a: 23, b: 27, f: 1, k: 'win', lo: 0.9 }],
     stairs: [{ f: 0, r: [29, -34.5, 35, -32.6], axis: 'x', dir: 1 }, { f: 1, r: [23, -34.5, 29, -32.6], axis: 'x', dir: -1 }] }));
@@ -234,6 +236,7 @@ export const MAPS = [];
       { t: 'sign', x: 39.9, y: 3.2, z: -18, w: 4, h: 2, rot: -Math.PI / 2, text: 'A', bg: '#e63946', fg: '#fff' },
       { t: 'sign', x: -39.9, y: 3.2, z: -20, w: 4, h: 2, rot: Math.PI / 2, text: 'B', bg: '#e63946', fg: '#fff' },
       { t: 'keg', x: -18, z: -34 }, { t: 'keg', x: -16.8, z: -34 }, { t: 'keg', x: 16, z: 33 }],
+    bomb: { sites: [[31.5, 1.2, -19.5], [-33.5, 0, -19]], atk: [[-8, 33], [0, 33.5], [8, 33], [-20, 31], [20, 29], [30, 32]], def: [[-3, -24], [6, -24], [14, -31], [-1, -30, 3.5], [-10, -32], [4, -33]] }, // Bomba: Ataque ao sul, Defesa ao norte; A na plataforma leste, B no fim dos túneis
     spawns: [[-8, 33], [0, 33.5], [8, 33], [-20, 31], [20, 29], [30, 32], [-30, 24], [-3, -24], [6, -24], [14, -31], [-22, -34], [18, -20], [-1, -30, 3.5]],
     pickups: [['health', 0, 26], ['health', 0, -22], ['health', 30, 8], ['health', -30, 10], ['health', 12, 14, 3.5],
       ['ammo', 30, -18, 1.2], ['ammo', -26, -18], ['ammo', 0, 3], ['ammo', -20, 14], ['ammo', 15, 0, 2.2], ['ammo', 30, -30, 3.5],
@@ -284,6 +287,7 @@ export const MAPS = [];
     ...fin(boxes), props: [{ t: 'silo', x: -28, z: 30, r: 4, h: 11, c: '#bdc3c7' }, { t: 'silo', x: 28, z: 25, r: 3.5, h: 12, c: '#d0d3d4' }, { t: 'silo', x: 34, z: -30, r: 3, h: 9, c: '#bdc3c7' },
       { t: 'truck', x: 14, z: 38, c: '#e63946' }, { t: 'truck', x: -6, z: -20, c: '#2f80ed' }, { t: 'sign', x: -4, y: 5.4, z: 16.05, w: 8, h: 2, rot: 0, text: 'CELEIRO C!', bg: '#7a1f17', fg: '#ffe7b0' },
       { t: 'hay', x: -34, z: 38 }, { t: 'hay', x: -36, z: 38 }, { t: 'hay', x: 38, z: 0 }],
+    bomb: { sites: [[-17, 0, -33.5], [20.5, 0, -25.5]], atk: [[-12, 38], [8, 33], [24, 38], [-30, 40], [0, 38], [-36, 34]], def: [[-24, -39], [-8, -40], [12, -36], [-34, -30, H], [2, -38], [34, -38]] }, // Bomba: Ataque ao sul, Defesa ao norte
     spawns: [[-12, 38], [8, 33], [24, 38], [-30, 40], [-24, -39], [-8, -40], [12, -36], [24, -26], [37, -20], [-37, 18], [-17, 0, H], [-34, -30, H]],
     pickups: [['health', -2, 0], ['health', -16, -10, H], ['health', 0, 34], ['health', 0, -34], ['health', 30, 9.5, 2.6],
       ['ammo', -16, 10, H], ['ammo', 23, 0, H], ['ammo', -10, 0, 2 * H], ['ammo', -26, 4, 1.2], ['ammo', 34, 0], ['ammo', -34, -32, H],
@@ -345,6 +349,7 @@ export const MAPS = [];
       { t: 'awning', x0: 26, z0: -12, x1: 29, z1: -10, y: 3, c: '#e63946' },
       { t: 'sign', x: -20, y: 5, z: -12.05, w: 5, h: 1.1, rot: Math.PI, text: 'MERCADÃO', bg: '#8b2f1c', fg: '#ffe7b0' },
       { t: 'sign', x: -12, y: 5, z: 8.05, w: 5, h: 1.1, rot: 0, text: 'FEIRA C!', bg: '#8b2f1c', fg: '#ffe7b0' }],
+    bomb: { sites: [[13, 0, -19.5], [21, 0, 21]], atk: [[-34, -5], [-34, 7], [-33, -21], [-34, 19], [-30, 30], [-30, -30]], def: [[34, -20], [34, 0], [34, 20], [30, 31], [30, -31], [23, 0, H]] }, // Bomba: Ataque no T (oeste), Defesa no CT (leste); A perto da rampa, B na fonte
     spawns: [[-34, -5], [-34, 7], [-33, -21], [-34, 19], [-30, 30], [-30, -30], [34, -20], [34, 0], [34, 20], [30, 31], [30, -31], [23, 0, H]],
     pickups: [['health', -30, 4], ['health', 30, -4], ['health', -14, -27, H], ['health', -14, 18, H], ['health', 16, 24],
       ['ammo', 0, 0], ['ammo', 14.4, -25.2, 1.2], ['ammo', 22, 28.5, 1.2], ['ammo', 8, -9], ['ammo', 8, 9.5], ['ammo', 25, 4, H],
@@ -404,6 +409,7 @@ export const MAPS = [];
     palette: { sky: '#7ec8f2', fog: ['#b8e0f5', 70, 180], hemi: ['#ffffff', '#5a8f3a', 1.6], sun: ['#ffffff', 2.3], ground: '#6cbf4f', tiles: null, clouds: true },
     ...(() => { const F = fin(boxes); F.boxes = F.boxes.filter((b) => b.b[4] - b.b[1] > 0.05); return F; })(), props: [...kegs, { t: 'tree', x: -26, z: 0 }, { t: 'tree', x: 26, z: 4 }, { t: 'tree', x: -26, z: 50 }, { t: 'tree', x: 26, z: -50 },
       { t: 'banner', x: 0, y: 6.2, z: 47.9, c: red, rot: Math.PI }, { t: 'banner', x: 0, y: 6.2, z: -47.9, c: cyan, rot: 0 }],
+    bomb: { sites: [[-24, 0, -43], [23, 0, -39.5]], atk: [[0, 58], [-4, 60, 4.4], [20, 60], [-20, 56], [-12, 66], [12, 66]], def: [[0, -58], [4, -60, 4.4], [-20, -60], [20, -56], [-12, -66], [12, -66]] }, // Bomba: Ataque na torre vermelha, Defesa na azul; sites na frente da torre azul
     spawns: [[0, 58], [-4, 60, 4.4], [20, 60], [-20, 56], [0, -58], [4, -60, 4.4], [-20, -60], [20, -56], [-24, 0], [24, 0]],
     pickups: [['health', 1.5, 0, 3], ['health', -22, 40], ['health', 22, -40], ['health', 0, 58], ['health', 0, -58],
       ['ammo', 4, 58, 4.4], ['ammo', -4, -58, 4.4], ['ammo', 0, 60, 8.4], ['ammo', 0, -60, 8.4], ['ammo', -26, -20], ['ammo', 27, 23],
@@ -456,6 +462,7 @@ export const MAPS = [];
     ...fin(boxes), props: [{ t: 'street', x0: -30, z0: -7, x1: 30, z1: 7 }, { t: 'bus', x: 0, z: 0, c: '#f2c94c' }, { t: 'truck', x: 19, z: 3.6, c: '#e63946' }, { t: 'truck', x: -19, z: -3.6, c: '#2f80ed' },
       { t: 'tree', x: -27, z: -23 }, { t: 'tree', x: 27, z: 23 }, { t: 'tree', x: 27, z: -23 }, { t: 'tree', x: -27, z: 23 }, { t: 'tree', x: -9, z: -24 }, { t: 'tree', x: 9, z: 24 },
       { t: 'sign', x: -9.1, y: 6.0, z: -7.9, w: 3, h: 0.9, rot: 0, text: 'C! 1', bg: '#e63946', fg: '#fff' }, { t: 'sign', x: 9.1, y: 6.0, z: 7.9, w: 3, h: 0.9, rot: Math.PI, text: 'C! 2', bg: '#12233a', fg: '#7DF9FF' }],
+    bomb: { sites: [[19, 0, -11], [22, 0, 20]], atk: [[-27.5, -8], [-27, 19], [-20, -23.5], [-12, -11.5], [-27, -19], [-10, 23.5]], def: [[27.5, 8], [27, -19], [12, 11.5], [27.5, -3], [27, 13], [27, -24]] }, // Bomba: Ataque a oeste, Defesa a leste; A no quintal nordeste, B no quintal sudeste
     spawns: [[-20, -23.5], [-6, -23.5], [10, -23.5], [20, 23.5], [6, 23.5], [-10, 23.5], [-27.5, -8], [27.5, 8], [-12, -11.5], [12, 11.5], [27, -19], [-27, 19]],
     pickups: [['health', -12.5, -16], ['health', 12.5, 16], ['ammo', -12, -16.5, 3.5], ['ammo', 12, 16.5, 3.5], ['ammo', -27, 0], ['ammo', 27, 0],
       ['grenade', -9, -13, 7], ['grenade', 9, 13, 7], ['grenade', 10, -15.5], ['grenade', -10, 15.5], ['health', 0, -23], ['health', 0, 23]],
@@ -515,6 +522,7 @@ export const MAPS = [];
     palette: { sky: '#0b0e22', fog: ['#161236', 30, 90], hemi: ['#9a9aff', '#3a1c50', 1.6], sun: ['#b8c4ff', 1.1], ground: '#3a2418', tiles: ['#4a2e1e', '#3c2618', 48, 24], clouds: false, stars: true,
       lights: [[neon, 0, 4.5, -2, 40, 22], [pink, -16, 3, 12, 30, 18], [neon, 16, 3, 0, 30, 18], ['#ffd27a', 0, 3, 16, 25, 14], ['#ffd27a', 0, 3, -15, 25, 14]] },
     ...fin(boxes), props,
+    bomb: { sites: [[17, 0, -3.5], [13.5, 0, 14]], atk: [[-22.5, -18], [-22.5, 18], [-16, -12], [-18.5, 0], [-14.5, 12], [-12, -15, H]], def: [[22.5, -18], [22.5, 18], [22.5, 1.5], [22.5, -9], [22.5, 9], [16, -15]] }, // Bomba: Ataque a oeste, Defesa a leste; A no escritório, B na sinuca
     spawns: [[-22.5, -18], [22.5, 18], [-22.5, 18], [22.5, -18], [-16, -12], [16, -15], [-18.5, 0], [16, 3], [16, 17], [-14.5, 12], [0, 10], [-12, -15, H], [12, -14, H]],
     pickups: [['health', 0, -7], ['health', -18.5, -4.5], ['health', 16, -2], ['ammo', 2, -12, H], ['ammo', 15, -16, 2 * H], ['ammo', 16, 11], ['ammo', -22.6, 6],
       ['grenade', 8, 2], ['grenade', -8, 2], ['grenade', 0, 15, 1], ['grenade', -2, -16, 2 * H]],
