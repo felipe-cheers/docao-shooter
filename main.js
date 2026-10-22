@@ -198,9 +198,10 @@ try {
   const savedAds = localStorage.getItem('docao.sensAds'); if (savedAds) $('sensAds').value = savedAds;
   sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
 } catch (e) { /* sem storage */ }
-let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação)
+let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação) | 'explore' (mapa vazio)
 let spawnHold = 'primary'; // arma na mão ao renascer (tela de morte)
 const teamMode = () => mode === 'dom';
+const exploreMode = () => mode === 'explore';
 const friends = (a, b) => teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0;
 let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
@@ -259,6 +260,17 @@ function refillAmmo(e) {
     e.reserve[i] = w.rocket ? Math.min(w.reserve, e.reserve[i] + 1) : w.reserve; got = true;
   }
   return got;
+}
+// Exploração: a reserva, os copos e as granadas táticas não acabam, pra dar pra testar sem caçar caixa.
+// O pente continua finito: a recarga acontece do mesmo jeito.
+function refillExplore(e) {
+  for (const i of e.slots) {
+    const w = WEAPONS[i]; if (!w || w.melee || e.reserve[i] >= w.reserve) continue;
+    e.reserve[i] = w.reserve;
+  }
+  if (e.nades < NADE.max) e.nades = NADE.max;
+  if ((e.smokeNades || 0) < 1) e.smokeNades = 1;
+  if ((e.stunNades || 0) < 1) e.stunNades = 1;
 }
 const pickups = [];
 function makePickup(type, x, z, yHint = 0) {
@@ -701,13 +713,13 @@ function damage(t, amount, attacker, wIdx, head, back = false) {
 }
 
 function kill(t, a, wIdx, head, back = false, noReward = false) {
-  t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.killW = wIdx; t.killBack = !!back;
+  t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + (exploreMode() && t.isPlayer ? 1 : RESPAWN_TIME); t.killW = wIdx; t.killBack = !!back;
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head, back);
   sfx.die(t.isPlayer ? 1 : distVol(t.pos));
   if (a && a.isPlayer && a !== t) { sfx.kill(); if (!noReward) notePlayerKill(t, head); }
   if (t.isPlayer) { if (a && a !== t) revengeName = a.name; showStamp(wIdx); onPlayerDeath(); }
-  if (a && a.kills >= KILL_LIMIT && !teamMode()) endGame();
+  if (a && a.kills >= KILL_LIMIT && mode === 'dm') endGame();
 }
 
 function startReload(e) {
@@ -1115,10 +1127,10 @@ function updateHud(dt) {
   if (stunN) stunN.textContent = p.stunNades || 0;
   { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
-  const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
-  $('score').textContent = `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
+  const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+  $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
   const lead = entities.reduce((a, b) => (b.kills > a.kills ? b : a));
-  $('leader').textContent = teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
+  $('leader').textContent = exploreMode() ? 'Mapa vazio · , . ou [ ] trocam a primária' : teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
   updateLeaderboard(dt); tickFeedback(dt);
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
@@ -2001,6 +2013,18 @@ function clearBots() {
   clearHeli();
   clearBacon(); if (ghost) ghost.model.group.visible = false;
 }
+function cycleExplorePrimary(dir) {
+  if (!exploreMode() || !player || !player.alive) return;
+  const cur = PRIMARIES.indexOf(player.primary);
+  const i = PRIMARIES[(cur + dir + PRIMARIES.length) % PRIMARIES.length];
+  setPrimary(i);
+  player.primary = player.nextPrimary = i;
+  player.slots[0] = i;
+  player.mag[i] = WEAPONS[i].mag; player.reserve[i] = WEAPONS[i].reserve;
+  player.reloadEnd = 0;
+  if (player.weapon !== i) switchWeapon(player, i); else setWeapon(player, i);
+  flashMsg(WEAPONS[i].name);
+}
 function startGame(mapId) {
   resetAds();
   initAudio();
@@ -2011,9 +2035,10 @@ function startGame(mapId) {
   revengeName = null; resetFeedback(); resetRewards();
   clearBots(); gameTime = 0;
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
-  const n = parseInt($('botCount').value) || 5;
+  const picked = $('modeSel').value;
+  mode = picked === 'dom' ? 'dom' : picked === 'explore' ? 'explore' : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
+  const n = exploreMode() ? 0 : (parseInt($('botCount').value, 10) || 5);
   for (let i = 0; i < n; i++) entities.push(makeEntity(BOT_DEFS[i].name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length]));
-  mode = $('modeSel').value === 'dom' ? 'dom' : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
   if (teamMode()) { // seu time (escolhido no menu ou automático); bots completam os dois lados
     applyTeam(player, menuTeam >= 0 ? menuTeam : Math.random() < 0.5 ? 0 : 1);
     for (const b of entities) if (!b.isPlayer) { const c = [0, 0]; for (const x of entities) if (x.team === 0 || x.team === 1) c[x.team]++; applyTeam(b, smallerTeam(c)); }
@@ -2024,7 +2049,7 @@ function startGame(mapId) {
   for (const e of entities) respawn(e);
   pickups.forEach((p) => { p.active = true; p.mesh.visible = true; });
   showcase.visible = false;
-  $('killfeed').innerHTML = ''; flashMsg(teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : `Mapa: ${currentMap.name}`); refreshModeHud();
+  $('killfeed').innerHTML = ''; flashMsg(exploreMode() ? `Exploração · ${currentMap.name} · , . ou [ ] trocam a primária` : teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : `Mapa: ${currentMap.name}`); refreshModeHud();
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause').classList.add('hidden'); $('hud').classList.remove('hidden'); $('socialHud').classList.add('hidden'); $('overChat').classList.add('hidden');
   camera.clearViewOffset(); state = 'playing'; lockPointer();
 }
@@ -2130,6 +2155,7 @@ document.addEventListener('keydown', (e) => {
       if (e.code === 'Digit4' && player.alive && !e.repeat) throwTactical('smoke');
       if (e.code === 'Digit5' && player.alive && !e.repeat) throwTactical('stun');
       if (e.code === 'KeyF' && player.alive && !e.repeat) callNuke();
+      if (exploreMode() && player.alive && !e.repeat && (e.code === 'Comma' || e.code === 'Period' || e.code === 'BracketLeft' || e.code === 'BracketRight')) cycleExplorePrimary(e.code === 'Period' || e.code === 'BracketRight' ? 1 : -1);
     }
     if (e.code === 'KeyQ' && !e.repeat) startCharge();
     if (e.code === 'Tab') $('tabboard').classList.remove('hidden');
@@ -2147,12 +2173,13 @@ function loop() {
   if (window.__stopAt != null) dt = Math.max(0, Math.min(dt, window.__stopAt - gameTime)); // testes/screenshots: congela o tempo de jogo num instante exato
   if (state === 'playing' || (online && state === 'paused' && player)) { // online o jogo não pausa
     gameTime += dt;
+    if (exploreMode() && player && player.alive) refillExplore(player);
     if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
     updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (!online) for (const e of entities) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt);
-    if (!online && gameTime >= matchLimit()) endGame();
+    if (!online && !exploreMode() && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
     menuT += dt * 0.25;
     const sp = showcase.position; camera.position.set(sp.x + Math.sin(showCamYaw) * 3.5, showBaseY + 1.25, sp.z + Math.cos(showCamYaw) * 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
@@ -2275,7 +2302,7 @@ function matchLimit() {
 function updateLeaderboard(dt) {
   lbT -= dt; if (lbT > 0) return; lbT = 0.25;
   const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths).slice(0, 10);
-  const head = teamMode() ? `<div class="lbh"><span class="r">Vermelho ${teamScore[0]}</span><span>/${DOM.WIN_CAPS}</span><span class="b">${teamScore[1]} Azul</span></div>` : `<div class="lbh"><span>Placar</span><span>abates</span></div>`;
+  const head = exploreMode() ? `<div class="lbh"><span>Exploração</span><span>só você</span></div>` : teamMode() ? `<div class="lbh"><span class="r">Vermelho ${teamScore[0]}</span><span>/${DOM.WIN_CAPS}</span><span class="b">${teamScore[1]} Azul</span></div>` : `<div class="lbh"><span>Placar</span><span>abates</span></div>`;
   $('lb').innerHTML = head + rows.map((e, i) => { const pid = online ? (e.isPlayer ? online.myId : (e.netId || 0)) : 0; return `<div class="row${e.isPlayer ? ' me' : ''}${e.alive ? '' : ' dead'}${pid && voiceTalking(pid) ? ' talking' : ''}${pid && voiceMuted(pid) ? ' vmuted' : ''}"${pid ? ` data-pid="${pid}"` : ''}><span>${i + 1}</span><span class="dot" style="background:${teamMode() && e.team >= 0 ? TEAM_COLORS[e.team] : e.shirt}"></span><span class="n">${escapeHtml(e.name)}</span><span class="k">${scoreOf(e)}</span></div>`; }).join('');
 }
 // botões de time (Vermelho / Azul / Automático)
@@ -2289,9 +2316,22 @@ function teamButtons(el, current, onPick, counts) { // atualiza no lugar: o lobb
   });
 }
 let menuTeam = -1;
-function refreshMenuMode() { const dom = $('modeSel').value === 'dom'; $('menuTeam').classList.toggle('hidden', !dom); teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); }); }
+const MENU_RULES = {
+  dm: 'Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos',
+  dom: 'Times · capture a zona · o primeiro a completar as capturas vence',
+  explore: 'Mapa vazio, só você. Ande e teste as armas. Vírgula, ponto ou [ ] trocam a primária. Munição não acaba e a partida não termina.',
+};
+function refreshMenuMode() {
+  const v = $('modeSel').value === 'dom' || $('modeSel').value === 'explore' ? $('modeSel').value : 'dm';
+  $('menuTeam').classList.toggle('hidden', v !== 'dom');
+  $('botCount').closest('label').classList.toggle('hidden', v === 'explore');
+  $('timeSel').closest('label').classList.toggle('hidden', v === 'explore');
+  $('playBtn').innerHTML = v === 'explore' ? 'EXPLORAR MAPA <small>(sem bots)</small>' : 'JOGAR OFFLINE <small>(bots)</small>';
+  $('menuRules').textContent = MENU_RULES[v];
+  teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); });
+}
 $('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); };
-try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm') $('modeSel').value = m; } catch (e) { /* */ }
+try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm' || m === 'explore') $('modeSel').value = m; } catch (e) { /* */ }
 $('timeSel').onchange = () => { try { localStorage.setItem('docao.time', $('timeSel').value); } catch (e) { /* */ } };
 try { $('timeSel').value = String(normTime(localStorage.getItem('docao.time'))); } catch (e) { /* */ }
 refreshMenuMode();
