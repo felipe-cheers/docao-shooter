@@ -4,6 +4,65 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.10 — Modo Invasão 🎃 (22/10/2026)
+**A noite caiu no chiqueiro e os Docões zumbis levantaram!** 🧟🐷 Modo novo, co-op, no menu em **Modo de jogo → Invasão 🎃**.
+
+**Como funciona**
+- 👥 **Todo mundo no mesmo time** (até 10 jogadores online, ou solo no offline) contra **hordas de Docões zumbis**. Sem fogo amigo.
+- 🌊 **20 waves** cada vez mais difíceis, com mais zumbis, mais vida e mais velocidade. **A cada 5 waves vem o chefão Docão Abóbora.** Sobreviveu à 20, venceu!
+- 🧟 Zumbis variados: **Docão Podre**, **Esqueleto Corredor**, **Barrigão de Gás** (explode quando cai) e **Cuspidor** (cospe de longe).
+- ❤️ **Só 2 vidas.** Acabou, você fica assistindo até alguém usar a **Ressurreição**. Todo mundo fora, fim de jogo.
+- 🌫️ **Névoa Assombrada:** a área segura encolhe e muda de lugar a cada wave. Fora dela você perde vida.
+- 😠 O Docão continua fechando a cara quando atira.
+- 🚫 Na Invasão não tem killstreak: nada de sequência, rádio, Gavião, Chopper ou Fim da chapa. Aqui quem manda são os poderes.
+
+**Poderes** (caem dos zumbis; passe por cima pra pegar, guarda até 3)
+- 🎃 **Abóbora Explosiva:** arremessa uma abóbora que explode em área.
+- 🐺 **Uivo do Lobisomem:** empurra e atordoa os zumbis em volta.
+- 🧪 **Poção de Cura:** cura você e os aliados perto.
+- 🔦 **Lanterna Sagrada:** cone de luz que queima os zumbis.
+- 👻 **Fantasma:** invisível pros zumbis e mais rápido por alguns segundos.
+- ✨ **Ressurreição** (rara): revive todos os aliados mortos.
+
+**Controles**
+- **G** usa o poder selecionado · **X** troca de poder
+- **B** abre o painel de armas na pausa entre as waves (troque primária, secundária e corpo a corpo)
+
+**Mapas da Invasão**
+- 🏚️ **Fazenda Mal-Assombrada** (novo!): noite de Halloween na fazenda.
+- 🍖 **Rodízio do Docão**: o mapa padrão da Invasão.
+- Os mapas de sempre também entram, com decoração de Halloween e névoa só nesse modo.
+
+🎶 Trilha de terror própria, que pesa mais na luta contra o chefão.
+
+---
+
+🎃🐷 **ATENÇÃO, CHIQUEIRO!** 🐷🎃
+
+Hoje o Docão não parou: foram **6 atualizações em um dia só!** 🔥
+
+🚀 **v1.8 "Míssil Pilotado"**: 5 abates seguidos e você mesmo guia o míssil até o alvo. Tem camuflagens novas e o F ativa as killstreaks.
+💬 **v1.8.2**: o chat foi pro canto da tela.
+🌾 **v1.8.3**: menu novo com cara de fazendinha.
+🦵 **v1.8.4 "Agachadinha"**: Shift agacha e a mira fica no botão direito.
+🌽 **v1.9 "Arsenal da Quermesse"**: FAMAS da Pocilga, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo. Tem tiro que atravessa parede, helicóptero com 10 abates e NUKE com 15! ☢️
+😠 **v1.9.1 "Docão Bravo"**: agora o Docão fecha a cara toda vez que atira.
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## 🧟 MAS HOJE AINDA TEM MAIS... 🧟
+Quando a noite cair, os mortos levantam do chiqueiro. 🌫️
+# 🎃 MODO INVASÃO 🎃
+👥 Até 10 jogadores no mesmo time contra **hordas de Docões zumbis**.
+🌊 **20 waves** que vão ficando mais difíceis, com um **chefão a cada 5**.
+🔮 Poderes que caem dos zumbis.
+❤️ Só **2 vidas**. Depois disso, só um milagre traz você de volta...
+🏚️ Mapa novo: **Fazenda Mal-Assombrada**.
+🌙 **JÁ ESTÁ NO AR!** Corre pro menu e escolhe a Invasão. 💥
+Prepara a lanterna, chama os amigos e não sai do chiqueiro... 👀🐷
+
+---
+
 ## Próxima versão
 
 - Menu com nova logo, lettering cartoon, moldura irregular de madeira, campos padronizados e carimbo suíno. A chama do título tem animação discreta.
@@ -34,6 +93,7 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.8.4 · Agachadinha** ([@felipe-cheers](https://github.com/felipe-cheers), PR #9): Shift agacha com hitbox sincronizada no online, mira só no botão direito e um pulo por toque no Espaço
 - **v1.9 · Arsenal da Quermesse** ([@rramosjoao](https://github.com/rramosjoao), PR #12): FAMAS, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo, bala que atravessa parede, inspecionar no I e Chopper da granja aos 10
 - **v1.9.1 · Docão Bravo:** o Docão faz cara de brava ao atirar e ao golpear com faca ou sabre
+- **v1.10 · Modo Invasão:** co-op contra hordas de Docões zumbis em 20 waves, com chefão a cada 5, poderes, 2 vidas e o mapa Fazenda Mal-Assombrada
 
 ---
 
