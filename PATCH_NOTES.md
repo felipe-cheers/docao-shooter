@@ -4,7 +4,17 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## v1.6.1 — Respiro 💚 (21/10/2026)
+## 🧪 Em teste — Modo Bomba: Planta o Botijão 💣🔥 (protótipo, branch `feature/modo-bomba`)
+Ainda **não está no site**. Primeiro protótipo de um modo estilo Valorant, com o Docão:
+- **Ataque × Defesa** (Vermelho × Azul). O Ataque leva o **Botijão do Churrasco** até o site **A** ou **B** e segura **E** por 4 s pra plantar. A Defesa segura **E** por 7 s pra desarmar (passou da metade, fica salvo).
+- Plantou: o botijão **bipa cada vez mais rápido** e **explode em 45 s**, levando todo mundo num raio de 16 m.
+- Rodada: 10 s de preparação (parado no spawn), 100 s pra plantar. Explodiu = ponto do Ataque; desarmou ou o tempo acabou = ponto da Defesa.
+- **Primeiro a 13 rodadas vence.** Depois da 12ª: **"Troca de lado!"**
+- O **renascimento continua normal** (5 s + RENASCER), no spawn do seu lado. A rodada não acaba por eliminação.
+- Sites A/B marcados no chão e na tela (seta com a distância) nos 7 mapas. Bots plantam, escoltam, guardam os sites e desarmam.
+- Funciona offline e online.
+
+ — Respiro 💚 (21/10/2026)
 - **Vida regenera fora de combate:** levou dano de outro Docão e ficou **5 segundos** sem apanhar? A vida volta sozinha, **+10 por segundo**, até 100. Levou dano de novo, os 5 segundos recomeçam.
 - **Mas só se o dano não foi seu:** se o último dano veio de você mesmo (foguete da bazuca no pé, seu próprio Copo Bomba, seu míssil), não regenera, e isso cancela a regeneração que ia começar. Quer a vida de volta? Fica longe da própria explosão.
 - Enquanto regenera, a barra de vida brilha verdinho com um "+" pulsando.

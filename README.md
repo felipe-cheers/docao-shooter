@@ -12,7 +12,7 @@ python3 -m http.server 8123
 (Precisa ser servido por HTTP por causa dos módulos ES; funciona offline, o Three.js está em `vendor/`.)
 
 ## Controles
-WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas três snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a **estocada** · R recarregar · **1** primária / **2** pistola / **3** faca (ou rodinha) · **V** troca rápida faca ↔ última arma · Segure **Q**: Copo Bomba, solte para arremessar · **4** fumaça · **5** atordoamento · **F** rádio do "Fim da chapa" (quando o prêmio estiver pronto) · Morto: **1–6** escolhe a primária do próximo renascimento (1 Fuzil, 2 Calibre 12, 3 Sniper Torresmo, 4 Canhão do Barril, 5 Carabina da Granja, 6 Bazuca), **Espaço/Enter** ou o botão **RENASCER** (liberado após 5 s) pra voltar · Tab placar · Esc (ou P) pausar
+WASD mover · Mouse mirar · Espaço pular · Shift ou botão direito: mirar/zoom (luneta nas três snipers) · Clique atirar (faca: golpe) · Com a faca na mão o botão direito vira a **estocada** · R recarregar · **1** primária / **2** pistola / **3** faca (ou rodinha) · **V** troca rápida faca ↔ última arma · Segure **Q**: Copo Bomba, solte para arremessar · **4** fumaça · **5** atordoamento · **F** rádio do "Fim da chapa" (quando o prêmio estiver pronto) · **E** (segurar) plantar/desarmar o botijão no Modo Bomba · Morto: **1–6** escolhe a primária do próximo renascimento (1 Fuzil, 2 Calibre 12, 3 Sniper Torresmo, 4 Canhão do Barril, 5 Carabina da Granja, 6 Bazuca), **Espaço/Enter** ou o botão **RENASCER** (liberado após 5 s) pra voltar · Tab placar · Esc (ou P) pausar
 
 ## Online (multiplayer) 🌐
 
@@ -69,6 +69,7 @@ cd server && npx wrangler dev --port 8787 --var ALLOW_TEST:1     # ALLOW_TEST s�
 python3 -m http.server 8124                                       # na raiz do jogo
 node test-online.mjs http://localhost:8124/ ws://127.0.0.1:8787
 node test-online-dom.mjs http://localhost:8124/ ws://127.0.0.1:8787   # Dominação online
+node test-online-bomb.mjs http://localhost:8124/ ws://127.0.0.1:8787  # Modo Bomba online (protótipo, ~1–2 min)
 node test-online-idle.mjs http://localhost:8124/ ws://127.0.0.1:8787  # sala parada + entrada no meio (~3 min)
 ```
 Para jogar em duas abas: `http://localhost:8124/?server=ws://127.0.0.1:8787`.
@@ -243,6 +244,18 @@ Escolha o modo no menu (offline) ou ao criar a sala (online; o anfitrião pode t
     Trocar de time no meio da partida conta como morte (sem pontuar pra ninguém) e você renasce no time novo.
   - Bots completam os dois times (e são remanejados se um time ficar 2+ maior), vão pra zona, contestam e só miram em inimigos.
 - **Placar ao vivo** sempre no canto superior esquerdo (até 10 linhas, você destacado; na Dominação com o placar dos times).
+- **Bomba · Planta o Botijão** 💣🔥 — **PROTÓTIPO (em teste, só no branch `feature/modo-bomba`)**. Estilo Valorant, com o Docão. Regras em `shared/bomb.js`, as mesmas offline e no servidor.
+  - Times **Vermelho × Azul** (mesma escolha de time da Dominação). Rodadas **1–12: Vermelho ataca, Azul defende**; da **13ª em diante os lados trocam** (faixa **"Troca de lado!"**). **Primeiro a 13 rodadas vence.**
+  - **Preparação de 10 s** no começo de cada rodada: todo mundo parado no spawn do seu lado e ninguém leva dano. Depois, **100 s** pra plantar.
+  - Um atacante carrega o **Botijão do Churrasco** (botijão de gás vermelho Cheers com grelhinha e luz piscando; aparece nas costas de quem carrega). Morreu? O botijão **cai no chão** e qualquer atacante pega passando por cima.
+  - **Plantar:** dentro do site **A** ou **B**, segure **E** por **4 s** (parado). **Desarmar:** defensor perto do botijão segura **E** por **7 s**; passou da metade (**3,5 s**), o progresso fica salvo se soltar.
+  - Plantado, o botijão **bipa cada vez mais rápido** (1/s → 2/s nos últimos 20 s → 4/s nos últimos 10 s → 8/s nos últimos 4 s) e **explode em 45 s**, matando todo mundo a até **16 m**.
+  - **Fim da rodada:** explodiu → ponto do **Ataque**; desarmou → ponto da **Defesa**; acabou o tempo sem plantar → ponto da **Defesa**. A rodada **não** acaba por eliminação: o **renascimento continua normal** (5 s + RENASCER), sempre no spawn do seu lado. Depois de 5 s de faixa com o resultado, todo mundo volta pro spawn com vida cheia.
+  - **Sites e lados** são calculados sozinhos em cada um dos 7 mapas (`bombLayout`): os dois spawns mais distantes viram o lado do Ataque e o da Defesa, e os sites A/B são pontos andáveis com chão em volta, na metade da Defesa, longe do muro e bem separados. Dá pra fixar à mão com `bombSites: [[x, y, z], [x, y, z]]` no mapa (`maps.js`). `node tools/bomb-layout.mjs` mostra o resultado.
+  - No chão: anel amarelo + letra gigante **A/B** + letra flutuando (fica vermelho onde o botijão foi plantado). Na tela: setas **A/B** com a distância em metros, e a do botijão (caído, só pro Ataque; plantado, pra todos).
+  - HUD: placar **Ataque × Defesa** (com a cor do time), relógio da rodada (vira contagem do botijão quando plantado), quem está com o botijão, seu lado e barra de plantar/desarmar. Kill feed: "X plantou o botijão no A!", "Y desarmou o botijão!", "Z virou churrasco no botijão" e companhia.
+  - Bots (versão simples): o carregador vai pro site e planta, os outros atacantes escoltam/pegam o botijão caído/guardam o plantado; defensores guardam A ou B e vão desarmar quando plantam.
+  - Placar individual: abates + 2 × objetivos (plantou/desarmou).
 
 ## Explosões (Bazuca e Copo Bomba)
 Regra única em `shared/combat.js` (cliente offline e servidor):
@@ -286,8 +299,8 @@ Campo "Seu nome" no menu, na janela "Jogar online" e no lobby (botão **Trocar**
 - `skins.js`: **registro de skins (só dados)**
 - `render.html`: renderiza um Docão isolado (`?skin=clube&rot=0.6&frame=face`) para conferir skins
 - `vendor/`: Three.js r169 + BufferGeometryUtils
-- `shared/domination.js` (zona, times) · `shared/combat.js` (explosões, colisão do foguete, dispersão da Sniper) · `shared/melee.js` (faca): regras usadas pelo cliente e pelo servidor
-- `test.mjs` / `test-maps.mjs` / `test-dom.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`) · `test-shared.mjs`: testes das regras sem navegador · `test-map-audit.mjs`: auditoria de layout dos mapas + partida simulada (sem navegador) · `tools/planta.py` e `tools/screenshots-mapas.mjs`: planta e fotos dos mapas
+- `shared/domination.js` (zona, times) · `shared/bomb.js` (Modo Bomba: rodadas, sites, plantar/desarmar, bots) + `bomb-gfx.js` (Botijão e marcas dos sites) · `shared/combat.js` (explosões, colisão do foguete, dispersão da Sniper) · `shared/melee.js` (faca): regras usadas pelo cliente e pelo servidor
+- `test.mjs` / `test-maps.mjs` / `test-dom.mjs` / `test-bomb.mjs` / `compare.mjs` / `skingrid.mjs`: testes headless com Playwright (geram `screenshots/`) · `test-shared.mjs`: testes das regras sem navegador · `test-map-audit.mjs`: auditoria de layout dos mapas + partida simulada (sem navegador) · `tools/planta.py` e `tools/screenshots-mapas.mjs`: planta e fotos dos mapas
 
 ## Como adicionar uma skin
 Abra `skins.js` e acrescente um objeto no array `SKINS`:
