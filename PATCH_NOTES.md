@@ -15,9 +15,9 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.6 · Bacon Restaurador:** bacon cura 10 de vida
 - **v1.6.1 · Respiro:** vida regenera fora de combate
 - **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
-- **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
 - **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
 - **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
+- **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
 
 ---
 
