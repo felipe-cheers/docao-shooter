@@ -58,10 +58,10 @@ export class Room extends DurableObject {
   }
   // recria o jogo depois de hibernar (lobby/fim de partida): config + jogadores ainda conectados
   restore(saved) {
-    this.game = this.makeGame({ ...saved.cfg, test: this.env.ALLOW_TEST === '1' }); this.game.nextId = saved.nextId || 1;
+    this.game = this.makeGame({ ...saved.cfg, test: this.env.ALLOW_TEST === '1', chatLog: saved.chat }); this.game.nextId = saved.nextId || 1;
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment(); if (!a) continue;
-      const e = this.game.makeEnt({ name: a.name, skin: a.skin, primary: a.primary, bot: false });
+      const e = this.game.makeEnt({ name: a.name, skin: a.skin, primary: a.primary, secondary: a.secondary, melee: a.melee, bot: false });
       this.game.ents.delete(e.id); e.id = a.id; e.token = a.token; this.game.ents.set(e.id, e);
       this.game.nextId = Math.max(this.game.nextId, a.id + 1);
     }
@@ -88,7 +88,7 @@ export class Room extends DurableObject {
   }
   sockets() { return this.ctx.getWebSockets().filter((w) => w.readyState === 1 && w.deserializeAttachment()); }
   safeSend(ws, s) { try { ws.send(s); } catch (e) { /* socket fechando */ } }
-  persist() { if (this.game) this.ctx.storage.put('room', { cfg: this.game.cfg, nextId: this.game.nextId, hostId: this.game.hostId, mapId: this.game.mapId }); }
+  persist() { if (this.game) this.ctx.storage.put('room', { cfg: this.game.cfg, nextId: this.game.nextId, hostId: this.game.hostId, mapId: this.game.mapId, chat: this.game.chatLog || [] }); }
 
   async fetch(req) {
     const url = new URL(req.url);
@@ -109,11 +109,11 @@ export class Room extends DurableObject {
       const fail = (msg) => { server.send(JSON.stringify({ t: 'error', msg })); server.close(4000, msg.slice(0, 60)); return new Response(null, { status: 101, webSocket: client }); };
       if (!this.game) return fail('Sala não encontrada');
       const q = url.searchParams;
-      const r = this.game.join({ name: q.get('name'), skin: q.get('skin'), primary: parseInt(q.get('primary')), token: q.get('token') });
+      const r = this.game.join({ name: q.get('name'), skin: q.get('skin'), primary: parseInt(q.get('primary')), secondary: parseInt(q.get('secondary')), melee: parseInt(q.get('melee')), token: q.get('token') });
       if (r.error) return fail(r.error);
       const e = r.ent;
       for (const old of this.ctx.getWebSockets()) { const a = old.deserializeAttachment(); if (old !== server && a && a.id === e.id) { old.serializeAttachment(null); try { old.close(4001, 'Reconectado em outra aba'); } catch (x) { /* já fechado */ } } }
-      server.serializeAttachment({ id: e.id, token: e.token, name: e.name, skin: e.skin, primary: e.primary });
+      server.serializeAttachment({ id: e.id, token: e.token, name: e.name, skin: e.skin, primary: e.primary, secondary: e.secondary, melee: e.melee });
       await this.ctx.storage.deleteAlarm();
       this.game.welcome(e); this.persist();
       return new Response(null, { status: 101, webSocket: client });
@@ -124,7 +124,7 @@ export class Room extends DurableObject {
     const a = ws.deserializeAttachment(); if (!a || !this.game || typeof msg !== 'string' || msg.length > 8192) return;
     let m; try { m = JSON.parse(msg); } catch (e) { return; }
     this.lastMsg = Date.now(); this.game.onMessage(a.id, m); this.maybeTick(false);
-    if (m.t === 'prof') { const e = this.game.ents.get(a.id); if (e) ws.serializeAttachment({ ...a, name: e.name, skin: e.skin, primary: e.nextPrimary }); }
+    if (m.t === 'prof') { const e = this.game.ents.get(a.id); if (e) ws.serializeAttachment({ ...a, name: e.name, skin: e.skin, primary: e.nextPrimary, secondary: e.nextSecondary, melee: e.nextMelee }); }
   }
   async webSocketClose(ws) { this.drop(ws); }
   async webSocketError(ws) { this.drop(ws); }

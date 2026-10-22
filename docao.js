@@ -1,5 +1,6 @@
 // Docão procedural: modelo 3D fiel à arte oficial + sistema de skins.
 import * as THREE from 'three';
+import { makeWorldSaber } from './saber-view.js';
 import { getSkin } from './skins.js';
 import { mergeVertices } from './vendor/BufferGeometryUtils.js';
 
@@ -392,11 +393,19 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.1, 0.12, 0.75), toon('#5c7a3a'), sn, 0.01).position.z = 0.02;
     const snb = mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.55, 8), toon('#22252c'), sn, 0.008); snb.position.set(0, 0.01, 0.62); snb.rotation.x = Math.PI / 2;
     const sc = mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.34, 12), toon('#2a2d35'), sn, 0.008); sc.position.set(0, 0.12, 0.05); sc.rotation.x = Math.PI / 2;
-    // bazuca no ombro
-    const bz = new THREE.Group(); bz.position.set(0.6, 1.12, 0.2); g.add(bz);
-    const tube = mesh(new THREE.CylinderGeometry(0.11, 0.11, 1.1, 16), toon('#6b7a3a'), bz, 0.012); tube.rotation.x = Math.PI / 2;
-    for (const z of [0.5, -0.5]) { const band = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 16), toon('#e63946'), bz, 0.008); band.rotation.x = Math.PI / 2; band.position.z = z; }
-    const nose = mesh(new THREE.SphereGeometry(0.09, 12, 10), toon('#F58A6E'), bz, 0.008); nose.position.z = 0.58; nose.scale.set(1, 0.8, 0.6);
+    // bazuca no ombro (RPG: tubo longo, traseira alargada, grip) — continua sendo guns[3]
+    const bz = new THREE.Group(); bz.position.set(0.55, 1.2, 0.02); bz.scale.setScalar(1.12); g.add(bz);
+    const tube = mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.55, 16), toon('#6b7a3a'), bz, 0.012); tube.rotation.x = Math.PI / 2; tube.position.set(0, 0.02, 0.32);
+    const lip = mesh(new THREE.CylinderGeometry(0.135, 0.102, 0.09, 16), toon('#4a5528'), bz, 0.008); lip.rotation.x = Math.PI / 2; lip.position.set(0, 0.02, 1.12);
+    const ring = mesh(new THREE.TorusGeometry(0.128, 0.02, 6, 16), toon('#f5e6d0'), bz, 0.006); ring.position.set(0, 0.02, 1.16);
+    for (const z of [0.85, 0.15]) { const band = mesh(new THREE.CylinderGeometry(0.114, 0.114, 0.06, 16), toon('#e63946'), bz, 0.008); band.rotation.x = Math.PI / 2; band.position.set(0, 0.02, z); }
+    const rear = mesh(new THREE.CylinderGeometry(0.102, 0.175, 0.32, 16), toon('#4a5528'), bz, 0.01); rear.rotation.x = Math.PI / 2; rear.position.set(0, 0.02, -0.615);
+    const grip = mesh(new THREE.BoxGeometry(0.055, 0.2, 0.065), toon('#2c3038'), bz, 0.008); grip.position.set(0, -0.14, 0.02); grip.rotation.x = -0.5;
+    const fg = mesh(new THREE.BoxGeometry(0.048, 0.14, 0.05), toon('#2c3038'), bz, 0.008); fg.position.set(0, -0.12, 0.48);
+    const sf = mesh(new THREE.BoxGeometry(0.02, 0.1, 0.02), toon('#1a1c22'), bz, 0.004); sf.position.set(0, 0.14, 0.95);
+    const sr = mesh(new THREE.BoxGeometry(0.05, 0.12, 0.016), toon('#1a1c22'), bz, 0.004); sr.position.set(0, 0.15, 0.05);
+    const og = mesh(new THREE.CylinderGeometry(0.055, 0.095, 0.22, 12), toon('#e63946'), bz, 0.008); og.rotation.x = Math.PI / 2; og.position.set(0, 0.02, 1.28);
+    const bzNose = mesh(new THREE.SphereGeometry(0.055, 10, 8), toon('#F58A6E'), bz, 0.006); bzNose.position.set(0, 0.02, 1.42); bzNose.scale.set(1, 0.82, 0.7);
     // pistola
     const ps = new THREE.Group(); ps.position.set(0.0, 0.9, 0.55); g.add(ps);
     mesh(new THREE.BoxGeometry(0.07, 0.08, 0.26), toon('#ff9fb6'), ps, 0.01);
@@ -416,7 +425,38 @@ export function makeDocao(skinOrId, opts = {}) {
     const cbb = mesh(new THREE.CylinderGeometry(0.015, 0.016, 0.36, 8), toon('#5c4a32'), cb, 0.008); cbb.position.set(0, 0.012, 0.34); cbb.rotation.x = Math.PI / 2;
     const cbs = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.13, 10), toon('#2a2d35'), cb, 0.008); cbs.position.set(0, 0.078, -0.02); cbs.rotation.x = Math.PI / 2;
     const cbl = mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 10), basic('#f4fbff'), cb, 0); cbl.rotation.x = Math.PI / 2; cbl.position.set(0, 0.078, 0.05);
-    guns.push(r, sg, sn, bz, ps, cn, cb, kn); for (const o of [sg, sn, bz, ps, cn, cb, kn]) o.visible = false;
+    guns.push(r, sg, sn, bz, ps, cn, cb, kn);
+    const hold = new THREE.Group(); hold.position.set(0, -0.64, 0.05); hold.rotation.set(-Math.PI / 2, 0.2, 0.05); arms[0].add(hold);
+    const sb = makeWorldSaber(); hold.add(sb);
+    hold.userData.blade = sb.userData.blade; hold.userData.glow = sb.userData.glow;
+    guns.push(hold);
+    const uz = new THREE.Group(); uz.position.copy(r.position); g.add(uz);
+    mesh(new THREE.BoxGeometry(0.09, 0.11, 0.46), toon('#2a2d35'), uz, 0.008).position.z = 0.02;
+    mesh(new THREE.BoxGeometry(0.05, 0.18, 0.05), toon('#3b3f4a'), uz, 0.006).position.set(0, -0.12, -0.02);
+    const p9 = new THREE.Group(); p9.position.copy(r.position); g.add(p9);
+    mesh(new THREE.BoxGeometry(0.11, 0.07, 0.52), toon('#4a5568'), p9, 0.008);
+    mesh(new THREE.BoxGeometry(0.09, 0.07, 0.28), toon('#c9a36a'), p9, 0.006).position.y = 0.07;
+    const nl = new THREE.Group(); nl.position.copy(ps.position); g.add(nl);
+    mesh(new THREE.BoxGeometry(0.13, 0.11, 0.26), toon('#f0c14a'), nl, 0.008);
+    const bit = mesh(new THREE.CylinderGeometry(0.02, 0.008, 0.26, 8), toon('#d0d4dc'), nl, 0.004); bit.rotation.x = Math.PI / 2; bit.position.z = 0.22;
+    guns.push(uz, p9, nl);
+    const sm = new THREE.Group(); sm.position.copy(r.position); g.add(sm);
+    mesh(new THREE.BoxGeometry(0.12, 0.12, 0.44), toon('#2c3138'), sm, 0.008);
+    mesh(new THREE.BoxGeometry(0.07, 0.16, 0.08), toon('#c45a3a'), sm, 0.006).position.set(0, -0.12, 0.02);
+    const smb = mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.4, 8), toon('#3a3e46'), sm, 0.006); smb.rotation.x = Math.PI / 2; smb.position.z = 0.34;
+    guns.push(sm);
+    const xb = new THREE.Group(); xb.name = 'besta'; xb.position.set(0.04, 0.98, 0.62); g.add(xb);
+    mesh(new THREE.BoxGeometry(0.06, 0.045, 0.46), toon('#6b3f22'), xb, 0.008);
+    mesh(new THREE.BoxGeometry(0.045, 0.1, 0.07), toon('#2a2d35'), xb, 0.006).position.set(0, -0.07, -0.14);
+    const xl = mesh(new THREE.BoxGeometry(0.2, 0.025, 0.03), toon('#7a4a28'), xb, 0.005); xl.position.set(-0.1, 0.04, 0.16); xl.rotation.z = 0.6;
+    const xr = mesh(new THREE.BoxGeometry(0.2, 0.025, 0.03), toon('#7a4a28'), xb, 0.005); xr.position.set(0.1, 0.04, 0.16); xr.rotation.z = -0.6;
+    mesh(new THREE.BoxGeometry(0.24, 0.012, 0.012), toon('#f4efe4'), xb, 0.004).position.set(0, 0.03, 0.02);
+    const xbolt = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), toon('#c4a574'), xb, 0.004); xbolt.rotation.x = Math.PI / 2; xbolt.position.z = 0.06;
+    const bw = new THREE.Group(); bw.name = 'arco'; bw.position.set(-0.18, 1.12, 0.38); bw.rotation.z = 0.15; g.add(bw);
+    mesh(new THREE.BoxGeometry(0.035, 0.62, 0.03), toon('#6b3f22'), bw, 0.008);
+    mesh(new THREE.BoxGeometry(0.012, 0.52, 0.012), toon('#f4efe4'), bw, 0.004).position.z = 0.05;
+    const arr = mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.38, 6), toon('#c4a574'), bw, 0.004); arr.rotation.x = Math.PI / 2; arr.position.set(0, 0.02, 0.18);
+    guns.push(xb, bw); for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -449,6 +489,7 @@ export function setPose(model, pose) {
     if (pose === 'gun') a.rotation.set(-1.32, -s * 0.5, s * 0.12);
     else if (pose === 'reload') a.rotation.set(-0.8, -s * 0.4, s * 0.1);
     else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
+    else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
   });
@@ -463,38 +504,67 @@ export function makeFPArms(skinOrId, pose = 'rifle') {
   const glove = (skin.parts || []).find((p) => p.type === 'glove'); let limbIdx = 0;
   const wraps = (skin.parts || []).find((p) => p.type === 'armWraps'), bones = (skin.parts || []).find((p) => p.type === 'boneLimbs'); const sStripes = (skin.parts || []).find((p) => p.type === 'sleeveStripes');
   const g = new THREE.Group();
-  const add = (geo, mat, th = 0.008) => { const m = new THREE.Mesh(geo, mat); g.add(m); outline(m, th); return m; };
   function limb(a, b, r) {
+    const limbG = new THREE.Group(); g.add(limbG);
+    const addL = (geo, mat, th = 0.008) => { const m = new THREE.Mesh(geo, mat); limbG.add(m); outline(m, th); return m; };
     const dir = b.clone().sub(a); const len = dir.length(); dir.normalize(); const q = new THREE.Quaternion().setFromUnitVectors(new V3(0, 1, 0), dir);
-    const arm = add(new THREE.CylinderGeometry(r, r * 1.12, len, 16), skinM); arm.position.copy(a).add(b).multiplyScalar(0.5); arm.quaternion.copy(q);
+    const arm = addL(new THREE.CylinderGeometry(r, r * 1.12, len, 16), skinM); arm.position.copy(a).add(b).multiplyScalar(0.5); arm.quaternion.copy(q);
     const sk = long ? 0.86 : 0.6, sr = puffy ? 2.1 : 1.6;
-    const sl = add(new THREE.CylinderGeometry(r * sr, r * sr, len * sk, 16), sleeveM); sl.position.copy(a).addScaledVector(dir, len * sk / 2); sl.quaternion.copy(q);
-    if (puffy) for (const f of [0.25, 0.5, 0.72]) { const pr = add(new THREE.TorusGeometry(r * sr * 0.97, r * 0.45, 8, 20), sleeveM, 0.005); pr.position.copy(a).addScaledVector(dir, len * f); pr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
-    const cf = add(new THREE.TorusGeometry(r * (sr - 0.05), r * 0.3, 8, 20), trimM, 0.006); cf.position.copy(a).addScaledVector(dir, len * sk); cf.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2));
-    if (wraps) for (const f of wraps.fp || [0.3, 0.5, 0.7]) { const wr = add(new THREE.TorusGeometry(r * sr * 1.02, r * 0.28, 8, 20), toon(wraps.color || '#6b4a2b'), 0.005); wr.position.copy(a).addScaledVector(dir, len * f * sk); wr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
-    if (sStripes) for (const f of [0.15, 0.4, 0.65]) { const st = add(new THREE.TorusGeometry(r * sr * 1.02, r * 0.16, 6, 20), toon(sStripes.color || '#1fb89a'), 0); st.position.copy(a).addScaledVector(dir, len * f * sk); st.quaternion.copy(q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 + 0.45, 0, 0))); }
+    const sl = addL(new THREE.CylinderGeometry(r * sr, r * sr, len * sk, 16), sleeveM); sl.position.copy(a).addScaledVector(dir, len * sk / 2); sl.quaternion.copy(q);
+    if (puffy) for (const f of [0.25, 0.5, 0.72]) { const pr = addL(new THREE.TorusGeometry(r * sr * 0.97, r * 0.45, 8, 20), sleeveM, 0.005); pr.position.copy(a).addScaledVector(dir, len * f); pr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
+    const cf = addL(new THREE.TorusGeometry(r * (sr - 0.05), r * 0.3, 8, 20), trimM, 0.006); cf.position.copy(a).addScaledVector(dir, len * sk); cf.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2));
+    if (wraps) for (const f of wraps.fp || [0.3, 0.5, 0.7]) { const wr = addL(new THREE.TorusGeometry(r * sr * 1.02, r * 0.28, 8, 20), toon(wraps.color || '#6b4a2b'), 0.005); wr.position.copy(a).addScaledVector(dir, len * f * sk); wr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
+    if (sStripes) for (const f of [0.15, 0.4, 0.65]) { const st = addL(new THREE.TorusGeometry(r * sr * 1.02, r * 0.16, 6, 20), toon(sStripes.color || '#1fb89a'), 0); st.position.copy(a).addScaledVector(dir, len * f * sk); st.quaternion.copy(q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 + 0.45, 0, 0))); }
     if (bones) { // osso pintado em cima da manga
       const up = new V3(0, 1, 0).sub(dir.clone().multiplyScalar(dir.y)).normalize();
       const bm = basic(bones.color || '#f7f7f2'), p0 = a.clone().addScaledVector(dir, len * 0.12 * sk).addScaledVector(up, r * sr * 0.92), p1 = a.clone().addScaledVector(dir, len * 0.9 * sk).addScaledVector(up, r * sr * 0.92);
-      const shaft = add(new THREE.CapsuleGeometry(r * 0.28, p0.distanceTo(p1), 4, 8), bm, 0.004); shaft.position.copy(p0).add(p1).multiplyScalar(0.5); shaft.quaternion.copy(q);
-      for (const pp of [p0, p1]) for (const k of [-1, 1]) { const kn = add(new THREE.SphereGeometry(r * 0.38, 10, 8), bm, 0.004); kn.position.copy(pp).addScaledVector(new V3().crossVectors(dir, up).normalize(), k * r * 0.3); }
+      const shaft = addL(new THREE.CapsuleGeometry(r * 0.28, p0.distanceTo(p1), 4, 8), bm, 0.004); shaft.position.copy(p0).add(p1).multiplyScalar(0.5); shaft.quaternion.copy(q);
+      for (const pp of [p0, p1]) for (const k of [-1, 1]) { const kn = addL(new THREE.SphereGeometry(r * 0.38, 10, 8), bm, 0.004); kn.position.copy(pp).addScaledVector(new V3().crossVectors(dir, up).normalize(), k * r * 0.3); }
     }
     const hand = limbIdx++ === 0 ? 'right' : 'left';
     const gl = glove && (glove.hand === 'both' || (glove.hand || 'right') === hand); const handM = gl ? gloveMat(glove.color) : skinM;
-    const fist = add(new THREE.SphereGeometry(r * 1.45, 18, 14), handM); fist.position.copy(b).addScaledVector(dir, r * 0.6); fist.scale.set(1, 0.9, 1.1);
+    const fist = addL(new THREE.SphereGeometry(r * 1.45, 18, 14), handM); fist.position.copy(b).addScaledVector(dir, r * 0.6); fist.scale.set(1, 0.9, 1.1);
     if (gl && glove.sparkle !== false) addSparkles(fist, 14, r * 1.45);
-    const th = add(new THREE.CapsuleGeometry(r * 0.42, r * 0.6, 4, 8), handM, 0.005); th.position.copy(fist.position).add(new V3(-0.03, 0.05, -0.04)); th.rotation.set(0.4, 0, 0.9);
+    const th = addL(new THREE.CapsuleGeometry(r * 0.42, r * 0.6, 4, 8), handM, 0.005); th.position.copy(fist.position).add(new V3(-0.03, 0.05, -0.04)); th.rotation.set(0.4, 0, 0.9);
+    return limbG;
   }
-  if (pose === 'knife') { // faca: só a mão direita, segurando o cabo
-    limb(new V3(0.22, -0.55, 0.45), new V3(0.02, -0.12, 0.06), 0.07);
-  } else if (pose === 'pistol') { // pistola: as duas mãos juntas no cabo
-    limb(new V3(0.14, -0.55, 0.5), new V3(0.0, -0.15, 0.02), 0.07);
-    limb(new V3(-0.4, -0.6, 0.35), new V3(-0.07, -0.19, 0.0), 0.07);
-  } else {
-    limb(new V3(0.14, -0.5, 0.45), new V3(0.0, -0.13, 0.13), 0.07);
-    limb(new V3(-0.45, -0.52, 0.25), new V3(-0.04, -0.1, -0.3), 0.07);
-  }
+  const grip = limb(pose === 'knife' ? new V3(0.22, -0.55, 0.45) : pose === 'pistol' ? new V3(0.14, -0.55, 0.5) : new V3(0.14, -0.5, 0.45), pose === 'knife' ? new V3(0.02, -0.12, 0.06) : pose === 'pistol' ? new V3(0.0, -0.15, 0.02) : new V3(0.0, -0.13, 0.13), 0.07);
+  let support = null;
+  if (pose === 'pistol') support = limb(new V3(-0.4, -0.6, 0.35), new V3(-0.07, -0.19, 0.0), 0.07);
+  else if (pose !== 'knife') support = limb(new V3(-0.45, -0.52, 0.25), new V3(-0.04, -0.1, -0.3), 0.07);
+  g.userData.grip = grip; g.userData.support = support;
   return g;
+}
+
+// Antebraço + casco que segura o pump da Calibre 12. O ombro fica parado; o casco vai na telha.
+const _foreDir = new V3(), _foreQ = new THREE.Quaternion(), _FORE_UP = new V3(0, 1, 0);
+export function makeFPForearm(skinOrId) {
+  const skin = typeof skinOrId === 'string' ? getSkin(skinOrId) : skinOrId;
+  const shirt = skin.shirt || {};
+  const tone = safeTone(skin.body && skin.body.tone);
+  const skinM = toonWarm(tone, 0.42, {}, '#e0500a'), sleeveM = toonWarm(sleeveColor(shirt), 0.12);
+  const glove = (skin.parts || []).find((p) => p.type === 'glove');
+  const handM = glove && (glove.hand === 'both' || glove.hand === 'left' || !glove.hand) ? gloveMat(glove.color) : skinM;
+  const g = new THREE.Group();
+  const armLen = 0.52;
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.052, armLen, 14), skinM); outline(arm, 0.006); g.add(arm);
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.088, armLen * 0.42, 14), sleeveM); sleeve.position.y = armLen * 0.2; outline(sleeve, 0.005); arm.add(sleeve);
+  const fist = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), handM); fist.scale.set(1.2, 0.82, 1.05); outline(fist, 0.007); g.add(fist);
+  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.028, 0.05, 4, 8), handM); thumb.position.set(0.05, 0.04, 0.02); thumb.rotation.set(0.7, 0, 0.8); outline(thumb, 0.004); g.add(thumb);
+  if (glove && glove.sparkle !== false && handM !== skinM) addSparkles(fist, 10, 0.1);
+  g.userData.arm = arm; g.userData.armLen = armLen; g.userData.handR = 0.1;
+  return g;
+}
+export function poseFPForearm(hand, shoulder) {
+  const arm = hand.userData.arm; if (!arm) return;
+  _foreDir.copy(shoulder).sub(hand.position);
+  const len = _foreDir.length(); if (len < 1e-4) return;
+  _foreDir.multiplyScalar(1 / len);
+  const reach = Math.max(0.2, len - hand.userData.handR * 0.65);
+  if (_foreDir.dot(_FORE_UP) > 0.999) _foreQ.identity(); else _foreQ.setFromUnitVectors(_FORE_UP, _foreDir);
+  arm.quaternion.copy(_foreQ);
+  arm.position.copy(_foreDir).multiplyScalar(hand.userData.handR * 0.3 + reach * 0.5);
+  arm.scale.set(1, reach / hand.userData.armLen, 1);
 }
 
 // ---------- Copo Bomba: copo de festa vermelho com logo C! ----------

@@ -160,6 +160,14 @@ function pushMedal(title, sub) {
   later(() => card.remove(), MEDAL_MS);
 }
 
+// pontos de abate que não contam na sequência (o helicóptero, por exemplo)
+export function feedbackAward(amount) {
+  const n = Math.max(0, Math.round(amount) || 0);
+  if (!n) return;
+  points += n;
+  popPoints(n, 'kill');
+}
+
 export function feedbackHit(info) {
   const head = !!(info && info.head);
   points += 10;
