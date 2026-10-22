@@ -664,7 +664,7 @@ export class Game {
     this.pickups.forEach((p, i) => {
       if (!p.active) { if (this.T >= p.respawnAt) { p.active = true; this.events.push(['pk', i, 1]); } return; }
       for (const e of this.ents.values()) {
-        if (!e.alive || (!e.bot && !e.connected)) continue;
+        if (!e.alive || e.zt || (!e.bot && !e.connected)) continue;
         const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z; if (dx * dx + dz * dz > 1.5 || Math.abs(e.pos.y - p.pos.y) > 1.5) continue;
         if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
         else if (p.type === 'grenade') { if (e.nades >= NADE.max) continue; e.nades++; }
@@ -682,7 +682,7 @@ export class Game {
     this.bacons = this.bacons.filter((b) => {
       const age = this.T - b.born; if (age >= BACON_ITEM.life) return false; if (age < BACON_ITEM.from) return true;
       for (const e of this.ents.values()) {
-        if (!e.alive || e.id === b.id || (!e.bot && !e.connected) || e.hp >= 100) continue;
+        if (!e.alive || e.zt || e.id === b.id || (!e.bot && !e.connected) || e.hp >= 100) continue;
         const dx = e.pos.x - b.x, dz = e.pos.z - b.z; if (dx * dx + dz * dz > R2 || Math.abs(e.pos.y - b.y) >= BACON_ITEM.dy) continue;
         e.hp = Math.min(100, e.hp + BACON_ITEM.heal); this.events.push(['bc', b.id, e.id, Math.round(e.hp)]); return false;
       }
@@ -707,7 +707,7 @@ export class Game {
       }
     }
     this.updatePickups(); this.updateBacons();
-    { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) regenStep(e, this.T, rt); }
+    { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) if (!e.zt) regenStep(e, this.T, rt); }
     if (this.zone) this.updateZone(TICK_DT(this));
     const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, iv: this.inv ? this.inv.stateArr() : undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
       (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping, r2(e.crouch)]), ev: this.events };

@@ -605,3 +605,46 @@ body:has(#menu:not(.hidden)) #streakBar { display: none !important; }
 }
 @media(prefers-reduced-motion:reduce){#menu input,#menu select{transition:none}}
 #menu input[type=range]{border-radius:2px}
+
+/* ---------- Modo Invasão 🎃 ---------- */
+#fogVeil{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(circle,rgba(120,40,200,.12) 30%,rgba(90,20,160,.75))}
+body.ghostfx #hud::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle,rgba(180,220,255,0) 45%,rgba(170,210,255,.45));z-index:0}
+#invhud{position:absolute;top:44px;left:50%;transform:translateX(-50%);text-align:center;color:#ffd9a8;text-shadow:0 2px 0 #000,0 0 12px rgba(255,120,30,.6);pointer-events:none}
+#invhud b{display:block;font-size:26px;letter-spacing:2px}
+#invhud small{display:block;font-size:13px;color:#e8d8ff;margin-top:2px}
+#invLives{font-size:18px;color:#ff4d6d;margin-top:3px;letter-spacing:3px}
+#invLives .lost{color:rgba(255,255,255,.22)}
+#invBoss{position:absolute;top:118px;left:50%;transform:translateX(-50%);width:min(520px,60vw);text-align:center;color:#ffb35a;font-weight:bold;font-size:13px;text-shadow:0 1px 0 #000;pointer-events:none}
+#invBoss .ibar{height:12px;margin-top:3px;border-radius:6px;background:rgba(0,0,0,.55);border:1px solid #ff8a1a;overflow:hidden}
+#invBossFill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5a00,#ffb35a)}
+#invBanner{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;color:#fff;animation:invPop .35s ease-out}
+#invBanner b{display:block;font-size:48px;letter-spacing:3px;color:#ff9a3a;text-shadow:0 3px 0 #2a0a40,0 0 22px rgba(255,120,30,.8)}
+#invBanner span{display:block;font-size:17px;margin-top:4px;color:#eadcff;text-shadow:0 2px 0 #000}
+#invBanner.big b{font-size:64px}
+@keyframes invPop{from{transform:translate(-50%,-50%) scale(1.4);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+#invPowers{position:absolute;left:18px;bottom:150px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none}
+#invSlots{display:flex;gap:6px}
+#invSlots .islot{position:relative;width:58px;height:58px;border-radius:10px;border:2px solid rgba(255,255,255,.2);background:rgba(20,10,30,.55);font-size:28px;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#invSlots .islot small{font-size:8.5px;line-height:9px;color:#eadcff;max-width:56px;text-align:center;white-space:nowrap;overflow:hidden}
+#invSlots .islot.on{border-color:rgba(255,154,58,.55)}
+#invSlots .islot.sel{border-color:#ff9a3a;box-shadow:0 0 12px rgba(255,140,40,.8);background:rgba(80,30,10,.6)}
+#invPowers .ikeys{font-size:11px;color:#eadcff;text-shadow:0 1px 0 #000}
+#invPowers kbd,#iLoad kbd{background:#ff9a3a;color:#2a1410;border-radius:4px;padding:0 4px;font-weight:bold;font-size:10px}
+#invFogArrow{position:absolute;top:40%;left:50%;transform:translateX(-50%);text-align:center;color:#f0d8ff;font-weight:bold;text-shadow:0 2px 0 #000;pointer-events:none}
+#invFogArrow i{display:block;font-style:normal;font-size:44px;color:#c070ff;transition:transform .1s}
+#invOut{position:absolute;top:22%;left:50%;transform:translateX(-50%);text-align:center;color:#fff;pointer-events:none;text-shadow:0 2px 0 #000}
+#invOut b{display:block;font-size:30px;color:#c070ff}
+#invOut span{display:block;font-size:14px;margin-top:4px}
+#iLoad{position:fixed;left:50%;bottom:62px;transform:translateX(-50%);width:min(660px,66vw);padding:6px 10px 8px;border-radius:12px;background:rgba(18,10,24,.62);border:1px solid rgba(255,154,58,.45);pointer-events:auto;font-size:12px;color:#fff;text-shadow:0 1px 0 #000;z-index:7}
+#iLoad .blt{display:flex;justify-content:space-between;color:#ff9a3a;font-size:13px;margin-bottom:3px}
+#iLoad .blrow{display:flex;align-items:center;gap:6px;margin:3px 0}
+#iLoad .bll{flex:none;width:62px;font-size:10px;text-transform:uppercase;color:#e8d8ff;opacity:.85}
+#iLoad .bltiles{display:flex;gap:4px;flex-wrap:nowrap;flex:1;min-width:0}
+#iLoad .bltile{position:relative;flex:1 1 0;min-width:0;max-width:62px;height:44px;border-radius:7px;border:2px solid rgba(255,255,255,.18);background:rgba(50,30,80,.55) center 38%/88% auto no-repeat;cursor:pointer;padding:0;color:#fff}
+#iLoad .bltile i{position:absolute;left:3px;top:1px;font-style:normal;font-weight:bold;font-size:10px;color:#ff9a3a}
+#iLoad .bltile span{position:absolute;left:0;right:0;bottom:1px;font-size:9px;line-height:10px;text-align:center;white-space:nowrap;overflow:hidden}
+#iLoad .bltile.on{border-color:#ff9a3a;background-color:rgba(160,60,20,.7);box-shadow:0 0 8px rgba(255,154,58,.7)}
+#iLoad .blhint{font-size:10.5px;opacity:.9;margin-top:2px}
+#iLoad .blbar{height:5px;margin-top:4px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+#iLoadFill{height:100%;width:100%;background:#ff9a3a}
+body.invpick #score,body.invpick #nades,body.invpick #tac,body.invpick #slots,body.invpick #wname{visibility:hidden}

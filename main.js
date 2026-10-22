@@ -14,7 +14,9 @@ import { mountStreakUi, setStreakCount, setStreakCycle, openStrikeMap, closeStri
 import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } from './fp-gear.js';
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
-import { MAPS, PLAY_MAPS, getMap } from './maps.js';
+import { MAPS, PLAY_MAPS, INV_MAPS, getMap } from './maps.js';
+import { INV, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
+import { makeZombie, animateZombie, dieZombie, applyHalloweenPalette, buildHalloween, makeFogWall, makeDropMesh, tickDrop, makeSpitMesh, makePowerPumpkin, makeRing, tickRing, makeLanternCone, setGhostLook } from './invasion-gfx.js';
 import { TRAIN, isTraining, dummyX } from './shared/training.js';
 import { buildWorld, disposeWorld, applyPalette, renderThumb } from './world.js';
 import { buildNav } from './nav.js';
@@ -208,7 +210,11 @@ let spawnHold = 'primary'; // arma na mão ao renascer (tela de morte)
 const teamMode = () => mode === 'dom';
 const training = () => isTraining(mode); // Estande do Docão: bots viram alvos
 const exploreMode = () => mode === 'explore';
-const friends = (a, b) => teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0;
+const invMode = () => isInvasion(mode); // Invasão 🎃: co-op contra zumbis (shared/invasion.js)
+let inv = null, invNet = null; // offline: InvasionCore local · online: estado lido do snapshot (parseState)
+const invGfx = { hal: null, fog: null, drops: new Map(), projs: new Map(), rings: [], cones: new Map(), inv: [], sel: 0 };
+let invZid = 1000;
+const friends = (a, b) => (invMode() ? !!(a && b && a !== b && !a.zt === !b.zt) : teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0);
 let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
 const keys = {}; let mouseDown = false, firedThisPress = false;
@@ -234,6 +240,7 @@ function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
 
 // spawn equilibrado: longe dos vivos e, se possível, fora da linha de visão deles
 function pickSpawn(e) {
+  if (invMode() && inv && e.isPlayer) { const near = e.reviveAt || null; e.reviveAt = null; const q = e.spawnedOnce ? inv.spawnPoint(e, near) : null; e.spawnedOnce = true; if (q) return new V3(q.x, q.y, q.z); } // Invasão: renasce perto de um aliado, dentro da área segura
   let best = SPAWNS[0], bd = -Infinity;
   for (const s of SPAWNS) {
     let md = 1e9, seen = false; const eye = new V3(s.x, s.y + 1.5, s.z);
@@ -310,7 +317,7 @@ function updatePickups(dt) {
     p.mesh.rotation.y += dt * 1.6; p.mesh.position.y = p.baseY + Math.sin(gameTime * 3 + p.pos.x) * 0.12;
     if (online) continue; // online: o servidor decide quem pegou
     for (const e of entities) {
-      if (!e.alive) continue;
+      if (!e.alive || e.zt) continue;
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z;
       if (dx * dx + dz * dz > 1.5 || Math.abs(e.pos.y - p.pos.y) > 1.5) continue;
       if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
@@ -328,7 +335,7 @@ function baconNear(e, b) { const dx = e.pos.x - b.pos.x, dz = e.pos.z - b.pos.z;
 function updateBaconPickups() {
   if (online) return;
   for (const b of edibleBacons()) for (const e of entities) {
-    if (!e.alive || e === b.ent || e.hp >= 100 || !baconNear(e, b)) continue;
+    if (!e.alive || e.zt || e === b.ent || e.hp >= 100 || !baconNear(e, b)) continue;
     e.hp = Math.min(100, e.hp + BACON_ITEM.heal); baconEaten(b, e); break;
   }
 }
@@ -547,7 +554,7 @@ function blast(c, owner, o, direct = null) {
     if (d < reach) hurtHeli(o.maxDmg * (0.35 + 0.65 * (1 - d / reach)));
   }
   const los = (a, b) => losClear(new V3(a.x, a.y, a.z), new V3(b.x, b.y, b.z));
-  for (const h of explosionHits(c, o, entities, los, owner, teamMode(), direct)) { // mesma regra do servidor (shared/combat.js)
+  for (const h of explosionHits(c, o, invMode() ? entities.filter((x) => x.zt || x === owner) : entities, los, owner, teamMode(), direct)) { // Invasão: explosão só fere zumbi (o dono ainda leva o empurrão do rocket jump) // mesma regra do servidor (shared/combat.js)
     const e = h.e; e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; // empurrão (rocket jump)
     if (e.isPlayer) lastKnock = gameTime;
     damage(e, h.dmg, owner, o.wIdx, false);
@@ -693,7 +700,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
     let best = null;
     for (const e of entities) {
       if (e === shooter || !e.alive || friends(e, shooter)) continue; // time: bala atravessa o companheiro
-      const hit = rayHitboxes(origin, d, e.pos, e.crouch);
+      const hit = e.zt ? scaleHit(origin, d, e.pos, e.size, (oo, pp) => rayHitboxes(oo, d, pp, e.crouch)) : rayHitboxes(origin, d, e.pos, e.crouch); // zumbi grande: hitbox escalada
       if (hit && hit.t < wallD && (heliT < 0 || hit.t < heliT) && (!best || hit.t < best.t)) best = { e, ...hit };
     }
     const end = origin.clone().addScaledVector(d, best ? best.t : heliT > 0 ? heliT : wallD);
@@ -716,6 +723,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
 
 function damage(t, amount, attacker, wIdx, head, back = false) {
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker)) return false; // sem fogo amigo
+  if (invMode() && !t.zt && attacker && !attacker.zt && !attacker.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
   if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
@@ -725,10 +733,12 @@ function damage(t, amount, attacker, wIdx, head, back = false) {
 }
 
 function kill(t, a, wIdx, head, back = false, noReward = false) {
+  if (t.zt) { killZombieLocal(t, a, wIdx, head, back); return; } // Invasão: zumbi
   t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + (t.dummy ? TRAIN.respawn : exploreMode() && t.isPlayer ? 1 : RESPAWN_TIME); t.killW = wIdx; t.killBack = !!back;
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head, back);
   sfx.die(t.isPlayer ? 1 : distVol(t.pos));
+  if (t.isPlayer && invMode() && inv && !inv.onPlayerDeath(t)) t.respawnAt = Infinity; // Invasão: sem vidas = assiste até alguém usar a Ressurreição
   if (a && a.isPlayer && a !== t) { sfx.kill(); if (!noReward) { notePlayerKill(t, head); noteWeaponKill(a, wIdx); } }
   if (t.isPlayer) { if (a && a !== t) revengeName = a.name; showStamp(wIdx); onPlayerDeath(); }
   if (a && a.kills >= KILL_LIMIT && mode === 'dm') endGame();
@@ -1290,7 +1300,8 @@ function addKillFeed(a, t, wIdx, head, back = false, label = null) {
   const div = document.createElement('div'); div.className = 'kf' + (wIdx === KNIFE ? ' knife' : '');
   const nm = (e) => `<b class="${e.isPlayer ? 'me' : ''}">${escapeHtml(e.name)}</b>`;
   const knife = wIdx === KNIFE && a && a !== t; // faca: frase fixa "moggou"
-  div.innerHTML = knife ? `${nm(a)} moggou ${nm(t)} <i>[Faca${back ? ' · pelas costas!' : ''}]</i>`
+  const zk = a && a.zt, fogK = (a && a.fog) || label === 'Névoa Assombrada'; // Invasão: zumbi / névoa
+  div.innerHTML = zk ? `${nm(a)} pegou ${nm(t)} <i>[🧟 ${zk === 'boss' ? 'Chefão' : 'Zumbi'}]</i>` : fogK ? `${nm(t)} sumiu na <i>[🌫 Névoa Assombrada]</i>` : knife ? `${nm(a)} moggou ${nm(t)} <i>[Faca${back ? ' · pelas costas!' : ''}]</i>`
     : a && a !== t ? `${pick(KILL_PHRASES)(nm(a), nm(t))} <i>[${label || WEAPON_SHORT(wIdx)}${head ? ' · direto no focinho!' : ''}]</i>` : pick(SELF_PHRASES)(nm(t));
   // log canônico p/ testes (o texto exibido varia; faca é fixo)
   { const L = (window.__feedLog ||= []); L.push(knife ? `${a.name} moggou ${t.name} [Faca${back ? ' · pelas costas!' : ''}]` : a && a !== t ? `${a.name} pururucou ${t.name} [${label || WEAPON_SHORT(wIdx)}]` : `${t.name} se pururucou`); if (L.length > 20) L.shift(); }
@@ -1299,7 +1310,7 @@ function addKillFeed(a, t, wIdx, head, back = false, label = null) {
 }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function boardHtml() {
-  const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
+  const rows = entities.filter((e) => !e.zt).sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
   const pg = (e) => (online ? `<td>${e.bot ? 'bot' : (e.isPlayer ? online.net.ping : e.ping || 0) + ' ms'}</td>` : '');
   return `<table><tr><th>#</th><th style="text-align:left">Docão</th><th>Abates</th><th>Mortes</th><th>K/D</th>${online ? '<th>Ping</th>' : ''}</tr>${rows.map((e, i) =>
     `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i + 1}</td><td style="text-align:left"><span class="dot" style="background:${teamMode() && e.team >= 0 ? TEAM_COLORS[e.team] : e.shirt}"></span>${escapeHtml(e.name)}${teamMode() ? ` <small style="color:${TEAM_COLORS[e.team] || '#fff'}">${e.caps || 0} zona${(e.caps || 0) === 1 ? '' : 's'}</small>` : ''}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${(e.kills / Math.max(1, e.deaths)).toFixed(2)}</td>${pg(e)}</tr>`).join('')}</table>`;
@@ -1325,8 +1336,8 @@ function updateHud(dt) {
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'Treino ∞';
   $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
-  const lead = entities.reduce((a, b) => (b.kills > a.kills ? b : a));
-  $('leader').textContent = exploreMode() ? 'Mapa vazio · , . ou [ ] trocam a primária' : training() ? 'Estande do Docão · B/N/M trocam a arma · munição infinita' : teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
+  const lead = entities.filter((e) => !e.zt).reduce((a, b) => (b.kills > a.kills ? b : a));
+  $('leader').textContent = invMode() ? '' : exploreMode() ? 'Mapa vazio · , . ou [ ] trocam a primária' : training() ? 'Estande do Docão · B/N/M trocam a arma · munição infinita' : teamMode() ? `Dominação · primeiro time a ${DOM.WIN_CAPS} zonas vence` : lead.kills ? `Líder: ${lead.name} (${lead.kills}/${KILL_LIMIT})` : `Primeiro a ${KILL_LIMIT} abates vence`;
   updateLeaderboard(dt); tickFeedback(dt);
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
@@ -1795,7 +1806,7 @@ function updatePlayer(dt) {
   if (!p.alive) {
     saberSfx.hum(false);
     if (p.charging) { p.charging = false; arcLine.visible = arcMark.visible = false; }
-    deathFx(p); deathCam(p, dt);
+    deathFx(p); if (!invSpectate()) deathCam(p, dt);
     // humano não renasce sozinho: espera RESPAWN_TIME e o clique em RENASCER (ou Espaço/Enter) — ver requestRespawn()
     updateAds(dt, false);
     return;
@@ -1810,7 +1821,7 @@ function updatePlayer(dt) {
   const wish = new V3();
   if (!guiding && (keys.KeyW || keys.ArrowUp)) wish.add(fwd); if (!guiding && (keys.KeyS || keys.ArrowDown)) wish.sub(fwd);
   if (!guiding && (keys.KeyD || keys.ArrowRight)) wish.add(right); if (!guiding && (keys.KeyA || keys.ArrowLeft)) wish.sub(right);
-  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
+  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (p.ghostOn ? 1.3 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
   const acc = p.onGround ? 14 : 4;
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
   if (!guiding && jumpPressed && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
@@ -1875,6 +1886,7 @@ function updatePlayer(dt) {
 
 // ---------------- Bots ----------------
 function updateBot(b, dt) {
+  if (b.zt) { updateZombie(b, dt); return; } // Invasão: zumbi (o core/servidor move)
   const m = b.model;
   if (!b.alive) {
     deathFx(b);
@@ -2332,7 +2344,11 @@ function loadMap(id) {
   currentMap = map; return map;
 }
 // seletor: mapa salvo no navegador ('random' = aleatório a cada partida)
-let selectedMap = (() => { const v = localStorage.getItem('docao.map'); return v === 'random' || PLAY_MAPS.some((m) => m.id === v) ? v : MAPS[0].id; })();
+const invMenu = () => $('modeSel').value === INV.mode; // Invasão tem lista de mapas própria (Rodízio + Fazenda + os normais)
+const mapPool = () => (invMenu() ? INV_MAPS : PLAY_MAPS);
+function storedMap() { let v = null; try { v = localStorage.getItem(invMenu() ? 'docao.invMap' : 'docao.map'); } catch (e) { /* */ } return v === 'random' || mapPool().some((m) => m.id === v) ? v : invMenu() ? INV.DEFAULT_MAP : MAPS[0].id; }
+let selectedMap = storedMap();
+function syncMapForMode() { const v = storedMap(); if (v !== selectedMap) { selectedMap = v; if (v !== 'random') loadMap(v); } buildMapGrid(); }
 const thumbs = {};
 function mapCard(id) {
   const b = document.createElement('button'); b.className = 'mapcard' + (id === 'random' ? ' random' : ''); b.dataset.map = id;
@@ -2350,11 +2366,11 @@ function refreshMapUI() {
   document.querySelectorAll('#mapGrid .mapcard').forEach((c) => c.classList.toggle('active', c.dataset.map === selectedMap));
 }
 function selectMap(id) {
-  selectedMap = id; try { localStorage.setItem('docao.map', id); } catch (e) { /* sem storage */ }
+  selectedMap = id; try { localStorage.setItem(invMenu() ? 'docao.invMap' : 'docao.map', id); } catch (e) { /* sem storage */ }
   if (id !== 'random') loadMap(id);
   refreshMapUI();
 }
-function buildMapGrid() { const g = $('mapGrid'); g.innerHTML = ''; for (const m of PLAY_MAPS) g.appendChild(mapCard(m.id)); g.appendChild(mapCard('random')); refreshMapUI(); }
+function buildMapGrid() { const g = $('mapGrid'); g.innerHTML = ''; for (const m of mapPool()) g.appendChild(mapCard(m.id)); g.appendChild(mapCard('random')); refreshMapUI(); }
 function makeThumbs() { // miniaturas renderizadas da vista aérea, uma por quadro pra não travar o menu
   let i = 0; const next = () => {
     if (i >= MAPS.length) { buildMapGrid(); window.__thumbsReady = true; return; }
@@ -2363,8 +2379,9 @@ function makeThumbs() { // miniaturas renderizadas da vista aérea, uma por quad
   }; requestAnimationFrame(next);
 }
 function pickMapForMatch() {
-  if (selectedMap !== 'random') return selectedMap;
-  const pool = PLAY_MAPS.filter((m) => !currentMap || m.id !== currentMap.id); return pool[Math.floor(Math.random() * pool.length)].id;
+  if (selectedMap !== 'random' && mapPool().some((m) => m.id === selectedMap)) return selectedMap;
+  if (selectedMap !== 'random') return invMenu() ? INV.DEFAULT_MAP : PLAY_MAPS[0].id;
+  const pool = mapPool().filter((m) => !currentMap || m.id !== currentMap.id); return pool[Math.floor(Math.random() * pool.length)].id;
 }
 $('mapBtn').onclick = () => { buildMapGrid(); $('mapModal').classList.remove('hidden'); };
 $('mapClose').onclick = () => $('mapModal').classList.add('hidden');
@@ -2399,12 +2416,12 @@ function startGame(mapId) {
   sens = parseFloat($('sens').value) || 1.4; sensAds = parseFloat($('sensAds').value) || 1;
   try { localStorage.setItem('docao.sens', String(sens)); localStorage.setItem('docao.sensAds', String(sensAds)); } catch (e) { /* sem storage */ }
   revengeName = null; resetFeedback(); resetRewards(); resetMatchCamos();
-  clearBots(); gameTime = 0;
+  clearBots(); gameTime = 0; inv = null; invNet = null;
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
   const picked = $('modeSel').value;
-  mode = picked === 'dom' || picked === 'explore' || picked === TRAIN.mode ? picked : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
+  mode = picked === 'dom' || picked === 'explore' || picked === TRAIN.mode || picked === INV.mode ? picked : 'dm'; teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
   if (training()) (currentMap.dummies || []).forEach((d, i) => { const b = makeEntity(d.name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length]); b.dummy = d; entities.push(b); });
-  else { const n = exploreMode() ? 0 : (parseInt($('botCount').value, 10) || 5);
+  else { const n = exploreMode() || invMode() ? 0 : (parseInt($('botCount').value, 10) || 5);
     for (let i = 0; i < n; i++) entities.push(makeEntity(BOT_DEFS[i].name, false, SKINS[Math.floor(Math.random() * SKINS.length)].id, TAG_COLORS[i % TAG_COLORS.length])); }
   if (teamMode()) { // seu time (escolhido no menu ou automático); bots completam os dois lados
     applyTeam(player, menuTeam >= 0 ? menuTeam : Math.random() < 0.5 ? 0 : 1);
@@ -2415,8 +2432,9 @@ function startGame(mapId) {
   for (const e of entities) { e.alive = false; }
   for (const e of entities) respawn(e);
   pickups.forEach((p) => { p.active = true; p.mesh.visible = true; });
+  invApplyLook(invMode()); if (invMode()) { player.id = -1; player.spawnedOnce = true; startInvasionOffline(); } // Invasão: decoração + core local
   showcase.visible = false;
-  $('killfeed').innerHTML = ''; flashMsg(exploreMode() ? `Exploração · ${currentMap.name} · , . ou [ ] trocam a primária` : teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : training() ? 'Estande do Docão · B/N/M trocam a arma' : `Mapa: ${currentMap.name}`); refreshModeHud();
+  $('killfeed').innerHTML = ''; flashMsg(invMode() ? `Invasão 🎃 · ${currentMap.name} · ${INV.WAVES} waves · ${KEYS.useLabel} usa poder · ${KEYS.cycleLabel} troca` : exploreMode() ? `Exploração · ${currentMap.name} · , . ou [ ] trocam a primária` : teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : training() ? 'Estande do Docão · B/N/M trocam a arma' : `Mapa: ${currentMap.name}`); refreshModeHud();
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause').classList.add('hidden'); $('hud').classList.remove('hidden'); $('socialHud').classList.add('hidden'); $('overChat').classList.add('hidden');
   camera.clearViewOffset(); state = 'playing'; lockPointer();
 }
@@ -2425,11 +2443,13 @@ function endGame() {
   if (state === 'over') return;
   state = 'over'; mouseDown = false; rightDown = false;
   if (document.pointerLockElement) document.exitPointerLock();
-  const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
-  if (teamMode()) { const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1; setTeamWinner(w); }
+  const rows = entities.filter((e) => !e.zt).sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
+  invClosePick();
+  if (invMode()) { $('winner').style.color = inv && inv.won ? '#ffd27a' : '#c070ff'; $('winner').textContent = invEndText(); }
+  else if (teamMode()) { const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1; setTeamWinner(w); }
   else $('winner').textContent = rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0].name} venceu!`;
   $('finalboard').innerHTML = boardHtml();
-  const nm = PLAY_MAPS[(PLAY_MAPS.indexOf(currentMap) + 1) % PLAY_MAPS.length]; $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
+  const ML = invMode() ? INV_MAPS : PLAY_MAPS, nm = ML[(ML.indexOf(currentMap) + 1) % ML.length]; $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
   ['againBtn', 'nextMapBtn'].forEach((id) => $(id).classList.remove('hidden')); $('overWait').classList.add('hidden');
   $('overChat').classList.add('hidden');
   $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden');
@@ -2448,7 +2468,7 @@ function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockP
 function toMenu() {
   if (online) leaveOnline();
   zone = null; mode = 'dm'; $('domhud').classList.add('hidden'); $('zoneMark').classList.add('hidden'); $('teamPick').classList.add('hidden');
-  state = 'menu'; clearBots(); if (selectedMap !== 'random') loadMap(selectedMap); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
+  state = 'menu'; clearBots(); inv = null; invNet = null; if (selectedMap !== 'random') loadMap(selectedMap); invApplyLook(false); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
   ['pause', 'gameover', 'hud'].forEach((id) => $(id).classList.add('hidden')); $('menu').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
 }
@@ -2516,6 +2536,7 @@ document.addEventListener('keydown', (e) => {
   if (tryOpenChat(e)) { e.preventDefault(); return; }
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   if (e.code !== 'Space' || !e.repeat) keys[e.code] = true;
+  if (state === 'playing' && player && invKey(e)) { e.preventDefault(); return; } // Invasão: G poder · X troca · B painel de armas na pausa
   if (state === 'playing' && player) {
     if (e.code === 'KeyR') startReload(player);
     if (!player.alive && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') && !e.repeat && requestRespawn()) keys[e.code] = false; // Espaço não vira pulo ao renascer
@@ -2551,8 +2572,8 @@ function loop() {
     if (state === 'playing') updatePlayer(dt); else if (player.alive) { stepCrouch(player, 0, dt, PHYS); player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
-    updateDomOffline(dt); updateZoneGfx(dt);
+    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) if (!e.zt) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
+    updateDomOffline(dt); updateZoneGfx(dt); invTick(dt);
     if (!online && !exploreMode() && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
     menuT += dt * 0.25;
@@ -2582,6 +2603,7 @@ function loop() {
 }
 mountUav();
 mountStreakUi();
+if (!$('fogVeil')) { const v = document.createElement('div'); v.id = 'fogVeil'; document.body.appendChild(v); } // Invasão: tela roxa fora da área segura
 if (!$('smokeVeil')) {
   const veil = document.createElement('div');
   veil.id = 'smokeVeil';
@@ -2678,14 +2700,14 @@ let lbT = 0;
 // duração da partida: online vem do servidor (start.limit); offline do select "Tempo" (0 = padrão do modo)
 let offlineMinutes = 0;
 function matchLimit() {
-  if (training()) return Infinity; // Treino: não acaba
+  if (training() || invMode()) return Infinity; // Treino: não acaba · Invasão: acaba na wave 20 ou quando todos caem
   if (online && online.limit) return online.limit;
   return offlineMinutes ? offlineMinutes * 60 : teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT;
 }
 function updateLeaderboard(dt) {
   lbT -= dt; if (lbT > 0) return; lbT = 0.25;
-  const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths).slice(0, 10);
-  const head = exploreMode() ? `<div class="lbh"><span>Exploração</span><span>só você</span></div>` : teamMode() ? `<div class="lbh"><span class="r">Vermelho ${teamScore[0]}</span><span>/${DOM.WIN_CAPS}</span><span class="b">${teamScore[1]} Azul</span></div>` : `<div class="lbh"><span>Placar</span><span>abates</span></div>`;
+  const rows = entities.filter((e) => !e.zt).sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths).slice(0, 10);
+  const head = invMode() ? `<div class="lbh"><span>Invasão 🎃</span><span>abates</span></div>` : exploreMode() ? `<div class="lbh"><span>Exploração</span><span>só você</span></div>` : teamMode() ? `<div class="lbh"><span class="r">Vermelho ${teamScore[0]}</span><span>/${DOM.WIN_CAPS}</span><span class="b">${teamScore[1]} Azul</span></div>` : `<div class="lbh"><span>Placar</span><span>abates</span></div>`;
   $('lb').innerHTML = head + rows.map((e, i) => { const pid = online ? (e.isPlayer ? online.myId : (e.netId || 0)) : 0; return `<div class="row${e.isPlayer ? ' me' : ''}${e.alive ? '' : ' dead'}${pid && voiceTalking(pid) ? ' talking' : ''}${pid && voiceMuted(pid) ? ' vmuted' : ''}"${pid ? ` data-pid="${pid}"` : ''}><span>${i + 1}</span><span class="dot" style="background:${teamMode() && e.team >= 0 ? TEAM_COLORS[e.team] : e.shirt}"></span><span class="n">${escapeHtml(e.name)}</span><span class="k">${scoreOf(e)}</span></div>`; }).join('');
 }
 // botões de time (Vermelho / Azul / Automático)
@@ -2703,20 +2725,22 @@ const MENU_RULES = {
   dm: 'Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos',
   dom: 'Times · capture a zona · o primeiro a completar as capturas vence',
   treino: 'Estande do Docão: alvos que não atacam e voltam em 2 s. B/N/M trocam a arma, munição infinita, sem tempo.',
+  inv: 'Invasão 🎃 · co-op contra 20 waves de Docões zumbis. 2 vidas cada, poderes caem dos zumbis (G usa, X troca) e a Névoa Assombrada fecha o mapa.',
   explore: 'Mapa vazio, só você. Ande e teste as armas. Vírgula, ponto ou [ ] trocam a primária. Munição não acaba e a partida não termina.',
 };
 function refreshMenuMode() {
-  const v = ['dom', 'explore', TRAIN.mode].includes($('modeSel').value) ? $('modeSel').value : 'dm';
+  const v = ['dom', 'explore', TRAIN.mode, INV.mode].includes($('modeSel').value) ? $('modeSel').value : 'dm';
   $('menuTrain').classList.toggle('hidden', v !== TRAIN.mode);
   $('menuTeam').classList.toggle('hidden', v !== 'dom');
-  $('botCount').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
-  $('timeSel').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
-  $('playBtn').innerHTML = v === 'explore' ? 'EXPLORAR <small>SEM BOTS · SEM PRESSA</small>' : v === TRAIN.mode ? 'TREINAR <small>ESTANDE · SEM LIMITE</small>' : 'JOGAR <small>SOLO · CONTRA BOTS</small>';
+  $('botCount').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode || v === INV.mode);
+  $('timeSel').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode || v === INV.mode);
+  $('playBtn').innerHTML = v === INV.mode ? 'SOBREVIVER <small>SOLO · 20 WAVES DE ZUMBIS</small>' : v === 'explore' ? 'EXPLORAR <small>SEM BOTS · SEM PRESSA</small>' : v === TRAIN.mode ? 'TREINAR <small>ESTANDE · SEM LIMITE</small>' : 'JOGAR <small>SOLO · CONTRA BOTS</small>';
   $('menuRules').textContent = MENU_RULES[v];
   teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); });
 }
-$('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); };
-try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm' || m === 'explore' || m === TRAIN.mode) $('modeSel').value = m; } catch (e) { /* */ }
+$('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); syncMapForMode(); };
+try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm' || m === 'explore' || m === TRAIN.mode || m === INV.mode) $('modeSel').value = m; } catch (e) { /* */ }
+if (invMenu()) syncMapForMode();
 $('timeSel').onchange = () => { try { localStorage.setItem('docao.time', $('timeSel').value); } catch (e) { /* */ } };
 try { $('timeSel').value = String(normTime(localStorage.getItem('docao.time'))); } catch (e) { /* */ }
 refreshMenuMode();
@@ -2741,10 +2765,11 @@ function buildDeathMelee() {
 }
 // botão RENASCER: só libera depois de RESPAWN_TIME; online pede ao servidor ({t:'rs'}), que é quem decide
 let rsSent = false;
-const respawnReady = (p) => !!p && !p.alive && Number.isFinite(p.respawnAt) && gameTime >= p.respawnAt;
+const invMeOut = () => { const v = invMode() && invView(); const s = v && v.lives.get(online ? online.myId : player && player.id); return !!(s && s.out); };
+const respawnReady = (p) => !!p && !p.alive && Number.isFinite(p.respawnAt) && gameTime >= p.respawnAt && !invMeOut();
 function updateRespawnBtn(p) {
   const b = $('respawnBtn'), ok = respawnReady(p) && !rsSent;
-  const txt = rsSent ? 'Renascendo...' : ok ? 'RENASCER (Espaço)' : Number.isFinite(p.respawnAt) ? `Renascer em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'Aguarde...';
+  const txt = invMeOut() ? 'Sem vidas · espere a ✨ Ressurreição' : rsSent ? 'Renascendo...' : ok ? 'RENASCER (Espaço)' : Number.isFinite(p.respawnAt) ? `Renascer em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'Aguarde...';
   if (b.disabled === ok) b.disabled = !ok; if (b.textContent !== txt) b.textContent = txt; b.classList.toggle('ready', ok);
 }
 function requestRespawn() {
@@ -2870,9 +2895,10 @@ function onNetMessage(m) {
   }
 }
 // ---------- lobby ----------
-function fillMapSelect(sel, value) {
-  if (!sel.options.length) { for (const m of PLAY_MAPS) sel.add(new Option(m.name, m.id)); sel.add(new Option('Aleatório', 'random')); }
-  if (value) sel.value = value;
+function fillMapSelect(sel, value, md) { // Invasão: lista própria (Rodízio, Fazenda Mal-Assombrada + mapas normais)
+  const iv = isInvasion(md), L = iv ? INV_MAPS : PLAY_MAPS, key = iv ? 'inv' : 'play';
+  if (!sel.options.length || sel.dataset.pool !== key) { sel.innerHTML = ''; sel.dataset.pool = key; for (const m of L) sel.add(new Option(m.name, m.id)); sel.add(new Option('Aleatório', 'random')); }
+  if (value && [...sel.options].some((o) => o.value === value)) sel.value = value; else if (value) sel.value = iv ? INV.DEFAULT_MAP : L[0].id;
 }
 function renderLobby() {
   const o = online, L = o.lobby; if (!L) return;
@@ -2883,7 +2909,7 @@ function renderLobby() {
   const counts = [0, 0]; for (const p of rows) if (p.team === 0 || p.team === 1) counts[p.team]++;
   $('lobbyTeam').classList.toggle('hidden', !dom);
   if (dom) { const me = rows.find((p) => p.id === o.myId); teamButtons($('lobbyTeamBtns'), me ? me.pref : -1, (t) => o.net.send({ t: 'team', team: t }), counts); }
-  $('lobbyInfo').textContent = (dom ? 'DOMINAÇÃO · ' : isTraining(cfg.mode) ? 'TREINO (Estande do Docão) · ' : 'MATA-MATA · ') + $('lobbyInfo').textContent;
+  $('lobbyInfo').textContent = (isInvasion(cfg.mode) ? 'INVASÃO 🎃 (co-op) · ' : dom ? 'DOMINAÇÃO · ' : isTraining(cfg.mode) ? 'TREINO (Estande do Docão) · ' : 'MATA-MATA · ') + $('lobbyInfo').textContent;
   $('lobbyPlayers').innerHTML = `<table><tr><th style="text-align:left">Jogadores (${rows.length}/${cfg.max})</th><th>Ping</th></tr>${rows.map((p) =>
     `<tr data-pid="${p.bot ? '' : p.id}" class="${p.id === o.myId ? 'me' : ''}${!p.bot && voiceTalking(p.id) ? ' talking' : ''}${!p.bot && voiceMuted(p.id) ? ' vmuted' : ''}"><td style="text-align:left"><span class="dot" style="background:${(getSkin(p.skin).shirt || {}).color || '#d8261c'}"></span>${escapeHtml(p.name)}${p.id === L.hostId ? '<span class="host">★ anfitrião</span>' : ''}${dom && p.team >= 0 ? `<span class="tm${p.team}">${TEAM_NAMES[p.team]}${p.pref < 0 ? ' (auto)' : ''}</span>` : ''}</td><td>${p.id === o.myId ? o.net.ping : p.ping} ms</td></tr>`).join('')}</table>`;
   chatSetRoom(cfg.chat !== false); chatSetTeam(!!dom); voiceRefresh();
@@ -2891,16 +2917,18 @@ function renderLobby() {
     $('lobbyName').disabled = $('lobbyNameBtn').disabled = inGame;
     $('lobbyNameMsg').textContent = me && me.name !== myName() ? `Na sala você aparece como “${me.name}”${inGame ? '' : ' (nome repetido ou ajustado)'}` : inGame ? 'Partida em andamento: o nome muda na próxima partida' : ''; }
   $('hostCtl').classList.toggle('hidden', !isHost); $('lobbyWait').classList.toggle('hidden', isHost || L.state !== 'lobby');
-  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); $('lobbyChatOn').value = cfg.chat === false ? '0' : '1'; }
+  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map, cfg.mode); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); $('lobbyChatOn').value = cfg.chat === false ? '0' : '1'; }
   if (state === 'over') { const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h); }
 }
 const sendCfg = () => online && online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode: $('lobbyMode').value, time: +$('lobbyTime').value, chat: $('lobbyChatOn').value === '1' });
-['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyMode', 'lobbyTime', 'lobbyChatOn'].forEach((id) => ($(id).onchange = sendCfg));
+['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyTime', 'lobbyChatOn'].forEach((id) => ($(id).onchange = sendCfg));
+$('lobbyMode').onchange = () => { fillMapSelect($('lobbyMap'), $('lobbyMap').value, $('lobbyMode').value); sendCfg(); };
 $('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
 $('leaveLobby').onclick = () => leaveOnline();
 // ---------- menu online ----------
 function onlineTab(create) { $('tabCreate').classList.toggle('active', create); $('tabJoin').classList.toggle('active', !create); $('paneCreate').classList.toggle('hidden', !create); $('paneJoin').classList.toggle('hidden', create); }
-$('onlineBtn').onclick = () => { fillMapSelect($('roomMap'), selectedMap); $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
+$('roomMode').onchange = () => fillMapSelect($('roomMap'), $('roomMap').value, $('roomMode').value);
+$('onlineBtn').onclick = () => { if (invMenu()) $('roomMode').value = INV.mode; fillMapSelect($('roomMap'), selectedMap, $('roomMode').value); $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
 $('onlineClose').onclick = () => { $('onlineModal').classList.add('hidden'); $('menu').classList.remove('hidden'); };
 $('tabCreate').onclick = () => onlineTab(true); $('tabJoin').onclick = () => { onlineTab(false); $('joinCode').focus(); };
 $('createBtn').onclick = async () => {
@@ -2919,6 +2947,10 @@ $('joinCode').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.ke
 // ---------- partida ----------
 function remoteEnt(info) {
   const o = online; if (info.id === o.myId || o.ents.has(info.id)) return o.ents.get(info.id);
+  if (info.zt) { // Invasão: zumbi do servidor
+    const z = makeZombieEnt(info.zt, info.name); Object.assign(z, { id: info.id, remote: true, netId: info.id, bot: true, buf: [], alive: false, hp: info.hp ?? z.hp, maxHp: info.mx || z.maxHp, ping: 0 });
+    z.model.group.visible = false; o.ents.set(info.id, z); entities.push(z); return z;
+  }
   const e = makeEntity(info.name, false, info.skin, info.tag || '#ffffff');
   Object.assign(e, { remote: true, netId: info.id, bot: !!info.bot, buf: [], kills: info.kills || 0, deaths: info.deaths || 0, alive: false, primary: info.primary || 0, ping: 0 });
   e.model.group.visible = false; setWeapon(e, info.w || 0); e.slots = [e.primary, e.secondary ?? PISTOL, e.melee ?? KNIFE]; e.caps = info.caps || 0; applyTeam(e, info.team ?? -1);
@@ -2935,7 +2967,7 @@ function startOnlineMatch(m) {
     return;
   }
   resetAds(); loadMap(m.map); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
-  mode = m.mode === 'dom' || isTraining(m.mode) ? m.mode : 'dm'; window.__capLog = []; o.limit = m.limit > 0 ? m.limit : 0;
+  mode = m.mode === 'dom' || isTraining(m.mode) || isInvasion(m.mode) ? m.mode : 'dm'; inv = null; invNet = m.iv ? parseState(m.iv) : null; window.__capLog = []; o.limit = m.limit > 0 ? m.limit : 0;
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
   const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
   player = makeEntity(me.name, true, me.skin, '#ffd27a'); player.netId = o.myId; player.sq = 0; player.alive = false; player.respawnAt = Infinity;
@@ -2943,10 +2975,11 @@ function startOnlineMatch(m) {
   player.primary = player.nextPrimary = selectedPrimary; player.nextSecondary = selectedSecondary; player.nextMelee = selectedMelee; player.slots = [selectedPrimary, selectedSecondary, selectedMelee]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
   entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin); player.caps = me.caps || 0; applyTeam(player, me.team ?? -1);
   for (const info of m.ents) remoteEnt(info);
+  invApplyLook(invMode()); if (invMode()) for (const [id, ki, pos] of m.drops || []) invAddDrop(id, POWER_KEYS[ki], pos);
   refreshModeHud(); $('teamPick').classList.add('hidden');
   if (teamMode() && me.pend) showTeamPick(m.ents);
   pickups.forEach((p, i) => { p.active = !!(m.pk ? m.pk[i] : 1); p.mesh.visible = p.active; });
-  showcase.visible = false; $('killfeed').innerHTML = ''; flashMsg(`Mapa: ${currentMap.name}`);
+  showcase.visible = false; $('killfeed').innerHTML = ''; flashMsg(invMode() ? `Invasão 🎃 · ${currentMap.name} · ${KEYS.useLabel} usa poder · ${KEYS.cycleLabel} troca` : `Mapa: ${currentMap.name}`);
   ['menu', 'gameover', 'pause', 'lobby', 'onlineModal'].forEach((id) => $(id).classList.add('hidden')); $('hud').classList.remove('hidden'); $('socialHud').classList.remove('hidden'); $('overChat').classList.add('hidden');
   $('netbar').classList.remove('hidden'); $('netRoom').textContent = 'Sala ' + o.code;
   camera.clearViewOffset(); state = 'playing'; if ($('teamPick').classList.contains('hidden')) lockPointer(); // escolhendo time: mouse livre pros botões
@@ -2977,13 +3010,14 @@ function applySnapshot(s) {
   if (Math.abs(gameTime - s.T) > 0.25) gameTime = s.T; else gameTime += (s.T - gameTime) * 0.1;
   o.tmap.push({ t: now, T: s.T }); if (o.tmap.length > 40) o.tmap.shift();
   if (s.d && zone) { const d = s.d; Object.assign(zone, { x: d[0], y: d[1], z: d[2], progress: d[3], team: d[4], contested: !!d[5], counts: [d[6], d[7]] }); teamScore = [d[8], d[9]]; }
+  if (s.iv) invNet = parseState(s.iv);
   for (const ev of s.ev) netEvent(ev);
   for (const [id, x, y, z, yaw, pitch, w, fl, hp, ping, crouch = 0] of s.e) {
     const e = o.ents.get(id); if (!e) continue;
     e.ping = ping; e.hp = hp; e.onGround = !!(fl & 4); e.regenOn = !!(fl & 16); // 16: regenerando (servidor novo)
     if (e === player) continue;
     const alive = !!(fl & 1);
-    if (alive && !e.alive) { e.alive = true; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = []; e.pos.set(x, y, z); }
+    if (alive && !e.alive) { e.alive = true; e.model.group.visible = true; e.model.group.scale.setScalar(e.zt ? e.model.group.userData.size || 1 : 1); e.buf = []; e.pos.set(x, y, z); }
     else if (!alive && e.alive) { e.alive = false; e.deathAt = gameTime; }
     if (w !== e.weapon) setWeapon(e, w);
     e.invulnUntil = fl & 2 ? gameTime + 0.15 : 0; e.reloadEnd = fl & 8 ? gameTime + 0.15 : 0;
@@ -2996,6 +3030,7 @@ const entOf = (id) => (online ? online.ents.get(id) : null);
 function remoteMuzzle(e) { return center(e, 1.3).add(new V3(Math.sin(e.yaw) * 1.0, -0.25, Math.cos(e.yaw) * 1.0)); }
 function netEvent(ev) {
   const o = online, k = ev[0];
+  if (INV_EVENTS.has(k)) { invEvent(ev); return; } // Invasão
   if (k === 'sh') {
     const [, sid, w, , ends] = ev; if (sid === o.myId) return; const e = entOf(sid); if (!e) return; const W = WEAPONS[w];
     const vol = distVol(e.pos) * 0.7; sfx[W.key](vol); if (W.pump) sfx.pump(vol * 0.7, 0.3); if (W.bolt) sfx.bolt(vol * 0.7, 0.3);
@@ -3014,9 +3049,15 @@ function netEvent(ev) {
     // ev[7] (servidor novo): 1 = faca, 2 = faca pelas costas. ev[3] vem como pistola pra clientes antigos.
     // ev[8] (servidor novo): killstreak 'p' míssil, 'h' Gavião, 'x' nuke. Gavião e nuke não contam pra sequência (Gavião vale 25 pts).
     const [, aid, tid, w0, head, aK, tD, mk, ks] = ev; const a = entOf(aid), t = entOf(tid); if (!t) return; const w = mk ? KNIFE : w0, back = mk === 2;
+    if (t.zt) { // Invasão: zumbi caiu (sem bacon; feed só pro chefão)
+      if (a) a.kills = aK; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = Infinity; sfx.die(distVol(t.pos) * 0.7);
+      if (t.zt === 'boss') addKillFeed(a, t, w, head, back);
+      if (a === player) { sfx.kill(); if (ks !== 'h' && ks !== 'x') { notePlayerKill(t, !!head); if (w >= 0 && w < WEAPONS.length) noteWeaponKill(player, w); } }
+      return;
+    }
     if (a) a.kills = aK; t.deaths = tD; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.lastAttacker = a || null; t.killW = w; t.killBack = back;
     if (w === -2) { t.fxDeath = t.deathAt; return; } // trocou de time (sem bacon)
-    addKillFeed(a, t, w, head, back, KS_KILL_NAME[ks] || null); sfx.die(t === player ? 1 : distVol(t.pos));
+    addKillFeed(a, t, w, head, back, ks === 'fog' ? 'Névoa Assombrada' : KS_KILL_NAME[ks] || null); sfx.die(t === player ? 1 : distVol(t.pos));
     if (a === player && t !== player) { sfx.kill(); if (ks === 'h' || ks === 'x') { if (ks === 'h') feedbackAward(HELI.points); } else { notePlayerKill(t, !!head); if (w >= 0) noteWeaponKill(player, w); } }
     if (t === player) { if (a && a !== player) revengeName = a.name; onPlayerDeath(); showStamp(w); player.charging = false; arcLine.visible = arcMark.visible = false; }
   } else if (k === 'sp') {
@@ -3060,6 +3101,8 @@ function netEvent(ev) {
 function personalEvent(ev) {
   const p = player; if (!p) return;
   if (ev[0] === 'pos') { p.pos.set(ev[1][0], ev[1][1], ev[1][2]); p.vel.set(0, 0, 0); }
+  else if (ev[0] === 'inv') invSetInv(ev[1] || []); // Invasão: inventário de poderes
+  else if (ev[0] === 'heal') { p.hp = ev[1]; }
   else if (ev[0] === 'kn') { const [x, y, z] = ev[1]; p.vel.x += x; p.vel.z += z; p.vel.y = Math.max(p.vel.y, y); p.onGround = false; lastKnock = gameTime; }
   else if (ev[0] === 'got') {
     const [, type, hp, nades] = ev; sfx.pickup(); p.hp = hp; p.nades = nades; if (type === 'ammo') refillAmmo(p);
@@ -3072,7 +3115,9 @@ function onlineEnd(m) {
   for (const [id, , k, d] of m.board) { const e = entOf(id); if (e) { e.kills = k; e.deaths = d; } }
   for (const r of m.board) { const e = entOf(r[0]); if (e && r[6] != null) e.caps = r[6]; }
   const w = m.board[0];
-  if (m.mode === 'dom') { teamScore = m.ts || teamScore; setTeamWinner(m.winTeam ?? -1); }
+  invClosePick();
+  if (isInvasion(m.mode)) { $('winner').style.color = m.inv && m.inv.won ? '#ffd27a' : '#c070ff'; $('winner').textContent = invEndText(); }
+  else if (m.mode === 'dom') { teamScore = m.ts || teamScore; setTeamWinner(m.winTeam ?? -1); }
   else $('winner').textContent = w && w[0] === o.myId ? 'Você venceu! 🏆' : `${w ? w[1] : '???'} venceu!`;
   $('finalboard').innerHTML = boardHtml();
   $('overMap').innerHTML = `Mapa: <b>${escapeHtml(getMap(m.map).name)}</b> · próximo: <b>${escapeHtml(getMap(m.next).name)}</b>`;
@@ -3089,7 +3134,7 @@ function showTeamPick(ents) {
 }
 // botões do fim de jogo: offline como antes; online só o anfitrião reinicia
 $('againBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.mapId }) : startGame(currentMap.id));
-$('nextMapBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.endMsg ? online.endMsg.next : 'random' }) : startGame(MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length].id));
+$('nextMapBtn').onclick = () => (online ? online.net.send({ t: 'start', map: online.endMsg ? online.endMsg.next : 'random' }) : (() => { const L = invMode() ? INV_MAPS : MAPS.filter((x) => PLAY_MAPS.includes(x) || !INV_MAPS.includes(x)); startGame(L[(L.indexOf(currentMap) + 1) % L.length].id); })());
 function placeSocialHud() {
   const kf = $('killfeed'); if (!kf) return;
   if (!document.body.classList.contains('dead')) { kf.style.top = ''; return; }
@@ -3135,6 +3180,228 @@ document.querySelectorAll('.invite').forEach(bindInvite);
 // link ?sala=ABCD entra direto
 { const sala = new URLSearchParams(location.search).get('sala'); if (sala) joinRoom(sala); }
 
+// ============================================================
+//  Modo Invasão 🎃 (cliente): core offline, eventos (offline e do servidor), zumbis, decoração, névoa, HUD,
+//  poderes (G usa · X troca) e painel de troca de arma nas pausas entre waves. Regras em shared/invasion.js.
+// ============================================================
+function invView() { return online ? invNet : inv ? coreView(inv) : null; }
+function makeZombieEnt(type, name) {
+  const st = ZOMBIES[type] || ZOMBIES.walker;
+  const e = { name: name || st.name, isPlayer: false, zt: type, size: st.size, pos: new V3(), vel: new V3(), yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: st.hp, maxHp: st.hp, alive: true,
+    kills: 0, deaths: 0, invulnUntil: 0, weapon: KNIFE, primary: KNIFE, slots: [KNIFE], mag: WEAPONS.map(() => 0), reserve: WEAPONS.map(() => 0), reloadEnd: 0, nextFire: 0, switchEnd: 0,
+    respawnAt: Infinity, deathAt: 0, fxDeath: 0, flashUntil: 0, nades: 0, stunUntil: 0, walk: 0, shirt: '#7d5228', team: 1, caps: 0, gunKills: WEAPONS.map(() => 0), lastAttacker: null };
+  e.model = makeZombie(type); scene.add(e.model.group); return e;
+}
+// zumbi: só visual (offline o core move; online vem do servidor)
+function updateZombie(z, dt) {
+  const m = z.model;
+  if (!z.alive) { if (dieZombie(m, z, gameTime)) m.group.visible = false; return; }
+  if (z.remote) interpRemote(z);
+  m.group.visible = true; z.stunned = z.stunUntil > gameTime;
+  animateZombie(m, z, dt, gameTime, gameTime < z.flashUntil);
+}
+function killZombieLocal(t, a, wIdx, head, back) {
+  t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = Infinity; t.fxDeath = t.deathAt;
+  if (a && a !== t && !a.zt) a.kills++;
+  sfx.die(distVol(t.pos) * 0.7);
+  if (a && a.isPlayer) { sfx.kill(); notePlayerKill(t, head); if (wIdx >= 0) noteWeaponKill(a, wIdx); }
+  if (t.zt === 'boss') addKillFeed(a, t, wIdx, head, back);
+  if (inv) inv.onZombieDeath(t, a);
+}
+// ---------- core offline ----------
+function startInvasionOffline() {
+  const fogSrc = { fog: true, name: 'Névoa Assombrada', zt: 'fog', isPlayer: false, pos: new V3(), kills: 0 }; // "atacante" da névoa (câmera de morte olha pro centro)
+  inv = new InvasionCore({
+    T: () => gameTime, P: PHYS, nav, size: currentMap.size,
+    players: () => entities.filter((e) => e.isPlayer),
+    spawnZombie(type, pos) { const z = makeZombieEnt(type); z.id = invZid++; z.pos.set(pos.x, pos.y, pos.z); z.yaw = Math.atan2(-pos.x, -pos.z); entities.push(z); return z; },
+    removeZombie(z) { scene.remove(z.model.group); entities = entities.filter((x) => x !== z); },
+    hurtPlayer(p, dmg, src) { if (!src) fogSrc.pos.set(inv.fog.cx, p.pos.y, inv.fog.cz); damage(p, dmg, src || fogSrc, src ? KNIFE : W_NADE, false); },
+    hurtZombie(z, dmg, by, kind) { damage(z, dmg, by, W_NADE, false); },
+    knock(e, v) { e.vel.x += v.x; e.vel.z += v.z; e.vel.y = Math.max(e.vel.y, v.y); e.onGround = false; if (e.isPlayer) lastKnock = gameTime; },
+    heal(p, hp) { p.hp = Math.min(100, p.hp + hp); },
+    revive(p, at) { p.reviveAt = at; p.respawnAt = gameTime; if (p.isPlayer && !p.alive) { respawn(p); if (state === 'playing') lockPointer(); } },
+    invChanged(p) { if (p.isPlayer) invSetInv(p.inv.map((k) => POWER_KEYS.indexOf(k))); },
+    emit(ev) { invEvent(ev); },
+    aimOf(p) { const d = new V3(); camera.getWorldDirection(d); return { o: camera.position.clone(), d }; },
+    over(won, wave) { setTimeout(() => endGame(), 1800); },
+  });
+  inv.start();
+}
+// ---------- eventos (core offline chama direto; online chegam no snapshot) ----------
+const INV_EVENTS = new Set(['wv', 'za', 'zs', 'zx', 'zb', 'dp', 'dg', 'pw', 'pb']);
+function invEvent(ev) {
+  const k = ev[0], ent = (id) => (online ? entOf(id) : inv ? inv.zombies.find((z) => z.id === id) : null);
+  const isMe = (id) => (online ? id === online.myId : !!player && id === player.id);
+  if (k === 'wv') {
+    const [, ph, w, x] = ev;
+    if (ph === 0) invBanner('🎃 INVASÃO', `Prepare-se! A wave 1 começa em ${INV.PREP} s · troque de arma no painel (B)`);
+    else if (ph === 1) { invBanner(`WAVE ${w}/${INV.WAVES}`, x ? '🎃 O DOCÃO ABÓBORA chegou!' : w === 1 ? 'Os zumbis estão vindo da névoa!' : 'A névoa está fechando…', !!x); sfx.incoming(0.9); invClosePick(); }
+    else if (ph === 2) { invBanner(`WAVE ${w} LIMPA!`, `Pausa de ${INV.BREAK} s · B troca de arma`); sfx.pickup(); if (player && player.alive) invOpenPick(); }
+    else if (ph === 3) invBanner(x ? 'VOCÊS SOBREVIVERAM! 🎃' : 'A HORDA VENCEU', x ? `Sobreviveram às ${INV.WAVES} waves` : `Sobreviveu até a wave ${w}`, true);
+  } else if (k === 'za') { const z = ent(ev[1]); if (z) { z.atkT = gameTime; if (player && z.pos.distanceTo(player.pos) < 25) sfx.knife(distVol(z.pos) * 0.6, 'slash'); } }
+  else if (k === 'zs') { const [, id, big, p, v] = ev; const m = makeSpitMesh(!!big); m.position.set(...p); scene.add(m); invGfx.projs.set(id, { m, pos: a3v(p), vel: a3v(v), born: gameTime, spit: true }); if (player) tone('sawtooth', big ? 160 : 320, big ? 90 : 140, 0.18, 0.12 * distVol(a3v(p))); }
+  else if (k === 'zx') { const [, id, c, big] = ev; invKillProj(id); const at = a3v(c); invRing(at, big ? '#ff8a1a' : '#7dff4a', 0.2, big ? 3.6 : 1.8, 0.4); if (big) blastFx(at, 3.6); else { puff(at, 0x7dff4a); noise(0.2, 900, 0.3 * distVol(at), 'bandpass'); } }
+  else if (k === 'zb') { const at = a3v(ev[2]); blastFx(at, ZOMBIES.tank.boom.radius); invRing(at, '#ff7a1a', 0.5, ZOMBIES.tank.boom.radius, 0.5); }
+  else if (k === 'dp') { const [, id, ki, p] = ev; invAddDrop(id, POWER_KEYS[ki], p); }
+  else if (k === 'dg') { const [, id, pid, ki] = ev; const d = invGfx.drops.get(id); if (d) { scene.remove(d.m); invGfx.drops.delete(id); }
+    if (pid && isMe(pid)) { sfx.pickup(); flashMsg(`${POWERS[POWER_KEYS[ki]].icon} ${POWERS[POWER_KEYS[ki]].name}! · ${KEYS.useLabel} usa`); }
+    else if (pid) { const e = online ? entOf(pid) : null; if (e && POWER_KEYS[ki] === 'revive') flashMsg(`✨ ${e.name} pegou uma Ressurreição`); } }
+  else if (k === 'pw') invPowerFx(ev);
+  else if (k === 'pb') { const [, id, c] = ev; invKillProj(id); const at = a3v(c); blastFx(at, POWERS.pumpkin.radius); invRing(at, '#ff8a1a', 0.5, POWERS.pumpkin.radius, 0.45); }
+}
+function invKillProj(id) { const p = invGfx.projs.get(id); if (p) { scene.remove(p.m); invGfx.projs.delete(id); } }
+function invRing(at, color, from, to, life, y = 0.12) { const r = makeRing(color, from, to, life); r.position.set(at.x, (at.y || 0) + y, at.z); scene.add(r); invGfx.rings.push(r); }
+function invAddDrop(id, kind, p) { if (invGfx.drops.has(id)) return; const m = makeDropMesh(kind); m.position.set(p[0], p[1], p[2]); scene.add(m); invGfx.drops.set(id, { m, kind, born: gameTime }); }
+function invPowerFx(ev) {
+  const [, ki, uid, p, d] = ev, kind = POWER_KEYS[ki], at = a3v(p), me = online ? uid === online.myId : true, user = online ? entOf(uid) : player;
+  const v = player ? distVol(at) : 1;
+  if (kind === 'pumpkin') { const [, , , , , pid, o, vel] = ev; const m = makePowerPumpkin(); m.position.set(...o); scene.add(m); invGfx.projs.set(pid, { m, pos: a3v(o), vel: a3v(vel), born: gameTime, nade: true }); sfx.toss(v); }
+  else if (kind === 'howl') { invRing(at, '#a8c8ff', 0.5, POWERS.howl.radius, 0.6, 1); invRing(at, '#ffffff', 0.3, POWERS.howl.radius * 0.7, 0.45, 0.3); tone('sawtooth', 260, 520, 0.35, 0.25 * v); tone('sawtooth', 520, 200, 0.9, 0.22 * v, 0.3); shake = Math.max(shake, me ? 0.4 : 0.15); }
+  else if (kind === 'potion') { invRing(at, '#5aff8a', 0.4, POWERS.potion.radius, 0.7); for (let i = 0; i < 14; i++) puff(at.clone().add(new V3(rand(-2, 2), rand(0.3, 2), rand(-2, 2))), 0x7dff9a); tone('sine', 520, 1040, 0.3, 0.2 * v); }
+  else if (kind === 'lantern') { tone('sine', 880, 1320, 0.5, 0.15 * v); }
+  else if (kind === 'ghost') { tone('sine', 700, 300, 0.7, 0.15 * v); if (me) flashMsg('👻 Fantasma! Os zumbis não te veem'); }
+  else if (kind === 'revive') { invRing(at, '#ffd24a', 0.5, 12, 1.0, 0.2); tone('triangle', 520, 1560, 0.8, 0.25); flashMsg(`✨ ${user ? user.name : 'Alguém'} usou a Ressurreição! (${ev[5] || 0} de volta)`); }
+  if (me && kind !== 'revive' && kind !== 'ghost') flashMsg(`${POWERS[kind].icon} ${POWERS[kind].name}`);
+}
+// inventário do jogador local (índices em POWER_KEYS)
+function invSetInv(list) { invGfx.inv = list.map((i) => POWER_KEYS[i]).filter(Boolean); if (invGfx.sel >= invGfx.inv.length) invGfx.sel = Math.max(0, invGfx.inv.length - 1); invRenderSlots(); }
+function invRenderSlots() {
+  const el = $('invSlots'); if (!el) return; let h = '';
+  for (let i = 0; i < INV.INV_MAX; i++) { const k = invGfx.inv[i]; h += `<div class="islot${k ? ' on' : ''}${k && i === invGfx.sel ? ' sel' : ''}" title="${k ? escapeHtml(POWERS[k].name + ' · ' + POWERS[k].desc) : 'vazio'}">${k ? POWERS[k].icon : ''}<small>${k ? escapeHtml(POWERS[k].name) : ''}</small></div>`; }
+  el.innerHTML = h;
+}
+function invUsePower() {
+  if (!player || !player.alive || !invGfx.inv.length) { if (player && player.alive) flashMsg('Sem poder · pegue os que caem dos zumbis'); return; }
+  const slot = invGfx.sel, d = new V3(); camera.getWorldDirection(d); const o = camera.position.clone();
+  if (invGfx.inv[slot] === 'revive' && !entities.some((e) => !e.zt && !e.alive && e !== player)) { flashMsg('✨ Ninguém pra reviver agora · guarde a Ressurreição'); return; }
+  if (online) netEv(['pw', slot, v3a(o), v3a(d)]); else inv.usePower(player, slot, { o, d });
+}
+function invCycle() { if (invGfx.inv.length > 1) { invGfx.sel = (invGfx.sel + 1) % invGfx.inv.length; invRenderSlots(); const k = invGfx.inv[invGfx.sel]; flashMsg(`${POWERS[k].icon} ${POWERS[k].name} selecionado`); } }
+// ---------- decoração de Halloween + névoa (só no modo Invasão) ----------
+function invApplyLook(on) {
+  if (invGfx.hal) { scene.remove(invGfx.hal); invGfx.hal.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); invGfx.hal = null; }
+  if (!invGfx.fog) { invGfx.fog = makeFogWall(); scene.add(invGfx.fog.group); }
+  invGfx.fog.group.visible = false;
+  for (const d of invGfx.drops.values()) scene.remove(d.m); invGfx.drops.clear(); for (const p of invGfx.projs.values()) scene.remove(p.m); invGfx.projs.clear(); for (const r of invGfx.rings) scene.remove(r); invGfx.rings.length = 0;
+  for (const c of invGfx.cones.values()) c.parent && c.parent.remove(c); invGfx.cones.clear();
+  if (!currentMap) return;
+  if (on) { applyHalloweenPalette(scene, hemi, sun, currentMap); fpHemi.intensity = 1.2; invGfx.hal = buildHalloween(currentMap, nav, groundAt); scene.add(invGfx.hal); }
+  else { applyPalette(scene, hemi, sun, currentMap); fpHemi.intensity = currentMap.palette.stars ? 1.25 : 1.8; }
+  document.body.classList.toggle('invmode', !!on);
+  ['invhud', 'invPowers'].forEach((id) => $(id).classList.toggle('hidden', !on)); if (!on) { $('invBoss').classList.add('hidden'); $('invOut').classList.add('hidden'); $('fogVeil').style.opacity = '0'; invClosePick(); }
+  invGfx.inv = []; invGfx.sel = 0; invRenderSlots();
+}
+// ---------- por quadro ----------
+function invTick(dt) {
+  if (!invMode()) return;
+  if (!online && inv && state === 'playing') inv.step(dt);
+  const v = invView(); if (!v) return;
+  if (invGfx.hal) invGfx.hal.userData.tick(gameTime);
+  invGfx.fog.update(v.fog, gameTime, v.phase === 'wave' || v.phase === 'break');
+  for (const d of invGfx.drops.values()) tickDrop(d.m, gameTime, d.born);
+  for (const [id, p] of invGfx.projs) {
+    if (p.nade) { for (let s = 0; s < 2; s++) PHYS.stepNade(p.pos, p.vel, dt / 2); p.m.rotation.x += dt * 6; }
+    else { p.vel.y -= SPIT_GRAV * dt; p.pos.addScaledVector(p.vel, dt); }
+    p.m.position.copy(p.pos); if (gameTime - p.born > 4.5) invKillProj(id);
+  }
+  for (let i = invGfx.rings.length - 1; i >= 0; i--) if (tickRing(invGfx.rings[i], dt)) { scene.remove(invGfx.rings[i]); invGfx.rings.splice(i, 1); }
+  // lanterna: cone na frente de quem usou
+  const lit = new Set();
+  for (const [id, left] of v.lanterns) {
+    if (left <= 0) continue; const e = online ? entOf(id) : player; if (!e || !e.alive) continue; lit.add(id);
+    let c = invGfx.cones.get(id); if (!c) { c = makeLanternCone(); invGfx.cones.set(id, c); scene.add(c); }
+    if (e === player) { c.position.copy(camera.position).add(new V3(0, -0.25, 0)); c.quaternion.copy(camera.quaternion); }
+    else { c.position.set(e.pos.x, e.pos.y + 1.4, e.pos.z); c.rotation.set(-(e.pitch || 0), e.yaw + Math.PI, 0, 'YXZ'); }
+    c.material.opacity = 0.12 + Math.sin(gameTime * 20) * 0.03;
+  }
+  for (const [id, c] of invGfx.cones) if (!lit.has(id)) { scene.remove(c); invGfx.cones.delete(id); }
+  // fantasma: jogadores transparentes (outros) / tela azulada (você)
+  const meId = online ? online.myId : player && player.id;
+  for (const [id, s] of v.lives) { const e = online ? entOf(id) : null; if (e && e !== player && e.model && !!e.ghostLook !== s.ghost) { e.ghostLook = s.ghost; setGhostLook(e.model, s.ghost); } }
+  const me = v.lives.get(meId) || null;
+  if (player) player.ghostOn = !!(me && me.ghost);
+  document.body.classList.toggle('ghostfx', !!(me && me.ghost && player && player.alive));
+  invHud(v, me, dt);
+}
+let invBannerT = 0;
+function invBanner(title, sub, big = false) { const b = $('invBanner'); b.innerHTML = `<b>${escapeHtml(title)}</b><span>${escapeHtml(sub || '')}</span>`; b.classList.remove('hidden'); b.classList.toggle('big', big); invBannerT = big ? 4 : 3; }
+function invHud(v, me, dt) {
+  if (invBannerT > 0) { invBannerT -= dt; if (invBannerT <= 0) $('invBanner').classList.add('hidden'); }
+  const ph = v.phase;
+  $('invWaveN').textContent = ph === 'prep' ? 'PREPARAÇÃO' : `WAVE ${Math.max(1, v.wave)}/${INV.WAVES}`;
+  $('invWaveSub').textContent = ph === 'wave' ? `🧟 ${v.remaining} zumbi${v.remaining === 1 ? '' : 's'} restando` : ph === 'break' || ph === 'prep' ? `Próxima wave em ${Math.ceil(v.left)} s · B troca de arma` : ph === 'over' ? 'Fim' : '';
+  $('timer').textContent = ph === 'wave' ? `🧟 ${v.remaining}` : ph === 'over' ? '—' : `${Math.ceil(v.left)} s`;
+  // chefão
+  const boss = v.bossId ? (online ? entOf(v.bossId) : inv && inv.zombies.find((z) => z.id === v.bossId)) : null;
+  $('invBoss').classList.toggle('hidden', !(boss && boss.alive)); if (boss && boss.alive) $('invBossFill').style.width = (100 * Math.max(0, boss.hp) / (boss.maxHp || 1)).toFixed(1) + '%';
+  // vidas
+  if (me) $('invLives').innerHTML = `${'❤'.repeat(Math.max(0, me.lives))}<span class="lost">${'❤'.repeat(Math.max(0, INV.LIVES - me.lives))}</span>`;
+  const out = !!(me && me.out && player && !player.alive);
+  $('invOut').classList.toggle('hidden', !out);
+  if (out) { const mates = entities.filter((e) => !e.zt && e !== player && e.alive); $('invOutTxt').textContent = mates.length ? `Assistindo ${mates[0].name} · um aliado pode te reviver com a ✨ Ressurreição` : 'Ninguém de pé…'; }
+  // névoa: fora da área segura = tela roxa + seta pro centro
+  let outside = false;
+  if (player && player.alive && v.fog) {
+    const dx = v.fog.cx - player.pos.x, dz = v.fog.cz - player.pos.z, d = Math.hypot(dx, dz); outside = d > v.fog.r;
+    const arr = $('invFogArrow'); arr.classList.toggle('hidden', !outside);
+    if (outside) { const ang = Math.atan2(dx, dz), rel = ang - (player.yaw + Math.PI); arr.querySelector('i').style.transform = `rotate(${-rel}rad)`; $('invFogDist').textContent = Math.ceil(d - v.fog.r) + ' m'; }
+  } else $('invFogArrow').classList.add('hidden');
+  $('fogVeil').style.opacity = outside ? (0.55 + Math.sin(gameTime * 4) * 0.1).toFixed(2) : '0';
+  if (invPick) invUpdatePick(v);
+}
+// espectador (sem vidas): câmera atrás de um aliado vivo
+function invSpectate() {
+  if (!invMode() || !player || player.alive || !invMeOut()) return false;
+  if (gameTime - player.deathAt < 2.5) return false;
+  const mates = entities.filter((e) => !e.zt && e !== player && e.alive); const t = mates[0]; if (!t) return false;
+  const back = new V3(-Math.sin(t.yaw), 0, -Math.cos(t.yaw)); const cam = t.pos.clone().addScaledVector(back, 4.5); cam.y += 3;
+  camera.position.lerp(cam, 0.15); camera.lookAt(t.pos.x, t.pos.y + 1.4, t.pos.z); return true;
+}
+// ---------- painel de troca de arma (pausa entre waves; mesmo jeito do modo Bomba) ----------
+let invPick = false;
+function iLoadTile(i, key, on, pickFn) {
+  const w = WEAPONS[i], b = document.createElement('button'); b.className = 'bltile' + (on ? ' on' : ''); b.dataset.w = i;
+  b.innerHTML = `${key ? `<i>${key}</i>` : ''}<span>${escapeHtml(w.chip || w.short || w.name)}</span>`; b.title = w.name;
+  if (weaponThumbs[i]) b.style.backgroundImage = `url("${weaponThumbs[i]}")`;
+  b.onclick = (ev) => { ev.stopPropagation(); pickFn(i); }; return b;
+}
+function invRenderPick() {
+  const pr = $('iLoadPri'), se = $('iLoadSec'), me = $('iLoadMel'); pr.innerHTML = se.innerHTML = me.innerHTML = '';
+  PRIMARIES.forEach((i, k) => pr.appendChild(iLoadTile(i, k < 9 ? String(k + 1) : '', i === selectedPrimary, (x) => invPickW(setPrimary, x))));
+  SECONDARIES.forEach((i) => se.appendChild(iLoadTile(i, i === selectedSecondary ? 'N' : '', i === selectedSecondary, (x) => invPickW(setSecondary, x))));
+  MELEES.forEach((i) => me.appendChild(iLoadTile(i, i === selectedMelee ? 'M' : '', i === selectedMelee, (x) => invPickW(setMelee, x))));
+}
+const invCanPick = () => { const v = invView(); return !!(invMode() && v && (v.phase === 'break' || v.phase === 'prep') && player && player.alive); };
+function invPickW(fn, i) { fn(i); invEquipNow(); if (invPick) invRenderPick(); } // troca na hora (online o servidor também troca: 'pr' na pausa)
+function invOpenPick(unlock = false) { if (!invCanPick()) return; if (unlock) { deathUnlock = true; if (document.pointerLockElement) document.exitPointerLock(); } invPick = true; document.body.classList.add('invpick'); invRenderPick(); $('iLoad').classList.remove('hidden'); window.__invPicks = (window.__invPicks || 0) + 1; }
+function invClosePick() { if (!invPick) return; invPick = false; document.body.classList.remove('invpick'); $('iLoad').classList.add('hidden'); if (state === 'playing' && player && player.alive && document.pointerLockElement !== canvas && deathUnlock) lockPointer(); }
+function invUpdatePick(v) { if (!invCanPick()) { invClosePick(); return; } const tot = v.phase === 'prep' ? INV.PREP : INV.BREAK; $('iLoadFill').style.width = (100 * v.left / tot).toFixed(1) + '%'; $('iLoadT').textContent = `wave ${v.wave + 1} em ${Math.ceil(v.left)} s`; }
+function invEquipNow() {
+  const p = player; if (!p || !p.alive) return;
+  const old = p.slots.slice(); p.primary = p.nextPrimary = selectedPrimary; p.secondary = p.nextSecondary = selectedSecondary; p.melee = p.nextMelee = selectedMelee; p.slots = [p.primary, p.secondary, p.melee];
+  for (const i of p.slots) if (!old.includes(i)) { p.mag[i] = WEAPONS[i].mag; p.reserve[i] = WEAPONS[i].reserve; }
+  const w = old[0] !== p.primary ? p.primary : old[1] !== p.secondary ? p.secondary : old[2] !== p.melee ? p.melee : p.weapon;
+  p.reloadEnd = 0; p.knifeMode = false; switchWeapon(p, w); if (p.weapon !== w) setWeapon(p, w);
+}
+function invKey(e) { // teclas da Invasão; true = consumiu
+  if (!invMode() || state !== 'playing' || !player || e.repeat) return false;
+  if (e.code === KEYS.use && !invPick) { invUsePower(); return true; }
+  if (e.code === KEYS.cycle) { invCycle(); return true; }
+  if (invCanPick()) {
+    if (e.code === 'KeyB') { if (invPick) invClosePick(); else invOpenPick(true); return true; }
+    if (invPick && e.code === 'KeyN') { invPickW(setSecondary, SECONDARIES[(SECONDARIES.indexOf(selectedSecondary) + 1) % SECONDARIES.length]); return true; }
+    if (invPick && e.code === 'KeyM') { invPickW(setMelee, MELEES[(MELEES.indexOf(selectedMelee) + 1) % MELEES.length]); return true; }
+    if (invPick && /^Digit[1-9]$/.test(e.code)) { const pk = PRIMARIES[+e.code.slice(5) - 1]; if (pk != null) invPickW(setPrimary, pk); return true; }
+  }
+  return false;
+}
+function invEndText() {
+  const v = invView(), won = online ? !!(online.endMsg && online.endMsg.inv && online.endMsg.inv.won) : !!(inv && inv.won);
+  const w = online ? (online.endMsg && online.endMsg.inv ? online.endMsg.inv.wave : v ? v.wave : 0) : inv ? inv.wave : 0;
+  return won ? `Vocês sobreviveram às ${INV.WAVES} waves! 🎃🏆` : `Sobreviveu até a wave ${w} 🧟`;
+}
+
 // ganchos para testes automatizados
 window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
@@ -3145,4 +3412,9 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   blastAt: (x, y, z, kind = 'r', owner) => blast(new V3(x, y, z), owner || player, kind === 'n' ? { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE } : { ...WEAPONS[3].rocket, wIdx: 3 }),
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()),
   rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, get netHelis() { return [...netHelis.values()].map((h) => ({ id: h.id, owner: h.owner ? h.owner.name : '', hp: h.hp, alive: h.alive, pos: h.pos.toArray() })); }, get netNukeAt() { return netNukeAt; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical('smoke'), throwStun: () => throwTactical('stun'), get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
-  swingSaber: () => swingSaber(player) };
+  swingSaber: () => swingSaber(player),
+  // Invasão 🎃
+  get inv() { return inv; }, get invView() { return invView(); }, get invInv() { return invGfx.inv.slice(); }, get invSel() { return invGfx.sel; }, get invDrops() { return [...invGfx.drops.keys()]; }, get invPick() { return invPick; },
+  invUse: () => invUsePower(), invCycle: () => invCycle(), invOpenPick: () => invOpenPick(), invEquipNow, INV, POWERS, ZOMBIES, INV_MAPS, makeZombieEnt, get invHal() { return invGfx.hal; },
+  invGive: (list) => { if (inv && player) { player.inv = list.slice(0, INV.INV_MAX); invSetInv(player.inv.map((k) => POWER_KEYS.indexOf(k))); } else if (online) online.net.send({ t: 'testInv', give: list }); },
+};
