@@ -103,10 +103,9 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 
 | Tecla | O que faz |
 |---|---|
-| **Y** | abre o chat para **todos** |
-| **U** | abre o chat do **time** (na Dominação) |
-| **Enter** | abre o chat para todos |
-| **Tab** (com o chat aberto) | troca entre todos e time |
+| **T** | abre o chat para **todos** |
+| **Y** / **U** | abre o chat do **time** (na Dominação) |
+| **Enter** | abre o chat (com o Docão vivo) |
 | **Esc** | fecha o chat |
 | **J** | troca a voz: Mudo → Todos → Time |
 | **K** (segurar) | fala no microfone (push-to-talk) |
