@@ -2370,11 +2370,18 @@ function selectMap(id) {
   if (id !== 'random') loadMap(id);
   refreshMapUI();
 }
-function buildMapGrid() { const g = $('mapGrid'); g.innerHTML = ''; for (const m of mapPool()) g.appendChild(mapCard(m.id)); g.appendChild(mapCard('random')); refreshMapUI(); }
+let invThumbsBusy = false;
+function invThumbs() { // Rodízio/Fazenda: renderiza a miniatura só quando o menu da Invasão aparece (não pesa nos outros modos)
+  if (invThumbsBusy) return; const todo = INV_MAPS.filter((m) => !thumbs[m.id] && !PLAY_MAPS.includes(m)); if (!todo.length) return; invThumbsBusy = true;
+  const next = () => { const m = todo.shift(); if (!m) { invThumbsBusy = false; buildMapGrid(); return; } try { thumbs[m.id] = renderThumb(m); } catch (e) { console.warn('miniatura', m.id, e); } refreshMapUI(); requestAnimationFrame(next); };
+  requestAnimationFrame(next);
+}
+function buildMapGrid() { if (invMenu()) invThumbs(); const g = $('mapGrid'); g.innerHTML = ''; for (const m of mapPool()) g.appendChild(mapCard(m.id)); g.appendChild(mapCard('random')); refreshMapUI(); }
 function makeThumbs() { // miniaturas renderizadas da vista aérea, uma por quadro pra não travar o menu
+  const L = MAPS.filter((m) => PLAY_MAPS.includes(m) || !INV_MAPS.includes(m)); // mapas só da Invasão: miniatura sob demanda (invThumbs)
   let i = 0; const next = () => {
-    if (i >= MAPS.length) { buildMapGrid(); window.__thumbsReady = true; return; }
-    const m = MAPS[i++]; try { thumbs[m.id] = renderThumb(m); } catch (e) { console.warn('miniatura', m.id, e); }
+    if (i >= L.length) { buildMapGrid(); window.__thumbsReady = true; return; }
+    const m = L[i++]; try { thumbs[m.id] = renderThumb(m); } catch (e) { console.warn('miniatura', m.id, e); }
     refreshMapUI(); requestAnimationFrame(next);
   }; requestAnimationFrame(next);
 }
