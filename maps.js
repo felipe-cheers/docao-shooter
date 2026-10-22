@@ -36,6 +36,19 @@ export function rot180(list, cx, cz) {
 export function mirrorZ(list) {
   return list.map((o) => { if (o.wp) return { wp: [o.wp[0], o.wp[1], -o.wp[2]] }; const [x0, y0, z0, x1, y1, z1] = o.b; return { ...o, b: [x0, y0, -z1, x1, y1, -z0], ramp: o.ramp ? { ...o.ramp, dir: o.ramp.axis === 'z' ? -o.ramp.dir : o.ramp.dir } : undefined }; });
 }
+// gira 90° no sentido horário visto de cima: a fachada que olhava pro sul (−z) passa a olhar pro leste (+x)
+function yawBoxes(list) {
+  return list.map((o) => {
+    if (o.wp) return { wp: [-o.wp[2], o.wp[1], o.wp[0]] };
+    const [x0, y0, z0, x1, y1, z1] = o.b;
+    const ramp = o.ramp ? (o.ramp.axis === 'x' ? { axis: 'z', dir: o.ramp.dir } : { axis: 'x', dir: -o.ramp.dir }) : undefined;
+    return { ...o, b: [Math.min(-z0, -z1), y0, Math.min(x0, x1), Math.max(-z0, -z1), y1, Math.max(x0, x1)], ramp };
+  });
+}
+function moveBoxes(list, dx, dz) {
+  return list.map((o) => o.wp ? { wp: [o.wp[0] + dx, o.wp[1], o.wp[2] + dz] } : { ...o, b: [o.b[0] + dx, o.b[1], o.b[2] + dz, o.b[3] + dx, o.b[4], o.b[5] + dz] });
+}
+const yawXZ = (x, z) => [-z, x];
 // casa de 2 andares (frente pro +z), escada interna junto da parede de trás, laje do 2º andar com vão da escada
 export function house(x0, z0, x1, z1, col) {
   const t = 0.6, H1 = 3.2, cx = (x0 + x1) / 2, out = [];
@@ -678,4 +691,420 @@ export const MAPS = [];
 }
 
 export const BOMB_MAP = 'rodizio'; // mapa padrão do modo Bomba (menu, criar sala, lobby)
+// ---------- HOTMILK: interiores dos dois blocos ----------
+const HM = { H: 3.3, col: { wall: '#e7e1d6', wall2: '#d7c4a4', inner: '#cfc6b8', floor: '#d5cfc4', roof: '#3c4248', roof2: '#2c3238', stair: '#8d3a3a', trim: '#2f6b45' }, facade: '#c9c2b4', wood: '#c4a574', green: '#2f6b45', red: '#e23b3b' };
+
+function hotmilkBloco1Interior() {
+  const { H, col, wood, green, red } = HM, boxes = [];
+  const link = [0, 1, 2].map((f) => ({ s: 'n', a: -6.6, b: 6.6, k: 'wide', f }));
+  const wins = [-24, -8, 10, 24].map((x) => ({ s: 's', a: x - 1.6, b: x + 1.6, k: 'win', f: 1 }));
+  boxes.push(...building(-31, -3, 31, 11.6, { col, floors: 3, H, t: 0.4, parapet: 0.9, ops: [...link, ...wins,
+    { s: 's', a: -22, b: -18, k: 'win' }, { s: 's', a: -6, b: -2, k: 'win' }, { s: 's', a: 4, b: 8, k: 'win' }, { s: 's', a: 18, b: 22, k: 'win' },
+    { s: 'w', a: 2, b: 4, k: 'win' }, { s: 'e', a: 2, b: 4, k: 'win' }],
+  inner: [
+    { axis: 'x', s0: -30.4, s1: -8.6, line: 1.05, ops: [{ a: -27.4, b: -25.6 }, { a: -19.8, b: -18 }, { a: -12.8, b: -11 }] },
+    { axis: 'x', s0: 8.6, s1: 30.4, line: 1.05, ops: [{ a: 11.2, b: 13 }, { a: 18.6, b: 20.4 }, { a: 25.4, b: 27.2 }] },
+    { axis: 'x', s0: -30.4, s1: -8.6, line: 4.35, ops: [{ a: -27.4, b: -25.6 }, { a: -19.8, b: -18 }, { a: -12.8, b: -11 }] },
+    { axis: 'x', s0: 8.6, s1: 30.4, line: 4.35, ops: [{ a: 11.2, b: 13 }, { a: 18.6, b: 20.4 }, { a: 25.4, b: 27.2 }] },
+    ...[-22.6, -15.2].flatMap((x) => [{ axis: 'z', s0: -2.6, s1: 0.85, line: x, ops: [] }, { axis: 'z', s0: 4.55, s1: 11.15, line: x, ops: [] }]),
+    ...[16, 23.4].flatMap((x) => [{ axis: 'z', s0: -2.6, s1: 0.85, line: x, ops: [] }, { axis: 'z', s0: 4.55, s1: 11.15, line: x, ops: [] }]),
+    { axis: 'z', s0: -2.5, s1: 11.15, line: -12, f: 1, ops: [{ a: 7.2, b: 9.2 }] },
+    { axis: 'z', s0: -2.5, s1: 11.15, line: 14, f: 1, ops: [{ a: 7.2, b: 9.2 }] },
+    { axis: 'z', s0: -2.5, s1: 11.15, line: -4, f: 2, ops: [{ a: -1.2, b: 0.8 }] },
+    { axis: 'z', s0: -2.5, s1: 11.15, line: 16, f: 2, ops: [{ a: 8.4, b: 10.4 }] },
+  ] }));
+  boxes.push(...building(-8, -13, 8, -3, { col, floors: 3, H, t: 0.4, parapet: 0.9, noWall: ['s0', 's1', 's2'],
+    ops: [{ s: 'n', a: -1.8, b: 1.8 }, { s: 'n', a: -6.2, b: -3.4, k: 'win' }, { s: 'n', a: 3.4, b: 6.2, k: 'win' },
+      { s: 'w', a: -11, b: -8, k: 'win' }, { s: 'e', a: -6, b: -4, k: 'win' },
+      { s: 'n', a: -5, b: -1.5, f: 1, k: 'win' }, { s: 'n', a: 1.5, b: 5, f: 1, k: 'win' },
+      { s: 'w', a: -10, b: -6, f: 1, k: 'win' }, { s: 'e', a: -10, b: -6, f: 1, k: 'win' }],
+    stairs: [{ f: 0, r: [-1.6, -11.5, 1.6, -4.0], axis: 'z', dir: 1 }, { f: 1, r: [2.0, -11.5, 5.2, -4.0], axis: 'z', dir: 1 }] }));
+  boxes.push(B(-7.2, -3.7, 7.2, -2.3, 0.3, col.floor, H - 0.3), B(-7.2, -3.7, 7.2, -2.3, 0.3, col.floor, 2 * H - 0.3));
+  boxes.push(B(-7.2, -8.7, -4.4, -7.3, 1.1, wood), B(-7.5, -9.4, -6.9, -5.2, 2.5, wood));
+  boxes.push(B(-6.4, -11.5, -3.0, -10.6, 0.55, red), B(-6.6, -11.3, -5.6, -9.3, 0.75, red), B(-3.5, -11.3, -2.6, -9.4, 0.75, red));
+  boxes.push(B(-5.4, -10.9, -4.0, -9.7, 0.85, green));
+  boxes.push(B(6.45, -11.6, 7.25, -6.6, 2.9, green));
+  boxes.push(B(-7.3, -6.3, -5.4, -4.3, 3 * H, '#2a2a2a'));
+  for (const [x, z] of [[-28.2, -1.6], [-18.5, 7.2], [-13.2, 8.6], [12.5, 7.2], [27.2, -1.6], [25.5, 8.4]]) boxes.push(crate(x, z, 1.0, 1.05, wood));
+  for (const x of [-20, -6, 10, 22]) boxes.push(B(x - 0.35, 1.35, x + 0.35, 1.9, 2.4, '#4a463f'));
+  for (const [x, z, y] of [[-21, 7, H], [1, 6.5, H], [22, 7, H], [-14, 6, 2 * H], [6, 7, 2 * H], [22, 5.5, 2 * H]]) boxes.push(crate(x, z, 1.3, 1.15, wood, y));
+  return {
+    boxes,
+    props: [
+      { t: 'sign', x: 6.35, y: 2.15, z: -9.2, w: 3.4, h: 0.85, rot: Math.PI / 2, text: 'HOTMILK', bg: '#1e3d28', fg: '#ffffff' },
+      { t: 'sign', x: 0, y: 2.4, z: -12.55, w: 2.6, h: 0.6, rot: 0, text: 'BLOCO 01', bg: '#2a2a2a', fg: '#ffffff' },
+    ],
+    spawns: [[-28, 2.7], [28, 2.7], [-25, 8.2], [19, 7.6], [-24.5, -1.6], [21, -1.6], [-3.2, -7.4], [6.8, -5.5],
+      [-26, 8, H], [18, 5, H], [0, 2.7, H], [-18, 8, 2 * H], [6, 4, 2 * H], [22, 2.7, 2 * H]],
+    pickups: [['health', 0.6, -12.15], ['health', 0, 2.7], ['health', -24, 7, H], ['health', 6, 3, 2 * H],
+      ['ammo', -24, 8.4], ['ammo', 25, -1.5], ['ammo', 24, 6, H], ['ammo', -18, 4, 2 * H],
+      ['grenade', 6.6, -5.0], ['grenade', -17, 8.5], ['grenade', 4, 8, H], ['grenade', 20, 8, 2 * H]],
+    lights: [['#fff4dd', 0, 2.6, -8, 16, 28], ['#fff4dd', -18, 2.5, 2.7, 12, 18], ['#fff4dd', 18, 2.5, 2.7, 12, 18], ['#fff4dd', 0, 2.6 + H, 3, 14, 20], ['#fff6e0', 4, 2.6 + 2 * H, 4, 14, 18]],
+    test: { stairs: { from: [0, 0, -12.4], to: [0, H, -3.7], level: H }, under: { from: [-24, 0, 2.7], to: [18, 0, 2.7], ceil: 3.0 }, roof: { from: [3.6, H, -12.2], to: [3.6, 2 * H, -3.7], level: 2 * H } },
+  };
+}
+function hotmilkBloco2Interior() {
+  const { H, col, wood, green, red } = HM, boxes = [];
+  const linkH = [0, 1, 2].map((f) => ({ s: 'e', a: -8.2, b: 3.2, k: 'wide', f }));
+  const linkS = [0, 1, 2].map((f) => ({ s: 'w', a: -8.2, b: 3.2, k: 'wide', f }));
+  const doors = [{ a: -2.4, b: -0.8 }, { a: 5.6, b: 7.2 }, { a: 13.4, b: 15.0 }, { a: 18.0, b: 19.6 }];
+  boxes.push(...building(-18, -11, -6.2, 4, { col, floors: 3, H, t: 0.4, parapet: 0.9,
+    ops: [...linkH, { s: 'n', a: -15.4, b: -12.2 }, { s: 'w', a: -6, b: -3, k: 'win', f: 1 }, { s: 'w', a: 0.4, b: 2.6, k: 'win', f: 2 }],
+    stairs: [{ f: 0, r: [-16.6, -7.2, -8.4, -4.0], axis: 'x', dir: 1 }, { f: 1, r: [-16.6, -2.0, -8.4, 1.2], axis: 'x', dir: 1 }] }));
+  boxes.push(...building(-6.2, -9, 22, 13, { col, floors: 3, H, t: 0.4, parapet: 0.9,
+    ops: [...linkS,
+      { s: 's', a: -1, b: 3, k: 'win', f: 1 }, { s: 's', a: 8, b: 12, k: 'win', f: 1 }, { s: 's', a: 16, b: 20, k: 'win', f: 2 },
+      { s: 'e', a: -2, b: 2, k: 'win' }, { s: 'e', a: 6, b: 10, k: 'win', f: 1 }, { s: 'n', a: 4, b: 8, k: 'win', f: 1 }],
+    inner: [0, 1, 2].flatMap((f) => [
+      { axis: 'x', s0: -5.4, s1: 21.4, line: -1.2, f, ops: doors },
+      { axis: 'x', s0: -5.4, s1: 21.4, line: 4.6, f, ops: doors },
+      { axis: 'z', s0: -8.5, s1: -1.05, line: 2.2, f, ops: [] },
+      { axis: 'z', s0: -8.5, s1: -1.05, line: 9.2, f, ops: [] },
+      { axis: 'z', s0: -8.5, s1: -1.05, line: 16.2, f, ops: [] },
+      { axis: 'z', s0: 4.45, s1: 12.4, line: 0.4, f, ops: [] },
+      { axis: 'z', s0: 4.45, s1: 12.4, line: 8.4, f, ops: [] },
+      { axis: 'z', s0: 4.45, s1: 12.4, line: 15.4, f, ops: [] },
+    ]).concat([
+      { axis: 'z', s0: -1.35, s1: 4.75, line: 4.8, f: 1, ops: [{ a: 2.7, b: 4.3 }] },
+      { axis: 'z', s0: -1.35, s1: 4.75, line: 13.2, f: 2, ops: [{ a: -0.8, b: 0.8 }] },
+    ]) }));
+  boxes.push(B(-7.05, -8.6, -5.35, 3.5, 0.3, col.floor, H - 0.3), B(-7.05, -8.6, -5.35, 3.5, 0.3, col.floor, 2 * H - 0.3));
+  for (const y of [0, H, 2 * H]) boxes.push({ wp: [-7.4, y, 2.4] }, { wp: [-5.4, y, 2.4] }, { wp: [-7.5, y, -5.6] }, { wp: [-7.5, y, -0.4] });
+  boxes.push(B(-17.6, -10.6, -16.2, -9.3, 1.1, wood), B(-16.2, -10.6, -15.2, -9.5, 1.05, green));
+  boxes.push(B(-17.6, 3.05, -15.4, 3.6, 0.7, red));
+  boxes.push(B(20.3, -8.6, 21.6, -6.4, 3 * H, '#2a2a2a'));
+  for (const [x, z] of [[-1.2, -5.2], [6.2, -5.6], [12.4, -5.0], [18.6, -5.4], [-2.2, 8.2], [4.6, 9.0], [11.6, 8.4], [18.8, 9.2]]) {
+    boxes.push(crate(x, z, 1.2, 1.1, wood), crate(x + 0.4, z + 0.3, 1.15, 1.1, wood, H), crate(x - 0.3, z - 0.2, 1.15, 1.1, wood, 2 * H));
+  }
+  for (const x of [-4.6, 3.2, 10.4, 16.0]) boxes.push(crate(x, -0.45, 1.0, 1.05, wood), crate(x, 3.95, 1.0, 1.05, wood));
+  return {
+    boxes,
+    props: [{ t: 'sign', x: -13.8, y: 2.3, z: -10.45, w: 2.8, h: 0.7, rot: 0, text: 'BLOCO 02', bg: '#1e3d28', fg: '#ffffff' }],
+    spawns: [[-16.2, 2.4], [-10, 2.4], [-3.2, 2.4], [3.2, 2.4], [10.2, 2.4], [17.2, 2.4], [-14.2, -8.8], [7.4, -4.2],
+      [-13.2, 2.6, H], [1.2, 7.6, H], [14.0, -4.4, H], [18.4, 8.2, H],
+      [-16.6, 2.8, 2 * H], [6.4, 7.4, 2 * H], [14.4, 2.6, 2 * H]],
+    pickups: [['health', -14.4, -8.6], ['health', 6.0, 7.8, H], ['health', -3.6, 8.2, 2 * H],
+      ['ammo', 17.0, -3.6], ['ammo', -3.4, -5.2, H], ['ammo', 16.4, 8.6, 2 * H],
+      ['grenade', 4.2, -5.4], ['grenade', 16.6, 2.6, H], ['grenade', 8.4, -4.8, 2 * H]],
+    lights: [['#fff4dd', -12, 2.6, -4, 16, 22], ['#fff4dd', 8, 2.6, 2, 18, 24], ['#fff4dd', 8, 2.6 + H, 2, 16, 22], ['#fff6e0', 4, 2.6 + 2 * H, 4, 16, 20]],
+    test: { stairs: { from: [-17.05, 0, -5.6], to: [-7.5, H, -5.6], level: H }, roof: { from: [-17.05, H, -0.4], to: [-7.5, 2 * H, -0.4], level: 2 * H }, under: { from: [-16, 0, 2.4], to: [19, 0, 2.4], ceil: 3.0 } },
+  };
+}
+// yaw=true gira a fachada sul para o leste; depois translada
+function placeHotmilk(core, dx, dz, yaw) {
+  const pt = (x, z) => { const q = yaw ? yawXZ(x, z) : [x, z]; return [q[0] + dx, q[1] + dz]; };
+  const seg = (s) => {
+    const a = pt(s.from[0], s.from[2]), b = pt(s.to[0], s.to[2]);
+    const out = { from: [a[0], s.from[1], a[1]], to: [b[0], s.to[1], b[1]] };
+    if (s.level != null) out.level = s.level; if (s.ceil != null) out.ceil = s.ceil; return out;
+  };
+  const prop = (p) => { const q = pt(p.x, p.z); return { ...p, x: q[0], z: q[1], rot: (p.rot || 0) - (yaw ? Math.PI / 2 : 0) }; };
+  const light = (L) => { const q = pt(L[1], L[3]); return [L[0], q[0], L[2], q[1], L[4], L[5]]; };
+  const spawn = (s) => { const q = pt(s[0], s[1]); return s.length > 2 ? [q[0], q[1], s[2]] : q; };
+  const pickup = (p) => { const q = pt(p[1], p[2]); const o = [p[0], q[0], q[1]]; if (p.length > 3) o.push(p[3]); return o; };
+  let boxes = core.boxes;
+  if (yaw) boxes = yawBoxes(boxes);
+  boxes = moveBoxes(boxes, dx, dz);
+  const test = {}; for (const k of Object.keys(core.test)) test[k] = seg(core.test[k]);
+  return { boxes, props: core.props.map(prop), spawns: core.spawns.map(spawn), pickups: core.pickups.map(pickup), lights: core.lights.map(light), test };
+}
+// espelha no Z em torno de cz: a fachada leste continua leste, as pontas norte/sul trocam
+function flipHotmilkZ(part, cz) {
+  const mz = (z) => 2 * cz - z;
+  const seg = (s) => {
+    const out = { from: [s.from[0], s.from[1], mz(s.from[2])], to: [s.to[0], s.to[1], mz(s.to[2])] };
+    if (s.level != null) out.level = s.level; if (s.ceil != null) out.ceil = s.ceil; return out;
+  };
+  const pickup = (p) => { const o = [p[0], p[1], mz(p[2])]; if (p.length > 3) o.push(p[3]); return o; };
+  const test = {}; for (const k of Object.keys(part.test)) test[k] = seg(part.test[k]);
+  return {
+    boxes: moveBoxes(mirrorZ(moveBoxes(part.boxes, 0, -cz)), 0, cz),
+    props: part.props.map((p) => ({ ...p, z: mz(p.z), rot: Math.PI - (p.rot || 0) })),
+    spawns: part.spawns.map((s) => (s.length > 2 ? [s[0], mz(s[1]), s[2]] : [s[0], mz(s[1])])),
+    pickups: part.pickups.map(pickup), lights: part.lights.map((L) => [L[0], L[1], L[2], mz(L[3]), L[4], L[5]]), test,
+  };
+}
+
+// ---------- 8) HOTMILK ----------
+// Vista de cima: Bloco 01 ao norte, Bloco 02 ao sul, recuado para dentro do estacionamento.
+// A praça entre os blocos abre para o leste, onde está o portão e a rua da frente.
+// O Bloco 02 é espelhado no Z para a entrada continuar de frente para a praça.
+{
+  const b1 = placeHotmilk(hotmilkBloco1Interior(), 4, 31, true);
+  const b2 = flipHotmilkZ(placeHotmilk(hotmilkBloco2Interior(), -12, -39, true), -37);
+  const boxes = [...b1.boxes, ...b2.boxes];
+  const props = [...b1.props, ...b2.props,
+    { t: 'street', x0: -46, z0: -64, x1: -16, z1: 64 },
+    { t: 'street', x0: -16, z0: -66, x1: 6, z1: -15 },
+    { t: 'street', x0: 41.2, z0: -64, x1: 47.4, z1: 64 },
+    { t: 'sign', x: 41.05, y: 3.85, z: -8, w: 6.4, h: 1.15, rot: Math.PI / 2, text: 'HOTMILK', bg: '#1e3d28', fg: '#ffffff' },
+    { t: 'sign', x: -18.2, y: 2.4, z: -8, w: 4.2, h: 0.7, rot: -Math.PI / 2, text: 'ESTACIONAMENTO', bg: '#2a2a2a', fg: '#ffffff' },
+  ];
+  const gate0 = -15, gate1 = -3, p0 = 28.5, p1 = 33.5;
+  boxes.push(B(39.7, -66, 40.3, gate0, 2.3, HM.facade), B(39.7, gate1, 40.3, p0, 2.3, HM.facade), B(39.7, p1, 40.3, 66, 2.3, HM.facade));
+  boxes.push(B(39.35, gate0 - 1.15, 40.7, gate0, 3.35, HM.green), B(39.35, gate1, 40.7, gate1 + 1.15, 3.35, HM.green));
+  boxes.push(B(39.25, gate0 - 1.15, 40.75, gate1 + 1.15, 0.35, HM.green, 2.95));
+  // portão menor do Bloco 01, na mesma parede da frente, alinhado com a porta (z ~31)
+  boxes.push(B(39.42, p0 - 0.42, 40.62, p0, 2.05, HM.green), B(39.42, p1, 40.62, p1 + 0.42, 2.05, HM.green));
+  boxes.push(B(39.32, p0 - 0.42, 40.72, p1 + 0.42, 0.16, HM.green, 2.05));
+  for (const [x, z] of [[-2, -8.5], [8, -8.5], [14, -10.8], [2, -4.8], [-6, -11.8]]) boxes.push(B(x - 0.7, z - 0.7, x + 0.7, z + 0.7, 1.15, '#d7c4a4'));
+  boxes.push(B(-1.2, -10.5, 1.5, -9.85, 0.48, HM.wood), B(5.6, -6.9, 8.2, -6.25, 0.48, HM.wood));
+  // a fachada leste recua fora do hall: fileira de canteiros pra não abrir um campo na frente
+  for (let z = -60; z <= 60; z += 8) {
+    if ((z > 26 && z < 36) || (z > -18 && z < 2)) continue;
+    boxes.push(B(19.2, z - 0.55, 20.6, z + 0.55, 1.15, '#d7c4a4'));
+  }
+  for (let z = 4; z <= 20; z += 8) boxes.push(B(11.2, z - 0.55, 12.6, z + 0.55, 1.15, '#d7c4a4'));
+  for (let z = 44; z <= 60; z += 8) boxes.push(B(11.2, z - 0.55, 12.6, z + 0.55, 1.15, '#d7c4a4'));
+  for (let z = -54; z <= -32; z += 8) boxes.push(B(16.3, z - 0.55, 17.7, z + 0.55, 1.15, '#cfc6b8'));
+  for (const [x, z] of [[-18.4, -24], [-18.4, -19], [-12, -12.4], [-12, -4.2], [7.4, -14.2], [7.4, -27.2], [13.2, -15.2], [13.2, -26.5], [26, 27.2], [26, 34.8], [33, 27.2], [33, 34.8]]) boxes.push(B(x - 0.6, z - 0.55, x + 0.6, z + 0.55, 1.15, '#d7c4a4'));
+  // círculo de toras na praça, de frente pro portão: um vão entre cada tora
+  {
+    const cx = 27, cz = -9, n = 6, lr = 4.0, br = 5.7;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.PI / n;
+      props.push({ t: 'log', x: cx + Math.cos(a) * lr, z: cz + Math.sin(a) * lr, r: 0.55, h: [6.4, 5.8, 6.6, 6.0, 6.5, 5.9][i] });
+      props.push({ t: 'bench', x: cx + Math.cos(a) * br, z: cz + Math.sin(a) * br, rot: Math.PI / 2 - a });
+    }
+    props.push({ t: 'flowerbed', x: cx, z: cz });
+  }
+  for (let z = -60; z <= 60; z += 10) for (const x of [25, 33]) {
+    if (Math.hypot(x - 17, z - 31) < 11 || Math.hypot(x - 40, z - 31) < 9 || Math.hypot(x + 1, z + 21) < 7) continue;
+    if (Math.hypot(x - 27, z + 9) < 9) continue;
+    if (z > -16 && z < 2 && x < 30) continue;
+    props.push({ t: 'tree', x, z });
+  }
+  for (let z = -60; z <= 60; z += 9) {
+    if (z > -15 && z < -2) continue;
+    if (z <= -16 && z >= -58) continue;
+    props.push({ t: 'tree', x: -15.5, z });
+  }
+  const carColors = ['#f4f1ea', '#d5dae0', '#3c4654', '#8d3a3a', '#2c4d6e', '#c4a574', '#6d6a64'];
+  let ci = 0;
+  const inB2 = (x, z) => (z > -58.2 && z < -28.2 && x > -26.4 && x < -1.6) || (z > -30.2 && z < -15.6 && x > -17.4 && x < 1.2);
+  const inU = (x, z) => x > -46.8 && x < -27.5 && z > 19 && z < 46;
+  const carAt = (x, z) => {
+    if (inB2(x, z) || inB2(x, z - 1.9) || inB2(x, z + 1.9) || inB2(x - 0.8, z) || inB2(x + 0.8, z)) return;
+    if (inU(x, z) || inU(x, z - 1.9) || inU(x, z + 1.9)) return;
+    props.push({ t: 'car', x, z, c: carColors[ci % carColors.length], rot: ci % 2 ? Math.PI : 0 });
+    ci++;
+  };
+  for (const x of [-40.5, -31.6, -22.8]) for (let z = -58; z <= 62; z += 6.5) carAt(x, z);
+  for (let z = -56; z <= -18; z += 6.5) if (z < -26 || z > -16) carAt(4.2, z);
+  for (let x = -22; x <= 4; x += 3.6) carAt(x, -63);
+  // rua em U no fundo do estacionamento: entrada e saída, cancela fechada nos dois sentidos
+  {
+    const arm = (z0, z1) => {
+      let i = 0;
+      for (let z = z0; z < z1 - 0.02; z += 0.42) {
+        boxes.push(B(-40.15, z, -39.95, Math.min(z + 0.42, z1), 0.16, i++ % 2 ? '#f4f1ea' : '#e23b3b', 0.9));
+      }
+    };
+    boxes.push(B(-46.2, 42.6, -28.2, 43.0, 0.22, '#d9d4cc'), B(-46.2, 21.6, -28.2, 22.0, 0.22, '#d9d4cc'), B(-46.2, 22.0, -45.8, 42.6, 0.22, '#d9d4cc'));
+    boxes.push(B(-42.3, 30.4, -42.05, 34.4, 2.25, HM.green), B(-38.3, 30.4, -38.05, 34.4, 2.25, HM.facade));
+    boxes.push(B(-42.3, 30.4, -38.05, 30.65, 2.25, HM.facade), B(-42.3, 34.15, -38.05, 34.4, 2.25, HM.facade));
+    boxes.push(B(-42.45, 30.25, -37.9, 34.55, 0.18, '#3c4248', 2.25));
+    boxes.push(B(-40.45, 42.15, -39.7, 42.6, 1.2, '#2a2a2a'), B(-40.45, 21.6, -39.7, 22.15, 1.2, '#2a2a2a'));
+    arm(34.4, 42.2);
+    arm(22.15, 30.4);
+    boxes.push(B(-30.7, 37.6, -29.5, 38.8, 1.15, '#d7c4a4'), B(-30.7, 25.2, -29.5, 26.4, 1.15, '#d7c4a4'));
+    props.push({ t: 'sign', x: -42.55, y: 1.7, z: 32.4, w: 1.7, h: 0.4, rot: -Math.PI / 2, text: 'CATRACA', bg: '#2a2a2a', fg: '#ffffff' });
+  }
+  for (const z of [-48, -30, -8.5, 12, 28, 46]) boxes.push({ wp: [30, 0, z] }, { wp: [44, 0, z] });
+  boxes.push({ wp: [0, 0, -8.5] }, { wp: [-16, 0, -8.5] }, { wp: [-36, 0, -8.5] }, { wp: [-36, 0, -36] }, { wp: [-36, 0, 50] });
+  MAPS.push({
+    id: 'hotmilk', name: 'HOTMILK', desc: 'Campus inteiro: Bloco 01 ao norte, Bloco 02 ao sul, estacionamento atrás, praça entre os blocos e portão na frente.',
+    size: [48, 68], wallH: 4.5, wallColor: [HM.facade, '#b7b09f'], laneMin: 35,
+    palette: { sky: '#9ec8ea', fog: ['#c5d3df', 70, 190], hemi: ['#ffffff', '#b7a48a', 1.45], sun: ['#fff6e4', 1.55], ground: '#c5bfb2', tiles: ['#d7d1c4', '#c9c2b4', 64, 16], clouds: true, stars: false,
+      lights: [...b1.lights, ...b2.lights, ['#fff4dd', 8, 3.2, -8.5, 18, 26], ['#fff4dd', 30, 3.4, -8, 16, 24], ['#fff6e0', 40.2, 3.5, -8, 14, 22]] },
+    ...fin(boxes), props,
+    spawns: [...b1.spawns, ...b2.spawns, [44, -8], [44, -28], [44, 24], [30, -40], [28, 16], [32, -8.5], [4, -8.5], [-6, -9], [-36, -40], [-36, 0], [-27, 32], [-27, -16]],
+    pickups: [...b1.pickups, ...b2.pickups, ['health', 6, -8.5], ['health', -34, 50], ['ammo', 30, -46], ['ammo', -27, -36], ['grenade', 34, -8], ['grenade', -36, -8]],
+    showcase: [8, 0, -8.5], view: [44, 0, -8, Math.PI / 2, -0.04], openMax: 7, test: b1.test,
+    // Bomba: Ataque nasce no fundo norte (rua e estacionamento atrás do Bloco 01, ~15–21 s até um site), Defesa no estacionamento sul (~6–9 s);
+    // A no estacionamento sudoeste, B no pátio sudeste. O Bloco 02 fica entre os dois sites.
+    bomb: { sites: [[-36, 0, -36], [30, 0, -40]], atk: [[-27, 62], [-36, 62], [-10, 64], [4, 64], [12, 64], [29, 58], [38, 62], [44, 62]], def: [[-12, -66], [-4, -66], [2, -66], [-8, -60.5], [-14, -60.5], [0, -60.5]] },
+  });
+}
+
+// =====================================================================
+// MAPA 8: Pátio Ferrugem. Rust do Call of Duty, em escala menor:
+// pátio quadrado e curto. A torre do meio é a coisa mais alta (meio em 6 m, topo em 13 m).
+// Sobe pela rampa laranja do sul (o duto de exaustão) até o meio, e por outra rampa até o topo.
+// Em volta: bomba a noroeste, duto ao norte (dá para andar em cima e por baixo),
+// contêineres, tanques a leste e uma salinha a sudoeste.
+{
+  const boxes = [];
+  const steel = '#5a626a', rust = '#8d5a34', pipe = '#c4783a', conc = '#b7b1a6', sand = '#c4a574';
+  const redC = '#c44536', blueC = '#3d6ea8';
+  const fenceOp = [door(-14, -10, 2.2), door(-2, 2, 2.2), door(10, 14, 2.2)];
+  boxes.push(...wallX(-20, 20, -20.5, 0.28, 1.5, sand, fenceOp));
+  boxes.push(...wallX(-20, 20, 20.5, 0.28, 1.5, sand, fenceOp));
+  boxes.push(...wallZ(-20, 20, -20.5, 0.28, 1.5, sand, fenceOp));
+  boxes.push(...wallZ(-20, 20, 20.5, 0.28, 1.5, sand, fenceOp));
+
+  // pernas da torre, mais altas que o topo, para o mastro aparecer de longe
+  boxes.push(B(-4.6, 2.9, -3.4, 4.05, 16.6, steel), B(3.3, 2.9, 4.5, 4.05, 16.6, steel));
+  boxes.push(B(-4.6, -4.3, -3.4, -3.15, 16.6, steel), B(3.3, -4.3, 4.5, -3.15, 16.6, steel));
+  // meio da torre, em 6 m. A borda sul para exatamente onde a rampa chega.
+  boxes.push(B(-5.1, -4.55, 4.7, 4.15, 0.4, '#6a727a', 5.6));
+  boxes.push(B(-4.5, -2.2, -3.4, 0.4, 1.15, steel, 6));
+  // passarela leste, ao sul da perna, até o pé da rampa de cima
+  boxes.push(B(4.7, -2.45, 13.5, 0.35, 0.35, '#5c656e', 5.65));
+  boxes.push(B(12.8, -7.35, 13.5, -2.45, 0.35, '#5c656e', 5.65));
+  // rampa do sul: chão → meio. Sobe andando para o norte.
+  boxes.push(R(-1.65, 4.15, 1.65, 12.4, 0, 6, 'z', -1, pipe));
+  // rampa do lado: meio → topo. Longa de propósito: se for íngreme, o corpo bate na quina da laje.
+  boxes.push(R(3.55, -7.25, 13.5, -4.85, 6, 13, 'x', -1, pipe));
+  boxes.push(B(-3.1, -2.4, 2.65, 2.7, 0.35, '#4e565e', 12.65));
+  boxes.push(B(-0.6, -7.25, 3.55, -2.4, 0.35, '#4e565e', 12.65));
+  boxes.push(B(-2.7, 0.8, -1.4, 2.2, 1.15, steel, 13));
+  boxes.push(B(-0.4, -0.4, 0.4, 0.4, 5.2, '#3e454c', 13)); // mastro, topo em 18 m
+  boxes.push(
+    { wp: [0, 3, 8.4] }, { wp: [0, 6, 2.2] }, { wp: [3.2, 6, -1.2] }, { wp: [13.1, 6, -1.2] },
+    { wp: [13.1, 6, -6.05] }, { wp: [8, 9.9, -6.05] }, { wp: [1.6, 13, -5.2] }, { wp: [1.4, 13, 1] },
+  );
+
+  // bomba de óleo (noroeste), mais baixa que a torre
+  boxes.push(B(-18.2, -19.2, -10.2, -15.4, 0.35, rust, 4.65));
+  for (const [x, z] of [[-17.6, -18.7], [-11.5, -18.7], [-17.6, -16.5], [-11.5, -16.5]]) boxes.push(B(x, z, x + 0.9, z + 0.9, 5.1, '#4a4038'));
+  boxes.push(B(-16.4, -18.5, -13.4, -16.4, 1.25, '#6a4a30', 5));
+  boxes.push(R(-10.2, -18.6, -4.2, -16.2, 0, 5, 'x', -1, rust));
+  boxes.push({ wp: [-14, 5, -17.2] }, { wp: [-7, 2.4, -17.4] });
+
+  // duto do norte: anda em cima e passa por baixo. Liga na bomba.
+  boxes.push(B(-16.5, -13.6, 11.2, -11.6, 0.42, pipe, 2.95));
+  boxes.push(R(-16, -15.4, -12.2, -13.6, 3.37, 5, 'z', -1, pipe));
+  boxes.push(R(11.2, -13.6, 16.4, -11.6, 0, 3.37, 'x', -1, pipe));
+  for (const x of [-14, -9, -4, 1, 6]) boxes.push(B(x, -13.55, x + 0.4, -13.15, 1.1, steel, 3.37));
+  boxes.push({ wp: [-8, 3.37, -12.6] }, { wp: [2, 3.37, -12.6] }, { wp: [13.5, 1.6, -12.6] });
+
+  // geradores ao sul da torre, um de cada lado da rampa
+  boxes.push(B(-9.2, 6.2, -4.0, 10.2, 2.15, '#c8962e'));
+  boxes.push(B(4.0, 6.0, 8.8, 9.6, 2.15, '#c8962e'));
+
+  // contêineres: vermelho a leste, azul a oeste
+  boxes.push(B(13.2, 1.5, 18.4, 6.2, 2.55, redC));
+  boxes.push(R(13.6, 6.2, 17.8, 9.4, 0, 2.55, 'z', -1, conc));
+  boxes.push(B(-18.6, 2, -13.2, 7.2, 2.55, blueC));
+  boxes.push(R(-13.2, 2.4, -10, 6.6, 0, 2.55, 'x', -1, conc));
+
+  // salinha coberta (sudoeste): o interior do mapa
+  boxes.push(...building(-18.5, 8.2, -9.2, 15.8, {
+    col: { wall: '#d2c2a4', wall2: '#c4b496', floor: '#8d8a84', roof: '#6e5438', roof2: '#5c4630', stair: rust, inner: '#e4d8c4', trim: '#6e5438' },
+    floors: 1, H: 3.3,
+    ops: [{ s: 'n', a: -15.2, b: -12.2 }, { s: 'e', a: 10.4, b: 13.2 }],
+  }));
+
+  // caixotes baixos para ninguém ficar no meio do areal
+  boxes.push(B(6.2, 2.2, 7.6, 4.8, 2.45, conc), B(-8.2, -6.4, -6.6, -4.4, 2.45, conc), B(10.2, 7.4, 11.8, 9.6, 3.4, steel));
+  boxes.push(B(8.4, -10.6, 10.1, -8.5, 2.7, steel), B(-8.1, -1.2, -6.4, 1.4, 2.55, conc));
+  for (const [x, z, h] of [[0, 16.2, 2.35], [7.5, 16.5, 2.35], [-7.2, 16.6, 2.35], [16.2, 12.5, 2.35], [17.4, -8.5, 2.35], [5, -15.6, 1.15], [-7, -16, 1.15], [-15.2, -4.5, 1.15], [-4, 15.6, 1.15], [6.2, 13.6, 1.15]]) {
+    boxes.push(B(x - 0.6, z - 0.6, x + 0.6, z + 0.6, h, '#cbb892'));
+  }
+
+  const props = [
+    { t: 'silo', x: 16.5, z: -8, r: 1.45, h: 5.2, c: '#8d8f86' },
+    { t: 'silo', x: 18.2, z: -1.5, r: 1.3, h: 4.6, c: '#7e8680' },
+    { t: 'truck', x: 4.5, z: 18.2, c: '#c44536' },
+    { t: 'truck', x: 11.5, z: 18.2, c: '#3d6ea8' },
+    { t: 'sign', x: 0, y: 3.1, z: -20.2, w: 5.4, h: 1.3, rot: 0, text: 'FERRUGEM', bg: '#c44536', fg: '#fff6e4' },
+    { t: 'keg', x: -6, z: -9 }, { t: 'keg', x: 6, z: -9 }, { t: 'keg', x: 10, z: 4 }, { t: 'keg', x: -11, z: 0 }, { t: 'keg', x: 2, z: 15 },
+  ];
+  MAPS.push({
+    id: 'patio-ferrugem', name: 'Pátio Ferrugem', desc: 'Pátio pequeno no estilo do Rust: a torre do meio é a mais alta, com rampa do chão até o topo.',
+    size: [24, 24], wallH: 3, wallColor: ['#d7c49a', '#c9b48a'], navSpacing: 1.5, expMax: 0.36,
+    palette: { ...DAY({ ground: '#e4cc90', tiles: ['#edd7a6', '#d8c08a', 56, 16] }), sky: '#8ec8ea', fog: ['#e7d7b0', 34, 88], hemi: ['#fff4e0', '#c4a36a', 1.55], sun: ['#fff6e4', 2.25] },
+    ...fin(boxes), props,
+    spawns: [[-18, -5], [2, -19], [12, -18.5], [19, -12], [19.2, 9], [-2, 19.2], [8, 14.5], [-15, 18.2], [-19.2, 2], [-6, 12.4], [18.4, 14.5], [-10, -9]],
+    pickups: [['health', 0, 1.2, 6], ['health', 1.2, 0.4, 13], ['health', -14, -6], ['health', -2, 16.2],
+      ['ammo', -12.2, -17.4, 5], ['ammo', 0, -12.6, 3.37], ['ammo', -6, 12.6], ['ammo', 15.6, 3.6, 2.55],
+      ['grenade', -1.4, -0.6, 13], ['grenade', 0, -8.4], ['grenade', 8.5, -18.6], ['grenade', -13.2, -2]],
+    showcase: [0, 0, 9], view: [15, 2.4, 17, 0.75, -0.22],
+    test: {
+      stairs: { from: [0, 0, 12], to: [0, 6, 2.2], level: 6 },
+      roof: { from: [0, 6, 2.2], via: [[3.2, -1.2], [13.1, -1.2], [13.1, -6.05], [1.5, -6.05]], to: [1.4, 13, 1], level: 13 },
+      under: { from: [-5, 0, -12.6], to: [5, 0, -12.6], ceil: 3.05 },
+    },
+  });
+}
+
+
+// ---------- 9) Estande do Docão (modo Treino: alvos que não atacam, só renascem) ----------
+// Linha de tiro em z = 22 (os jogadores atiram pra -z). Raias separadas por muretas baixas:
+//  A (oeste) distâncias 10/20/30/50 m · B alvos andando · C explosivos e arco · D faca e sabre (perto da linha).
+//  Atrás da linha: área de renascimento (leste) e arena pequena de X1 (oeste).
+// dummies: { name, x, z, y?, yaw?, move?: { amp, speed, ph } } (move = vai e volta no eixo X; speed = velocidade máxima m/s)
+{
+  const FIRE = 22, boxes = [], props = [];
+  const wood = '#b5793e', wood2 = '#9c6b3a', stone = '#a8a29a', yel = '#f2c94c', red = '#e63946', white = '#fff4e0';
+  const signAt = (x, z, text, bg, w = 3.2, h = 0.9, y = 2.3) => { props.push({ t: 'sign', x, y, z: z + 0.06, w, h, rot: 0, text, bg, fg: '#fff6e4' }); boxes.push(B(x - 0.1, z - 0.1, x + 0.1, z, y - h / 2, wood2)); };
+  // linha de tiro: balcão baixo com passagens pra cada raia e faixa amarela no chão
+  const gaps = [[-31.2, -28.8], [-10.2, -7.8], [10.8, 13.2], [29.8, 32.2]];
+  let cx = -40;
+  for (const [a, b] of gaps) { boxes.push(B(cx, 20.4, a, 21.2, 1.0, wood)); cx = b; }
+  boxes.push(B(cx, 20.4, 40, 21.2, 1.0, wood));
+  boxes.push(B(-40, 21.4, 40, 21.7, 0.03, yel));
+  // muretas entre as raias (até o balcão)
+  for (const x of [-19, 2, 22]) boxes.push(B(x - 0.3, -34, x + 0.3, 20.4, 1.3, stone));
+  // ---- Raia A: distâncias ----
+  const dummies = [];
+  [[10, -36], [20, -31], [30, -26], [50, -22]].forEach(([d, x]) => {
+    const z = FIRE - d;
+    boxes.push(B(x - 0.7, z - 0.7, x + 0.7, z + 0.7, 0.12, yel));
+    boxes.push(B(-38.5, z + 1.1, -19.4, z + 1.3, 0.03, white));
+    signAt(x + 2.2, z, `${d} m`, '#2f80ed', 1.8, 0.8, 2.0);
+    dummies.push({ name: `Alvo ${d} m`, x, z });
+  });
+  // ---- Raia B: alvos andando em trilhos ----
+  [[12, 2.0, 'Lento'], [24, 3.5, 'Médio'], [38, 5.0, 'Ligeiro']].forEach(([d, sp, tag], i) => {
+    const z = FIRE - d;
+    boxes.push(B(-16.5, z - 0.25, -1, z + 0.25, 0.06, wood2));
+    signAt(-17.2, z - 1.4, `${d} m · ${tag}`, '#8a6bc6', 2.4, 0.7, 2.0);
+    dummies.push({ name: `Corredor ${tag}`, x: -8.5, z, move: { amp: 6, speed: sp, ph: i * 2.1 } });
+  });
+  // ---- Raia C: explosivos e arco ----
+  boxes.push(B(5, 5.6, 19, 6.6, 1.2, '#c8b07a')); // sacos de areia: Copo Bomba por cima da mureta
+  dummies.push({ name: 'Atrás do Muro 1', x: 8.5, z: 3.5 }, { name: 'Atrás do Muro 2', x: 15.5, z: 3.5 });
+  boxes.push(B(8.5, -8.6, 15.5, -4.4, 0.12, '#d9c49a')); // roda dos três (bazuca: dano em área)
+  dummies.push({ name: 'Trio 1', x: 10, z: -6 }, { name: 'Trio 2', x: 12, z: -7.2 }, { name: 'Trio 3', x: 14, z: -6 });
+  boxes.push(B(15, -20, 19, -16, 4, wood), B(14.8, -20.2, 19.2, -16.2, 0.3, red, 4)); // torre do arco (alvo no alto)
+  dummies.push({ name: 'Alvo da Torre', x: 17, z: -18, y: 4.3 });
+  boxes.push(B(5, -27.7, 7, -25.7, 0.12, yel));
+  dummies.push({ name: 'Alvo Longe', x: 6, z: -26.7 });
+  boxes.push(B(4, -12, 6, -10, 2.2, wood2), crate(19.5, -2, 1.4, 1.2, yel)); // cobertura pro foguete bater
+  // ---- Raia D: faca e sabre (cercadinho perto da linha) ----
+  boxes.push(B(22.3, 2, 40, 2.4, 1.1, wood)); // cerca do fundo
+  boxes.push(B(25.2, 7.2, 36.8, 13.8, 0.06, '#d9c49a'));
+  dummies.push({ name: 'Saco de Faca 1', x: 27, z: 12 }, { name: 'Saco de Faca 2', x: 35, z: 12 }, { name: 'De Costas', x: 31, z: 8.5, yaw: Math.PI });
+  dummies.push({ name: 'Rodando', x: 31, z: 4.8, move: { amp: 4, speed: 1.6, ph: 0 } });
+  // ---- arena do X1 (oeste, atrás da linha) ----
+  boxes.push(B(-24, 26, -18, 30, 2.4, wood), R(-18, 26.8, -14, 29.2, 0, 2.4, 'x', -1, wood2), B(-24, 25.8, -18, 26, 0.9, wood2, 2.4));
+  boxes.push(crate(-34, 26, 1.6, 1.6), crate(-30, 31, 1.4, 1.2, yel), crate(-10, 30.5, 1.6, 1.6), crate(-12, 25.5, 1.4, 1.2, yel), B(-36, 29.5, -32.6, 30.3, 1.2, stone), B(-8, 27.4, -4.6, 28.2, 1.2, stone));
+  boxes.push(B(-2.3, 22.6, -1.7, 34, 1.3, stone, 0)); // mureta separando o X1 da área de renascer
+  // placas das raias (no fundo) e da entrada
+  props.push({ t: 'sign', x: -29.5, y: 3.0, z: -33.9, w: 8, h: 1.6, rot: 0, text: 'DISTÂNCIA', bg: '#2f80ed', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: -8.5, y: 3.0, z: -33.9, w: 8, h: 1.6, rot: 0, text: 'EM MOVIMENTO', bg: '#8a6bc6', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 12, y: 3.0, z: -33.9, w: 8, h: 1.6, rot: 0, text: 'EXPLOSIVOS · ARCO', bg: red, fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 31, y: 3.0, z: 2.0, w: 7, h: 1.4, rot: 0, text: 'FACA · SABRE', bg: '#c0392b', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 19, y: 3.4, z: 33.9, w: 12, h: 2.0, rot: Math.PI, text: 'ESTANDE DO DOCÃO', bg: red, fg: '#fff6e4' });
+  props.push({ t: 'sign', x: -21, y: 3.4, z: 33.9, w: 7, h: 1.6, rot: Math.PI, text: 'ARENA X1', bg: '#1d5f8a', fg: '#fff6e4' });
+  props.push({ t: 'sign', x: 19, y: 1.75, z: 33.9, w: 12, h: 0.9, rot: Math.PI, text: 'B primária · N secundária · M faca/sabre', bg: '#2a1410', fg: '#ffd27a' });
+  props.push({ t: 'logoSign', x: 0, y: 5.2, z: -33.98, rot: 0 });
+  props.push({ t: 'hay', x: 37, z: 31 }, { t: 'hay', x: 3, z: 32 }, { t: 'keg', x: 21, z: 24 }, { t: 'keg', x: 1, z: 24 }, { t: 'tree', x: 38, z: -31 }, { t: 'tree', x: -38, z: -31 });
+  MAPS.push({
+    id: 'estande', name: 'Estande do Docão', desc: 'Modo Treino: raias de 10/20/30/50 m, alvos andando, área de explosivos e arco, cercadinho da faca/sabre e arena X1. Os alvos não atacam, só renascem.',
+    training: true, size: [40, 34], wallH: 4, wallColor: ['#e8c25a', '#d8b24a'],
+    palette: DAY({ ground: '#7cc95a', tiles: ['#a9e07f', '#9bd972', 64, 14] }),
+    ...fin(boxes), props, dummies,
+    spawns: [[5, 26], [10, 30], [15, 26], [20, 30], [25, 26], [30, 30], [35, 26], [8, 32.5], [-6, 26], [-14, 32], [-30, 33], [-37, 24.5]],
+    pickups: [['grenade', 8, 23.8], ['grenade', 16, 23.8], ['ammo', 24, 23.8], ['health', -20, 32.5], ['health', 34, 32.5], ['ammo', -28, 24.5]],
+    showcase: [12, 0, 26], view: [0, 1.6, 26, 0, -0.05],
+  });
+}
+
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
+// mapas jogáveis nas listas/rodízio (o Estande só abre no modo Treino)
+export const PLAY_MAPS = MAPS.filter((m) => !m.training);
+// mapas do Modo Bomba (só os com sites/spawns feitos à mão; Pátio Ferrugem é pequeno demais e o Estande é do Treino)
+export const BOMB_MAPS = PLAY_MAPS.filter((m) => m.bomb);

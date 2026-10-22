@@ -4,17 +4,99 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## 🧪 Em teste — Modo Bomba: Planta o Botijão 💣🔥 (protótipo, branch `feature/modo-bomba`)
-Ainda **não está no site**. Primeiro protótipo de um modo estilo Valorant, com o Docão:
+## Resumo de 21 e 22/10/2026
+Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
+- **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados
+- **v1.3 · Bacon & Nomes:** morte vira bacon e cada jogador escolhe o nome
+- **v1.4 · Pururucado:** kill feed com frases de porco
+- **v1.4.1 · Mira, snipers e prêmios** ([@rramosjoao](https://github.com/rramosjoao), PRs #1 e #2): mira no botão direito, três snipers, abates seguidos, fumaça, atordoamento e prêmios de 3, 5 e 7
+- **v1.5 · Churrasco Moggado:** faca de churrasqueiro e animações de recarga
+- **v1.5.1 a v1.5.7:** botão RENASCER, 3 skins novas, salas com até 10 jogadores, tempo da partida configurável, captura da Dominação mais lenta, Docão não fica mais preso na parede, piso e mira sem piscar
+- **v1.6 · Bacon Restaurador:** bacon cura 10 de vida
+- **v1.6.1 · Respiro:** vida regenera fora de combate
+- **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
+- **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
+- **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
+
+---
+
+## 🧪 Em teste — Modo Bomba: Planta o Botijão 💣🔥 (não lançado, só no branch `feature/modo-bomba`)
+Ainda **não está no site**. Modo estilo Valorant, com o Docão:
 - **Ataque × Defesa** (Vermelho × Azul). O Ataque leva o **Botijão do Churrasco** até o site **A** ou **B** e segura **E** por 4 s pra plantar. A Defesa segura **E** por 7 s pra desarmar (passou da metade, fica salvo).
 - Plantou: o botijão **bipa cada vez mais rápido** e **explode em 45 s**, levando todo mundo num raio de 16 m.
 - Rodada: 10 s de preparação (parado no spawn), 100 s pra plantar. Explodiu = ponto do Ataque; desarmou ou o tempo acabou = ponto da Defesa.
 - **Primeiro a 13 rodadas vence.** Depois da 12ª: **"Troca de lado!"**
 - O **renascimento continua normal** (5 s + RENASCER), no spawn do seu lado. A rodada não acaba por eliminação.
-- Sites A/B marcados no chão e na tela (seta com a distância) nos 7 mapas. Bots plantam, escoltam, guardam os sites e desarmam.
-- Funciona offline e online.
+- **Mapa novo: Rodízio do Docão**, feito pro modo (o padrão dele). É comprido: o Ataque leva uns 21 s pra chegar num site e a Defesa uns 8 s, com três rotas (Rua do Espeto, Avenida da Linguiça e Beco da Farofa).
+- **Sites e spawns feitos à mão** em 9 mapas, com o Ataque nascendo longe dos sites. O **HOTMILK** entrou no rodízio (A no estacionamento sudoeste, B no pátio sudeste, uns 18 s pro Ataque). O **Pátio Ferrugem** ficou fora por ser pequeno e o **Estande** é só do Treino.
+- **Killstreaks e rodadas:** a sequência e os streaks guardados passam pra rodada seguinte (trocar de rodada não é morrer). O que está no ar acaba na virada: o Gavião vai embora, e o míssil e o Fim da chapa ainda na contagem voltam pro F. Na preparação o F não funciona.
+- Funciona offline e online, com chat, voz e killstreaks online da v1.8.
 
- — Respiro 💚 (21/10/2026)
+---
+
+## v1.8.1 — Streak de verdade 💥 (22/10/2026)
+
+- Online, o míssil pilotado, o Gavião e o Fim da chapa agora matam de verdade. Antes eles apareciam só na tela de quem usou
+- Quem decide é o servidor: ele conta a sua sequência, confere se você ganhou o prêmio e se o míssil chegou onde dava pra chegar, e só então aplica o dano
+- Todo mundo vê a explosão do míssil, o Gavião voando e atirando e a contagem e o clarão do Fim da chapa
+- Os outros jogadores (e os bots) podem atirar no Gavião e derrubá-lo
+- O kill feed mostra o nome do prêmio: [Míssil da granja], [Gavião da granja] e [Fim da chapa]
+- Igual ao offline: abates do Gavião valem 25 pontos e não contam pra sequência, o Fim da chapa também não conta, e morrer depois de puxar o rádio não cancela
+
+---
+
+## v1.8 — Míssil Pilotado 🚀 (22/10/2026)
+Versão de muita gente: valeu, Janor, Paulo e João! 🐷
+
+**Chat, voz e convite** (PR #4, [@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers))
+- Chat escrito no lobby, na partida e no fim do jogo: Y fala com todos, U só com o time, e Tab troca o canal com a caixa aberta
+- Voz: J troca entre Mudo, Todos e Time; segure K para falar
+- Convite da sala no lobby e na pausa: copiar link ou código, WhatsApp, Telegram, Slack e compartilhar
+
+**Campus HOTMILK e modo Exploração** (PR #5, [@paulo-cheers](https://github.com/paulo-cheers))
+- Mapa HOTMILK com o Bloco 01 e o Bloco 02 (prédios de três andares com corredor, escada e vão entre eles)
+- O mapa HOTMILK virou o campus inteiro: Bloco 01, Bloco 02, estacionamento com catraca, praça e portões
+- Modo Exploração (offline): mapa sem bots pra andar e testar armas
+
+**Treino · Estande do Docão**
+- Novo modo com mapa próprio: alvos que não atacam e voltam em 2 s, números de dano na tela, distâncias de 10 a 50 m, alvos em movimento, área de explosivos, faca/sabre e arena X1
+- B/N/M trocam a arma na hora, munição infinita e sem tempo. Funciona offline e online
+
+**Killstreaks no F e camuflagens** (PR #6, [@rramosjoao](https://github.com/rramosjoao))
+- O killstreak não dispara sozinho: quando fica pronto, aperte F. Com mais de um guardado, o F usa o mais antigo
+- O de 5 abre um laptop e você pilota um míssil em primeira pessoa: sai bem alto, o mouse aponta e a explosão é bem maior
+- No menu, cada arma mostra uma miniatura
+- Camuflagem por partida: 5 abates com a mesma arma dão a de chiqueiro, 10 a de bacon e 15 deixa dourada. Zera na partida nova
+
+---
+
+## v1.7 — Arsenal do Chiqueiro 🏹🚁 (21/10/2026)
+Leva enorme feita pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #3). Valeu, João! 🐷
+
+**Armas**
+- A lista de armas ficou separada por categoria: Rajada, Escopeta, Precisão, Explosivo, Faca e Secundária
+- Mini Uzi do Leitão: rajada bem rápida, curta, forte de perto
+- P90 da Granja: compacta, carregador grande, rajada mais estável
+- Furadeira de Prego: secundária. Um prego por clique
+- Escopeta Semi do Leitão: atira mais rápido e é mais fraca. A Calibre 12 (pump) ficou mais forte
+- Sniper Torresmo sem luneta espalha mais. Com a luneta e parado, continua no centro
+- Sabre de Luz na categoria Faca. As duas mãos seguram o cabo e acompanham o corte. Com ele na mão, você anda 30% mais devagar
+- Besta do Leitão e Arco da Granja, as duas na categoria Secundária. Não matam de um tiro no corpo. A besta arma a corda na recarga. No arco, segura o clique para puxar a corda: quanto mais tempo, mais forte a flecha
+- A Bazuca do Chiqueiro ficou maior e com cara de RPG: tubo longo, traseira larga, empunhadura e a ogiva na boca
+
+**Killstreaks**
+- O killstreak de 5 solta os mísseis do céu, e eles batem mais forte
+- O killstreak de 7 agora é o helicóptero Gavião da granja (no máximo 30 segundos, dá para derrubar)
+- Cada abate do helicóptero Gavião da granja vale 25 pontos. Não enche a barra de killstreak
+- O nuke saiu da barra e virou um streak secreto de 10 abates. Se você morrer depois de puxar o rádio, a contagem não cancela
+- A fumaça ficou mais fechada no meio
+
+**Mapa e tela**
+- Mapa Pátio Ferrugem, menor, no estilo do Rust: a torre do meio é a mais alta, com rampa do chão até o topo
+- A lista de abates (killfeed) foi para o canto esquerdo de baixo, acima da vida e da linha de Abates, sem cobrir o resto
+- Quando você morre, a câmera fica parada olhando para quem te matou
+
+## v1.6.1 — Respiro 💚 (21/10/2026)
 - **Vida regenera fora de combate:** levou dano de outro Docão e ficou **5 segundos** sem apanhar? A vida volta sozinha, **+10 por segundo**, até 100. Levou dano de novo, os 5 segundos recomeçam.
 - **Mas só se o dano não foi seu:** se o último dano veio de você mesmo (foguete da bazuca no pé, seu próprio Copo Bomba, seu míssil), não regenera, e isso cancela a regeneração que ia começar. Quer a vida de volta? Fica longe da própria explosão.
 - Enquanto regenera, a barra de vida brilha verdinho com um "+" pulsando.
@@ -76,6 +158,14 @@ Agora são **17 skins**. Chegaram três novas no fim da lista:
 - Correção: a skin do Docão volta a aparecer no menu logo no começo.
 - Correção: na **Vizinhança Cheers** a câmera do menu ficava dentro do ônibus e a skin não aparecia; agora ela procura um ângulo livre em qualquer mapa. A barra de prêmios por abate não aparece mais por cima do Docão no menu.
 - **Tela de morte compacta**, ancorada embaixo: todas as armas cabem mesmo em telas menores.
+
+## v1.4.1 — Mira, snipers e prêmios 🎯 (21/10/2026)
+Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PRs #1 e #2).
+- O botão direito mira em todas as armas. Na sniper abre a luneta, e no ferrolho a mão do Docão puxa o ferrolho
+- Três snipers: Torresmo (meio), Canhão do Barril (pesada, pouca bala) e Carabina da Granja (leve e rápida), cada uma com a sua luneta. O menu ganhou o slider Mirando
+- Acerto mostra o X, os pontos (+10, +100, +150) e medalhas. Abates seguidos: Dupla na chapa, Trio frito, Ultra na brasa, Fantástico e Incrível
+- Granada de fumaça (tecla 4) e de atordoamento (tecla 5)
+- Prêmios por abates sem morrer: no 3 um minimapa que gira com você, no 5 um tablet para marcar 3 mísseis, no 7 o rádio que derruba todo mundo
 
 ## v1.4 — "Pururucado" (21/10/2026)
 - **Kill feed novo:** "carimbou" virou **"pururucou"**, com frases engraçadas sorteadas a cada abate:

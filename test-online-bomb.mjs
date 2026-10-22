@@ -27,7 +27,7 @@ ok(sp.pts && sp.atk < 1 && sp.def > 20, `servidor manda os spawns do modo Bomba 
 ok(await until(() => window.__docao.bomb.S.phase === 'live', 15000), 'servidor libera a rodada depois de 10 s');
 const S1 = await G(() => window.__docao.bomb.S.carrier === window.__docao.player.id);
 if (S1) { // Ana carrega: teleporta pro A (só com ALLOW_TEST) e segura E
-  await G(() => { const g = window.__docao, p = g.player, s = g.bomb.L.sites[0]; p.pos.set(s.x, s.y, s.z); p.vel.set(0, 0, 0); p.invulnUntil = 1e9; g.online.net.send({ t: 'u', sq: p.sq, tp: 1, p: [s.x, s.y, s.z], v: [0, 0, 0], y: 0, pi: 0, g: 1, w: p.weapon }); });
+  await G(() => { const g = window.__docao, p = g.player, s = g.bomb.L.sites[0]; p.pos.set(s.x, s.y, s.z); p.vel.set(0, 0, 0); p.invulnUntil = 1e9; g.online.net.send({ t: 'testGod', s: 30 }); g.online.net.send({ t: 'u', sq: p.sq, tp: 1, p: [s.x, s.y, s.z], v: [0, 0, 0], y: 0, pi: 0, g: 1, w: p.weapon }); });
   await wait(300); await A.keyboard.down('KeyE');
   ok(await until(() => window.__docao.bomb.S.phase === 'planted', 12000), 'Ana segurou E no A e o servidor plantou');
   await A.keyboard.up('KeyE');
