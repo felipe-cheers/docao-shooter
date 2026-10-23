@@ -156,7 +156,7 @@
     <div class="controls">
       <b>Controles</b>
       <div>WASD mover · Mouse mirar · Espaço pular · Segurar Shift: agachar · Botão direito: mirar/zoom (com a faca: estocada)</div>
-      <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida · I inspecionar</div>
+      <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida · I inspecionar · B dança (sem atirar até acabar)</div>
       <div>Segure Q: Copo Bomba · solte para arremessar</div>
       <div>4: fumaça · 5: atordoamento · F: usa o killstreak que estiver pronto (o de 5 abre o laptop do míssil)</div>
       <label class="checkline"><input type="checkbox" data-chat-toggle checked> Mostrar chat</label>
@@ -174,6 +174,15 @@
     <button type="button" class="sound-toggle" id="menuSound" aria-label="Silenciar áudio" aria-pressed="false" title="Silenciar áudio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="sound-waves" d="M16 8q5 4 0 8M19 5q8 7 0 14"/></svg></button>
     <button type="button" class="settings-cap" data-menu-view="settings" aria-controls="menu-settings" aria-expanded="false" aria-label="Ajustes" title="Ajustes"><span aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m13 2-1 5-3 1-4-2-3 5 4 3v4l-4 3 3 5 4-2 3 1 1 5h6l1-5 3-1 4 2 3-5-4-3v-4l4-3-3-5-4 2-3-1-1-5Zm3 9a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/></svg></span></button>
   </nav>
+  <aside id="loadoutDock" class="loadout-dock" aria-label="Arma padrão">
+    <p class="dock-title">Arma padrão</p>
+  </aside>
+  <aside id="danceDock" class="dance-dock" aria-label="Dança da vitória">
+    <p class="dock-title">Dança da vitória</p>
+    <div class="dance-stage" id="danceStage">
+      <div class="dance-picks" id="dancePicks"></div>
+    </div>
+  </aside>
   <nav class="showcase-actions" aria-label="Personagem e equipamento">
     <button type="button" class="arsenal-crate" aria-label="Arsenal" data-menu-view="arsenal" aria-controls="menu-arsenal" aria-expanded="false"><span class="plaque-surface" aria-hidden="true"></span><svg class="crate-mark" viewBox="0 0 56 57" aria-hidden="true">
       <defs>
@@ -219,10 +228,12 @@
         <label>Completar com bots<select id="roomBots"><option value="1" selected>Sim</option><option value="0">Não</option></select></label>
         <label>Tempo<select id="roomTime"><option value="0">Padrão</option><option value="3">3 min</option><option value="5">5 min</option><option value="7">7 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></label>
       </div>
+      <div id="roomLimits" class="room-limits"></div>
       <button id="createBtn">CRIAR SALA</button>
     </div>
     <div id="paneJoin" class="hidden">
       <label>Código da sala<input id="joinCode" maxlength="4" placeholder="ABCD" autocomplete="off" spellcheck="false"></label>
+      <p class="sub">Se a partida já começou e ainda tem bot, você entra no lugar de um.</p>
       <button id="joinBtn">ENTRAR</button>
     </div>
     <div id="onlineErr" class="err"></div>
@@ -247,6 +258,10 @@
     </div>
     <div id="lobbyInfo" class="sub"></div>
     <div class="namerow"><label>Seu nome<input id="lobbyName" class="nameField" maxlength="16" autocomplete="nickname" spellcheck="false"></label><button id="lobbyNameBtn" class="small">Trocar</button></div><div id="lobbyNameMsg" class="sub"></div>
+    <div id="lobbyLoadout" class="loadout-box">
+      <div class="label2">Sua arma <span>vale nesta sala e nas próximas</span></div>
+      <div class="row loadout-row" id="lobbyLoadoutRow"></div>
+    </div>
     <div id="lobbyTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="lobbyTeamBtns"></div><div class="tpe" id="lobbyTeamErr"></div></div>
     <div id="lobbyPlayers" class="board"></div>
     <div id="lobbyChat" class="chatpanel">
@@ -273,6 +288,7 @@
         <label>Tempo<select id="lobbyTime"><option value="0">Padrão</option><option value="3">3 min</option><option value="5">5 min</option><option value="7">7 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></label>
         <label>Chat<select id="lobbyChatOn"><option value="1">Sim</option><option value="0">Não</option></select></label>
       </div>
+      <div id="lobbyLimits" class="room-limits"></div>
       <button id="startOnline">INICIAR PARTIDA</button>
     </div>
     <div id="lobbyWait" class="sub">Aguardando o anfitrião iniciar a partida…</div>
@@ -306,6 +322,10 @@
     <section id="pauseLoadout" aria-label="Trocar equipamento">
       <p class="pause-note">Trocar uma arma te derruba. Você nasce de novo com o equipamento novo.</p>
       <div id="pauseGuns"></div>
+    </section>
+    <section id="pauseDance" aria-label="Dança da vitória">
+      <p class="pause-note">Dança da vitória</p>
+      <div class="dance-picks" id="pauseDancePicks"></div>
     </section>
     <button id="resumeBtn">CONTINUAR</button>
     <button id="quitBtn" class="secondary">SAIR PRO MENU</button>

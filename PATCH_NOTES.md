@@ -4,6 +4,27 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.11 — Salão de Festa 💃 (23/10/2026)
+Feito pelo **[@paulo-cheers](https://github.com/paulo-cheers)** (PR #14).
+
+**Quem manda na sala escolhe o arsenal**
+- Ao criar a sala, o **dono escolhe quais armas e quais power-ups valem**: quer uma sala só de rajada, ou só de pistola e faca? Pode! Os poderes de killstreak e os que caem no chão só funcionam se estiverem liberados.
+- Os **bots só sacam armas que a sala permite**, e quem entra no meio da partida já encontra tudo certinho.
+- O menu agora **lembra a sua arma padrão** (primária, pistola e corpo a corpo), e o lobby mostra o que a sala liberou.
+
+**Dança da vitória na tecla B** 🕺
+- Apertou **B** no meio da partida, o Docão **dança em 3ª pessoa** por uns 3 segundos. Escolha o seu passo no menu inicial ou na pausa:
+  - 🌙 **Moonwalk:** desliza pra trás
+  - 🤫 **Mewing:** dedo no queixo
+  - 6️⃣7️⃣ **Sixseven:** um de cada vez
+- Dançando você **não atira**, então escolha bem a hora. 😅
+- **Na Invasão não tem dança:** lá o **B continua abrindo o painel de armas** entre as waves. E nada de dançar com o chat aberto ou digitando.
+
+**No menu**
+- O **Docão agora gira**: arraste com o mouse pra ver ele de todos os lados. 🐷🔄
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.10.1 — Metralhadora do Chiqueiro 🔫 (22/10/2026)
 Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #13).
 
@@ -98,8 +119,8 @@ Prepara a lanterna, chama os amigos e não sai do chiqueiro... 👀🐷
 
 ---
 
-## Resumo de 21 e 22/10/2026
-Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
+## Resumo de 21 a 23/10/2026
+Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados
 - **v1.3 · Bacon & Nomes:** morte vira bacon e cada jogador escolhe o nome
 - **v1.4 · Pururucado:** kill feed com frases de porco
@@ -118,6 +139,7 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.9.1 · Docão Bravo:** o Docão faz cara de brava ao atirar e ao golpear com faca ou sabre
 - **v1.10 · Modo Invasão:** co-op contra hordas de Docões zumbis em 20 waves, com chefão a cada 5, poderes, 2 vidas e o mapa Fazenda Mal-Assombrada
 - **v1.10.1 · Metralhadora do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #13): arma nova de 100 balas, HUD da fazenda, míssil que acelera segurando o tiro e troca de arma na pausa
+- **v1.11 · Salão de Festa** ([@paulo-cheers](https://github.com/paulo-cheers), PR #14): o dono da sala escolhe as armas e os power-ups, o menu lembra sua arma padrão, dança da vitória no B (moonwalk, mewing e sixseven; fora da Invasão) e o Docão do menu gira ao arrastar
 
 ---
 
