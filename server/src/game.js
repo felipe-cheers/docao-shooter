@@ -254,7 +254,8 @@ export class Game {
   }
   matchWon(e, rows) {
     if (this.inv) return !!this.inv.won;
-    if (this.teamMode) { const ts = (this.bomb ? this.bomb.score : this.teamScore) || [0, 0], w = ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1; return w >= 0 && e.team === w; }
+    if (this.teamMode) { const ts = (this.bomb ? this.bomb.score : this.teamScore) || [0, 0], w = this.forcedWinTeam === 0 || this.forcedWinTeam === 1 ? this.forcedWinTeam : ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1; return w >= 0 && e.team === w; } // Fim da chapa: quem chamou vence
+    if (this.nukeWinner) return this.nukeWinner === e.id;
     return !!rows[0] && rows[0].id === e.id && rows[0].kills > 0;
   }
   endMatch() {
