@@ -252,8 +252,9 @@ try {
 } catch (e) { /* sem storage */ }
 document.querySelectorAll('[data-nade-voice]').forEach((el) => { // vozes da granada: liga/desliga (localStorage, padrão ligado)
   el.checked = grenadeVoiceEnabled();
-  el.addEventListener('change', () => { setGrenadeVoiceEnabled(el.checked); document.querySelectorAll('[data-nade-voice]').forEach((o) => { o.checked = el.checked; }); });
+  el.addEventListener('change', () => setNadeVoice(el.checked));
 });
+function setNadeVoice(on) { setGrenadeVoiceEnabled(on); document.querySelectorAll('[data-nade-voice]').forEach((o) => { o.checked = grenadeVoiceEnabled(); }); }
 let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação) | 'explore' (mapa vazio) | 'treino' | 'bomb' (Bomba, protótipo)
 let bombS = null, bombL = null; // Modo Bomba: estado da rodada (shared/bomb.js) e layout do mapa (sites A/B, lados)
 const MODE_OK = (m) => (m === 'dom' || m === 'bomb' || m === 'explore' || m === TRAIN.mode || m === INV.mode ? m : 'dm');
@@ -4302,6 +4303,9 @@ document.addEventListener('keydown', (e) => {
     if (bombPick && e.code === 'KeyG') { deathUnlock = true; if (document.pointerLockElement) document.exitPointerLock(); return; } // solta o mouse pra clicar
   }
   if (tryOpenChat(e)) { e.preventDefault(); return; }
+  if (e.code === 'KeyH' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && state === 'playing') { // H: liga/desliga as vozes da granada no meio da partida (mesma preferência do menu)
+    setNadeVoice(!grenadeVoiceEnabled()); flashMsg(grenadeVoiceEnabled() ? '🔊 Vozes da granada: ligadas' : '🔇 Vozes da granada: desligadas'); return;
+  }
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   if (e.code !== 'Space' || !e.repeat) keys[e.code] = true;
   if (state === 'playing' && player && invKey(e)) { e.preventDefault(); return; } // Invasão: G poder · X troca · B painel de armas na pausa

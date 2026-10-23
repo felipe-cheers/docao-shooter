@@ -1683,3 +1683,7 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 #gameover:not(.hidden){animation:end-menu-in .24s cubic-bezier(.22,1,.36,1) both}
 @keyframes end-menu-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){#matchResult .result-card,#gameover:not(.hidden){animation:none}}
+
+/* Pausa: toggle das vozes da granada em destaque, no topo */
+#pause label.checkline.nade-voice-hl{grid-column:1 / -1;margin:6px 0 12px;padding:12px 14px;border:2px solid var(--red,#e63946);background:#ffe9b8;font-size:13px;font-weight:700;box-shadow:0 2px 0 rgba(0,0,0,.25);cursor:pointer}
+#pause label.checkline.nade-voice-hl small{font-weight:400;opacity:.8}

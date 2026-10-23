@@ -4,6 +4,12 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.16.2 — Granada de Bolso 🎛️💣 (23/10/2026)
+🎛️ **A GRANADA AGORA TEM CONTROLE REMOTO!** Antes você tinha que abrir o menu pra calar o "GRANADA!" e o "BANANA!". Agora dá pra decidir no meio do tiroteio:
+⌨️ **Aperte H em partida** e as vozes da granada ligam ou desligam na hora, com aviso na tela: "🔊 Vozes da granada: ligadas" ou "🔇 ... desligadas". Funciona em todos os modos (inclusive Invasão, Bomba e online) e não atrapalha chat, painel B, nem nada que você esteja digitando.
+⏸️ **Apertou ESC?** O botão **"Vozes da granada"** agora é a primeira coisa da pausa, grandão e destacado, pra clicar sem procurar. Tudo continua sincronizado com o botão dos Ajustes, e o Docão lembra da sua escolha.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.16.1 — Granada Silenciosa 🤫💣 (23/10/2026)
 🤫 **CALA A BOCA, GRANADA!** Tem gente que ama o "GRANADA!" e o "BANANA!", e tem gente que quer jogar em paz sem frutas gritando. Agora os dois lados vivem em harmonia:
 🔘 **Novo botão "Vozes da granada"** em **Ajustes** (e também no menu de pausa). Desmarcou? O Copo Bomba volta pro som de sempre: o *toc* do arremesso e o *BUM* da explosão, sem ninguém avisando nada.

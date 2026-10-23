@@ -42,6 +42,24 @@ await throwQ(P); await wait(200); await release(P); await wait(1200);
 ok((await log(P)).length === 0, 'com a voz desligada, soltar o copo não toca "granada"');
 ok(await until(P, () => window.__docao.grenades.length === 0, 15000), 'o copo explode normalmente (som de sempre)');
 ok((await log(P)).length === 0, 'com a voz desligada, a explosão não toca "banana"');
+// atalho H no meio da partida (sem abrir menu): alterna a mesma preferência, mostra aviso e sincroniza os checkboxes
+await P.evaluate(() => { const g = window.__docao; g.player.alive = true; g.player.invulnUntil = 1e9; });
+await P.keyboard.press('KeyH'); await wait(100);
+ok(await P.evaluate(() => localStorage.getItem('docao.nadeVoice') === '1' && [...document.querySelectorAll('[data-nade-voice]')].every((c) => c.checked)), 'H liga (estava desligada): grava 1 e marca os checkboxes');
+ok((await P.evaluate(() => document.getElementById('centermsg').textContent)).includes('ligadas'), 'H mostra o aviso "Vozes da granada: ligadas"');
+await P.evaluate(() => { const p = window.__docao.player; p.nades = 2; window.__voiceLog = []; });
+await throwQ(P); await wait(200); await release(P); await wait(300);
+ok(JSON.stringify(await log(P)) === '["granada"]', 'com H ligando, a voz volta a tocar no meio da partida');
+await P.keyboard.press('KeyH'); await wait(100);
+ok(await P.evaluate(() => localStorage.getItem('docao.nadeVoice') === '0' && [...document.querySelectorAll('[data-nade-voice]')].every((c) => !c.checked)), 'H desliga: grava 0 e desmarca os checkboxes');
+ok((await P.evaluate(() => document.getElementById('centermsg').textContent)).includes('desligadas'), 'H mostra o aviso "Vozes da granada: desligadas"');
+// menu do ESC: o toggle fica visível no topo da pausa e funciona por clique
+await P.keyboard.press('Escape'); await wait(300);
+ok(await P.evaluate(() => { const l = document.getElementById('pauseNadeVoice'), p = document.getElementById('pause'); return state0() && !p.classList.contains('hidden') && l.getBoundingClientRect().height > 10 && l.getBoundingClientRect().top < p.querySelector('.panel').getBoundingClientRect().top + 120; function state0() { return true; } }), 'ESC abre a pausa com "Vozes da granada" em destaque no topo');
+await P.click('#pauseNadeVoice'); await wait(150);
+ok(await P.evaluate(() => localStorage.getItem('docao.nadeVoice') === '1' && [...document.querySelectorAll('[data-nade-voice]')].every((c) => c.checked)), 'clicar no toggle da pausa liga (grava 1, sincroniza)');
+await P.click('#pauseNadeVoice'); await wait(150);
+ok(await P.evaluate(() => localStorage.getItem('docao.nadeVoice') === '0' && [...document.querySelectorAll('[data-nade-voice]')].every((c) => !c.checked)), 'clicar de novo desliga (grava 0, sincroniza)');
 const store = await P.evaluate(() => localStorage.getItem('docao.nadeVoice'));
 await P.close();
 { const R = await browser.newContext({ viewport: { width: 900, height: 520 } }); await R.addInitScript((v) => { if (!sessionStorage.getItem('nv')) { sessionStorage.setItem('nv', '1'); localStorage.setItem('docao.nadeVoice', v); } }, store);
