@@ -4,6 +4,16 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.17 — Crachá do Porquinho 🪪🐷 (23/10/2026)
+🪪 **O DOCÃO AGORA TEM CRACHÁ!** Chegou o **login**, e o melhor: ele é **opcional**. Não quer conta? Joga de **convidado** como sempre, sem perguntar nada nem pedir e-mail (o chiqueiro é democrático).
+🐷 **Apelido fixo:** criou a conta, o apelido é **seu e só seu**. Ninguém mais entra na sala com o seu nome (quem tentar vira "(conv)", o impostor), e você também não troca de nome no meio do jogo. Reputação de porco se constrói.
+🏆 **Ranking do chiqueiro:** abates, mortes, vitórias e partidas **por modo**, com ordem por abates ou por vitórias. Só entra o que você joga logado, e o **Treino não vale** (bater em boneco não dá fama). Fim da chapa vencendo a partida conta como vitória, claro.
+🎭 **Skin salva na conta:** a skin que você escolher fica guardada e volta quando você entrar de novo. Só vale **skin que já existe** no jogo, sem inventar fantasia por fora.
+🔐 **Segurança de porco esperto:** senha guardada com **PBKDF2** (nunca em texto puro), sessão por **token** (só o hash fica no banco), limite de tentativas contra quem fica chutando senha, e a mensagem de erro não entrega se errou o apelido ou a senha.
+💸 **E o bolso do Matheus?** Ranking com cache de 1 minuto e gravação em lote, só ao sair da sala ou no fim da partida. Barato como churrasco de domingo.
+🙏 Testado no Mac do Matheus antes de subir.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.16.2 — Granada de Bolso 🎛️💣 (23/10/2026)
 🎛️ **A GRANADA AGORA TEM CONTROLE REMOTO!** Antes você tinha que abrir o menu pra calar o "GRANADA!" e o "BANANA!". Agora dá pra decidir no meio do tiroteio:
 ⌨️ **Aperte H em partida** e as vozes da granada ligam ou desligam na hora, com aviso na tela: "🔊 Vozes da granada: ligadas" ou "🔇 ... desligadas". Funciona em todos os modos (inclusive Invasão, Bomba e online) e não atrapalha chat, painel B, nem nada que você esteja digitando.

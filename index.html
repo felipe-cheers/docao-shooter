@@ -130,6 +130,10 @@
           <path class="flame-heart" d="M17 23c0 6 6 8 5 13-1 7-12 7-13 0-1-4 3-7 4-10 0 5 3 6 3 6-2-4 1-6 1-9Z"/>
         </svg><img class="menu-lettering heading-lettering" src="./assets/menu/lettering-bora-pra-chapa.webp" alt="Bora pra chapa"></h2></div>
     <label class="name-ticket"><span class="field-caption">Seu nome</span><input id="nameInput" class="nameField" maxlength="16" value="Docão" autocomplete="nickname" spellcheck="false"></label>
+    <div id="acctStrip" class="acct-strip" role="group" aria-label="Conta e ranking">
+      <span id="acctTxt" class="acct-txt">Convidado · crie uma conta para ter apelido só seu, skin guardada e ranking</span>
+      <span class="acct-btns"><button type="button" id="acctBtn">ENTRAR</button><button type="button" id="rankBtn">RANKING</button></span>
+    </div>
     <div class="mappick">
       <div class="label2">Mapa</div>
       <button id="mapBtn" class="mapcard current" title="Escolher mapa"><span class="thumb"></span><span class="mtxt"><b id="mapName">Arena da Fazendinha</b><small id="mapDesc"></small></span><span class="mchange">↻ TROCAR</span></button>
@@ -260,6 +264,42 @@
     </div>
     <div id="onlineErr" class="err"></div>
     <button id="onlineClose" class="secondary">VOLTAR</button>
+  </div>
+</div>
+
+<div id="acctModal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="acctTitle">
+  <div class="ticket-panel">
+    <h2 id="acctTitle">Comanda do Docão</h2>
+    <div id="acctGuest">
+      <div class="otabs"><button type="button" id="acctTabLogin" class="otab active">Entrar</button><button type="button" id="acctTabReg" class="otab">Criar conta</button></div>
+      <form id="acctForm" autocomplete="on" novalidate>
+        <label>Apelido<input id="acctNick" maxlength="16" autocomplete="username" spellcheck="false"></label>
+        <label>Senha<input id="acctPass" type="password" maxlength="128" autocomplete="current-password"></label>
+        <label id="acctPass2Row" class="hidden">Repita a senha<input id="acctPass2" type="password" maxlength="128" autocomplete="new-password"></label>
+        <p class="acct-help" id="acctHelp">Entre com o apelido e a senha da sua comanda.</p>
+        <div id="acctErr" class="acct-err" role="alert"></div>
+        <button type="submit" id="acctSubmit" class="ticket-btn">ENTRAR</button>
+      </form>
+      <p class="acct-note">Conta é <b>opcional</b>: como convidado você joga igual. Com conta, o apelido é só seu, a skin fica guardada e você aparece no ranking.</p>
+    </div>
+    <div id="acctUser" class="hidden">
+      <p class="acct-hello">🐷 <b id="acctNickView"></b></p>
+      <div id="acctStats" class="acct-stats"></div>
+      <button type="button" id="acctRank" class="ticket-btn">VER RANKING</button>
+      <button type="button" id="acctLogout" class="ticket-btn alt">SAIR DA CONTA</button>
+    </div>
+    <button type="button" id="acctClose" class="ticket-btn ghost">VOLTAR</button>
+  </div>
+</div>
+
+<div id="rankModal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rankTitle">
+  <div class="ticket-panel wide">
+    <h2 id="rankTitle">Ranking do Chiqueiro</h2>
+    <div class="rank-tabs" id="rankModes"></div>
+    <div class="rank-sort"><span>Ordenar por</span><button type="button" data-sort="kills" class="active">Abates</button><button type="button" data-sort="wins">Vitórias</button></div>
+    <div id="rankBody" class="rank-body"></div>
+    <p class="acct-note">Só contam partidas online com conta (o Treino não vale). Atualiza ao fim de cada partida.</p>
+    <button type="button" id="rankClose" class="ticket-btn ghost">VOLTAR</button>
   </div>
 </div>
 

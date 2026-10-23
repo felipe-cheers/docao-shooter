@@ -10,7 +10,7 @@ import { INV, INV_AMMO, DROP_KEYS, invRefillAmmo, isInvasion, InvasionCore, POWE
 import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
-import { cleanName, uniqueName } from '../../shared/names.js';
+import { cleanName, uniqueName, NAME_MAX } from '../../shared/names.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { normWeapons, normPowers, clampLoadout, botPool, weaponOn, powerOn } from '../../shared/loadout.js';
 import { DANCE_TIME, danceId } from '../../shared/emote.js';
@@ -77,13 +77,18 @@ export class Game {
   }
   humans(connectedOnly = true) { return [...this.ents.values()].filter((e) => !e.bot && (!connectedOnly || e.connected)); }
   // ---------- entrada/saída ----------
-  join({ name, skin, primary, secondary, melee, token }) {
+  // acct (opcional): { id, nick, skin } já conferido pelo Worker. Com conta, o nome é o apelido fixo e a skin é a da conta.
+  join({ name, skin, primary, secondary, melee, token, acct }) {
     this.syncClock(); this.purge();
     let e = token ? [...this.ents.values()].find((x) => !x.bot && x.token === token) : null;
-    if (e) { e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
+    if (acct && (!e || !e.acct || e.acct.id !== acct.id)) e = [...this.ents.values()].find((x) => !x.bot && x.acct && x.acct.id === acct.id) || null; // mesma conta de volta (outra aba / voltou do zero): assume o lugar
+    if (e && (acct ? (!e.acct || e.acct.id !== acct.id) : e.acct)) e = null; // token de sala que não é seu (convidado não herda lugar de conta): ignora
+    if (e) { if (acct && e.acct) { e.name = acct.nick; if (SKINS.some((s) => s.id === acct.skin)) e.skin = acct.skin; } e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
-      e = this.makeEnt({ name: this.freeName(name), skin, primary, secondary, melee, bot: false });
+      if (acct) { for (const x of this.ents.values()) if (!x.acct && x.name.toLowerCase() === acct.nick.toLowerCase()) x.name = this.freeName(Array.from(x.name).slice(0, NAME_MAX - 7).join('') + ' (conv)', x); } // o apelido da conta é dela: quem estava usando vira "(conv)"
+      e = this.makeEnt({ name: acct ? acct.nick : this.freeName(name), skin: acct && SKINS.some((s) => s.id === acct.skin) ? acct.skin : skin, primary, secondary, melee, bot: false });
+      if (acct) { e.acct = { id: acct.id, nick: acct.nick }; e.sk = 0; e.sd = 0; }
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
       e.arrived = true;
@@ -111,6 +116,7 @@ export class Game {
   }
   leave(id) {
     const e = this.ents.get(id); if (!e) return;
+    if (e.acct) this.flushStats(e, false);
     const name = e.name, bot = e.bot;
     e.connected = false; e.dcAt = this.now(); e.alive = false; e.voice = 'off';
     if (this.hostId === id) { const h = this.humans()[0]; this.hostId = h ? h.id : 0; }
@@ -239,7 +245,22 @@ export class Game {
   get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
   startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, DROP_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), bomb: this.bomb ? { sites: this.bombL.sites.map((s) => [r2(s.x), r2(s.y), r2(s.z)]), atk: this.bombL.atk, def: this.bombL.def, pts: this.bombL.pts ? this.bombL.pts.map((p) => [r2(p.x), r2(p.y), r2(p.z)]) : undefined, s: packBomb(this.bomb) } : undefined, win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  // ranking: soma abates/mortes (e partida/vitória no fim) das contas. Treino não conta. Falha de gravação nunca derruba a sala.
+  flushStats(e, final, won = false) {
+    if (!e.acct || this.training || !this.io.stats) return;
+    const k = e.sk | 0, d = e.sd | 0; e.sk = 0; e.sd = 0;
+    if (!k && !d && !final) return;
+    try { this.io.stats([{ acct: e.acct.id, mode: this.cfg.mode, k, d, w: final && won ? 1 : 0, m: final ? 1 : 0 }]); } catch (err) { console.error('stats', err && err.message); }
+  }
+  matchWon(e, rows) {
+    if (this.inv) return !!this.inv.won;
+    if (this.teamMode) { const ts = (this.bomb ? this.bomb.score : this.teamScore) || [0, 0], w = this.forcedWinTeam === 0 || this.forcedWinTeam === 1 ? this.forcedWinTeam : ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1; return w >= 0 && e.team === w; } // Fim da chapa: quem chamou vence
+    if (this.nukeWinner) return this.nukeWinner === e.id;
+    return !!rows[0] && rows[0].id === e.id && rows[0].kills > 0;
+  }
   endMatch() {
+    const rows = [...this.ents.values()].filter((e) => (e.bot && !e.zt) || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
+    for (const e of rows) if (e.acct && e.connected) this.flushStats(e, true, this.matchWon(e, rows));
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.gunships = []; this.nukes = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
@@ -263,7 +284,7 @@ export class Game {
     switch (m.t) {
       case 'u': this.onUpdate(e, m); break;
       case 'rs': if (this.state === 'playing' && !e.alive) e.rsReq = true; break; // botão Renascer
-      case 'prof': if (typeof m.name === 'string' && this.state !== 'playing') e.name = this.freeName(m.name, e); // nome só muda fora da partida (as plaquinhas são criadas no início)
+      case 'prof': if (typeof m.name === 'string' && this.state !== 'playing' && !e.acct) e.name = this.freeName(m.name, e); // nome só muda fora da partida (as plaquinhas são criadas no início)
          if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; this.applyLoadout(e, m.primary, m.secondary, m.melee, this.state === 'lobby'); this.sendLobby(); break;
       case 'cfg': if (!isHost) return;
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
@@ -282,6 +303,7 @@ export class Game {
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); this.sendVoices(); break;
       case 'testGod': if (this.test && e.alive) e.invulnUntil = this.T + clamp(+m.s || 0, 0, 120); break; // só testes (ALLOW_TEST=1): invulnerável por s segundos
       case 'testKs': if (this.test && this.state === 'playing' && e.alive) { const n = clamp(m.n | 0, 0, 30); for (let i = 0; i < n; i++) this.streakKill(e); } break; // só testes (ALLOW_TEST=1)
+      case 'testKill': if (this.test && this.state === 'playing' && e.alive) { const v = [...this.ents.values()].find((x) => x !== e && x.alive && !x.zt); if (v) this.kill(v, e, e.weapon, false); } break; // só testes (ALLOW_TEST=1): abate o 1º vivo (ranking)
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
       case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? this.nextMapId() : this.cfg.map)); break;
       case 'testInv': if (this.test && this.inv && this.state === 'playing') this.testInv(e, m); break; // só testes (ALLOW_TEST=1)
@@ -772,8 +794,8 @@ export class Game {
   // ks: abate de killstreak ('p' míssil, 'h' Gavião, 'x' nuke) → ev[8]; Gavião e nuke não contam pra sequência
   kill(t, a, w, head, back = false, ks = null, fx = 0) {
     if (this.inv && t.zt) return this.killZombie(t, a, w, head, back, ks);
-    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + (t.dummy ? TRAIN.respawn : RESPAWN_TIME); if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
-    if (a && a !== t) { a.kills++; if (a.alive && ks !== 'h' && ks !== 'x' && ks !== 'g' && ks !== 'a') this.streakKill(a); }
+    t.alive = false; t.hp = 0; t.deaths++; if (t.acct) t.sd++; t.respawnAt = this.T + (t.dummy ? TRAIN.respawn : RESPAWN_TIME); if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
+    if (a && a !== t) { a.kills++; if (a.acct) a.sk++; if (a.alive && ks !== 'h' && ks !== 'x' && ks !== 'g' && ks !== 'a') this.streakKill(a); }
     t.ksKills = 0; t.ksMissile = null; // morreu: sequência zera (míssil no ar cai junto); os streaks já ganhos (ksBank) continuam guardados
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w === W_BOMB ? W_NADE : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1); else if (w === W_BOMB) ev.push(3); // 3 = botijão (clientes antigos veem Copo Bomba)
@@ -1045,8 +1067,8 @@ export class Game {
     });
   }
   killZombie(t, a, w, head, back, ks) {
-    t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = Infinity;
-    if (a && a !== t && !a.zt) { a.kills++; if (a.alive && ks !== 'h' && ks !== 'x') this.streakKill(a); }
+    t.alive = false; t.hp = 0; t.deaths++; if (t.acct) t.sd++; t.respawnAt = Infinity;
+    if (a && a !== t && !a.zt) { a.kills++; if (a.acct) a.sk++; if (a.alive && ks !== 'h' && ks !== 'x') this.streakKill(a); }
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
     if (ks) { while (ev.length < 8) ev.push(0); ev.push(ks); }
     this.events.push(ev);
