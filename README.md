@@ -28,7 +28,7 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 - [🎮 Como jogar](#-como-jogar)
 - [⌨️ Controles](#️-controles)
 - [🏆 Modos de jogo](#-modos-de-jogo)
-  - [💣 Bomba · Planta o Botijão (em teste)](#-bomba--planta-o-botijão-em-teste)
+  - [💣 Bomba · Planta o Botijão](#-bomba--planta-o-botijão)
 - [🗺️ Mapas](#️-mapas)
 - [🔫 Armas](#-armas)
 - [💣 Granadas](#-granadas)
@@ -64,7 +64,7 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 
 ### 🌐 Online (com a galera)
 
-- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino ou Bomba, que ainda está em teste), **máximo de jogadores (2 a 10)**, se quer **completar com bots** e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
+- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots** e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
 - **Entrar na sala:** digite o código ou abra o link de convite `https://docao.mvalentim.dev/?sala=ABCD`, que já cai direto no lobby.
 - **Convite:** no lobby e na pausa tem Copiar link, Copiar código, WhatsApp, Telegram, Slack e Compartilhar.
 - **Anfitrião (★):** troca mapa, máximo, bots, modo, tempo e **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
@@ -153,8 +153,7 @@ Um estande de tiro no estilo The Range, que abre sempre no mapa **Estande do Doc
 - **B / N / M** trocam a arma na hora, a reserva de munição é infinita e o Copo Bomba volta sozinho. Não tem limite de tempo.
 - Online, os jogadores se dão dano normalmente, então dá pra fazer X1 com a galera.
 
-### 💣 Bomba · Planta o Botijão (em teste)
-> 🧪 **Em teste:** este modo ainda não está no site. Ele mora no branch `feature/modo-bomba` até ser aprovado.
+### 💣 Bomba · Planta o Botijão
 
 Estilo Valorant, com o Docão. Time **Vermelho × Azul**, um lado **ataca** e o outro **defende**.
 

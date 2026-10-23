@@ -4,6 +4,32 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.14 — Operação Bacon 🥓💣 (23/10/2026)
+🚨 **NOVO MODO: BOMBA!** Dois times, um botijão de churrasco e muita pressão. O **Ataque** (Vermelho) leva o **Botijão do Churrasco** até o site **A** ou **B**. A **Defesa** (Azul) tem que impedir, ou desarmar antes de virar torresmo. Estilo "plante e defenda", mas com cheiro de bacon. 🥓
+🧯 **Plantar:** segure **E** por **4 segundos** dentro do site. Quanto mais nervoso o time, mais o dedo escorrega.
+🔧 **Desarmar:** a Defesa segura **E** por **7 segundos** perto do botijão. Passou da metade, fica salvo (o Docão agradece o esforço).
+⏲️ **Plantou, bipou:** o botijão **bipa cada vez mais rápido** e **explode em 45 segundos**, levando todo mundo no raio. Quem está perto vira churrasquinho. Não fique de bobeira, porco assado não joga mais.
+🏁 **Primeiro a 13 rodadas vence.** Depois da 12ª rodada vem o aviso **"Troca de lado!"**, e quem atacava agora defende (e vice-versa, sem choro).
+🕙 **Preparação de 10 segundos:** todo mundo parado no spawn do seu lado, só olhando e pensando na vida. Só depois do VALENDO a rodada começa de verdade.
+🔫 **Painel de armas toda rodada:** na preparação aparece um painel com as armas (primária, secundária e corpo a corpo). Troque na hora com **1–9**, **N**, **M**, **G** e **B**. Respeita as armas liberadas pela sala. Ele some sozinho quando o jogo começa.
+🎖️ **Killstreaks guardados:** a sequência e os streaks que você juntou **passam pra rodada seguinte**. Trocar de rodada não é morrer. Só o que ainda está no ar (Gavião, míssil, Fim da chapa) vai embora na virada.
+💀 **Morreu? Renasce.** O renascimento continua normal (5 segundos + RENASCER), no spawn do seu lado. A rodada **não acaba por eliminação**, porque aqui ninguém sai do churrasco mais cedo.
+🗺️ **Mapa novo: Rodízio do Docão!** Feito pro modo: comprido, com **três rotas** (Rua do Espeto, Avenida da Linguiça e Beco da Farofa). **Sites e spawns feitos à mão** em vários mapas (o **HOTMILK** entrou no rodízio), com o Ataque nascendo longe dos sites. O Pátio Ferrugem ficou de fora por ser pequeno demais e o Estande é só do Treino.
+📣 **Instruções na tela:** aviso grande dizendo o que fazer ("Segure E para plantar o botijão", "Leve o botijão até o A ou o B" com a distância), barra de segundos e um **Como jogar** no menu.
+💬 **Funciona online e offline,** com chat e voz do time (na Bomba, o time é o seu lado), e com tudo que já existia: Invasão, loadout por sala, killer cam, tela cinza, arcos de dano, SPAS-12 e pau de choque. A explosão do botijão não ativa a câmera do assassino, e trocar de arma no meio da rodada nunca mata.
+🙏 Feito e testado pelo **Matheus**, com muitas rodadas de bacon.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.13.1 — Mira de Granada 🎯💣 (23/10/2026)
+🤝 **O FELIPE VOLTOU!** O **Felipe Gomes** (@felipe-cheers) estava cansado de jogar copo bomba no escuro, torcendo pra ele cair "mais ou menos ali". Mandou o conserto, e agora o Docão arremessa com a **ficha técnica na mão**:
+🎯 **A linha de mira mostra o caminho inteiro do copo, até a explosão:** quicadas, parede, rampa, tudo. Segurou o botão, viu onde vai explodir, soltou, e **explodiu exatamente ali**. Chega de "foi mal, achei que ia passar".
+🥤 **O copo sai da mão, não da testa:** a granada agora parte de onde o copo está na tela, com a mesma conta da preview. Funciona agachado, colado na parede, com zoom e mirando pro céu. A Pokébola também ganhou mira de professor.
+🧮 **Física igualzinha pra todo mundo:** o arremesso agora anda em passinhos fixos, no seu PC e no servidor. Ping alto, FPS baixo ou computador de cebola não mudam mais onde a granada cai.
+✋ O copo ganhou uma **animação de soltura** (o braço joga de verdade, e não só some).
+⚡ Levou choque segurando o copo? Nada de arremesso: a granada fica com você.
+🙏 Valeu, Felipe!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.13 — Calibre 12 Meteoro ⚡🐗 (23/10/2026)
 🤝 **MAIS UMA DO CHIQUEIRO!** O **João** (@rramosjoao) chegou com o **PR #16** e entregou três presentes de uma vez. O Docão agradece, o resto do servidor chora:
 🔫 **Calibre 12 virou SPAS-12 (e agora é de verdade):** 9 chumbos por tiro, cone fechado, **acerta andando**, bombeia mais rápido e recarrega cartucho em velocidade de quem tá atrasado pro churrasco. Modelo novinho (preto, protetor de calor furado, coronha dobrada) em 1ª e 3ª pessoa, coice de ombro, tremida de tela e um **estrondo bem mais grave**. Quem leva tiro de perto **sai voando pra trás** (Barrigão e chefe da Invasão são pesados demais pra isso, sorry). A Semi continua sendo a das 2 rajadinhas.
@@ -191,22 +217,6 @@ Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 
 ---
 
-## 🧪 Em teste — Modo Bomba: Planta o Botijão 💣🔥 (não lançado, só no branch `feature/modo-bomba`)
-Ainda **não está no site**. Modo estilo Valorant, com o Docão:
-- **Ataque × Defesa** (Vermelho × Azul). O Ataque leva o **Botijão do Churrasco** até o site **A** ou **B** e segura **E** por 4 s pra plantar. A Defesa segura **E** por 7 s pra desarmar (passou da metade, fica salvo).
-- Plantou: o botijão **bipa cada vez mais rápido** e **explode em 45 s**, levando todo mundo num raio de 16 m.
-- Rodada: 10 s de preparação (parado no spawn), 100 s pra plantar. Explodiu = ponto do Ataque; desarmou ou o tempo acabou = ponto da Defesa.
-- **Primeiro a 13 rodadas vence.** Depois da 12ª: **"Troca de lado!"**
-- O **renascimento continua normal** (5 s + RENASCER), no spawn do seu lado. A rodada não acaba por eliminação.
-- **Mapa novo: Rodízio do Docão**, feito pro modo (o padrão dele). É comprido: o Ataque leva uns 21 s pra chegar num site e a Defesa uns 8 s, com três rotas (Rua do Espeto, Avenida da Linguiça e Beco da Farofa).
-- **Sites e spawns feitos à mão** em 9 mapas, com o Ataque nascendo longe dos sites. O **HOTMILK** entrou no rodízio (A no estacionamento sudoeste, B no pátio sudeste, uns 18 s pro Ataque). O **Pátio Ferrugem** ficou fora por ser pequeno e o **Estande** é só do Treino.
-- **Killstreaks e rodadas:** a sequência e os streaks guardados passam pra rodada seguinte (trocar de rodada não é morrer). O que está no ar acaba na virada: o Gavião vai embora, e o míssil e o Fim da chapa ainda na contagem voltam pro F. Na preparação o F não funciona.
-- **Instruções claras na tela:** aviso grande com a tecla (*"Segure E para plantar o botijão"*, *"Segure E para desarmar"*, *"Leve o botijão até o A ou o B"* com a distância), barra com os segundos, faixa de começo de rodada explicando o objetivo do seu lado e um bloco **Como jogar** no menu.
-- **Troca de arma toda rodada:** na preparação aparece um painel compacto embaixo, com as miniaturas das armas (primária, secundária e corpo a corpo) e uma barra até a rodada começar. **1–9** ou a rodinha trocam a primária na hora, **N** a secundária, **M** faca/sabre, **G** solta o mouse se quiser clicar e **B** fecha/reabre. Dá pra olhar em volta com ele aberto, e ele some sozinho no VALENDO. Online, o servidor só aceita a troca na preparação.
-- Funciona offline e online, com chat, voz e killstreaks online da v1.8. **Chat no canto da v1.8.2 junto:** T fala com todos, Y/U com o seu time (na Bomba o time é o seu lado), e na Bomba o painel do chat fica mais estreito e o placar/tempo da rodada se ajeita no espaço livre, sem ficar um por cima do outro. As teclas da Bomba (E, e B/N/M/G/1–9 só na preparação) não brigam com T/Y/U/J/K/F/V/Q/R.
-- **Atualizado com a v1.13 (23/10):** o branch agora tem tudo da Invasão, loadout por sala (os painéis de troca respeitam as armas liberadas da sala), killer cam, tela cinza, arcos de dano, B/dança, SPAS-12 e pau de choque. Na Bomba a explosão do botijão não ativa a câmera do assassino, e trocar de arma no meio da rodada nunca mata (só vale na preparação ou na próxima rodada).
-
----
 ## v1.9.1 — Docão Bravo 😠 (22/10/2026)
 - Quando atira, o Docão agora **fecha a cara**: sobrancelhas em V, olhos apertados e dentes cerrados no lugar do sorrisão.
 - Vale pra todas as armas, inclusive a rajada da FAMAS, a metralhadora giratória, a bazuca, o Lança-Milho, o Disco Voador e o Estilingue, e também pros golpes de faca e de sabre (simples ou duplo).
