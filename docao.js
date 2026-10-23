@@ -350,6 +350,8 @@ export function makeDocao(skinOrId, opts = {}) {
   const sp = headPoint(0, snoutY);
   const snout = mesh(roundedCyl(0.2, snoutDepth, 0.065), snoutM, head, 0.012);
   snout.rotation.x = Math.PI / 2 - 0.12; snout.scale.set(1.22, 1, 0.82); snout.position.set(0, snoutY, sp.z + snoutDepth / 2 - 0.08);
+  const jaw = mesh(new THREE.BoxGeometry(0.34, 0.13, 0.18), snoutM, head, 0.008); // queixo quadrado, só aparece no Mewing
+  jaw.position.set(0, snoutY - 0.22, sp.z + 0.06); jaw.visible = false;
   for (const s of [-1, 1]) {
     const n = new THREE.Mesh(new THREE.CircleGeometry(0.042, 18), dark); n.scale.set(0.85, 1.35, 1);
     n.position.set(s * 0.085, snoutY + 0.01, sp.z + snoutDepth - 0.08 + 0.004); n.rotation.set(-0.12, 0, -s * 0.2); head.add(n);
@@ -389,9 +391,13 @@ export function makeDocao(skinOrId, opts = {}) {
     }
     mesh(new THREE.CapsuleGeometry(0.125, 0.28, 4, 12), skinM, piv, 0.012).position.y = -0.33;
     const fist = mesh(new THREE.SphereGeometry(0.155, 18, 14), skinM, piv, 0.012); fist.position.y = -0.57; fist.scale.set(1, 0.95, 1.05);
-    const thumb = mesh(new THREE.CapsuleGeometry(0.04, 0.06, 4, 8), skinM, piv, 0.008); thumb.position.set(-s * 0.08, -0.5, 0.08); thumb.rotation.z = s * 0.6;
+    const thumb = mesh(new THREE.CapsuleGeometry(0.04, 0.06, 4, 8), skinM, piv, 0.008); thumb.position.set(-s * 0.08, -0.5, 0.08); thumb.rotation.z = s * 0.6; if (s === -1) thumb.userData.isThumb = true;
     arms.push(piv); fists.push({ fist, thumb });
   }
+  // dedo indicador da mão direita: só aparece no Mewing, arrastando a mandíbula
+  const point = new THREE.Group(); point.visible = false; arms[0].add(point);
+  mesh(new THREE.CapsuleGeometry(0.03, 0.13, 4, 8), skinM, point, 0.005).position.y = 0.095;
+  const nail = mesh(new THREE.SphereGeometry(0.026, 8, 6), toon('#fff3dc'), point, 0); nail.scale.set(0.8, 0.45, 1); nail.position.y = 0.175;
   // armas em 3ª pessoa
   const guns = [];
   if (withGun) {
@@ -536,7 +542,7 @@ export function makeDocao(skinOrId, opts = {}) {
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
   for (const b of brows) b.userData.base = { p: b.position.clone(), q: b.quaternion.clone() };
   const face = { eyes, brows, faceM, tex: [tone, beard, facePaint], neutralMap: faceM.map, angryMap: null, t: 0, target: 0, hold: 0 };
-  return { group: g, legs, arms, guns, head, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
+  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
 }
 
 // Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.

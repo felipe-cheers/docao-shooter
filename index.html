@@ -156,7 +156,7 @@
     <div class="controls">
       <b>Controles</b>
       <div>WASD mover · Mouse mirar · Espaço pular · Segurar Shift: agachar · Botão direito: mirar/zoom (com a faca: estocada)</div>
-      <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida · I inspecionar</div>
+      <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida · I inspecionar · B dança (sem atirar até acabar)</div>
       <div>Segure Q: Copo Bomba · solte para arremessar</div>
       <div>4: fumaça · 5: atordoamento · F: usa o killstreak que estiver pronto (o de 5 abre o laptop do míssil)</div>
       <label class="checkline"><input type="checkbox" data-chat-toggle checked> Mostrar chat</label>
@@ -176,6 +176,12 @@
   </nav>
   <aside id="loadoutDock" class="loadout-dock" aria-label="Arma padrão">
     <p class="dock-title">Arma padrão</p>
+  </aside>
+  <aside id="danceDock" class="dance-dock" aria-label="Dança da vitória">
+    <p class="dock-title">Dança da vitória</p>
+    <div class="dance-stage" id="danceStage">
+      <div class="dance-picks" id="dancePicks"></div>
+    </div>
   </aside>
   <nav class="showcase-actions" aria-label="Personagem e equipamento">
     <button type="button" class="arsenal-crate" aria-label="Arsenal" data-menu-view="arsenal" aria-controls="menu-arsenal" aria-expanded="false"><span class="plaque-surface" aria-hidden="true"></span><svg class="crate-mark" viewBox="0 0 56 57" aria-hidden="true">
@@ -316,6 +322,10 @@
     <section id="pauseLoadout" aria-label="Trocar equipamento">
       <p class="pause-note">Trocar uma arma te derruba. Você nasce de novo com o equipamento novo.</p>
       <div id="pauseGuns"></div>
+    </section>
+    <section id="pauseDance" aria-label="Dança da vitória">
+      <p class="pause-note">Dança da vitória</p>
+      <div class="dance-picks" id="pauseDancePicks"></div>
     </section>
     <button id="resumeBtn">CONTINUAR</button>
     <button id="quitBtn" class="secondary">SAIR PRO MENU</button>

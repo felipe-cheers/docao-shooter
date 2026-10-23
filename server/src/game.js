@@ -13,6 +13,7 @@ import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { normWeapons, normPowers, clampLoadout, botPool, weaponOn, powerOn } from '../../shared/loadout.js';
+import { DANCE_TIME, danceId } from '../../shared/emote.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES, rayHitboxes } from '../../shared/physics.js';
 import { stanceScale, stanceHeight, stepCrouch } from '../../shared/stance.js';
@@ -364,8 +365,17 @@ export class Game {
       if (e.slots.includes(m.w) && m.w !== e.weapon) { e.weapon = m.w; e.reload = null; if (m.w === EGG_W) e.eggAt = this.T; if (e.mg && e.mg.on) this.events.push(['mgs', e.id, 0]); e.mg = e.mg && { ...e.mg, on: false, v: 0, at: -1e9 }; } // trocou de arma: canos param (cliente zera mgSpin igual)
       this.pushHist(e);
     }
+    this.noteEmote(e, m.dn);
     if (Array.isArray(m.ev)) for (const ev of m.ev.slice(0, 24)) this.onEvent(e, ev);
   }
+  noteEmote(e, raw) {
+    if (typeof raw !== 'string') return;
+    const id = danceId(raw);
+    if (!id || !e.alive) { e.emote = ''; return; }
+    if (e.emote === id) return; // o cliente manda o mesmo id até acabar; '' libera a próxima
+    e.emote = id; e.emoteAt = this.T; this.events.push(['dn', e.id, id]);
+  }
+  emoting(e) { return !!(e.emote && this.T - (e.emoteAt || 0) < DANCE_TIME); }
   onEvent(e, ev) {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
@@ -385,6 +395,7 @@ export class Game {
       return;
     }
     if (!e.alive) return;
+    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'rl')) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
     if (k === 'mgs') return this.mgSpin(e, ev[1], ev[2]);
