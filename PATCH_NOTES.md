@@ -26,27 +26,21 @@ Feito pelo **[@paulo-cheers](https://github.com/paulo-cheers)** (PR #14).
 🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
 
 ## v1.10.1 — Metralhadora do Chiqueiro 🔫 (22/10/2026)
-Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #13).
-
-**Arma nova**
-- **Metralhadora do Chiqueiro:** fita gigante de **100 balas** (300 de reserva), automática e barulhenta. Faz um pouquinho menos de dano por segundo que o fuzil, recarrega mais devagar e anda 5% mais devagar. Está no menu de **Rajada**, tem inspeção só dela e os bots também sacam a bichinha.
-
-**Visual da fazenda na partida**
-- **Killfeed** sem bloco, só o texto flutuando.
-- **Munição e armas** com ícones: nome da arma, modo de tiro (AUTO, RAJADA...) e os slots 1, 2 e 3 desenhados.
-- **Tela de morte** nova, no estilo da fazenda.
-- **Barra de streak** ao lado do prêmio que está sendo ganho (3, 5, 7 e 10).
-- **Olho da granja** com o mapa ocupando o painel todo, mostrando bem mais terreno.
-
-**Míssil mais esperto**
-- Segurando o tiro, o **míssil da granja acelera** (1,85× mais rápido). Quem aperta e segura chega primeiro.
-
-**Trocar de arma na pausa**
-- Pausou e escolheu outra arma? O Docão **cai e nasce de novo na hora** com o equipamento novo, sem esperar os 5 segundos. No Treino a troca é instantânea e ele nem cai.
-- Pra ninguém virar mágico do respawn, online dá pra trocar **uma vez a cada 10 segundos**.
-- **Na Invasão não tem essa:** lá a troca de arma continua no painel **B**, entre as waves, e não gasta vida. 🎃
-
-🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+🐷💥 **PATCH v1.10.1: A METRALHADORA DO CHIQUEIRO!** 💥🐷
+:alphabet-white-b::alphabet-white-d::alphabet-white-c:
+O Docão acordou hoje com uma ideia: "e se eu atirasse **MUITO** mais rápido?" E o João (@rramosjoao) respondeu: "segura essa." 🔫🌽
+🔫 **Metralhadora do Chiqueiro**: arma automática nova na categoria Rajada. Fita de 100 balas, 15 de dano por tiro e uma cadência que faz o porquinho suar. Cuidado: ela deixa você um pouquinho mais lento. 🐢
+🌾 **HUD da fazenda**: tudo mais bonito e mais fácil de ler:
+💀 Killfeed novo
+🔫 Munição com ícones
+☠️ Tela de morte nova, pra você sofrer com estilo
+📊 Barra de streak redesenhada
+🦅 Olho da granja com mapa maior
+🚀 **Míssil turbinado**: segura o gatilho e o míssil acelera! Dá pra ir mais longe que o vizinho, e mais rápido. 💨
+🔄 **Trocou de arma na pausa? Renasce na hora!** Escolheu uma arma nova, você volta pro jogo equipado. Mas segura a ansiedade: só dá pra fazer isso **a cada 10 segundos**, e na Invasão os zumbis não deixam. 🧟 Lá a troca continua só pelo painel **B** entre as waves.
+🤫 E sim, o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+👏 Obrigado, João, pela metralhadora e pela caprichada no HUD!
+👉 **Joga agora:** [docao.mvalentim.dev](https://docao.mvalentim.dev/)
 
 ## v1.10 — Modo Invasão 🎃 (22/10/2026)
 **A noite caiu no chiqueiro e os Docões zumbis levantaram!** 🧟🐷 Modo novo, co-op, no menu em **Modo de jogo → Invasão 🎃**.
