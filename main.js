@@ -13,6 +13,7 @@ import { renderWeaponThumb } from './weapon-thumbs.js';
 import { camoLevel, camoInfo, nextCamo, applyWeaponCamo, resetWeaponCamo } from './weapon-camo.js';
 import { INSPECT_DUR, INSPECT_HOLD, INSPECT_FADE, INSPECT_PROFILES, inspectKind, inspectPose } from './inspect.js';
 import { createSaberSfx } from './saber-sfx.js';
+import { HIT_DIR_LIFE, addHit } from './damage-dir.js';
 import { resetFeedback, feedbackPoints, feedbackHit, feedbackKill, feedbackAward, feedbackMedal, tickFeedback } from './feedback.js';
 import { SMOKE, makeTacticalMesh, makeSmokeCloud, inRadius, makeShockStake, makeShockArc } from './tactical-nades.js';
 import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from './shared/shock.js';
@@ -22,7 +23,7 @@ import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } 
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
 import { MAPS, PLAY_MAPS, INV_MAPS, getMap } from './maps.js';
-import { INV, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
+import { INV, INV_AMMO, DROP_KEYS, invRefillAmmo, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
 import { createInvMusic } from './invasion-music.js';
 import { makeZombie, animateZombie, dieZombie, applyHalloweenPalette, buildHalloween, makeFogWall, makeDropMesh, tickDrop, makeSpitMesh, makePowerPumpkin, makeRing, tickRing, makeLanternCone, setGhostLook } from './invasion-gfx.js';
 import { TRAIN, isTraining, dummyX } from './shared/training.js';
@@ -322,6 +323,7 @@ function placeDummy(b) {
 // ---------------- Pickups ----------------
 // caixa de munição: enche a reserva da primária e da pistola; a bazuca é escassa (+1 foguete por caixa)
 function refillAmmo(e) {
+  if (invMode()) return invRefillAmmo(e, WEAPONS); // Invasão: mais munição por caixa (mesma regra do servidor)
   let got = false;
   for (const i of e.slots) {
     const w = WEAPONS[i]; if (e.reserve[i] >= w.reserve) continue;
@@ -354,6 +356,11 @@ function makePickup(type, x, z, yHint = 0) {
   } else {
     const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.55), toon(0x6b7a3a)); outline(b, 0.025); g.add(b);
     const st = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.12, 0.57), toon(0xf2c94c)); g.add(st);
+    // Invasão: facho e anel amarelos pra achar a caixa de longe (só aparecem nesse modo)
+    const fxMat = () => new THREE.MeshBasicMaterial({ color: 0xf2c94c, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 8, 6, 1, true), fxMat()); beam.position.y = 4; g.add(beam);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.68, 28), fxMat()); ring.material.side = THREE.DoubleSide; ring.rotation.x = -Math.PI / 2; ring.position.y = -0.62; g.add(ring);
+    beam.visible = ring.visible = false; g.userData.fx = [beam, ring];
   }
   const y = groundAt(x, z, yHint + 0.3); g.position.set(x, y + 0.7, z); scene.add(g);
   pickups.push({ type, mesh: g, pos: new V3(x, y, z), active: true, respawnAt: 0, baseY: y + 0.7 });
@@ -363,6 +370,7 @@ function updatePickups(dt) {
   for (const p of pickups) {
     if (!p.active) { if (gameTime >= p.respawnAt) { p.active = true; p.mesh.visible = true; } continue; }
     p.mesh.rotation.y += dt * 1.6; p.mesh.position.y = p.baseY + Math.sin(gameTime * 3 + p.pos.x) * 0.12;
+    if (p.mesh.userData.fx) { const on = invMode(); for (const f of p.mesh.userData.fx) if (f.visible !== on) f.visible = on; }
     if (online) continue; // online: o servidor decide quem pegou
     for (const e of entities) {
       if (!e.alive || e.zt || !clientPower(p.type)) continue;
@@ -371,8 +379,8 @@ function updatePickups(dt) {
       if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
       else if (p.type === 'grenade') { const sk = clientPower('stun') && (e.stunNades || 0) < SHOCK.max; if (e.nades >= NADE.max && !sk) continue; if (e.nades < NADE.max) e.nades++; if (sk) e.stunNades = (e.stunNades || 0) + 1; } // Copo Bomba também dá +1 pau de choque
       else if (!refillAmmo(e)) continue;
-      p.active = false; p.mesh.visible = false; p.respawnAt = gameTime + (p.type === 'grenade' ? NADE.pickupRespawn : 15);
-      if (e.isPlayer) { sfx.pickup(); flashMsg(p.type === 'health' ? '+50 de vida' : p.type === 'grenade' ? `+1 Copo Bomba (${e.nades}/${NADE.max})${clientPower('stun') ? ` · Pau de choque ${e.stunNades || 0}/${SHOCK.max}` : ''}` : e.primary === 3 ? `Munição! +1 foguete (${e.reserve[3]}/${WEAPONS[3].reserve})` : 'Munição cheia!'); }
+      p.active = false; p.mesh.visible = false; p.respawnAt = gameTime + (p.type === 'grenade' ? NADE.pickupRespawn : invMode() && p.type === 'ammo' ? INV_AMMO.respawn : 15);
+      if (e.isPlayer) { sfx.pickup(); flashMsg(p.type === 'health' ? '+50 de vida' : p.type === 'grenade' ? `+1 Copo Bomba (${e.nades}/${NADE.max})${clientPower('stun') ? ` · Pau de choque ${e.stunNades || 0}/${SHOCK.max}` : ''}` : e.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${e.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!'); }
       break;
     }
   }
@@ -476,9 +484,25 @@ function deathFx(e) { // dispara uma vez por morte (offline: kill(); online: eve
   }
 }
 const camTmp = new V3(), camTgt = new V3();
-function deathCam(p, dt) { // 3ª pessoa: parada, olhando para quem matou (encurta se tiver parede)
+const KILLERCAM_AFTER = 0.9; // s vendo o próprio bacon antes de passar a seguir quem matou
+function killerCamTarget(p) { // quem matou, se ainda está vivo e na partida (jogador, bot ou zumbi); senão null → fica onde morreu
+  const k = p.lastAttacker; if (!k || k === p || !k.alive || k.fog || !k.pos || !entities.includes(k)) return null; return k;
+}
+function deathCam(p, dt) { // 3ª pessoa: primeiro olhando para quem matou; depois segue o assassino (killer cam); se ele sumir, fica na posição da morte
   const t = gameTime - p.deathAt;
   if (ghost && ghost.model.group.visible) popModel(ghost.model.group, t, p.yaw + Math.PI);
+  const kc = t > KILLERCAM_AFTER ? killerCamTarget(p) : null;
+  if (kc) {
+    const kp = kc.pos, sz = kc.size || 1; camTgt.set(kp.x, kp.y + 1.25 * sz, kp.z);
+    let hx = p.pos.x - kp.x, hz = p.pos.z - kp.z; const hl = Math.hypot(hx, hz);
+    if (hl < 0.2) { hx = -Math.sin(kc.yaw || 0); hz = -Math.cos(kc.yaw || 0); } else { hx /= hl; hz /= hl; } // câmera do lado de onde você caiu, olhando a cara do assassino
+    let d = 4 * sz; for (; d > 1.2; d -= 0.4) { camTmp.set(camTgt.x + hx * d, camTgt.y + 0.5 + d * 0.2, camTgt.z + hz * d); if (losClear(camTgt, camTmp)) break; }
+    camTmp.set(camTgt.x + hx * d, camTgt.y + 0.5 + d * 0.2, camTgt.z + hz * d);
+    if (!deathCamState.dist) camera.position.copy(camTmp); else camera.position.lerp(camTmp, Math.min(1, dt * 4));
+    deathCamState.dist = d; deathCamState.target = camTgt.toArray(); deathCamState.killer = kc;
+    camera.lookAt(camTgt); return;
+  }
+  deathCamState.killer = null;
   const b = p.bacon && p.bacon.on ? p.bacon : null;
   camTgt.set(b ? b.pos.x : p.pos.x, (b ? b.pos.y : p.pos.y) + 0.25, b ? b.pos.z : p.pos.z);
   const a = deathCamState.ang;
@@ -804,7 +828,7 @@ function blast(c, owner, o, direct = null) {
   for (const h of explosionHits(c, o, invMode() ? entities.filter((x) => x.zt || x === owner) : entities, los, owner, teamMode(), direct)) { // Invasão: explosão só fere zumbi (o dono ainda leva o empurrão do rocket jump) // mesma regra do servidor (shared/combat.js)
     const e = h.e; e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; // empurrão (rocket jump)
     if (e.isPlayer) lastKnock = gameTime;
-    damage(e, h.dmg, owner, o.wIdx, false);
+    damage(e, h.dmg, owner, o.wIdx, false, false, 0, c);
   }
 }
 // partículas: confete vermelho/ciano + espuma + gotas âmbar + clarão + onda
@@ -1090,11 +1114,11 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
   return res;
 }
 
-function damage(t, amount, attacker, wIdx, head, back = false, fx = 0) {
+function damage(t, amount, attacker, wIdx, head, back = false, fx = 0, origin = attacker && attacker !== t && !attacker.fog ? attacker.pos : null) { // origin: de onde veio o golpe (explosão: o centro dela)
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker)) return false; // sem fogo amigo
   if (invMode() && !t.zt && attacker && !attacker.zt && !attacker.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
-  if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
+  if (t.isPlayer) { hurtFlash(); noteHit(origin); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
   if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head, wall: !!(fx & 1) }); sfx.hit(); if (training()) dmgPopup(t, amount, head); }
   if (t.hp <= 0) { kill(t, attacker, wIdx, head, back, false, null, fx); return true; }
@@ -1180,6 +1204,30 @@ function notePlayerKill(victim, head, fx = 0) {
   onRewardKill();
 }
 function hurtFlash() { hurtLevel = 1; }
+// Indicador de direção do dano (estilo Fortnite): arco vermelho na borda da tela apontando de onde veio o golpe, relativo à câmera.
+// Sem origem conhecida (névoa, queda, dano próprio) vale só o flash vermelho nas bordas (hurtFlash). Não aparece morto.
+// origem = posição de onde veio o dano (explosão/helicóptero quando o servidor manda; senão a do atacante); golpes de direção parecida (≤30°) renovam o mesmo arco (ideia do @felipe-cheers, PR #15)
+const hitMarks = []; let hitDirsEl = null;
+function noteHit(origin) {
+  if (!player || !player.alive || player.hp <= 0 || !origin) return;
+  const r = addHit(hitMarks, origin, player.pos, gameTime); if (r && r.dropped && r.dropped.el) r.dropped.el.remove();
+}
+function clearHitMarks() { for (const m of hitMarks) if (m.el) m.el.remove(); hitMarks.length = 0; }
+const hitDirDir = new V3();
+function updateHitDirs() {
+  if (!hitMarks.length) return;
+  if (!player || !player.alive || state !== 'playing') { clearHitMarks(); return; }
+  if (!hitDirsEl) { hitDirsEl = document.createElement('div'); hitDirsEl.id = 'hitDirs'; $('hud').appendChild(hitDirsEl); }
+  camera.getWorldDirection(hitDirDir); const fx = hitDirDir.x, fz = hitDirDir.z, fl = Math.hypot(fx, fz) || 1, rx = -fz / fl, rz = fx / fl; // direção da câmera e "direita" no chão
+  for (let i = hitMarks.length - 1; i >= 0; i--) {
+    const m = hitMarks[i], age = gameTime - m.t;
+    if (age >= HIT_DIR_LIFE) { if (m.el) m.el.remove(); hitMarks.splice(i, 1); continue; }
+    if (!m.el) { m.el = document.createElement('div'); m.el.className = 'hitmark'; m.el.innerHTML = '<i></i>'; hitDirsEl.appendChild(m.el); }
+    const dx = m.x - player.pos.x, dz = m.z - player.pos.z;
+    const ang = Math.atan2(dx * rx + dz * rz, (dx * fx + dz * fz) / fl); // 0 = na frente (topo da tela), + = pra direita
+    m.el.style.transform = `rotate(${ang}rad)`; m.el.style.opacity = age < 0.35 ? 1 : Math.max(0, 1 - (age - 0.35) / (HIT_DIR_LIFE - 0.35));
+  }
+}
 function flashMsg(t) { $('centermsg').textContent = t; msgTimer = 1.5; }
 
 // Abates sem morrer. O ciclo mostra 3, 5, 7 e 10 (Chopper) e volta depois do 15. O 15 é o nuke secreto, fora da barra.
@@ -1955,7 +2003,7 @@ function updateHud(dt) {
   const smokeN = $('smokeN'), stunN = $('stunN');
   if (smokeN) { smokeN.textContent = p.smokeNades || 0; smokeN.parentElement.classList.toggle('out', !(p.smokeNades > 0)); }
   if (stunN) { stunN.textContent = p.stunNades || 0; stunN.parentElement.classList.toggle('out', !(p.stunNades > 0)); }
-  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
+  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; document.body.classList.toggle('deadgray', !p.alive); const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'Treino ∞';
   $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
@@ -1964,6 +2012,7 @@ function updateHud(dt) {
   updateLeaderboard(dt); tickFeedback(dt);
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   { const left = p.alive ? eggSplatUntil - gameTime : 0, el = $('eggsplat'); if (el) { el.style.opacity = left > 0 ? Math.min(1, left / 0.5).toFixed(2) : '0'; if (left > 0) drawEggSplat(); } } // sujeira de ovo na tela: 2 s escorrendo, some no último meio segundo
+  updateHitDirs();
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
   if (!p.alive) cm.textContent = `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''} · ${respawnReady(p) ? (rsSent ? 'renascendo...' : 'clique em RENASCER (ou Espaço)') : Number.isFinite(p.respawnAt) ? `renasce em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'aguarde...'}`;
@@ -3826,7 +3875,7 @@ function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown 
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
   if (online) leaveOnline();
-  endVictory(); stopEmote();
+  endVictory(); stopEmote(); document.body.classList.remove('deadgray');
   zone = null; mode = 'dm'; $('domhud').classList.add('hidden'); $('zoneMark').classList.add('hidden'); $('teamPick').classList.add('hidden');
   state = 'menu'; rulesLive = false; clearBots(); inv = null; invNet = null; if (selectedMap !== 'random') loadMap(selectedMap); invApplyLook(false); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
   ['pause', 'gameover', 'hud'].forEach((id) => $(id).classList.add('hidden')); $('menu').classList.remove('hidden');
@@ -3864,6 +3913,7 @@ document.addEventListener('mousemove', (e) => {
 canvas.addEventListener('mousedown', (e) => {
   if (state !== 'playing') return;
   if (!$('teamPick').classList.contains('hidden')) return; // escolhendo time
+  if ((player && !player.alive) || invPick) return; // morto ou com o painel de armas (B) aberto: o clique no jogo NÃO recaptura o mouse, o cursor fica livre pra clicar nas armas (volta ao renascer/fechar o B)
   if (chatTyping()) closeChat(false);
   if (e.button === 2) e.preventDefault(); // senão o navegador solta o mouse ao abrir o menu
   if (e.button === 0 && (document.pointerLockElement || !deathUnlock)) { mouseDown = true; firedThisPress = false; }
@@ -4356,8 +4406,8 @@ function requestRespawn() {
   return true;
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
-function onPlayerDeath(opts) { if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
-function onPlayerRespawn() { rsSent = false; deathCamState.on = false; if (ghost) ghost.model.group.visible = false;
+function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
+function onPlayerRespawn() { clearHitMarks(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 
@@ -4575,7 +4625,7 @@ function startOnlineMatch(m) {
   player.primary = player.nextPrimary = selectedPrimary; player.nextSecondary = selectedSecondary; player.nextMelee = selectedMelee; player.slots = [selectedPrimary, selectedSecondary, selectedMelee]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
   entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin); player.caps = me.caps || 0; applyTeam(player, me.team ?? -1);
   for (const info of m.ents) remoteEnt(info);
-  invApplyLook(invMode()); if (invMode()) for (const [id, ki, pos] of m.drops || []) invAddDrop(id, POWER_KEYS[ki], pos);
+  invApplyLook(invMode()); if (invMode()) for (const [id, ki, pos] of m.drops || []) invAddDrop(id, DROP_KEYS[ki], pos);
   refreshModeHud(); $('teamPick').classList.add('hidden');
   if (teamMode() && me.pend) showTeamPick(m.ents);
   pickups.forEach((p, i) => { p.active = !!(m.pk ? m.pk[i] : 1); p.mesh.visible = p.active; });
@@ -4643,7 +4693,7 @@ function netEvent(ev) {
   } else if (k === 'h') {
     const [, tid, aid, hp, head] = ev; const t = entOf(tid), a = entOf(aid); if (!t) return;
     const prevHp = t.hp; t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
-    if (t === player) { hurtFlash(); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
+    if (t === player) { hurtFlash(); if (hp > 0 && (ev[5] ?? prevHp - hp) > 0) noteHit(ev.length > 7 ? ev[7] : a && a !== player && !a.fog ? a.pos : null); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
     if (aid === o.myId && t !== player) { if (hp > 0) feedbackHit({ head: !!head, wall: !!((ev[6] || 0) & 1) }); sfx.hit(); if (training()) dmgPopup(t, ev[5] ?? Math.max(0, prevHp - hp), !!head); }
   } else if (k === 'ml') { // golpe de faca de alguém: animação + som (o dano vem nos eventos 'h'/'k')
     const [, id, kind, hit] = ev; const e = entOf(id); if (!e) return; const kn = MELEE_KINDS[kind] || 'slash';
@@ -4745,7 +4795,7 @@ function personalEvent(ev) {
   else if (ev[0] === 'ndn') p.nades = ev[1] | 0; // servidor recusou o copo (choque): devolve a contagem
   else if (ev[0] === 'got') {
     const [, type, hp, nades] = ev; sfx.pickup(); p.hp = hp; p.nades = nades; if (type === 'ammo') refillAmmo(p); if (ev[4] != null) p.stunNades = ev[4];
-    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})${clientPower('stun') ? ` · Pau de choque ${p.stunNades || 0}/${SHOCK.max}` : ''}` : p.primary === 3 ? `Munição! +1 foguete (${p.reserve[3]}/${WEAPONS[3].reserve})` : 'Munição cheia!');
+    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})${clientPower('stun') ? ` · Pau de choque ${p.stunNades || 0}/${SHOCK.max}` : ''}` : p.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${p.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!');
   }
 }
 function onlineEnd(m) {
@@ -4864,6 +4914,7 @@ function startInvasionOffline() {
     heal(p, hp) { p.hp = Math.min(100, p.hp + hp); },
     revive(p, at) { p.reviveAt = at; p.respawnAt = gameTime; if (p.isPlayer && !p.alive) { respawn(p); if (state === 'playing') lockPointer(); } },
     invChanged(p) { if (p.isPlayer) invSetInv(p.inv.map((k) => POWER_KEYS.indexOf(k))); },
+    giveAmmo(p) { return !!p.isPlayer && refillAmmo(p); }, // caixa que o zumbi solta
     emit(ev) { invEvent(ev); },
     aimOf(p) { const d = new V3(); camera.getWorldDirection(d); return { o: camera.position.clone(), d }; },
     over(won, wave) { setTimeout(() => endGame(), 1800); },
@@ -4885,9 +4936,10 @@ function invEvent(ev) {
   else if (k === 'zs') { const [, id, big, p, v] = ev; const m = makeSpitMesh(!!big); m.position.set(...p); scene.add(m); invGfx.projs.set(id, { m, pos: a3v(p), vel: a3v(v), born: gameTime, spit: true }); if (player) tone('sawtooth', big ? 160 : 320, big ? 90 : 140, 0.18, 0.12 * distVol(a3v(p))); }
   else if (k === 'zx') { const [, id, c, big] = ev; invKillProj(id); const at = a3v(c); invRing(at, big ? '#ff8a1a' : '#7dff4a', 0.2, big ? 3.6 : 1.8, 0.4); if (big) blastFx(at, 3.6); else { puff(at, 0x7dff4a); noise(0.2, 900, 0.3 * distVol(at), 'bandpass'); } }
   else if (k === 'zb') { const at = a3v(ev[2]); blastFx(at, ZOMBIES.tank.boom.radius); invRing(at, '#ff7a1a', 0.5, ZOMBIES.tank.boom.radius, 0.5); }
-  else if (k === 'dp') { const [, id, ki, p] = ev; invAddDrop(id, POWER_KEYS[ki], p); }
+  else if (k === 'dp') { const [, id, ki, p] = ev; invAddDrop(id, DROP_KEYS[ki], p); }
   else if (k === 'dg') { const [, id, pid, ki] = ev; const d = invGfx.drops.get(id); if (d) { scene.remove(d.m); invGfx.drops.delete(id); }
-    if (pid && isMe(pid)) { sfx.pickup(); flashMsg(`${POWERS[POWER_KEYS[ki]].icon} ${POWERS[POWER_KEYS[ki]].name}! · ${KEYS.useLabel} usa`); }
+    if (DROP_KEYS[ki] === 'ammo') { if (pid && isMe(pid)) { if (online && player) refillAmmo(player); sfx.pickup(); flashMsg('📦 Munição!'); } } // offline o core já encheu (giveAmmo); online o servidor enche e a gente espelha
+    else if (pid && isMe(pid)) { sfx.pickup(); flashMsg(`${POWERS[POWER_KEYS[ki]].icon} ${POWERS[POWER_KEYS[ki]].name}! · ${KEYS.useLabel} usa`); }
     else if (pid) { const e = online ? entOf(pid) : null; if (e && POWER_KEYS[ki] === 'revive') flashMsg(`✨ ${e.name} pegou uma Ressurreição`); } }
   else if (k === 'pw') invPowerFx(ev);
   else if (k === 'pb') { const [, id, c] = ev; invKillProj(id); const at = a3v(c); blastFx(at, POWERS.pumpkin.radius); invRing(at, '#ff8a1a', 0.5, POWERS.pumpkin.radius, 0.45); }

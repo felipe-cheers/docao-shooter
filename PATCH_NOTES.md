@@ -4,6 +4,46 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
+🤝 **PARCERIA DO CHIQUEIRO!** O **Felipe Gomes** (@felipe-cheers) mandou o **PR #15** com um indicador de dano parecido com o nosso... e, em vez de brigar, o Docão **roubou as melhores ideias dele** (com crédito, claro 🫡🐷):
+💥 **Explosão e helicóptero agora apontam pro lugar certo:** antes, se o foguete (ou o Gavião) te acertava, o arco apontava pro *dono* do tiro, que podia estar do outro lado do mapa. Agora o servidor manda **de onde a explosão realmente veio**, e o arco aponta pra ela. Tomou foguete na cara? O arco olha pra fumaça, não pro fofoqueiro.
+🧲 **Golpes parecidos viram um arco só:** levou rajada de dois caras do mesmo lado (até 30° de diferença)? Em vez de uma fila de arcos empilhados, o jogo **junta tudo num arco só** e renova o tempo dele. Tela menos poluída, mais tempo pra olhar pro encrenqueiro. (Máximo de 4 arcos ao mesmo tempo.)
+🙏 Valeu, Felipe! O resto continua igual: flash leve quando o dano não tem dono, e morreu/renasceu/pausou os arcos somem.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.12 — Ai, de Onde Veio Isso? 🎯🩸 (23/10/2026)
+🚨 **NOVIDADE QUENTINHA!** O Docão apanhava calado e sem saber de quem: "ai! quem foi? foi você? foi o vento?" 😵🐷 Chega de levar bala misteriosa. Agora o jogo aponta o dedo pro culpado:
+🔴 **Indicador de dano estilo Fortnite:** quando você leva dano, aparece um **arco vermelho na borda da tela apontando de onde veio o golpe**. Vira a câmera e o arco gira junto, então é só olhar pra onde ele aponta e devolver o carinho. 💥
+🌀 **Vários inimigos, vários arcos:** levou tiro de três lados? Três arcos, um pra cada vizinho mal-educado. Cada um some sozinho em **1,5 segundo**.
+🧟 **Funciona em tudo:** jogador, bot e **zumbi na Invasão** (o Barrigão agora é pego em flagrante).
+🌫️ **Dano sem dono** (névoa, queda, você mesmo): só um flash vermelho leve nas bordas, porque aí o culpado é você.
+💀 Morreu? Os arcos somem. Não adianta apontar o dedo pro cadáver.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11.3 — Mouse Fujão 🖱️💀 (23/10/2026)
+🚑 **FIX RELÂMPAGO!** Tinha um bug cruel: você morria, ia clicar na arma nova... e o jogo **sequestrava o seu mouse** de volta, o cursor sumia e o painel fugia da sua mão. O Docão morto não tinha nem direito de escolher o armamento em paz. 😭
+🖱️ **Morreu? O cursor é seu.** Clicar na tela não prende mais o mouse enquanto você está morto: o cursor fica **livre e visível** pra você clicar na arma que quiser.
+📦 **Painel B da Invasão também:** com o painel aberto nas pausas, o clique no jogo não rouba o mouse. Apertou **B** de novo ou renasceu, o mouse volta pra mira.
+🎯 Renasceu? A mira volta na hora, como sempre.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11.2 — Cara de Morto 💀📹 (23/10/2026)
+🚑 **FIX RÁPIDO!** Até hoje, quando o Docão virava bacon, ele ficava ali olhando pro nada, sem nem saber quem foi o desgraçado. Agora ele tem **direito à vingança visual**:
+📹 **Câmera do assassino:** morreu? A câmera passa a **seguir quem te matou** (jogador, bot ou até zumbi na Invasão), pra você encarar o culpado com a cara que ele merece. Se o assassino sumir ou morrer, a câmera fica no lugar da sua morte, de luto. Renasceu, volta tudo ao normal.
+🩶 **Tela de morto:** enquanto você está morto, o mundo fica **cinza e sem graça**, tipo segunda-feira. Renasceu, as cores voltam.
+🗂️ **Painel de armas tímido:** a escolha de arma na morte e o painel **B** da Invasão agora ficam **pequenininhos, no cantinho e meio transparentes** (passa o mouse e eles acordam). Dá pra ver quem te matou e a dança da vitória sem um cardápio gigante na cara. 💃
+🚫 Na Invasão o B continua só abrindo o painel de armas. Dançar lá? Nem pensar, tem zumbi no meio!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11.1 — Hotfix da Munição 📦🧟 (23/10/2026)
+🚨 **HOTFIX URGENTE!** Os zumbis comeram TODA a munição do chiqueiro. 🧟🍽️ O Docão abriu a gaveta, só achou uma bala mofada e saiu correndo pro mercado. 🐷🛒 Voltou com o carrinho lotado:
+📦 **Caixas de munição pra todo lado na Invasão:** **Rodízio 6 → 28** e **Fazenda Mal-Assombrada 4 → 18**, espalhadas pelos spawns, pelo meio e pelas pontas.
+⏱️ **Caixa nova em 6 segundos** (antes eram 15). Nem dá tempo de sentir saudade.
+🔫 **Cada caixa dá mais:** a reserva vai até **1,5×** o normal, o pente já sai cheio e a bazuca ganha **+2 foguetes**.
+🧟 **Zumbi agora solta caixa de munição!** O Barrigão de Gás é o mais generoso (a barriga tá cheia de bala, vai entender), e o chefão larga duas.
+✨ **Facho e anel amarelos** em cada caixa, pra você achar de longe e parar de apanhar com a pistola vazia.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.11 — Salão de Festa 💃 (23/10/2026)
 Feito pelo **[@paulo-cheers](https://github.com/paulo-cheers)** (PR #14).
 
@@ -134,6 +174,10 @@ Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.10 · Modo Invasão:** co-op contra hordas de Docões zumbis em 20 waves, com chefão a cada 5, poderes, 2 vidas e o mapa Fazenda Mal-Assombrada
 - **v1.10.1 · Metralhadora do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #13): arma nova de 100 balas, HUD da fazenda, míssil que acelera segurando o tiro e troca de arma na pausa
 - **v1.11 · Salão de Festa** ([@paulo-cheers](https://github.com/paulo-cheers), PR #14): o dono da sala escolhe as armas e os power-ups, o menu lembra sua arma padrão, dança da vitória no B (moonwalk, mewing e sixseven; fora da Invasão) e o Docão do menu gira ao arrastar
+- **v1.11.1 · Hotfix da Munição:** Invasão com bem mais caixas de munição (Rodízio 6 → 28, Fazenda 4 → 18), caixa nova em 6 s, mais munição e +2 foguetes por caixa, zumbi solta caixa e facho amarelo pra achar
+- **v1.11.2 · Cara de Morto:** câmera segue quem te matou, tela cinza enquanto está morto e painel de armas discreto no canto
+- **v1.11.3 · Mouse Fujão:** morto (ou com o painel B aberto) o clique no jogo não prende mais o mouse, então dá pra clicar nas armas
+- **v1.12 · Ai, de Onde Veio Isso?:** arco vermelho na borda da tela mostra de onde veio o dano (jogador, bot e zumbi), gira com a câmera e some em 1,5 s
 
 ---
 

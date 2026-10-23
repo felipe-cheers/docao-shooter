@@ -1437,3 +1437,15 @@ body #streakBar .streak-pips i.on{background:#e7b15a;box-shadow:none}
 @media(max-width:520px){
   #pauseGuns .wgrid,#pauseGuns .wgrid.small{grid-template-columns:1fr}
 }
+
+/* v1.11.2: tela de morte discreta (canto, transparente) pra ver quem matou, e tela cinza enquanto está morto */
+body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transition:filter .5s}
+#game{transition:filter .35s}
+#iLoad{left:auto;right:10px;bottom:10px;transform:none;width:min(380px,34vw);opacity:.55;transition:opacity .2s}
+#iLoad:hover{opacity:1}
+#iLoad .bltile{height:34px}
+
+/* v1.12: indicador de direção do dano (arco vermelho na borda, gira com a câmera, some em 1,5 s) */
+#hitDirs{position:fixed;inset:0;pointer-events:none;z-index:6;overflow:hidden}
+#hitDirs .hitmark{position:absolute;left:50%;top:50%;width:0;height:0}
+#hitDirs .hitmark i{position:absolute;left:-80px;top:calc(-1 * min(40vh,36vw));width:160px;height:46px;border-top:9px solid rgba(255,38,38,.95);border-radius:50% 50% 0 0 / 100% 100% 0 0;filter:drop-shadow(0 0 7px rgba(255,0,0,.9));-webkit-mask:linear-gradient(#000 0 26%,transparent 100%);mask:linear-gradient(#000 0 26%,transparent 100%)}

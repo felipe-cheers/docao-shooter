@@ -6,7 +6,7 @@
 //  O cliente é dono só do próprio movimento (com checagem de velocidade/paredes) e manda eventos de tiro com origem+direção.
 // ============================================================
 import { MAPS, PLAY_MAPS, INV_MAPS, getMap } from '../../maps.js';
-import { INV, isInvasion, InvasionCore, POWER_KEYS, modelAim } from '../../shared/invasion.js';
+import { INV, INV_AMMO, DROP_KEYS, invRefillAmmo, isInvasion, InvasionCore, POWER_KEYS, modelAim } from '../../shared/invasion.js';
 import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
@@ -228,7 +228,7 @@ export class Game {
   get cfgLimit() { return this.training || this.invasion ? Infinity : this.cfg.time ? this.cfg.time * 60 : this.teamMode ? DOM.TIME_LIMIT_DOM : TIME_LIMIT; } // Treino: não acaba
   get timeLimit() { return this.curLimit || this.cfgLimit; } // mudar o tempo no meio da partida só vale na próxima
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
-  startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, POWER_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
+  startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, DROP_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
     this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.nukes = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
@@ -472,7 +472,7 @@ export class Game {
     }
     const L = best ? best.tt : wallD;
     this.events.push(['gs', h.id, [r2(o.x + d.x * L), r2(o.y + d.y * L), r2(o.z + d.z * L)], mode === 'sniper' ? 1 : 0, best ? 1 : 0]);
-    if (best) this.damage(best.t, M.dmg * (best.head ? M.headMul : 1), e, 0, best.head, false, 'g');
+    if (best) this.damage(best.t, M.dmg * (best.head ? M.headMul : 1), e, 0, best.head, false, 'g', 0, o);
   }
   hurtHeli(h, amount, by) {
     if (!h.alive || !(amount > 0)) return;
@@ -497,7 +497,7 @@ export class Game {
       const to = center(best, 1.0), miss = Math.random() < HELI.miss; // erra de vez em quando: o tiro passa do lado
       if (miss) { const a = Math.random() * Math.PI * 2, r = rand(0.9, 1.6); to.x += Math.cos(a) * r; to.z += Math.sin(a) * r; to.y += rand(-0.6, 0.3); }
       this.events.push(['hs', h.id, arr3(to)]);
-      if (!miss) this.damage(best, HELI.dmg, h.owner, 0, false, false, 'h');
+      if (!miss) this.damage(best, HELI.dmg, h.owner, 0, false, false, 'h', 0, hp);
     }
     this.helis = this.helis.filter((h) => h.alive);
   }
@@ -693,12 +693,12 @@ export class Game {
     return hits;
   }
   friends(a, b) { if (this.invasion) return !!(a && b && a !== b && !a.zt === !b.zt); return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
-  damage(t, amount, a, w, head, back = false, ks = null, fx = 0) {
+  damage(t, amount, a, w, head, back = false, ks = null, fx = 0, origin = a && a !== t && !a.fog ? a.pos : null) {
     if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
     if (this.invasion && !t.zt && a && !a.zt && !a.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
     t.hp -= amount; t.lastAttacker = a ? a.id : 0; noteHurt(t, a, this.T); // regen só com dano de outro
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
-    this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0, Math.round(amount), fx]); // [5] = dano (números no Treino), [6] = 1 pela parede, 2 collateral
+    this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0, Math.round(amount), fx, origin ? arr3(origin) : null]); // [5] = dano, [6] = parede/collateral, [7] = origem no instante do golpe
     if (t.hp <= 0) { this.kill(t, a, w, head, back, ks, fx); return true; }
     return false;
   }
@@ -729,7 +729,7 @@ export class Game {
       const e = h.e; e.lastKnock = this.T;
       if (e.bot) { e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; }
       else this.toMe(e, ['kn', arr3(h.knock)]); // empurrão aplicado pelo próprio cliente (rocket jump)
-      this.damage(e, h.dmg, owner, o.wIdx, false, false, o.ks || null);
+      this.damage(e, h.dmg, owner, o.wIdx, false, false, o.ks || null, 0, c);
     }
     return hits;
   }
@@ -856,6 +856,7 @@ export class Game {
     this.events.push(['sp', e.id, arr3(e.pos), r2(e.yaw), e.primary, e.sq]);
   }
   refillAmmo(e) {
+    if (this.invasion) return invRefillAmmo(e, WEAPONS); // Invasão: mais munição por caixa (mesma regra do cliente)
     let got = false;
     for (const i of e.slots) { const w = WEAPONS[i]; if (e.reserve[i] >= w.reserve) continue; e.reserve[i] = w.rocket ? Math.min(w.reserve, e.reserve[i] + 1) : w.reserve; got = true; }
     return got;
@@ -870,7 +871,7 @@ export class Game {
         if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
         else if (p.type === 'grenade') { const sk = !e.bot && powerOn('stun', this.cfg.powers) && (e.shocks | 0) < SHOCK.max; if (e.nades >= NADE.max && !sk) continue; if (e.nades < NADE.max) e.nades++; if (sk) e.shocks = (e.shocks | 0) + 1; } // Copo Bomba também dá +1 pau de choque
         else if (!this.refillAmmo(e)) continue;
-        p.active = false; p.respawnAt = this.T + (p.type === 'grenade' ? NADE.pickupRespawn : 15);
+        p.active = false; p.respawnAt = this.T + (p.type === 'grenade' ? NADE.pickupRespawn : this.invasion && p.type === 'ammo' ? INV_AMMO.respawn : 15);
         this.events.push(['pk', i, 0]); if (!e.bot) this.toMe(e, ['got', p.type, Math.round(e.hp), e.nades, e.shocks | 0]);
         break;
       }
@@ -948,6 +949,7 @@ export class Game {
       heal(p, hp) { p.hp = Math.min(100, p.hp + hp); g.toMe(p, ['heal', Math.round(p.hp)]); },
       revive(p, at) { p.needRs = false; p.rsReq = false; p.respawnAt = g.T + 0.4; p.reviveAt = at; },
       invChanged(p) { g.toMe(p, ['inv', p.inv.map((k) => POWER_KEYS.indexOf(k))]); },
+      giveAmmo(p) { return g.refillAmmo(p); }, // caixa que o zumbi solta: o cliente espelha no 'dg'
       emit(ev) { g.events.push(ev); },
       aimOf(p) { return { o: center(p, EYE), d: modelAim(p.yaw, p.pitch) }; },
       over() { g.pendingEnd = true; },
@@ -969,6 +971,7 @@ export class Game {
     if (m.killAll) for (const z of [...I.zombies]) if (z.alive) this.damage(z, 1e6, e, 0, false);
     if (m.clearQueue) { I.queue = []; I.bossPending = false; }
     if (m.drop) I.drop({ x: e.pos.x + 2, y: e.pos.y, z: e.pos.z }, false);
+    if (m.ammoDrop) { for (const i of e.slots) { e.reserve[i] = 0; e.mag[i] = 0; } I.dropAmmo({ x: e.pos.x + 2, y: e.pos.y, z: e.pos.z }, 0); } // zera a munição e solta uma caixa de zumbi ao lado
     if (m.lives != null) e.lives = m.lives | 0;
     if (m.hurt) this.damage(e, m.hurt, null, 0, false);
     if (m.fog) Object.assign(I.fog, m.fog, { t0: 0, t1: 0 });

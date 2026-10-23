@@ -676,7 +676,9 @@ export const MAPS = [];
     bomb: { sites: [[-30, 0, -42], [30, 0, -42]], atk: spA, def: spD },
     pickups: [['health', -36, 52], ['health', 36, 52], ['health', 0, 20], ['health', -20, -4, H], ['health', -30, -56], ['health', 31, -52.5, 1.2],
       ['ammo', 0, 56], ['ammo', -40, 0], ['ammo', 40, 0], ['ammo', 0, -44], ['ammo', -16, 55, H], ['ammo', 20, 30, H],
-      ['grenade', -33, 31], ['grenade', 35, 30], ['grenade', 0, -18], ['grenade', -40, -50.5, H], ['grenade', 0, 66], ['grenade', 0, -66]],
+      ['grenade', -33, 31], ['grenade', 35, 30], ['grenade', 0, -18], ['grenade', -40, -50.5, H], ['grenade', 0, 66], ['grenade', 0, -66],
+      // Invasão: mais caixas de munição espalhadas (perto dos spawns, no meio e pelas pontas)
+      ['ammo', 7, 1], ['ammo', -27, -29], ['ammo', 27, -29], ['ammo', -9, 31], ['ammo', -17, 9], ['ammo', -19, -49], ['ammo', 19, -49], ['ammo', -9, -9], ['ammo', 7, -27], ['ammo', 23, -7], ['ammo', -11, -25], ['ammo', 3, 41], ['ammo', 33, 75], ['ammo', 41, -71], ['ammo', -37, -73], ['ammo', -37, 75], ['ammo', 15, -73], ['ammo', -13, -73], ['ammo', 11, 75], ['ammo', -11, 75], ['ammo', 41, -43], ['ammo', -35, 19]],
     showcase: [0, 0, 30], view: [0, 0, 58, 0, -0.02], openMax: 8, laneMin: 35,
     test: { stairs: { from: [-23, 0, 51.5], to: [-23, H, 59], level: H }, under: { from: [-26.5, 0, 48], to: [-20.5, 0, 48], ceil: 3.2 }, roof: { from: [-15.5, H, 52], to: [-15.5, 2 * H, 44.2], level: 2 * H } },
   });
@@ -740,7 +742,9 @@ export const MAPS = [];
       lights: [['#ff8a2a', 0, 2.4, 9.4, 6, 14], ['#a070ff', 30, 3, -26, 5, 16], ['#ff8a2a', -29, 3.2, -22, 4, 14], ['#ff8a2a', -29, 3, 30, 4, 14]] },
     ...fin(boxes), props,
     spawns: [[0, 12], [12, 0], [0, -12], [-12, 0], [9, 10], [-9, 10.5], [10, -10], [-10, -10], [3, 13], [-3, -13]],
-    pickups: [['health', -14, 0], ['health', 14, 0], ['health', 0, -16], ['ammo', 0, 15], ['ammo', -20, -20], ['ammo', 20, 20], ['ammo', -4, 4, H], ['grenade', -20, 14], ['grenade', 20, -20], ['grenade', 4, -4, H]],
+    pickups: [['health', -14, 0], ['health', 14, 0], ['health', 0, -16], ['ammo', 0, 15], ['ammo', -20, -20], ['ammo', 17, 20], ['ammo', -4, 4, H], ['grenade', -20, 14], ['grenade', 20, -20], ['grenade', 4, -4, H],
+      // Invasão: mais caixas de munição espalhadas (casarão, cemitério, milharal e pontas)
+      ['ammo', 11, -13], ['ammo', -11, -9], ['ammo', 11, 7], ['ammo', -15, 9], ['ammo', -1, -9], ['ammo', -9, 15], ['ammo', -35, 37], ['ammo', 37, -31], ['ammo', 37, -3], ['ammo', 1, -35], ['ammo', -35, -3], ['ammo', -5, 37], ['ammo', -31, 19], ['ammo', 33, 29]],
     showcase: [0, 0, 15], view: [0, 1.6, 22, 0, -0.04], openMax: 9, laneMin: 30,
     test: { stairs: { from: [-7.8, 0, -5.5], to: [0, H, -5.5], level: H }, under: { from: [-6, 0, 2], to: [6, 0, 2], ceil: 3.2 }, roof: { from: [7.9, H, 5.5], to: [0, 2 * H, 5.5], level: 2 * H } },
   });
