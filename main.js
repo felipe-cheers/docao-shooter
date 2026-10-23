@@ -4599,12 +4599,12 @@ const sendCfg = (lim) => {
   online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode, time: +$('lobbyTime').value, chat: $('lobbyChatOn').value === '1', weapons: L.weapons, powers: L.powers });
 };
 ['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyTime', 'lobbyChatOn'].forEach((id) => ($(id).onchange = sendCfg));
-$('lobbyMode').onchange = () => { fillMapSelect($('lobbyMap'), $('lobbyMap').value, $('lobbyMode').value); sendCfg(limitsFor($('lobbyMode').value)); };
+$('lobbyMode').onchange = () => { fillMapSelect($('lobbyMap'), $('lobbyMode').value === 'bomb' ? BOMB_MAP : $('lobbyMap').value, $('lobbyMode').value); sendCfg(limitsFor($('lobbyMode').value)); };
 $('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
 $('leaveLobby').onclick = () => leaveOnline();
 // ---------- menu online ----------
 function onlineTab(create) { $('tabCreate').classList.toggle('active', create); $('tabJoin').classList.toggle('active', !create); $('paneCreate').classList.toggle('hidden', !create); $('paneJoin').classList.toggle('hidden', create); }
-$('roomMode').onchange = () => { fillMapSelect($('roomMap'), $('roomMap').value, $('roomMode').value); syncRoomLimits(); };
+$('roomMode').onchange = () => { fillMapSelect($('roomMap'), $('roomMode').value === 'bomb' ? BOMB_MAP : $('roomMap').value, $('roomMode').value); syncRoomLimits(); };
 $('onlineBtn').onclick = () => { if (invMenu()) $('roomMode').value = INV.mode; else if (bombMenu()) $('roomMode').value = 'bomb'; fillMapSelect($('roomMap'), selectedMap, $('roomMode').value); syncRoomLimits(); $('onlineErr').textContent = ''; $('menu').classList.add('hidden'); $('onlineModal').classList.remove('hidden'); };
 $('onlineClose').onclick = () => { $('onlineModal').classList.add('hidden'); $('menu').classList.remove('hidden'); };
 $('tabCreate').onclick = () => onlineTab(true); $('tabJoin').onclick = () => { onlineTab(false); $('joinCode').focus(); };

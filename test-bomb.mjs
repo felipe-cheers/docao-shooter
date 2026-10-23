@@ -70,7 +70,7 @@ await page.screenshot({ path: `${SHOTS}/30-bomba-live.png` });
 await G(() => window.__docao.bomb.plant(0)); await wait(400);
 const pl = await G(() => { const S = window.__docao.bomb.S; return { phase: S.phase, site: S.site, feed: (window.__feedLog || []).slice(-3), beeps: window.__bombBeeps || 0 }; });
 ok(pl.phase === 'planted' && pl.site === 0 && pl.feed.some((l) => /plantou o botijão no A/.test(l)), `plantou no A (${pl.feed.join(' | ')})`);
-await wait(1200); ok(await G(() => (window.__bombBeeps || 0) >= 1), 'botijão plantado bipando');
+ok(await page.waitForFunction(() => (window.__bombBeeps || 0) >= 1, null, { timeout: 30000, polling: 250 }).then(() => true, () => false), 'botijão plantado bipando'); // espera o jogo andar (headless lento estica o tempo do jogo)
 await page.screenshot({ path: `${SHOTS}/30-bomba-plantado.png` });
 await G(() => { const g = window.__docao, b = g.bomb.S.bomb; const v = g.entities.find((e) => !e.isPlayer); v.frozen = true; v.pos.set(b.x + 2, b.y, b.z); g.bomb.skip(); }); await wait(500);
 const bo = await G(() => { const g = window.__docao, S = g.bomb.S; return { phase: S.phase, score: S.score.slice(), reason: S.reason, booms: window.__bombBooms || 0, deadNear: g.entities.filter((e) => e.frozen && !e.alive).length }; });
