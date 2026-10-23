@@ -20,7 +20,7 @@ import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from './s
 import { mountUav, showUav, drawUav, tickUav, hideUav } from './uav.js';
 import { mountStreakUi, setStreakCount, setStreakCycle, setStreakReady, openStrikeMap, closeStrikeMap, showNukeCount, hideNuke, showNukeReady, hideNukeReady } from './killstreak-ui.js';
 import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } from './fp-gear.js';
-import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
+import { SKINS, getSkin, DEFAULT_SKIN, skinOk } from './skins.js';
 import './costumes.js';
 import { MAPS, PLAY_MAPS, INV_MAPS, BOMB_MAPS, getMap, BOMB_MAP } from './maps.js';
 import { INV, INV_AMMO, DROP_KEYS, invRefillAmmo, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
@@ -52,6 +52,7 @@ import { killIcon, weaponSvg } from './killfeed-icons.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, FAMAS, DISC_W, SABER2, CORN_W, EGG_W, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, LMG, COMMANDO, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
 import { getAccount, onAccount, loadMe, saveSkin as saveAcctSkin, dropSession } from './account.js';
 import { initAccountUI } from './account-ui.js';
+import { initCloset } from './closet-ui.js';
 import { bindGrenadeVoice, playGrenadeVoice, grenadeVoiceEnabled, setGrenadeVoiceEnabled } from './grenade-voice.js';
 import { POWER_UPS, normHand, clampLoadout, botPool, powerOn, savedToLimits, limitsToSaved } from './shared/loadout.js';
 
@@ -3848,7 +3849,7 @@ function setPreview(id) {
   preview = makeDocao(selectedSkin, { withGun: false, pose: 'idle' }); showcase.add(preview.group);
   $('skinName').textContent = getSkin(selectedSkin).name;
   $('wardrobePreview').setAttribute('aria-label', `Prévia do visual ${getSkin(selectedSkin).name}`);
-  $('skinIdx').textContent = `${SKINS.findIndex((s) => s.id === selectedSkin) + 1}/${SKINS.length}`;
+  { const n = SKINS.findIndex((s) => s.id === selectedSkin); $('skinIdx').textContent = n < 0 ? 'meu visual' : `${n + 1}/${SKINS.length}`; }
   document.querySelectorAll('.skinchip').forEach((c) => c.classList.toggle('active', c.dataset.id === selectedSkin));
 }
 function buildSkinPicker() {
@@ -3858,7 +3859,7 @@ function buildSkinPicker() {
     const base = sk.shirt && sk.shirt.color ? sk.shirt.color : '#d8261c'; const acc = (sk.parts || []).find((p) => p.color);
     b.style.background = acc ? `linear-gradient(180deg, ${acc.color} 0 45%, ${base} 45% 100%)` : base; b.onclick = () => setPreview(sk.id); list.appendChild(b);
   }
-  const step = (d) => { const i = SKINS.findIndex((s) => s.id === selectedSkin); setPreview(SKINS[(i + d + SKINS.length) % SKINS.length].id); };
+  const step = (d) => { let i = SKINS.findIndex((s) => s.id === selectedSkin); if (i < 0) i = d > 0 ? -1 : 0; setPreview(SKINS[(i + d + SKINS.length) % SKINS.length].id); };
   $('skinPrev').onclick = () => step(-1); $('skinNext').onclick = () => step(1);
 }
 const weaponThumbs = [];
@@ -4835,10 +4836,10 @@ $('lobbyNameBtn').onclick = () => sendName();
 // ---------- conta (opcional): apelido fixo + skin guardada ----------
 function applyAccount(a) {
   for (const id of NAME_FIELDS) { const el = $(id); el.readOnly = !!a; el.title = a ? 'Apelido fixo da sua conta' : ''; el.classList.toggle('locked', !!a); }
-  if (a) { saveName(a.nick); if (a.skin && SKINS.some((s) => s.id === a.skin) && a.skin !== selectedSkin) setPreview(a.skin); else if (!a.skin) saveAcctSkin(selectedSkin); }
-  else { let n = ''; try { n = localStorage.getItem('docao.name') || ''; } catch (e) { /* sem storage */ } for (const id of NAME_FIELDS) $(id).value = cleanName(n || 'Docão'); }
+  if (a) { saveName(a.nick); if (a.skin && skinOk(a.skin) && a.skin !== selectedSkin) setPreview(a.skin); else if (!a.skin) saveAcctSkin(selectedSkin); }
+  else { if (selectedSkin.startsWith('x1.')) setPreview(DEFAULT_SKIN); /* visual personalizado é só de conta */ let n = ''; try { n = localStorage.getItem('docao.name') || ''; } catch (e) { /* sem storage */ } for (const id of NAME_FIELDS) $(id).value = cleanName(n || 'Docão'); }
 }
-onAccount(applyAccount); initAccountUI(); loadMe().then(() => applyAccount(getAccount()));
+onAccount(applyAccount); initAccountUI(); initCloset(); document.addEventListener('docao-look-saved', () => { const a = getAccount(); if (a && a.skin && skinOk(a.skin)) setPreview(a.skin); }); loadMe().then(() => applyAccount(getAccount()));
 const roomLink = (code) => { const u = new URL(location.href); u.search = ''; const sv = new URLSearchParams(location.search).get('server'); if (sv) u.searchParams.set('server', sv); u.searchParams.set('sala', code); return u.toString(); };
 function socialTeam() { if (!online) return false; const cfg = (online.lobby && online.lobby.cfg) || online.cfg; return !!(cfg && (cfg.mode === 'dom' || cfg.mode === 'bomb')); } // Dominação e Bomba: chat e voz do time
 function inviteBlurb(code) { return `Bora jogar Docão Shooter! Sala ${code}\n${roomLink(code)}`; }
@@ -5199,6 +5200,7 @@ function personalEvent(ev) {
   }
 }
 function onlineEnd(m) {
+  if (getAccount()) setTimeout(() => loadMe(), 3500); // com conta: confere o saldo de Torresmos uma vez por fim de partida (o servidor já gravou), sem polling
   dropNukeRider(); // o fim online já veio do servidor; só tira o docão se o 'nb' não tiver passado
   const o = online; stopInspect(true); stopEmote(); // a mira com zoom continua na câmera lenta
   if (state === 'over' || !player) return;

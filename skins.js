@@ -43,6 +43,8 @@
 //   float: true                 flutua de leve (bob) e solta um rastro fraquinho no jogo
 //   Peças novas: crie uma função em PARTS (costumes.js).
 
+import { lookToSkin, isLookCode, parseLook } from './shared/closet.js';
+
 export const SKINS = [
   {
     id: 'classico',
@@ -243,4 +245,5 @@ export const SKINS = [
 ];
 
 export const DEFAULT_SKIN = 'classico';
-export const getSkin = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
+export const getSkin = (id) => SKINS.find((s) => s.id === id) || lookToSkin(id) || SKINS[0]; // id também pode ser um visual personalizado ("x1....", ver shared/closet.js)
+export const skinOk = (id) => SKINS.some((s) => s.id === id) || isLookCode(id) && !!parseLook(id); // id existente ou visual personalizado bem formado

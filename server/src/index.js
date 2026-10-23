@@ -11,6 +11,7 @@
 // ============================================================
 import { DurableObject } from 'cloudflare:workers';
 import { Game } from './game.js';
+import { SKINS } from '../../skins.js';
 import { handleAccountRoute, accountFromToken, nickRegistered, saveSkin, recordStats } from './auth.js';
 import { cleanName, NAME_MAX } from '../../shared/names.js';
 
@@ -131,7 +132,7 @@ export class Room extends DurableObject {
       if (r.error) return fail(r.error);
       const e = r.ent;
       for (const old of this.ctx.getWebSockets()) { const a = old.deserializeAttachment(); if (old !== server && a && a.id === e.id) { old.serializeAttachment(null); try { old.close(4001, 'Reconectado em outra aba'); } catch (x) { /* já fechado */ } } }
-      server.serializeAttachment({ id: e.id, token: e.token, acct: e.acct || null, name: e.name, skin: e.skin, primary: e.primary, secondary: e.secondary, melee: e.melee });
+      server.serializeAttachment({ id: e.id, token: e.token, acct: e.acct ? { ...e.acct, skin: e.skin } : null, name: e.name, skin: e.skin, primary: e.primary, secondary: e.secondary, melee: e.melee });
       await this.ctx.storage.deleteAlarm();
       this.game.welcome(e); this.persist();
       return new Response(null, { status: 101, webSocket: client, headers: proto });
@@ -142,7 +143,14 @@ export class Room extends DurableObject {
     const a = ws.deserializeAttachment(); if (!a || !this.game || typeof msg !== 'string' || msg.length > 8192) return;
     let m; try { m = JSON.parse(msg); } catch (e) { return; }
     if (m && m.t === 'prof') { // conta: skin vira a da conta (salva); convidado não pode tomar o apelido de uma conta
-      if (a.acct) { if (typeof m.skin === 'string') await saveSkin(this.env, a.acct.id, m.skin).catch(() => {}); }
+      if (a.acct) { // conta: a skin só muda se o D1 aceitar (da lista, ou visual personalizado com todas as partes na mochila); só grava se mudou
+        if (typeof m.skin === 'string' && m.skin !== a.acct.skin && m.skin.length <= 48) {
+          const ok = await saveSkin(this.env, a.acct.id, m.skin).catch(() => false);
+          if (ok) { a.acct = { ...a.acct, skin: m.skin }; ws.serializeAttachment(a); if (!SKINS.some((x) => x.id === m.skin)) this.game.setVerifiedSkin(a.id, m.skin); }
+        }
+        delete m.skin; // quem aplica a skin da conta é o servidor (acima/setVerifiedSkin); o jogo ignora skin vinda do cliente de conta
+        if (a.acct.skin && SKINS.some((x) => x.id === a.acct.skin)) m.skin = a.acct.skin;
+      }
       else if (typeof m.name === 'string' && await nickRegistered(this.env, m.name)) m.name = guestName(m.name);
     }
     this.lastMsg = Date.now(); this.game.onMessage(a.id, m); this.maybeTick(false);

@@ -12,7 +12,7 @@ let reg = false, rankMode = 'all', rankSort = 'kills', busy = false;
 
 function renderStrip(a) {
   const t = $('acctTxt'), b = $('acctBtn');
-  if (a) { t.innerHTML = `🐷 Logado como <b>${esc(a.nick)}</b> · apelido e skin guardados`; b.textContent = 'MINHA CONTA'; }
+  if (a) { t.innerHTML = `🐷 Logado como <b>${esc(a.nick)}</b> · 🥓 <b>${a.coins | 0}</b> Torresmos`; b.textContent = 'MINHA CONTA'; }
   else { t.textContent = 'Convidado · crie uma conta para ter apelido só seu, skin guardada e ranking'; b.textContent = 'ENTRAR'; }
 }
 function renderUser() {

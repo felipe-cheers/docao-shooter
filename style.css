@@ -1727,3 +1727,28 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 /* Pausa: toggle das vozes da granada em destaque, no topo */
 #pause label.checkline.nade-voice-hl{grid-column:1 / -1;margin:6px 0 12px;padding:12px 14px;border:2px solid var(--red,#e63946);background:#ffe9b8;font-size:13px;font-weight:700;box-shadow:0 2px 0 rgba(0,0,0,.25);cursor:pointer}
 #pause label.checkline.nade-voice-hl small{font-weight:400;opacity:.8}
+
+/* ---------- Ateliê (personalizador + loja de partes) ---------- */
+.closet-panel{width:min(860px,96vw)}
+.closet-main{display:flex;gap:16px;align-items:flex-start}
+.closet-left{flex:none;width:260px;text-align:center}
+.closet-left canvas{display:block;width:260px;height:330px;border:2px solid #9f8b66;border-radius:4px;background:radial-gradient(circle at 50% 40%,#fff5d3,#d9c391)}
+.closet-wallet{margin-top:8px;padding:8px;border:2px dashed #9f8b66;border-radius:4px;background:#fff5d359;font:900 14px "Trebuchet MS",sans-serif;color:var(--ink)}
+.closet-wallet small{display:block;margin-top:3px;font:700 11px "Trebuchet MS",sans-serif;color:#5b4a2c}
+.closet-right{flex:1;min-width:0;max-height:62vh;overflow:auto;padding-right:4px}
+.closet-slot{margin:8px 0}
+.closet-slot h4,.closet-sec h4{margin:0 0 4px;font:900 11px "Trebuchet MS",sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--ink)}
+.closet-chips{display:flex;flex-wrap:wrap;gap:5px}
+.closet-chips button,.closet-sw{margin:0;width:auto;padding:5px 9px;font:800 12px "Trebuchet MS",sans-serif;color:var(--ink);background:#e6d3a8;border:2px solid var(--ink);border-radius:3px;box-shadow:none;cursor:pointer}
+.closet-chips button.on{background:var(--ink);color:#efdfbb}
+.closet-sw{width:26px;height:26px;padding:0;border-radius:50%}
+.closet-sw.on{outline:3px solid var(--red);outline-offset:1px}
+.closet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.closet-card{padding:8px;border:2px solid #9f8b66;border-radius:4px;background:#fff5d38c;font:700 13px "Trebuchet MS",sans-serif;color:var(--ink);cursor:pointer}
+.closet-card.try{outline:3px solid var(--red)}
+.closet-card b{display:block;font:900 13px "Trebuchet MS",sans-serif}
+.closet-card .price{margin:4px 0;color:var(--red);font-weight:900}
+.closet-card button{margin:4px 0 0;width:100%;padding:6px;font:900 12px "Trebuchet MS",sans-serif;color:#fff3d6;background:var(--red);border:2px solid #7d1f19;border-radius:3px;cursor:pointer;box-shadow:none}
+.closet-card button:disabled{opacity:.55;cursor:default;background:var(--ink);border-color:#162c25}
+.closet-note{margin:6px 0;font:700 12px/1.35 "Trebuchet MS",sans-serif;color:#5b4a2c}
+@media (max-width:700px){.closet-main{flex-direction:column}.closet-left{width:100%}.closet-left canvas{margin:0 auto}}

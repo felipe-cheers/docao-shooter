@@ -6,7 +6,8 @@
 //  - Tudo é OPCIONAL: sem D1 configurado (env.DB) as rotas respondem 503 e o jogo segue como convidado.
 // ============================================================
 import { cleanNick, nickKey, nickError, passError } from '../../shared/nick.js';
-import { SKINS } from '../../skins.js';
+import { SKINS, skinOk } from '../../skins.js';
+import { coinCreditStmt, wallet, buyItem, equipSkin } from './shop.js';
 
 const ITERS = 100000; // teto do WebCrypto do Workers
 const SESSION_TTL = 30 * 24 * 3600; // s
@@ -78,16 +79,16 @@ export async function nickRegistered(env, raw) {
   if (!env.DB) return false; const k = nickKey(cleanNick(raw)); if (!k) return false;
   try { return !!(await env.DB.prepare('SELECT 1 AS x FROM accounts WHERE nick_key = ?').bind(k).first()); } catch (e) { return false; }
 }
-export async function saveSkin(env, accountId, skin) {
-  if (!env.DB || !SKINS.some((s) => s.id === skin)) return false;
-  await env.DB.prepare('UPDATE accounts SET skin = ? WHERE id = ?').bind(skin, accountId).run(); return true;
+export async function saveSkin(env, accountId, skin) { // skin da lista ou visual personalizado (partes têm que estar na mochila); só grava se mudou
+  if (!env.DB) return false; return equipSkin(env, accountId, skin);
 }
 // items: [{ acct, mode, k, d, w, m }] — soma no ranking
 export async function recordStats(env, items) {
   if (!env.DB || !items || !items.length) return;
   const c = (n) => Math.max(0, Math.min(5000, n | 0));
   const st = items.filter((i) => i && STAT_MODES.includes(i.mode) && i.acct > 0).map((i) => env.DB.prepare('INSERT INTO stats (account_id, mode, kills, deaths, wins, matches) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(account_id, mode) DO UPDATE SET kills = kills + ?3, deaths = deaths + ?4, wins = wins + ?5, matches = matches + ?6').bind(i.acct, i.mode, c(i.k), c(i.d), c(i.w), c(i.m)));
-  if (st.length) await env.DB.batch(st);
+  const cs = items.filter((i) => i && i.acct > 0 && i.c > 0 && STAT_MODES.includes(i.mode)).map((i) => coinCreditStmt(env, i.acct, i.c)).filter(Boolean);
+  if (st.length || cs.length) await env.DB.batch([...st, ...cs]);
 }
 
 // ---------- HTTP ----------
@@ -96,7 +97,7 @@ async function readJson(req) {
   const len = parseInt(req.headers.get('Content-Length') || '0'); if (len > 2048) return null;
   try { const t = await req.text(); if (t.length > 2048) return null; const o = JSON.parse(t); return o && typeof o === 'object' && !Array.isArray(o) ? o : null; } catch (e) { return null; }
 }
-const publicAcc = (a) => ({ nick: a.nick, skin: a.skin && SKINS.some((s) => s.id === a.skin) ? a.skin : null });
+const publicAcc = (a) => ({ nick: a.nick, skin: a.skin && skinOk(a.skin) ? a.skin : null });
 async function myStats(env, id) {
   const { results } = await env.DB.prepare('SELECT mode, kills, deaths, wins, matches FROM stats WHERE account_id = ?').bind(id).all();
   const out = { all: { kills: 0, deaths: 0, wins: 0, matches: 0 } };
@@ -107,7 +108,7 @@ async function myStats(env, id) {
 // devolve Response ou null (rota não é de conta). json(obj, status, extraHeaders)
 export async function handleAccountRoute(req, env, url, json) {
   const p = url.pathname, m = req.method;
-  if (!(p.startsWith('/api/auth/') || p === '/api/me' || p === '/api/me/skin' || p === '/api/rank')) return null;
+  if (!(p.startsWith('/api/auth/') || p === '/api/me' || p === '/api/me/skin' || p === '/api/shop/buy' || p === '/api/rank')) return null;
   if (!env.DB) return json({ error: 'Contas indisponíveis no momento. Você pode jogar como convidado.' }, 503);
   const ip = req.headers.get('CF-Connecting-IP') || 'local';
   try {
@@ -162,12 +163,19 @@ export async function handleAccountRoute(req, env, url, json) {
     }
     if (p === '/api/me' && m === 'GET') {
       const a = await accountFromToken(env, tok); if (!a) return json({ error: 'Sessão inválida' }, 401);
-      return json({ account: publicAcc(a), stats: await myStats(env, a.id) });
+      const w = await wallet(env, a.id);
+      return json({ account: { ...publicAcc(a), custom: w.custom, coins: w.coins }, stats: await myStats(env, a.id), items: w.items, earn: { today: w.earnToday, cap: w.dayCap } });
     }
     if (p === '/api/me/skin' && m === 'PUT') {
       const a = await accountFromToken(env, tok); if (!a) return json({ error: 'Sessão inválida' }, 401);
-      const b = await readJson(req); if (!b || typeof b.skin !== 'string' || !(await saveSkin(env, a.id, b.skin))) return json({ error: 'Skin inválida' }, 400);
+      const b = await readJson(req); if (!b || typeof b.skin !== 'string' || !(await saveSkin(env, a.id, b.skin))) return json({ error: 'Skin inválida ou com partes que você ainda não comprou' }, 400);
       return json({ ok: true, skin: b.skin });
+    }
+    if (p === '/api/shop/buy' && m === 'POST') {
+      const a = await accountFromToken(env, tok); if (!a) return json({ error: 'Sessão inválida' }, 401);
+      const b = await readJson(req); if (!b) return json({ error: 'Pedido inválido' }, 400);
+      const r = await buyItem(env, a.id, b.item); // saldo e preço são do servidor; o cliente só diz QUAL item
+      return r.status === 200 ? json({ ok: true, item: r.item, coins: r.coins }) : json({ error: r.error }, r.status);
     }
     return json({ error: 'Não encontrado' }, 404);
   } catch (e) {

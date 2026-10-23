@@ -9,7 +9,8 @@ import { MAPS, PLAY_MAPS, INV_MAPS, BOMB_MAPS, getMap } from '../../maps.js';
 import { INV, INV_AMMO, DROP_KEYS, invRefillAmmo, isInvasion, InvasionCore, POWER_KEYS, modelAim } from '../../shared/invasion.js';
 import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
-import { SKINS } from '../../skins.js';
+import { SKINS, skinOk } from '../../skins.js';
+import { EARN } from '../../shared/closet.js';
 import { cleanName, uniqueName, NAME_MAX } from '../../shared/names.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { normWeapons, normPowers, clampLoadout, botPool, weaponOn, powerOn } from '../../shared/loadout.js';
@@ -83,12 +84,13 @@ export class Game {
     let e = token ? [...this.ents.values()].find((x) => !x.bot && x.token === token) : null;
     if (acct && (!e || !e.acct || e.acct.id !== acct.id)) e = [...this.ents.values()].find((x) => !x.bot && x.acct && x.acct.id === acct.id) || null; // mesma conta de volta (outra aba / voltou do zero): assume o lugar
     if (e && (acct ? (!e.acct || e.acct.id !== acct.id) : e.acct)) e = null; // token de sala que não é seu (convidado não herda lugar de conta): ignora
-    if (e) { if (acct && e.acct) { e.name = acct.nick; if (SKINS.some((s) => s.id === acct.skin)) e.skin = acct.skin; } e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
+    if (e) { if (acct && e.acct) { e.name = acct.nick; if (skinOk(acct.skin)) e.skin = acct.skin; } e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
       if (acct) { for (const x of this.ents.values()) if (!x.acct && x.name.toLowerCase() === acct.nick.toLowerCase()) x.name = this.freeName(Array.from(x.name).slice(0, NAME_MAX - 7).join('') + ' (conv)', x); } // o apelido da conta é dela: quem estava usando vira "(conv)"
-      e = this.makeEnt({ name: acct ? acct.nick : this.freeName(name), skin: acct && SKINS.some((s) => s.id === acct.skin) ? acct.skin : skin, primary, secondary, melee, bot: false });
-      if (acct) { e.acct = { id: acct.id, nick: acct.nick }; e.sk = 0; e.sd = 0; }
+      e = this.makeEnt({ name: acct ? acct.nick : this.freeName(name), skin: acct && skinOk(acct.skin) ? acct.skin : SKINS.some((x) => x.id === skin) ? skin : undefined, primary, secondary, melee, bot: false });
+      e.jt = this.state === 'playing' ? this.T : 0; // quando entrou (segundos de partida): bônus de fim só pra quem jogou um tempo
+      if (acct) { e.acct = { id: acct.id, nick: acct.nick }; e.sk = 0; e.sd = 0; e.ck = 0; e.cpaid = 0; }
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
       e.arrived = true;
@@ -98,6 +100,8 @@ export class Game {
     if (!this.hostId || !this.ents.get(this.hostId)?.connected) this.hostId = e.id;
     return { ent: e };
   }
+  // skin equipada e JÁ conferida pelo Worker (dona dos itens); nunca vem direto do cliente
+  setVerifiedSkin(id, skin) { const e = this.ents.get(id); if (e && e.acct && skinOk(skin)) { e.skin = skin; return true; } return false; }
   welcome(e) {
     this.syncClock(); if (this.state === 'playing') this.io.startLoop(); // o loop para quando o último humano sai: volta ao entrar/reconectar
     const fresh = !!e.arrived; e.arrived = false;
@@ -145,7 +149,7 @@ export class Game {
     const rawP = bot ? (botPool(this.cfg.weapons).includes(primary) ? primary : pick(botPool(this.cfg.weapons))) : primary;
     const c = clampLoadout(rawP, secondary, melee, this.cfg.weapons);
     const prim = c.primary, sec = c.secondary, mel = c.melee;
-    const e = { id, bot, name: cleanName(name), skin: SKINS.some((s) => s.id === skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
+    const e = { id, bot, name: cleanName(name), skin: skinOk(skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
       primary: prim, nextPrimary: prim, secondary: sec, nextSecondary: sec, melee: mel, nextMelee: mel, slots: [prim, sec, mel], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
@@ -211,7 +215,7 @@ export class Game {
     this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     this.curLimit = this.cfgLimit;
-    for (const e of this.ents.values()) {
+    for (const e of this.ents.values()) { e.ck = 0; e.cpaid = 0; e.jt = 0;
       e.kills = 0; e.deaths = 0; e.alive = false; e.needRs = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1;
       // this.T e o relógio do cliente voltam a 0 na partida nova: zera cadência/anti speed-hack, senão os tiros da partida anterior
       // (lastShot/lastCt/lastMelee no futuro) fazem o servidor rejeitar todo tiro no "Próximo mapa"/"Jogar de novo" (sem dano)
@@ -246,11 +250,20 @@ export class Game {
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
   startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, DROP_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), bomb: this.bomb ? { sites: this.bombL.sites.map((s) => [r2(s.x), r2(s.y), r2(s.z)]), atk: this.bombL.atk, def: this.bombL.def, pts: this.bombL.pts ? this.bombL.pts.map((p) => [r2(p.x), r2(p.y), r2(p.z)]) : undefined, s: packBomb(this.bomb) } : undefined, win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   // ranking: soma abates/mortes (e partida/vitória no fim) das contas. Treino não conta. Falha de gravação nunca derruba a sala.
+  // Torresmos (moeda do jogo): o SERVIDOR calcula tudo aqui. Abates contam na hora (e.ck); fim de partida/vitória/waves só no flush final ou na saída.
+  // Teto por partida (EARN.matchCap); o teto por dia fica no D1 (recordStats). Treino não rende (flushStats nem chega aqui).
+  coinsDelta(e, final, won) {
+    let raw = e.ck | 0;
+    if (this.inv) { const w = Math.max(0, (this.inv.wave | 0) - 1); raw += w * EARN.invWave + (final && this.inv.won ? EARN.invWin : 0); }
+    else if (final && this.T - (e.jt || 0) >= EARN.minSecs) raw += EARN.finish + (won ? EARN.win : 0);
+    const earned = Math.max(0, Math.min(EARN.matchCap, raw)), delta = Math.max(0, earned - (e.cpaid | 0)); e.cpaid = earned; return delta;
+  }
   flushStats(e, final, won = false) {
     if (!e.acct || this.training || !this.io.stats) return;
     const k = e.sk | 0, d = e.sd | 0; e.sk = 0; e.sd = 0;
-    if (!k && !d && !final) return;
-    try { this.io.stats([{ acct: e.acct.id, mode: this.cfg.mode, k, d, w: final && won ? 1 : 0, m: final ? 1 : 0 }]); } catch (err) { console.error('stats', err && err.message); }
+    const c = this.coinsDelta(e, final, won);
+    if (!k && !d && !c && !final) return;
+    try { this.io.stats([{ acct: e.acct.id, mode: this.cfg.mode, k, d, c, w: final && won ? 1 : 0, m: final ? 1 : 0 }]); } catch (err) { console.error('stats', err && err.message); }
   }
   matchWon(e, rows) {
     if (this.inv) return !!this.inv.won;
@@ -795,7 +808,7 @@ export class Game {
   kill(t, a, w, head, back = false, ks = null, fx = 0) {
     if (this.inv && t.zt) return this.killZombie(t, a, w, head, back, ks);
     t.alive = false; t.hp = 0; t.deaths++; if (t.acct) t.sd++; t.respawnAt = this.T + (t.dummy ? TRAIN.respawn : RESPAWN_TIME); if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
-    if (a && a !== t) { a.kills++; if (a.acct) a.sk++; if (a.alive && ks !== 'h' && ks !== 'x' && ks !== 'g' && ks !== 'a') this.streakKill(a); }
+    if (a && a !== t) { a.kills++; if (a.acct) { a.sk++; if (!this.inv && !(this.teamMode && a.team === t.team)) a.ck = (a.ck | 0) + (t.bot || t.zt ? EARN.killBot : EARN.killHuman); } if (a.alive && ks !== 'h' && ks !== 'x' && ks !== 'g' && ks !== 'a') this.streakKill(a); }
     t.ksKills = 0; t.ksMissile = null; // morreu: sequência zera (míssil no ar cai junto); os streaks já ganhos (ksBank) continuam guardados
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w === W_BOMB ? W_NADE : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1); else if (w === W_BOMB) ev.push(3); // 3 = botijão (clientes antigos veem Copo Bomba)
