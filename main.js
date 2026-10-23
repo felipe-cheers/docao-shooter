@@ -50,6 +50,8 @@ import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from './shared/c
 import { EGG, eggSpeed, eggDmg, stepEgg } from './shared/egg.js';
 import { killIcon, weaponSvg } from './killfeed-icons.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, FAMAS, DISC_W, SABER2, CORN_W, EGG_W, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, LMG, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
+import { getAccount, onAccount, loadMe, saveSkin as saveAcctSkin, dropSession } from './account.js';
+import { initAccountUI } from './account-ui.js';
 import { POWER_UPS, normHand, clampLoadout, botPool, powerOn, savedToLimits, limitsToSaved } from './shared/loadout.js';
 
 const V3 = THREE.Vector3;
@@ -3564,6 +3566,7 @@ function buildPrimaryPickers() {
 }
 function setPreview(id) {
   selectedSkin = getSkin(id).id; try { localStorage.setItem('docao.skin', selectedSkin); } catch (e) { /* sem storage */ }
+  saveAcctSkin(selectedSkin); // com conta: guarda a skin (sem conta não faz nada)
   if (preview) showcase.remove(preview.group);
   preview = makeDocao(selectedSkin, { withGun: false, pose: 'idle' }); showcase.add(preview.group);
   $('skinName').textContent = getSkin(selectedSkin).name;
@@ -4492,10 +4495,10 @@ function renderServerT() {
 }
 // ---------- nome do jogador: um só valor nos 3 campos (menu, janela online, lobby), salvo no navegador ----------
 const NAME_FIELDS = ['nameInput', 'onlineName', 'lobbyName'];
-function myName() { return cleanName($('nameInput').value); }
+function myName() { const a = getAccount(); return a ? a.nick : cleanName($('nameInput').value); } // conta: o apelido é fixo
 function saveName(n, from) {
-  n = cleanName(n); for (const id of NAME_FIELDS) if (id !== from) $(id).value = n;
-  try { localStorage.setItem('docao.name', n); } catch (e) { /* sem storage */ }
+  const acc = getAccount(); n = acc ? acc.nick : cleanName(n); for (const id of NAME_FIELDS) if (id !== from) $(id).value = n;
+  if (!acc) { try { localStorage.setItem('docao.name', n); } catch (e) { /* sem storage */ } } // o apelido da conta não vira o nome de convidado
   return n;
 }
 function profile() {
@@ -4512,6 +4515,13 @@ for (const id of NAME_FIELDS) {
 // lobby: manda o nome novo pro servidor (ele limpa e evita repetido, ex.: "Matheus (2)")
 function sendName() { if (!online || !online.net) return; const n = saveName($('lobbyName').value); online.net.send({ t: 'prof', name: n, skin: selectedSkin, primary: selectedPrimary, secondary: selectedSecondary, melee: selectedMelee }); online.nameSent = n; }
 $('lobbyNameBtn').onclick = () => sendName();
+// ---------- conta (opcional): apelido fixo + skin guardada ----------
+function applyAccount(a) {
+  for (const id of NAME_FIELDS) { const el = $(id); el.readOnly = !!a; el.title = a ? 'Apelido fixo da sua conta' : ''; el.classList.toggle('locked', !!a); }
+  if (a) { saveName(a.nick); if (a.skin && SKINS.some((s) => s.id === a.skin) && a.skin !== selectedSkin) setPreview(a.skin); else if (!a.skin) saveAcctSkin(selectedSkin); }
+  else { let n = ''; try { n = localStorage.getItem('docao.name') || ''; } catch (e) { /* sem storage */ } for (const id of NAME_FIELDS) $(id).value = cleanName(n || 'Docão'); }
+}
+onAccount(applyAccount); initAccountUI(); loadMe().then(() => applyAccount(getAccount()));
 const roomLink = (code) => { const u = new URL(location.href); u.search = ''; const sv = new URLSearchParams(location.search).get('server'); if (sv) u.searchParams.set('server', sv); u.searchParams.set('sala', code); return u.toString(); };
 function socialTeam() { if (!online) return false; const cfg = (online.lobby && online.lobby.cfg) || online.cfg; return !!(cfg && (cfg.mode === 'dom' || cfg.mode === 'bomb')); } // Dominação e Bomba: chat e voz do time
 function inviteBlurb(code) { return `Bora jogar Docão Shooter! Sala ${code}\n${roomLink(code)}`; }
@@ -4558,6 +4568,7 @@ function leaveOnline(silent) {
 }
 function onNetStatus(st, detail) {
   if (!online) return; online.status = st;
+  if (st === 'error' && /^Sessão expirada/.test(detail || '')) { dropSession(); leaveOnline(); flashMenuErr(detail); return; } // token vencido: volta a convidado
   const txt = st === 'reconnecting' ? 'Reconectando…' : st === 'connecting' ? 'Conectando…' : st === 'error' ? (detail || 'Erro de conexão') : '';
   $('lobbyStatus').textContent = txt; $('netStatus').textContent = st === 'open' ? '' : ' · ' + txt;
   if (st === 'error') {

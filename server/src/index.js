@@ -11,12 +11,15 @@
 // ============================================================
 import { DurableObject } from 'cloudflare:workers';
 import { Game } from './game.js';
+import { handleAccountRoute, accountFromToken, nickRegistered, saveSkin, recordStats } from './auth.js';
+import { cleanName, NAME_MAX } from '../../shared/names.js';
 
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I/O pra não confundir
 const CODE_RE = /^[A-Z]{4}$/;
 const EMPTY_TTL = 120 * 1000; // sala vazia some depois de 2 min
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
-const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' };
+const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', ...cors, ...extra } });
+const guestName = (raw) => cleanName(Array.from(cleanName(raw)).slice(0, NAME_MAX - 7).join('').trim() + ' (conv)'); // convidado com apelido de conta vira "Nome (conv)"
 const newCode = () => Array.from({ length: 4 }, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
 
 export default {
@@ -33,12 +36,22 @@ export default {
       }
       return json({ error: 'Não deu pra gerar um código de sala' }, 503);
     }
+    const acctRes = await handleAccountRoute(req, env, url, json); if (acctRes) return acctRes;
     const m = url.pathname.match(/^\/(api\/rooms|ws)\/([A-Za-z]{4})\/?$/);
     if (m) {
       const code = m[2].toUpperCase(); const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
       if (m[1] === 'ws') {
         if (req.headers.get('Upgrade') !== 'websocket') return json({ error: 'Esperado WebSocket' }, 426);
-        return stub.fetch(new Request('https://room/ws' + url.search, req));
+        // Conta (opcional): o token vem no subprotocolo "tk.<token>" (fora da URL, pra não cair em log). Só o Worker confere o token;
+        // a sala recebe o resultado por cabeçalhos internos (os de fora são descartados).
+        const h = new Headers(req.headers); h.delete('x-docao-acct'); h.delete('x-docao-authfail'); h.delete('x-docao-proto'); h.delete('x-docao-guestname');
+        const protos = (req.headers.get('Sec-WebSocket-Protocol') || '').split(',').map((x) => x.trim()).filter(Boolean);
+        const tk = protos.find((x) => x.startsWith('tk.')); if (protos.includes('docao')) h.set('x-docao-proto', 'docao');
+        if (tk) {
+          const acc = await accountFromToken(env, tk.slice(3));
+          if (acc) h.set('x-docao-acct', JSON.stringify({ id: acc.id, nick: acc.nick, skin: acc.skin || '' })); else h.set('x-docao-authfail', '1');
+        } else if (await nickRegistered(env, url.searchParams.get('name'))) h.set('x-docao-guestname', guestName(url.searchParams.get('name')));
+        return stub.fetch(new Request('https://room/ws' + url.search, { method: 'GET', headers: h }));
       }
       const r = await stub.fetch('https://room/info'); return json(await r.json(), r.status);
     }
@@ -62,7 +75,7 @@ export class Room extends DurableObject {
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment(); if (!a) continue;
       const e = this.game.makeEnt({ name: a.name, skin: a.skin, primary: a.primary, secondary: a.secondary, melee: a.melee, bot: false });
-      this.game.ents.delete(e.id); e.id = a.id; e.token = a.token; this.game.ents.set(e.id, e);
+      this.game.ents.delete(e.id); e.id = a.id; e.token = a.token; if (a.acct) { e.acct = a.acct; e.sk = e.sd = 0; } this.game.ents.set(e.id, e);
       this.game.nextId = Math.max(this.game.nextId, a.id + 1);
     }
     this.game.hostId = this.game.ents.has(saved.hostId) ? saved.hostId : (this.game.humans()[0] || {}).id || 0;
@@ -76,6 +89,7 @@ export class Room extends DurableObject {
       startLoop() { self.lastMsg = Date.now(); if (!self.loop) self.loop = setInterval(() => self.maybeTick(true), 50); },
       stopLoop() { if (self.loop) { clearInterval(self.loop); self.loop = null; } self.persist(); },
       saveCfg() { self.persist(); },
+      stats(items) { if (self.env.DB && items.length) self.ctx.waitUntil(recordStats(self.env, items).catch((e) => console.error('stats', e && e.message))); },
     });
   }
   // A simulação roda a 20 Hz "pegando carona" nas mensagens dos clientes (cada mensagem é uma invocação com o
@@ -107,25 +121,32 @@ export class Room extends DurableObject {
     if (url.pathname === '/ws') {
       const pair = new WebSocketPair(); const [client, server] = Object.values(pair);
       this.ctx.acceptWebSocket(server);
-      const fail = (msg) => { server.send(JSON.stringify({ t: 'error', msg })); server.close(4000, msg.slice(0, 60)); return new Response(null, { status: 101, webSocket: client }); };
+      const proto = req.headers.get('x-docao-proto') ? { 'Sec-WebSocket-Protocol': 'docao' } : {};
+      const fail = (msg) => { server.send(JSON.stringify({ t: 'error', msg })); server.close(4000, msg.slice(0, 60)); return new Response(null, { status: 101, webSocket: client, headers: proto }); };
+      if (req.headers.get('x-docao-authfail')) return fail('Sessão expirada. Entre de novo na sua conta (ou jogue como convidado).');
+      let acct = null; try { const raw = req.headers.get('x-docao-acct'); if (raw) { const o = JSON.parse(raw); if (o && o.id > 0 && typeof o.nick === 'string') acct = { id: o.id | 0, nick: o.nick, skin: String(o.skin || '') }; } } catch (e) { acct = null; }
       if (!this.game) return fail('Sala não encontrada');
       const q = url.searchParams;
-      const r = this.game.join({ name: q.get('name'), skin: q.get('skin'), primary: parseInt(q.get('primary')), secondary: parseInt(q.get('secondary')), melee: parseInt(q.get('melee')), token: q.get('token') });
+      const r = this.game.join({ acct, name: !acct && req.headers.get('x-docao-guestname') ? req.headers.get('x-docao-guestname') : q.get('name'), skin: q.get('skin'), primary: parseInt(q.get('primary')), secondary: parseInt(q.get('secondary')), melee: parseInt(q.get('melee')), token: q.get('token') });
       if (r.error) return fail(r.error);
       const e = r.ent;
       for (const old of this.ctx.getWebSockets()) { const a = old.deserializeAttachment(); if (old !== server && a && a.id === e.id) { old.serializeAttachment(null); try { old.close(4001, 'Reconectado em outra aba'); } catch (x) { /* já fechado */ } } }
-      server.serializeAttachment({ id: e.id, token: e.token, name: e.name, skin: e.skin, primary: e.primary, secondary: e.secondary, melee: e.melee });
+      server.serializeAttachment({ id: e.id, token: e.token, acct: e.acct || null, name: e.name, skin: e.skin, primary: e.primary, secondary: e.secondary, melee: e.melee });
       await this.ctx.storage.deleteAlarm();
       this.game.welcome(e); this.persist();
-      return new Response(null, { status: 101, webSocket: client });
+      return new Response(null, { status: 101, webSocket: client, headers: proto });
     }
     return new Response('not found', { status: 404 });
   }
   async webSocketMessage(ws, msg) {
     const a = ws.deserializeAttachment(); if (!a || !this.game || typeof msg !== 'string' || msg.length > 8192) return;
     let m; try { m = JSON.parse(msg); } catch (e) { return; }
+    if (m && m.t === 'prof') { // conta: skin vira a da conta (salva); convidado não pode tomar o apelido de uma conta
+      if (a.acct) { if (typeof m.skin === 'string') await saveSkin(this.env, a.acct.id, m.skin).catch(() => {}); }
+      else if (typeof m.name === 'string' && await nickRegistered(this.env, m.name)) m.name = guestName(m.name);
+    }
     this.lastMsg = Date.now(); this.game.onMessage(a.id, m); this.maybeTick(false);
-    if (m.t === 'prof') { const e = this.game.ents.get(a.id); if (e) ws.serializeAttachment({ ...a, name: e.name, skin: e.skin, primary: e.nextPrimary, secondary: e.nextSecondary, melee: e.nextMelee }); }
+    if (m.t === 'prof') { const e = this.game.ents.get(a.id); if (e) ws.serializeAttachment({ ...a, acct: a.acct || null, name: e.name, skin: e.skin, primary: e.nextPrimary, secondary: e.nextSecondary, melee: e.nextMelee }); }
   }
   async webSocketClose(ws) { this.drop(ws); }
   async webSocketError(ws) { this.drop(ws); }

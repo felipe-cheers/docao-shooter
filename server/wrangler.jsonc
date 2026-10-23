@@ -10,5 +10,7 @@
   },
   // plano grátis: Durable Objects precisam ser SQLite-backed
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  // Contas (login opcional). Em `wrangler dev` o D1 é simulado local (id de mentira). Em produção: ver docs/LOGIN-DEPLOY.md
+  "d1_databases": [{ "binding": "DB", "database_name": "docao-contas", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
   "observability": { "enabled": true }
 }
