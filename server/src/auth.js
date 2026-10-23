@@ -118,8 +118,14 @@ export async function handleAccountRoute(req, env, url, json) {
       const where = mode === 'all' ? '' : 'WHERE s.mode = ?1';
       const order = sort === 'wins' ? 'wins DESC, kills DESC' : 'kills DESC, wins DESC';
       const q = `SELECT a.nick AS nick, SUM(s.kills) AS kills, SUM(s.deaths) AS deaths, SUM(s.wins) AS wins, SUM(s.matches) AS matches FROM stats s JOIN accounts a ON a.id = s.account_id ${where} GROUP BY s.account_id HAVING SUM(s.kills) + SUM(s.deaths) + SUM(s.wins) > 0 ORDER BY ${order}, deaths ASC, a.nick LIMIT ${limit}`;
+      // custo: o ranking soma a tabela inteira; guarda a resposta 60 s no cache da borda da Cloudflare (leitura do D1 no máx. 1x por minuto por filtro)
+      const ck = new Request(`https://rank.cache/${mode}/${sort}/${limit}`); let hit = null;
+      try { hit = await caches.default.match(ck); } catch (e) { /* sem cache (dev local) */ }
+      if (hit) return hit;
       const { results } = await (mode === 'all' ? env.DB.prepare(q) : env.DB.prepare(q).bind(mode)).all();
-      return json({ mode, sort, rows: results || [] }, 200, { 'Cache-Control': 'public, max-age=10' });
+      const resp = json({ mode, sort, rows: results || [] }, 200, { 'Cache-Control': 'public, max-age=60' });
+      try { await caches.default.put(ck, resp.clone()); } catch (e) { /* ok */ }
+      return resp;
     }
     if (p === '/api/auth/register' && m === 'POST') {
       const b = await readJson(req); if (!b) return json({ error: 'Pedido inválido' }, 400);
