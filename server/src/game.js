@@ -26,6 +26,7 @@ import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from '../
 import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos, AC130 } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 import { BOMB, W_BOMB, bombLayout, newBombState, startRound, stepBomb, blastVictims, packBomb, spawnList, botObjective, bombFrozen } from '../../shared/bomb.js';
+import { rounds, spendRound, drumsFull, drumsEmpty, refillDrums, resetDrums, setDrum, pickBotSecondary, akimboReady, ammoLow } from '../../shared/revolver.js';
 const MODE_OK = (m) => (m === 'dom' || m === 'bomb' || isTraining(m) || isInvasion(m) ? m : 'dm');
 
 export const MAX_PLAYERS = 10;
@@ -148,7 +149,7 @@ export class Game {
     const e = { id, bot, name: cleanName(name), skin: SKINS.some((s) => s.id === skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
       primary: prim, nextPrimary: prim, secondary: sec, nextSecondary: sec, melee: mel, nextMelee: mel, slots: [prim, sec, mel], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
-      nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
+      nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastShotL: WEAPONS.map(() => -9), lastCt: [], lastCtL: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
       connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off' };
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
     this.ents.set(id, e); return e;
@@ -177,7 +178,7 @@ export class Game {
     const used = new Set(this.live().map((b) => b.name)); // bot não pega nome de humano
     while (bots.length < want) {
       const name = BOT_DEFS.map((d) => d.name).find((n) => !used.has(n)) || 'Bot ' + this.nextId; used.add(name);
-      const b = this.makeEnt({ name, skin: pick(SKINS).id, primary: pick(botPool(this.cfg.weapons)), bot: true }); bots.push(b);
+      const b = this.makeEnt({ name, skin: pick(SKINS).id, primary: pick(botPool(this.cfg.weapons)), secondary: pickBotSecondary(this.cfg.weapons), bot: true }); bots.push(b);
       if (this.teamMode) b.team = smallerTeam(tc());
       if (this.state === 'playing') { this.events.push(['j', this.entInfo(b)]); this.spawn(b); }
     }
@@ -215,7 +216,7 @@ export class Game {
       e.kills = 0; e.deaths = 0; e.alive = false; e.needRs = false; e.caps = 0; e.pendingTeam = false; if (!this.teamMode) e.team = -1;
       // this.T e o relógio do cliente voltam a 0 na partida nova: zera cadência/anti speed-hack, senão os tiros da partida anterior
       // (lastShot/lastCt/lastMelee no futuro) fazem o servidor rejeitar todo tiro no "Próximo mapa"/"Jogar de novo" (sem dano)
-      e.lastShot = WEAPONS.map(() => -9); e.lastCt = []; e.maxOff = undefined; e.lastMeleeCt = undefined; e.lastMeleeT = undefined; e.lastMeleeRate = 0; e.lastKnock = -9; e.mg = null; e.shotBud = [];
+      e.lastShot = WEAPONS.map(() => -9); e.lastShotL = WEAPONS.map(() => -9); e.lastCt = []; e.lastCtL = []; e.maxOff = undefined; e.lastMeleeCt = undefined; e.lastMeleeT = undefined; e.lastMeleeRate = 0; e.lastKnock = -9; e.mg = null; e.shotBud = [];
       this.resetStreak(e); e.pokeballs = 0; e.rejectedShots = 0; e.rejectedMelee = 0; e.reload = null; e.hist = []; e.nextFire = 0; e.reloadEnd = 0; e.knifeRoll = 0; e.knifeMode = false;
       if (e.bot) Object.assign(e, { think: 0, lastSeenAt: -99, nextNade: 0, repathAt: 0 });
     }
@@ -438,8 +439,8 @@ export class Game {
     if (!e.alive) return;
     if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'af' || k === 'rl' || k === 'sk')) return;
     if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
-    if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
-    if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
+    if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && WEAPONS[w] && !drumsFull(e, w) && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
+    if (k === 'f') { const Wf = WEAPONS[ev[3]]; const hand = Wf && Wf.akimbo ? ev[6] : 0; if (Wf && Wf.akimbo && hand !== 0 && hand !== 1) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; } return this.clockOk(e, ev[4], ev[3], hand) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]); }
     if (k === 'mgs') return this.mgSpin(e, ev[1], ev[2]);
     if (k === 'r') return this.clockOk(e, ev[3], 3) && this.humanRocket(e, ev[1], ev[2]);
     if (k === 'dk') return this.clockOk(e, ev[3], DISC_W) && this.humanDisc(e, ev[1], ev[2]);
@@ -603,17 +604,19 @@ export class Game {
   // Treino: troca de arma na hora (teclas B/N/M), com pente cheio
   equipNow(e) {
     e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; const old = e.slots; e.slots = [e.primary, e.secondary, e.melee];
-    for (const w of e.slots) if (!old.includes(w)) { e.mag[w] = WEAPONS[w].mag; e.reserve[w] = WEAPONS[w].reserve; if (w === EGG_W) e.eggAt = this.T; }
+    for (const w of e.slots) if (!old.includes(w)) { e.mag[w] = WEAPONS[w].mag; e.reserve[w] = WEAPONS[w].reserve; if (WEAPONS[w].akimbo) setDrum(e, w, WEAPONS[w].mag); if (w === EGG_W) e.eggAt = this.T; }
     if (!e.slots.includes(e.weapon)) e.weapon = e.primary; e.reload = null;
   }
   // cadência: usa o relógio do cliente (tiros chegam agrupados pela rede), mas o relógio do cliente não pode
   // andar mais rápido que o do servidor (speed hack): (tServidor - tCliente) não pode cair mais que 0,75 s abaixo do máximo visto
-  clockOk(e, ct, w) {
+  clockOk(e, ct, w, hand = 0) {
     if (!Number.isFinite(ct) || !WEAPONS[w]) return false;
     const off = this.now() - ct; e.maxOff = Math.max(e.maxOff ?? -Infinity, off);
     if (off < e.maxOff - 0.75) { e.rejectedShots = (e.rejectedShots || 0) + 1; return false; }
-    const last = e.lastCt[w] ?? -Infinity; if (ct - last < WEAPONS[w].rate * 0.9) { e.rejectedShots = (e.rejectedShots || 0) + 1; return false; }
-    e.lastCt[w] = ct; return true;
+    const left = !!(WEAPONS[w].akimbo && hand === 1);
+    const bag = left ? (e.lastCtL || (e.lastCtL = [])) : e.lastCt;
+    const last = bag[w] ?? -Infinity; if (ct - last < WEAPONS[w].rate * 0.9) { e.rejectedShots = (e.rejectedShots || 0) + 1; return false; }
+    bag[w] = ct; return true;
   }
   // Minigun: embalo e calor modelados no relógio do cliente (o mesmo de clockOk), com folga pra rede
   mgLevel(e, ct) { const m = e.mg, S = WEAPONS[MINIGUN].spin; if (!m) return 0; const d = Math.max(0, ct - m.at); return clamp(m.v + (m.on ? d / S.up : -d / S.down), 0, 1); }
@@ -641,23 +644,26 @@ export class Game {
       const shells = el >= (w.reloadStart + w.reload) * 0.8 ? Math.floor((el - w.reloadStart * 0.8) / (w.reload * 0.8)) : 0;
       while (R.done < shells && e.mag[i] < w.mag && e.reserve[i] > 0) { e.mag[i]++; e.reserve[i]--; R.done++; }
       if (e.mag[i] >= w.mag || e.reserve[i] <= 0) e.reload = null;
-    } else if (el >= w.reload * 0.8) { const n = Math.min(w.mag - e.mag[i], e.reserve[i]); e.mag[i] += n; e.reserve[i] -= n; e.reload = null; if (i === EGG_W) e.eggAt = R.start + w.reload * 0.8; } // ovo na mão: a puxada conta daqui
+    } else if (el >= w.reload * 0.8) { refillDrums(e, i); e.reload = null; if (i === EGG_W) e.eggAt = R.start + w.reload * 0.8; } // ovo na mão: a puxada conta daqui
   }
-  canShoot(e, w) {
-    const W = WEAPONS[w]; if (!e.slots.includes(w)) return false;
+  canShoot(e, w, hand = 0) {
+    const W = WEAPONS[w]; if (!W || !e.slots.includes(w)) return false;
+    const h = W.akimbo && hand === 1 ? 1 : 0;
+    const bag = h === 1 ? (e.lastShotL || (e.lastShotL = WEAPONS.map(() => -9))) : e.lastShot;
     let bud = 0; if (W.spin) { bud = Math.min(6, (e.shotBud?.[w] ?? 6) + (this.T - e.lastShot[w]) / (W.rate * 0.9)); if (bud < 1) return false; } // minigun: até 6 tiros de folga, recarrega na cadência
-    else if (this.T - e.lastShot[w] < W.rate * 0.35) return false; // folga pra rede; a cadência real é checada em clockOk
+    else if (this.T - (bag[w] ?? -9) < W.rate * 0.35) return false; // folga pra rede; a cadência real é checada em clockOk
     this.progressReload(e);
-    if (e.mag[w] <= 0) return false;
+    if (rounds(e, w, h) <= 0) return false;
     if (e.reload && W.shellReload) e.reload = null; // atirar interrompe a recarga do Calibre 12
     else if (e.reload) return false;
     if (W.spin) (e.shotBud ||= [])[w] = bud - 1;
-    e.mag[w]--; e.lastShot[w] = this.T; e.invulnUntil = Math.min(e.invulnUntil, this.T); e.weapon = w; return true;
+    spendRound(e, w, h); bag[w] = this.T; e.invulnUntil = Math.min(e.invulnUntil, this.T); e.weapon = w; return true;
   }
   humanFire(e, oA, dirs, w, rt, pull) {
     if (WEAPONS[w] && WEAPONS[w].egg) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; } // estilingue não é hitscan: só 'eg'
     const o = obj3(oA); if (!this.eyeOk(e, o) || !Number.isInteger(w) || !WEAPONS[w] || WEAPONS[w].rocket || WEAPONS[w].egg || WEAPONS[w].corn || WEAPONS[w].disc || !Array.isArray(dirs)) return; // projéteis têm evento próprio
-    if (!this.canShoot(e, w)) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; }
+    const hand = WEAPONS[w].akimbo && pull === 1 ? 1 : 0;
+    if (!this.canShoot(e, w, hand)) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; }
     const ds = dirs.slice(0, Math.max(1, WEAPONS[w].pellets)).map(obj3).filter(Boolean).map(norm);
     // compensação de lag: o cliente manda o tempo de servidor do que estava desenhando (rt); senão estima RTT + 100 ms de interpolação
     const rewind = Number.isFinite(rt) ? clamp(rt, this.T - 0.4, this.T) : this.T - clamp(e.ping / 1000 + 0.1, 0, 0.4);
@@ -939,7 +945,7 @@ export class Game {
     const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.crouch = 0; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
     if (e.bot && (Math.random() < 0.3 || !weaponOn(e.nextPrimary, this.cfg.weapons))) e.nextPrimary = pick(botPool(this.cfg.weapons));
     const c = clampLoadout(e.nextPrimary, e.nextSecondary ?? PISTOL, e.nextMelee ?? KNIFE, this.cfg.weapons);
-    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith; e.shocks = powerOn('stun', this.cfg.powers) ? SHOCK.spawnWith : 0; e.stunUntil = 0; e.lastShockT = -99; this.toMe(e, ['skn', e.shocks]);
+    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); resetDrums(e); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith; e.shocks = powerOn('stun', this.cfg.powers) ? SHOCK.spawnWith : 0; e.stunUntil = 0; e.lastShockT = -99; this.toMe(e, ['skn', e.shocks]);
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
     if (e.dummy) { this.placeDummy(e); e.invulnUntil = this.T; e.slots = [0, PISTOL, KNIFE]; }
     e.hist = []; this.pushHist(e); e.lastUpd = this.now();
@@ -1082,7 +1088,7 @@ export class Game {
     if (m.killAll) for (const z of [...I.zombies]) if (z.alive) this.damage(z, 1e6, e, 0, false);
     if (m.clearQueue) { I.queue = []; I.bossPending = false; }
     if (m.drop) I.drop({ x: e.pos.x + 2, y: e.pos.y, z: e.pos.z }, false);
-    if (m.ammoDrop) { for (const i of e.slots) { e.reserve[i] = 0; e.mag[i] = 0; } I.dropAmmo({ x: e.pos.x + 2, y: e.pos.y, z: e.pos.z }, 0); } // zera a munição e solta uma caixa de zumbi ao lado
+    if (m.ammoDrop) { for (const i of e.slots) { e.reserve[i] = 0; e.mag[i] = 0; if (WEAPONS[i].akimbo) setDrum(e, i, 0); } I.dropAmmo({ x: e.pos.x + 2, y: e.pos.y, z: e.pos.z }, 0); } // zera a munição e solta uma caixa de zumbi ao lado
     if (m.lives != null) e.lives = m.lives | 0;
     if (m.hurt) this.damage(e, m.hurt, null, 0, false);
     if (m.fog) Object.assign(I.fog, m.fog, { t0: 0, t1: 0 });
@@ -1117,13 +1123,14 @@ export class Game {
     if (pr === P90) return d < 36 ? pr : side;
     if (pr === SEMI) return d < 16 ? pr : side;
     if (pr === CORN_W) return d >= 4 && d <= 13 ? pr : side; // pipoca: nem colado nem longe
+    if (WEAPONS[side] && WEAPONS[side].revolver && d < (WEAPONS[side].akimbo ? 6 : 8) && pr !== 1 && pr !== SEMI) return side; // revólver no colo; escopeta e semi ficam na primária
     return pr;
   }
   updateBot(b, dt) {
     if (!b.alive) return;
     if (bombFrozen(this.bomb)) { b.vel.x = b.vel.z = 0; b.useHold = false; return; } // Bomba: preparação, todo mundo parado
     if (b.dummy) { this.placeDummy(b); return; } // Treino: alvo não pensa, não mira, não atira
-    if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; b.reloadEnd = 0; }
+    if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; if (WEAPONS[b.weapon].akimbo) setDrum(b, b.weapon, WEAPONS[b.weapon].mag); b.reloadEnd = 0; }
     b.think -= dt;
     if (b.think <= 0) {
       b.think = rand(0.18, 0.32); let best = null, bs = 1e9; const eye = center(b, 1.5);
@@ -1167,7 +1174,7 @@ export class Game {
       const gx = goal.x - b.pos.x, gz = goal.z - b.pos.z;
       if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5 && !(bc && Math.hypot(gx, gz) > 0.1)) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
       else { const st = this.steer(b, goal) || { x: gx / Math.hypot(gx, gz), z: gz / Math.hypot(gx, gz) }; mx = st.x; mz = st.z; desiredYaw = face(st.x, st.z); }
-      if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5 && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
+      if (ammoLow(b, b.weapon) && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
     }
     if (b.useHold) { mx = 0; mz = 0; } // plantando/desarmando: fica parado
     const sp = BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > this.T ? SHOCK.slow : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
@@ -1194,17 +1201,25 @@ export class Game {
       b.nextFire = this.T + MELEE[kind].rate * rand(1.3, 1.9); b.invulnUntil = Math.min(b.invulnUntil, this.T);
       this.melee(b, kind, o, norm({ x: at.x - o.x, y: at.y - o.y, z: at.z - o.z })); return;
     }
-    if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
-    if (w.rocket && d < 6) return;
-    if (w.corn && d < 4) return;
-    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * ([rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6), 1.15, 1.05][b.weapon] || 1.2); b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    if (w.akimbo) {
+      const slack = 1 + Math.max(0, ((b.accuracy || 0.05) - 0.045) * 8);
+      const h = akimboReady(b, b.weapon, this.T, slack);
+      if (h < 0) { if (drumsEmpty(b, b.weapon)) b.reloadEnd = this.T + w.reload; return; }
+      spendRound(b, b.weapon, h); b.nextFire = this.T + w.rate * 0.45; b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    } else {
+      if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
+      if (w.rocket && d < 6) return;
+      if (w.corn && d < 4) return;
+      b.mag[b.weapon]--; b.nextFire = this.T + w.rate * ([rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6), 1.15, 1.05][b.weapon] || 1.2); b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    }
     if (w.burst) { b.burstLeft = (b.burstLeft || w.burst) - 1; b.nextFire = this.T + (b.burstLeft > 0 ? w.rate : w.burstDelay * rand(1.6, 2.6)); } // FAMAS: rajada de 3 e respira
     const o = center(b, 1.3), tMoving = Math.hypot(t.vel.x, t.vel.z) > 2 ? 1.5 : 1;
     if (w.corn) { const oo = center(b, 1.4); this.launchCorn(b, oo, cornAim(oo, { x: t.pos.x + t.vel.x * 0.35 + rand(-0.6, 0.6), y: t.pos.y + 0.7, z: t.pos.z + t.vel.z * 0.35 + rand(-0.6, 0.6) })); return; }
     if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + t.vel.x * lead + rand(-0.8, 0.8), y: t.pos.y + 0.25, z: t.pos.z + t.vel.z * lead + rand(-0.8, 0.8) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
     const aim = w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6)); aim.x += rand(-0.3, 0.3); aim.z += rand(-0.3, 0.3);
     const base = norm({ x: aim.x - o.x, y: aim.y - o.y, z: aim.z - o.z });
-    const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > this.T ? 2.5 : 1); // ovo na cara: erra mais
+    const hip = w.akimbo ? 1.45 : w.revolver ? 0.72 : (b.weapon === PISTOL ? 0.9 : 1);
+    const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * hip) * (b.eggUntil > this.T ? 2.5 : 1); // ovo na cara: erra mais
     const dirs = []; for (let p = 0; p < Math.max(1, w.pellets); p++) dirs.push(norm({ x: base.x + (Math.random() - 0.5) * 2 * spread, y: base.y + (Math.random() - 0.5) * 2 * spread, z: base.z + (Math.random() - 0.5) * 2 * spread }));
     this.hitscan(b, o, dirs, b.weapon);
     if (w.scope) b.aim = b.reaction * 0.4;
@@ -1215,9 +1230,17 @@ export class Game {
     for (const h of this.helis) { if (!h.alive || !this.heliFoe(h, b)) continue; const p = this.heliAt(h), d = dist(eye, p); if (d <= 62 && d >= 4 && this.P.losClear(eye, p)) { hl = h; hp = p; break; } }
     if (!hl) return;
     const w = WEAPONS[b.weapon]; if (w.melee || w.rocket || isSaber(b.weapon)) return;
-    if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
+    if (w.akimbo) {
+      if (drumsEmpty(b, b.weapon)) { b.reloadEnd = this.T + w.reload; return; }
+      const h = akimboReady(b, b.weapon, this.T, 1.2);
+      if (h < 0) return;
+      spendRound(b, b.weapon, h); b.nextFire = this.T + w.rate * 0.45;
+    } else {
+      if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
+      b.mag[b.weapon]--; b.nextFire = this.T + w.rate * 1.6;
+    }
     b.yaw = Math.atan2(hp.x - b.pos.x, hp.z - b.pos.z);
-    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * 1.6; b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    b.invulnUntil = Math.min(b.invulnUntil, this.T);
     const o = center(b, 1.3), base = norm({ x: hp.x - o.x, y: hp.y - o.y, z: hp.z - o.z }), sp = 0.05, dirs = [];
     for (let i = 0; i < Math.max(1, w.pellets); i++) dirs.push(norm({ x: base.x + (Math.random() - 0.5) * 2 * sp, y: base.y + (Math.random() - 0.5) * 2 * sp, z: base.z + (Math.random() - 0.5) * 2 * sp }));
     this.hitscan(b, o, dirs, b.weapon);
