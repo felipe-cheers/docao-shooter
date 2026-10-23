@@ -28,6 +28,7 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 - [🎮 Como jogar](#-como-jogar)
 - [⌨️ Controles](#️-controles)
 - [🏆 Modos de jogo](#-modos-de-jogo)
+  - [💣 Bomba · Planta o Botijão](#-bomba--planta-o-botijão)
 - [🗺️ Mapas](#️-mapas)
 - [🔫 Armas](#-armas)
 - [💣 Granadas](#-granadas)
@@ -63,7 +64,7 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 
 ### 🌐 Online (com a galera)
 
-- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação ou Treino), **máximo de jogadores (2 a 10)**, se quer **completar com bots** e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
+- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots** e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
 - **Entrar na sala:** digite o código ou abra o link de convite `https://docao.mvalentim.dev/?sala=ABCD`, que já cai direto no lobby.
 - **Convite:** no lobby e na pausa tem Copiar link, Copiar código, WhatsApp, Telegram, Slack e Compartilhar.
 - **Anfitrião (★):** troca mapa, máximo, bots, modo, tempo e **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
@@ -91,6 +92,7 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **4** | granada de **fumaça** (só offline) |
 | **5** | granada de **atordoamento** (só offline) |
 | **F** | usa o **killstreak** pronto (o mais antigo primeiro) |
+| **E** (segurar) | Modo Bomba: **planta** o Botijão (Ataque, dentro do site) ou **desarma** (Defesa, perto dele) |
 | **Tab** (segurar) | placar |
 | **Esc** ou **P** | pausa |
 
@@ -151,11 +153,50 @@ Um estande de tiro no estilo The Range, que abre sempre no mapa **Estande do Doc
 - **B / N / M** trocam a arma na hora, a reserva de munição é infinita e o Copo Bomba volta sozinho. Não tem limite de tempo.
 - Online, os jogadores se dão dano normalmente, então dá pra fazer X1 com a galera.
 
+### 💣 Bomba · Planta o Botijão
+
+Estilo Valorant, com o Docão. Time **Vermelho × Azul**, um lado **ataca** e o outro **defende**.
+
+| | |
+|---|---|
+| 🎯 **Objetivo do Ataque** | levar o **Botijão do Churrasco** até o site **A** ou **B** e plantar |
+| 🛡️ **Objetivo da Defesa** | impedir a plantação ou **desarmar** o Botijão |
+| 🔁 **Rodadas** | **10 s** de preparação (todo mundo parado no spawn, ninguém leva dano) e depois **100 s** pra plantar |
+| 🏁 **Vitória** | **primeiro a 13 rodadas**. Depois da **12ª**, os lados trocam (faixa **"Troca de lado!"**) |
+| ♻️ **Renascimento** | **normal** (5 s + RENASCER), sempre no spawn do seu lado. A rodada **não** acaba por eliminação |
+
+- **Instruções na tela:** um aviso grande no meio da tela diz o que fazer agora e com qual tecla: *"Leve o botijão até o A ou o B"* com a distância de cada site, *"Segure **E** para plantar o botijão"* quando você está dentro do site, *"Segure **E** para desarmar"* quando é da Defesa e está perto do Botijão plantado, e a barra com os segundos que faltam. A faixa do começo da rodada explica o objetivo do seu lado.
+- **Troca de arma a cada rodada:** na preparação aparece um painel compacto embaixo da tela, com as miniaturas das armas (primária, secundária e corpo a corpo), a sua escolha destacada e uma barra até a rodada começar. **1–9** ou a **rodinha** trocam a primária na hora (com pente cheio), **N** troca a secundária, **M** alterna faca/sabre, **G** solta o mouse se quiser clicar e **B** fecha/reabre (só na preparação). Dá pra olhar em volta com ele aberto, e ele some sozinho no VALENDO. Online, o servidor só aceita a troca na preparação.
+- **Plantar:** um atacante carrega o Botijão (aparece nas costas dele). Dentro do site, segure **E** por **4 s**, parado. Se o carregador morrer, o Botijão **cai no chão** e qualquer atacante pega passando por cima.
+- **Plantado:** o Botijão **bipa cada vez mais rápido** e **explode em 45 s**, matando todo mundo a até **16 m**.
+- **Desarmar:** o defensor segura **E** perto do Botijão por **7 s**. Passou da metade (**3,5 s**), o progresso fica salvo se soltar.
+- **Ponto da rodada:** explodiu → **Ataque**. Desarmou ou o tempo acabou sem plantar → **Defesa**. Depois de 5 s de faixa com o resultado, todo mundo volta pro spawn com vida cheia.
+- **Killstreaks:** a sequência e os streaks guardados **passam de uma rodada pra outra**, porque trocar de rodada não é morrer. O que estiver no ar acaba na virada: o Gavião vai embora, e o míssil pilotado ou o Fim da chapa ainda na contagem **voltam pro F**. Na preparação o **F não funciona**.
+- **Na tela:** placar **Ataque × Defesa**, relógio da rodada (vira a contagem do Botijão quando plantado), quem está com o Botijão, o seu lado e a barra de plantar/desarmar. Setas **A/B** com a distância em metros. No chão, anel amarelo e letra gigante em cada site.
+- **Bots:** o carregador vai pro site e planta, os outros escoltam ou pegam o Botijão caído, e a Defesa guarda o A e o B e corre pra desarmar.
+- **Placar individual:** abates + 2 × objetivos (plantou ou desarmou).
+
+**Mapas do modo Bomba.** O padrão é o **Rodízio do Docão**, feito pra ele. Os outros têm sites e spawns colocados à mão, com o Ataque nascendo longe dos sites. Tempo médio a pé até um site:
+
+| Mapa | Ataque → A / B | Defesa → A / B |
+|---|---|---|
+| 🍖 **Rodízio do Docão** *(padrão)* | 21 s / 22 s | 8 s / 8 s |
+| 🥛 **HOTMILK** | 18 s / 17 s | 8 s / 7 s |
+| 🛢️ **Torres Gêmeas do Barril** | 18 s / 18 s | 6 s / 5 s |
+| 🏭 **Celeiro Industrial** | 12 s / 12 s | 4 s / 6 s |
+| 🐖 **Duas Pocilgas** | 11 s / 12 s | 6 s / 7 s |
+| 🏪 **Mercadão** | 9 s / 12 s | 6 s / 5 s |
+| 🏡 **Arena da Fazendinha** | 9 s / 10 s | 4 s / 4 s |
+| 🍻 **Bar Cheers Noturno** | 8 s / 7 s | 4 s / 5 s |
+| 🏘️ **Vizinhança Cheers** | 8 s / 10 s | 3 s / 4 s |
+
+O **Pátio Ferrugem** fica fora porque é pequeno demais, e o **Estande** é só do Treino. Escolher um deles (ou **Aleatório**) no modo Bomba cai num mapa da lista. Pra conferir as distâncias: `node tools/bomb-walk.mjs`.
+
 ---
 
 ## 🗺️ Mapas
 
-São **9 mapas** de partida, mais o Estande do Docão, que só abre no modo Treino. Todos têm prédios com interior, vários andares ligados por rampas, telhados onde dá pra subir e pelo menos uma linha longa pra Sniper. A geometria, os nomes e a arte são originais. Quando o mapa cita um jogo, foi só a inspiração de layout.
+São **10 mapas** de partida, mais o Estande do Docão, que só abre no modo Treino. Todos têm prédios com interior, vários andares ligados por rampas, telhados onde dá pra subir e pelo menos uma linha longa pra Sniper. A geometria, os nomes e a arte são originais. Quando o mapa cita um jogo, foi só a inspiração de layout.
 
 | Mapa | Como é |
 |---|---|
@@ -167,6 +208,7 @@ São **9 mapas** de partida, mais o Estande do Docão, que só abre no modo Trei
 | 🏘️ **Vizinhança Cheers** | Estilo Nuketown: duas casas de dois andares frente a frente, garagens com telhado, sacadas, quintais e o ônibus no meio da rua. |
 | 🍻 **Bar Cheers Noturno** | Estilo Office: salão com balcão e palco, VIP com sacada no andar de cima, terraço, banheiros, escritório, sinuca e corredores compridos. |
 | 🥛 **HOTMILK** | O campus inteiro: Bloco 01 ao norte, Bloco 02 ao sul, estacionamento com catraca atrás, praça entre os blocos e portão na frente. |
+| 🍖 **Rodízio do Docão** *(Bomba)* | Feito pro modo Bomba: o Ataque nasce num curral ao norte e tem três rotas (Rua do Espeto, Avenida da Linguiça e Beco da Farofa) até o Quintal do Espeto (A) e a Varanda da Costela (B). A Defesa nasce no pátio sul. |
 | 🔩 **Pátio Ferrugem** | Pátio pequeno no estilo do Rust. A torre do meio é a mais alta, com rampa do chão até o topo. |
 | 🎯 **Estande do Docão** *(Treino)* | Raias de 10, 20, 30 e 50 m, alvos andando, área de explosivos e arco, cercadinho da faca e do sabre e arena X1. |
 
@@ -318,6 +360,7 @@ Abates com a **mesma arma** na mesma partida mudam a cor dela. Tudo zera na part
 - **Renascimento:** depois de **5 s** o botão vira **RENASCER**, e você volta clicando nele ou apertando Espaço/Enter. Ao nascer, você fica **2 s protegido**.
 - **Kill feed** no canto de baixo à esquerda, com frases de porco: *pururucou*, *fritou*, *transformou em torresmo*, *mandou pra chapa*, *defumou*, *fez virar bacon*, *serviu no café da manhã*, *botou no espeto*, *temperou com chumbo*… O tiro na cabeça aparece como **"direto no focinho!"**, e quem morre leva o carimbo **PURURUCADO!**.
 - **Placar ao vivo** no canto de cima à esquerda, e o placar completo fica no **Tab**.
+- **Fim da partida:** o resultado fecha as regras na hora e aparece uma plaquinha com **VITÓRIA!**, **DERROTA** ou **EMPATE!**. A cena continua por **1,5 s em câmera lenta** na sua visão (mesma posição, direção e zoom), sem comandos, dano, capturas nem renascimento. Aos **0,8 s** o placar entra por cima, e se você venceu a **dança da vitória** começa quando a câmera lenta acaba. Se você já estava na câmera de morte, ela fica parada. Com "movimento reduzido" ligado no sistema, o placar abre direto. Vale offline e online; pacotes que chegam depois do resultado são ignorados até a próxima partida.
 
 ---
 
@@ -447,8 +490,10 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-idle.mjs` |
 | `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-names.mjs` |
 | `tools/stuck-repro.mjs`: ninguém fica preso na parede | `test-treino.mjs`, `test-faca.mjs`, `test-bacon.mjs` | `test-online-nextmap.mjs` |
+| `tools/bomb-walk.mjs`: sites e tempo a pé no modo Bomba | `test-bomb.mjs`: modo Bomba (aceita `SITE=`) | `test-online-bomb.mjs`: modo Bomba online (`MAP=` troca o mapa) |
 | | `test-mira.mjs`, `test-reload.mjs`, `test-respawn.mjs` | `test-faca-online.mjs`, `test-treino-online.mjs` |
 | | `test-nextmap.mjs`, `test-skin-start.mjs` | `test-prod.mjs`, `test-prod-dom.mjs` |
+| | `test-match-end.mjs`: fim de partida (câmera lenta, resultado, zoom, online com WebSocket controlado; aceita `SITE=`) | |
 | | | `tools/test-killstreak-online.mjs`: míssil, Gavião e nuke online |
 
 Exemplo do online:
@@ -472,6 +517,7 @@ docao-shooter/
 ├── docao.js · costumes.js     # modelo 3D do Docão e peças de fantasia
 ├── skins.js                   # registro das skins (só dados)
 ├── killstreak-ui.js · uav.js  # barra de prêmios e minimapa
+├── bomb-gfx.js                # Modo Bomba: o Botijão e as marcas dos sites
 ├── tactical-nades.js          # fumaça e atordoamento
 ├── weapon-camo.js · weapon-thumbs.js   # camuflagens e miniaturas das armas
 ├── sniper-view.js · bow-view.js · saber-view.js · fp-gear.js  # modelos em 1ª pessoa
@@ -481,6 +527,7 @@ docao-shooter/
 │   ├── rules.js               # armas, Copo Bomba, física, tempos, bots
 │   ├── combat.js · melee.js   # explosões, dispersão da sniper, faca
 │   ├── domination.js · training.js   # Dominação e Treino
+│   ├── bomb.js                     # Modo Bomba: rodadas, sites, plantar/desarmar, bots
 │   └── physics.js · names.js  # colisão e nomes
 ├── server/                    # Cloudflare Worker + Durable Object "Room"
 │   └── src/index.js · src/game.js

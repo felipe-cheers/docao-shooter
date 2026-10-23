@@ -4,6 +4,52 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.15 — Câmera Lenta no Torresmo 🎬🥓 (23/10/2026)
+🤝 **O JOÃO VOLTOU COM CINEMA!** O **João** (@rramosjoao) mandou o **PR #17** e o fim de partida deixou de ser um "pimba, acabou" pra virar **cena de filme**:
+📋 **A tela de fim agora parece a comanda do churrasco:** prancheta de madeira, papel creme, prendedor de metal e o título em tinta com pincelada vermelha. Cada time tem a sua cor, e a Invasão tem verde-oliva (venceu) ou roxo (perdeu). Placar igualzinho ao do Tab, botão de **Jogar de novo** em tijolo, **Próximo mapa** em oliva e **Menu** no papel. Até o chat do online foi pro papel.
+🎬 **Câmera lenta de 1,5 segundo:** acabou a partida? Tudo desacelera na sua visão, com a mesma posição, direção e zoom, e a arma continua na mão. Dá pra ver a última granada rolando, o último torresmo voando e o último bot com cara de quem não entendeu nada.
+🛑 **Placar fechado na hora:** depois do resultado ninguém mais atira, morre, captura nem renasce. Fim é fim, e não adianta reclamar com o juiz.
+🏆 **Plaquinha de VITÓRIA!, DERROTA ou EMPATE!** na hora, com o placar entrando uns 0,8 segundo depois. E a **dança da vitória** só começa quando a câmera lenta acaba, pra ninguém dançar no meio da cena.
+🤝 **Empate de verdade:** no mata-mata, empatou, é **EMPATE!**. Chega de "vence quem aparecer primeiro na lista".
+📶 **Online sem fantasma:** pacotes atrasados que chegam depois do resultado são ignorados até a próxima partida.
+🧘 Tem **movimento reduzido** ligado no seu aparelho? O placar abre direto, sem câmera lenta.
+🙏 Valeu, João! (PR #17)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.14.1 — Granada, Banana! 🍌💣 (23/10/2026)
+📣 **O Copo Bomba agora fala!** E fala com a voz do próprio Matheus, gravada com todo o carinho (e nenhum ensaio):
+🗣️ **"GRANADA!"** no exato instante em que o copo sai da sua mão. Não é quando você começa a segurar o botão, é quando solta. Avisar o inimigo faz parte do estilo.
+🍌 **"BANANA!"** quando o copo explode. Ninguém sabe por quê. O Docão também não pergunta.
+🔊 **Todo mundo ouve:** a granada dos outros jogadores (e dos bots) também grita, com **volume que cai com a distância**. Quem está perto ouve alto; quem está do outro lado do mapa fica em paz (a "granada" some a uns 60 metros e a "banana" a uns 50).
+🙅 **Só o Copo Bomba:** a Pokébola, o míssil e o foguete continuam na dieta de sempre, sem frutas.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.14 — Operação Bacon 🥓💣 (23/10/2026)
+🚨 **NOVO MODO: BOMBA!** Dois times, um botijão de churrasco e muita pressão. O **Ataque** (Vermelho) leva o **Botijão do Churrasco** até o site **A** ou **B**. A **Defesa** (Azul) tem que impedir, ou desarmar antes de virar torresmo. Estilo "plante e defenda", mas com cheiro de bacon. 🥓
+🧯 **Plantar:** segure **E** por **4 segundos** dentro do site. Quanto mais nervoso o time, mais o dedo escorrega.
+🔧 **Desarmar:** a Defesa segura **E** por **7 segundos** perto do botijão. Passou da metade, fica salvo (o Docão agradece o esforço).
+⏲️ **Plantou, bipou:** o botijão **bipa cada vez mais rápido** e **explode em 45 segundos**, levando todo mundo no raio. Quem está perto vira churrasquinho. Não fique de bobeira, porco assado não joga mais.
+🏁 **Primeiro a 13 rodadas vence.** Depois da 12ª rodada vem o aviso **"Troca de lado!"**, e quem atacava agora defende (e vice-versa, sem choro).
+🕙 **Preparação de 10 segundos:** todo mundo parado no spawn do seu lado, só olhando e pensando na vida. Só depois do VALENDO a rodada começa de verdade.
+🔫 **Painel de armas toda rodada:** na preparação aparece um painel com as armas (primária, secundária e corpo a corpo). Troque na hora com **1–9**, **N**, **M**, **G** e **B**. Respeita as armas liberadas pela sala. Ele some sozinho quando o jogo começa.
+🎖️ **Killstreaks guardados:** a sequência e os streaks que você juntou **passam pra rodada seguinte**. Trocar de rodada não é morrer. Só o que ainda está no ar (Gavião, míssil, Fim da chapa) vai embora na virada.
+💀 **Morreu? Renasce.** O renascimento continua normal (5 segundos + RENASCER), no spawn do seu lado. A rodada **não acaba por eliminação**, porque aqui ninguém sai do churrasco mais cedo.
+🗺️ **Mapa novo: Rodízio do Docão!** Feito pro modo: comprido, com **três rotas** (Rua do Espeto, Avenida da Linguiça e Beco da Farofa). **Sites e spawns feitos à mão** em vários mapas (o **HOTMILK** entrou no rodízio), com o Ataque nascendo longe dos sites. O Pátio Ferrugem ficou de fora por ser pequeno demais e o Estande é só do Treino.
+📣 **Instruções na tela:** aviso grande dizendo o que fazer ("Segure E para plantar o botijão", "Leve o botijão até o A ou o B" com a distância), barra de segundos e um **Como jogar** no menu.
+💬 **Funciona online e offline,** com chat e voz do time (na Bomba, o time é o seu lado), e com tudo que já existia: Invasão, loadout por sala, killer cam, tela cinza, arcos de dano, SPAS-12 e pau de choque. A explosão do botijão não ativa a câmera do assassino, e trocar de arma no meio da rodada nunca mata.
+🙏 Feito e testado pelo **Matheus**, com muitas rodadas de bacon.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.13.1 — Mira de Granada 🎯💣 (23/10/2026)
+🤝 **O FELIPE VOLTOU!** O **Felipe Gomes** (@felipe-cheers) estava cansado de jogar copo bomba no escuro, torcendo pra ele cair "mais ou menos ali". Mandou o conserto, e agora o Docão arremessa com a **ficha técnica na mão**:
+🎯 **A linha de mira mostra o caminho inteiro do copo, até a explosão:** quicadas, parede, rampa, tudo. Segurou o botão, viu onde vai explodir, soltou, e **explodiu exatamente ali**. Chega de "foi mal, achei que ia passar".
+🥤 **O copo sai da mão, não da testa:** a granada agora parte de onde o copo está na tela, com a mesma conta da preview. Funciona agachado, colado na parede, com zoom e mirando pro céu. A Pokébola também ganhou mira de professor.
+🧮 **Física igualzinha pra todo mundo:** o arremesso agora anda em passinhos fixos, no seu PC e no servidor. Ping alto, FPS baixo ou computador de cebola não mudam mais onde a granada cai.
+✋ O copo ganhou uma **animação de soltura** (o braço joga de verdade, e não só some).
+⚡ Levou choque segurando o copo? Nada de arremesso: a granada fica com você.
+🙏 Valeu, Felipe!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.13 — Calibre 12 Meteoro ⚡🐗 (23/10/2026)
 🤝 **MAIS UMA DO CHIQUEIRO!** O **João** (@rramosjoao) chegou com o **PR #16** e entregou três presentes de uma vez. O Docão agradece, o resto do servidor chora:
 🔫 **Calibre 12 virou SPAS-12 (e agora é de verdade):** 9 chumbos por tiro, cone fechado, **acerta andando**, bombeia mais rápido e recarrega cartucho em velocidade de quem tá atrasado pro churrasco. Modelo novinho (preto, protetor de calor furado, coronha dobrada) em 1ª e 3ª pessoa, coice de ombro, tremida de tela e um **estrondo bem mais grave**. Quem leva tiro de perto **sai voando pra trás** (Barrigão e chefe da Invasão são pesados demais pra isso, sorry). A Semi continua sendo a das 2 rajadinhas.
