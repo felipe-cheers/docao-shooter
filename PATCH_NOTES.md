@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## Próxima versão — Para pra Pururucar 🎯🐷
+
+- **Parou, acertou:** correr espalha mais os tiros; pular atrapalha bastante, mesmo mirando. Agachar continua reduzindo a velocidade e ajuda a acertar enquanto anda.
+- **No scope é no susto:** Torresmo, Canhão e Carabina agora têm dispersão forte sem luneta. De pertinho ainda dá para salvar a pele; de longe, abra a luneta e espere estabilizar.
+- **A mira volta:** o recoil sobe durante a sequência e recupera suavemente na pausa, sem travar seus movimentos do mouse. Rajadas curtas ficam mais controláveis; sprays longos espalham mais.
+- **Cada arma com seu tempero:** SMGs toleram mais movimento que fuzis. Bots também perdem precisão ao correr e pular, offline e online. Dano e cadência continuam iguais.
+
 ## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
 🤝 **PARCERIA DO CHIQUEIRO!** O **Felipe Gomes** (@felipe-cheers) mandou o **PR #15** com um indicador de dano parecido com o nosso... e, em vez de brigar, o Docão **roubou as melhores ideias dele** (com crédito, claro 🫡🐷):
 💥 **Explosão e helicóptero agora apontam pro lugar certo:** antes, se o foguete (ou o Gavião) te acertava, o arco apontava pro *dono* do tiro, que podia estar do outro lado do mapa. Agora o servidor manda **de onde a explosão realmente veio**, e o arco aponta pra ela. Tomou foguete na cara? O arco olha pra fumaça, não pro fofoqueiro.

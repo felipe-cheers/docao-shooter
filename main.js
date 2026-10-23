@@ -36,7 +36,8 @@ import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
 import { createPhysics, rayHitboxes } from './shared/physics.js';
 import { CROUCH, crouchAmount, stanceScale, eyeHeight, stepCrouch } from './shared/stance.js';
-import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
+import { explosionHits, rayCapsule, ROCKET_PAD } from './shared/combat.js';
+import { createGunplay, stepGunplay, shotSpread, kickShot, spreadDirection, botShotSpread } from './shared/gunplay.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
 import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
@@ -1058,7 +1059,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
   const targets = entities.filter((e) => e !== shooter && e.alive && !friends(e, shooter)).map((e) => ({ e, p: e.pos, crouch: e.crouch || 0, size: e.zt ? e.size : 1 })); // zumbi grande: hitbox escalada; // time: bala atravessa o companheiro; agachado achata o corpo
   const helis = skies.map((sh) => ({ h: sh, c: sh.pos, r: heliR(sh) }));
   for (let p = 0; p < w.pellets; p++) {
-    const d = dir.clone(); d.x += (Math.random() - 0.5) * 2 * spread; d.y += (Math.random() - 0.5) * 2 * spread; d.z += (Math.random() - 0.5) * 2 * spread; d.normalize(); dirs.push(d);
+    const d = new V3().copy(spreadDirection(dir, spread)); dirs.push(d);
     const tr = traceShot(PHYS, origin, d, w, targets, helis, scale), end = origin.clone().addScaledVector(d, tr.end), vis = p < 4 || shooter.isPlayer;
     if (vis) tracer(muzzle, end, !!w.beam);
     for (const h of tr.holes) bulletHole(h, vis);
@@ -1118,7 +1119,7 @@ function finishReload(e) {
   const need = w.mag - e.mag[e.weapon]; const take = Math.min(need, e.reserve[e.weapon]);
   e.mag[e.weapon] += take; e.reserve[e.weapon] -= take; e.reloadEnd = 0;
 }
-function setWeapon(e, idx) { e.weapon = idx; if (e.model) e.model.guns.forEach((g, i) => { g.visible = i === idx; if (g.userData.twin) g.userData.twin.visible = g.visible; }); } // twin: o 2º sabre do Sabre Duplo (na outra mão)
+function setWeapon(e, idx) { e.weapon = idx; if (e.isPlayer) e.gunplay = createGunplay(); if (e.model) e.model.guns.forEach((g, i) => { g.visible = i === idx; if (g.userData.twin) g.userData.twin.visible = g.visible; }); } // twin: o 2º sabre do Sabre Duplo (na outra mão)
 // pinta as lâminas dos dois sabres (e do par do Sabre Duplo)
 function colorSabers(guns, hex) { for (const i of [SABER, SABER2]) { const g = guns[i]; if (!g) continue; setSaberColor(g, hex); if (g.userData.twin) setSaberColor(g.userData.twin, hex); } }
 function switchWeapon(e, idx) {
@@ -2614,7 +2615,7 @@ function updateAds(dt, want) {
 }
 // sempre booleano: classList.toggle('hidden', undefined) vira toggle simples e a mira piscava a cada quadro (armas sem luneta)
 const scoped = () => !!(player && player.alive && WEAPONS[player.weapon].scope && ads > 0.85 && !(fp.actionT > 0 && WEAPONS[player.weapon].bolt));
-function resetAds() { $('scope').classList.add('hidden'); crossEl.classList.remove('hidden'); ads = 0; camera.fov = BASE_FOV; camera.updateProjectionMatrix(); adsVig.style.opacity = 0; crossEl.style.transform = ''; crossEl.classList.remove('ads'); }
+function resetAds() { $('scope').classList.add('hidden'); crossEl.classList.remove('hidden'); ads = 0; if (player?.gunplay) player.gunplay.scopeTime = 0; camera.fov = BASE_FOV; camera.updateProjectionMatrix(); adsVig.style.opacity = 0; crossEl.style.transform = ''; crossEl.classList.remove('ads'); }
 
 // ---------------- Jogador ----------------
 const fwd = new V3(), right = new V3();
@@ -2652,11 +2653,11 @@ function updateMinigun(p, dt, w) {
   if (!firing || gameTime < p.nextFire) return;
   if (p.mag[MINIGUN] <= 0) { sfx.empty(); p.nextFire = gameTime + 0.25; startReload(p); return; }
   p.mag[MINIGUN]--; p.nextFire = gameTime + w.rate; p.invulnUntil = Math.min(p.invulnUntil, gameTime);
-  const dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion), moving = Math.hypot(p.vel.x, p.vel.z) > 1 || !p.onGround;
-  const spread = w.spread * (moving ? 1.35 : 1) * (1 + (p.mgHeat || 0) * 0.5); // quente abre um pouco
+  const dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const spread = shotSpread(w, p.gunplay) * (1 + (p.mgHeat || 0) * 0.5); // quente abre um pouco
   fire(p, camera.position.clone(), dir, MINIGUN, spread, camera.localToWorld(new V3(0.16, -0.24, -1.0)));
   sfx.minigun(); fp.kick = Math.min(0.05, fp.kick + 0.012); fp.flashT = 0.035; shake = Math.max(shake, 0.07); ejectCase(fp.mgCase);
-  p.pitch = clamp(p.pitch + w.recoil * (0.4 + Math.random() * 0.6), -1.5, 1.5); p.yaw += (Math.random() - 0.5) * w.recoil * 0.8;
+  kickShot(p.gunplay, w, gameTime);
   p.mgHeat = (p.mgHeat || 0) + S.heat; if (p.mgHeat >= 1) { p.mgHeat = 1; p.mgHot = true; p.mgFiring = false; sfx.steam(); flashMsg('Minigun superaqueceu!'); }
   window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: MINIGUN }; window.__mgShots = (window.__mgShots || 0) + 1; // testes
   if (p.mag[MINIGUN] === 0) startReload(p);
@@ -2682,7 +2683,7 @@ function releaseBow(p) {
   fire(p, camera.position.clone(), dir, BOW, spread, muzzle, force);
   sfx[w.key](); fp.kick = Math.min(0.14, fp.kick + w.recoil * (1.2 + k)); fp.flashT = 0.04; fp.stringT = 0.14;
   launchShaft(muzzle, dir, 16 + 26 * k);
-  p.pitch = clamp(p.pitch + w.recoil * (0.35 + k), -1.5, 1.5);
+  kickShot(p.gunplay, { ...w, recoil: w.recoil * (0.35 + k) / 0.75 }, gameTime);
   window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: BOW, force };
   if (p.mag[BOW] === 0) startReload(p);
 }
@@ -2707,6 +2708,7 @@ function releaseEgg(p) {
 }
 function updatePlayer(dt) {
   const p = player;
+  p.gunplay ||= createGunplay();
   // Consome o toque mesmo no ar: segurar Espaço não rearma o pulo ao aterrissar.
   const jumpPressed = !!keys.Space; keys.Space = false;
   if (!p.alive) {
@@ -2734,8 +2736,9 @@ function updatePlayer(dt) {
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
   if (!guiding && jumpPressed && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
   moveEntity(p, dt);
+  stepGunplay(p.gunplay, WEAPONS[p.weapon], Math.hypot(p.vel.x, p.vel.z), !p.onGround, scoped() && ads >= 1, dt, gameTime);
   const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 * stanceScale(p.crouch) : 0;
-  camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
+  camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(clamp(p.pitch + p.gunplay.pitch, -1.5, 1.5), p.yaw + p.gunplay.yaw, 0);
   if (shake > 0) {
     if (!guiding) { camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.25)); camera.rotation.z += rand(-1, 1) * shake * 0.05; }
     shake = Math.max(0, shake - dt * 1.8);
@@ -2788,10 +2791,9 @@ function updatePlayer(dt) {
       p.mag[p.weapon]--; p.nextFire = gameTime + (w.burst && !p.burstLeft ? w.burstDelay : w.rate); p.invulnUntil = Math.min(p.invulnUntil, gameTime);
       if (w.burst && p.mag[p.weapon] === 0) p.burstLeft = 0;
       const dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion);
+      // Projéteis especiais preservam seu comportamento; balas usam precisão tática.
       const moving = Math.hypot(p.vel.x, p.vel.z) > 1 || !p.onGround;
-      let spread;
-      if (w.scope) spread = sniperSpread(scoped(), Math.hypot(p.vel.x, p.vel.z), !p.onGround, w.scopeStyle === 'torresmo'); // luneta + parado = zero; Torresmo sem luneta abre bem mais
-      else spread = w.spread * (moving ? 2.2 - ads * 0.8 : 1) * (1 - (1 - w.adsSpread) * ads);
+      const spread = w.pellets > 0 ? shotSpread(w, p.gunplay, ads, scoped()) : w.spread * (moving ? 2.2 - ads * 0.8 : 1) * (1 - (1 - w.adsSpread) * ads);
       const muzzle = scoped() ? camera.localToWorld(new V3(0, -0.12, -0.6)) : camera.localToWorld(new V3(0.2 * (1 - ads), -0.18 + ads * 0.06, -0.9));
       if (w.rocket) {
         const d = dir.clone(); if (spread) { d.x += rand(-1, 1) * spread; d.y += rand(-1, 1) * spread; d.normalize(); }
@@ -2805,7 +2807,7 @@ function updatePlayer(dt) {
       if (w.bolt) { sfx.bolt(0.9, 0.3); fp.actionT = fp.actionLen = w.rate; }
       if (w.burst) { fp.cycT = 0.06; fp.climb = Math.min(0.12, fp.climb + 0.04); ejectCase(fp.famasCase); } // alavanca corre, arma sobe na rajada, cápsula sai pela direita
       if (w.scope) shake = Math.max(shake, 0.15);
-      if (!w.scope) { p.pitch = clamp(p.pitch + w.recoil * (0.5 + Math.random() * 0.5), -1.5, 1.5); p.yaw += (Math.random() - 0.5) * w.recoil * (w.burst ? 0.15 : 0.4); } // rajada sobe reto, quase sem desvio pro lado // Sniper: coice só visual, a mira não sai do lugar
+      kickShot(p.gunplay, w, gameTime, ads);
       window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: p.weapon }; // testes
       if (p.mag[p.weapon] === 0) startReload(p);
     } else { sfx.empty(); p.nextFire = gameTime + 0.25; startReload(p); }
@@ -3035,7 +3037,7 @@ function botShoot(b, t, dist = 10) {
   } else {
     const aimPt = (w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6))).add(new V3(rand(-0.3, 0.3), 0, rand(-0.3, 0.3)));
     const dir = aimPt.sub(origin).normalize();
-    const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > gameTime ? 2.5 : 1); // ovo na cara: erra mais
+    const spread = botShotSpread(w, b, w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > gameTime ? 2.5 : 1); // ovo na cara: erra mais
     fire(b, origin, dir, b.weapon, spread, muzzle);
     if (w.scope) b.aim = b.reaction * 0.4; // precisa remirar depois de cada tiro de sniper
   }
@@ -4349,8 +4351,8 @@ function requestRespawn() {
   return true;
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
-function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
-function onPlayerRespawn() { clearHitMarks(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
+function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.gunplay = createGunplay(); player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
+function onPlayerRespawn() { clearHitMarks(); if (player) player.gunplay = createGunplay(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 
@@ -4580,7 +4582,7 @@ function startOnlineMatch(m) {
 function netTick(dt) {
   const o = online; if (!o || !o.inMatch || !player) return;
   o.sendAcc += dt; if (o.sendAcc < 1 / SEND_HZ) return; o.sendAcc = 0;
-  const p = player, msg = { t: 'u', sq: p.sq, y: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3), c: +p.crouch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping, dn: emote.on ? selectedDance : '' };
+  const p = player, msg = { t: 'u', sq: p.sq, y: +(p.yaw + (p.gunplay?.yaw || 0)).toFixed(3), pi: +clamp(p.pitch + (p.gunplay?.pitch || 0), -1.5, 1.5).toFixed(3), c: +p.crouch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping, dn: emote.on ? selectedDance : '' };
   if (p.alive) { msg.p = v3a(p.pos); msg.v = v3a(p.vel); }
   if (o.evq.length) { msg.ev = o.evq; o.evq = []; }
   o.net.send(msg);

@@ -206,7 +206,8 @@ Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto.
 | **Canhão do Barril** | 3 / 6 | 180 (mata em qualquer lugar) | ×1 | 1,85 s | 3,1 s | 260 m | 8° |
 | **Carabina da Granja** | 10 / 40 | 55 (2 no corpo, 1 na cabeça) | ×2,2 | 0,58 s | 1,9 s | 180 m | 24° |
 
-- Com a **luneta aberta e parado** (menos de 1,5 m/s), o tiro vai exatamente no centro. Andando ou no ar ele espalha um pouco, e sem luneta espalha mais. A Torresmo é a que mais espalha sem luneta.
+- Com a **luneta totalmente aberta, estabilizada e parado**, o tiro vai exatamente no centro. A estabilização leva mais 150 ms na Carabina, 180 ms na Torresmo e 200 ms no Canhão depois de terminar o zoom.
+- **Sem luneta**, as três snipers têm dispersão forte: o no scope é uma saída de emergência de muito perto. O Canhão é o mais difícil e a Carabina é um pouco mais permissiva. Andar perde precisão mesmo com luneta; pular aumenta bastante a dispersão.
 - Cada uma tem a sua luneta, e o ferrolho fecha a luneta depois de cada tiro.
 
 ### 🚀 Explosivo (primária)
@@ -311,6 +312,8 @@ Abates com a **mesma arma** na mesma partida mudam a cor dela. Tudo zera na part
 
 ## ❤️ Mecânicas
 
+- **Precisão e movimento:** parar para atirar dá mais precisão. Mirar reduz a velocidade para 60%; agachar reduz mais a velocidade e, por isso, melhora a precisão ao andar. Correr espalha os tiros e pular penaliza ainda mais, mesmo parado na horizontal. Ao parar, a penalidade de movimento recupera em até 160 ms; a de salto, em 250 ms após aterrissar.
+- **Recoil e spray:** tiros seguidos acumulam subida e um desvio lateral moderado, além de dispersão progressiva com limite. Na pausa, o recoil começa a voltar após 130 ms, respeitando a direção escolhida pelo mouse. Rajadas curtas recuperam a precisão; SMGs toleram mais movimento que fuzis.
 - **Morte = BACON 🥓:** o Docão dá um "pop", some numa nuvem de fumaça e vira uma tira de bacon que quica chiando no chão. A câmera da morte fica olhando pra quem te matou.
 - **Bacon que cura:** qualquer Docão vivo que pisar no bacon (menos o próprio morto) ganha **+10 de vida**, até 100. O bacon fica no chão por uns 3,45 s.
 - **Regeneração:** se você levou dano de **outro** Docão e ficou **5 s** sem apanhar, a vida volta a **+10 por segundo** até 100, com a barra brilhando em verde. Se o último dano foi seu (bazuca no pé, o seu Copo Bomba, o seu míssil), não regenera.
@@ -443,6 +446,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 |---|---|---|
 | `test-shared.mjs`: regras compartilhadas | `test.mjs`: fluxo geral | `test-online.mjs` |
 | `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Shift, câmera e animação | |
+| `test-gunplay.mjs`: precisão, no scope, cone angular, recoil e tiros no servidor | `test-gunplay-browser.mjs`: recoil, agachamento, salto, snipers e respawn | |
 | `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-dom.mjs` |
 | `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-idle.mjs` |
 | `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-names.mjs` |
@@ -479,7 +483,8 @@ docao-shooter/
 ├── chat.js · voice.js · net.js · config.js   # chat, voz (WebRTC), rede e URL do servidor
 ├── shared/                    # regras usadas pelo cliente e pelo servidor
 │   ├── rules.js               # armas, Copo Bomba, física, tempos, bots
-│   ├── combat.js · melee.js   # explosões, dispersão da sniper, faca
+│   ├── combat.js · melee.js   # explosões, cápsulas e faca
+│   ├── gunplay.js             # perfis de precisão, movimento, luneta, recoil e cone dos tiros
 │   ├── domination.js · training.js   # Dominação e Treino
 │   └── physics.js · names.js  # colisão e nomes
 ├── server/                    # Cloudflare Worker + Durable Object "Room"

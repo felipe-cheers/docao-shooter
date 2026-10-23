@@ -1,5 +1,7 @@
 // Testes de unidade das regras compartilhadas (sem navegador): node test-shared.mjs
-import { bodyClosest, explosionHits, rayCapsule, sniperSpread, BODY } from './shared/combat.js';
+import { bodyClosest, explosionHits, rayCapsule, BODY } from './shared/combat.js';
+import { createGunplay, stepGunplay, shotSpread } from './shared/gunplay.js';
+import { WEAPONS } from './shared/rules.js';
 import { DOM, newZoneState, stepZone, canJoinTeam, inZone } from './shared/domination.js';
 const fails = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 const P = { x: 0, y: 0, z: 0 }; const ent = (x, z, team = -1) => ({ pos: { x, y: 0, z }, alive: true, team });
@@ -31,9 +33,13 @@ ok(rayCapsule({ x: -10, y: 3, z: 0 }, { x: 1, y: 0, z: 0 }, 20, P, 0.15) === nul
 const tgt = ent(0, 0), dh = explosionHits({ x: 1.2, y: 1, z: 0 }, R, [tgt], () => true, null, false, null)[0], dh2 = explosionHits({ x: 1.2, y: 1, z: 0 }, R, [tgt], () => true, null, false, tgt)[0];
 ok(dh.dmg < 120 && Math.abs(dh2.dmg - 120) < 1e-6, 'foguete que bateu no casco (direct) = dano máximo pra quem foi atingido');
 // sniper
-ok(sniperSpread(true, 0, false) === 0 && sniperSpread(true, 1.2, false) === 0, 'Sniper com luneta parado/quase parado: dispersão 0');
-ok(sniperSpread(true, 6, false) > 0 && sniperSpread(true, 6, false) < 0.02 && sniperSpread(false, 0, false) <= 0.03, 'Sniper andando / sem luneta: dispersão pequena');
-ok(sniperSpread(false, 0, false, true) >= 0.1 && sniperSpread(true, 0, false, true) === 0, 'Torresmo sem luneta abre; com luneta parado continua reto');
+for (const w of WEAPONS.filter((w) => w.scope)) {
+  const s = createGunplay(); stepGunplay(s, w, 0, false, true, 0.25, 0.25);
+  ok(shotSpread(w, s, 1, true) === 0, `${w.short}: luneta estabilizada e parado = precisão máxima`);
+  ok(shotSpread(w, s, 0, false) >= 0.1, `${w.short}: no scope tem dispersão forte`);
+  stepGunplay(s, w, 6, true, true, 0.01, 0.26);
+  ok(shotSpread(w, s, 1, true) > 0.2, `${w.short}: pular penaliza mesmo com luneta`);
+}
 // zona
 const z1 = newZoneState({ x: 0, y: 0, z: 0 }); stepZone(z1, [1, 0], 1); const z2 = newZoneState({ x: 0, y: 0, z: 0 }); stepZone(z2, [2, 0], 1);
 ok(Math.abs(z1.progress - 1 / 25) < 1e-9 && Math.abs(z2.progress - 1 / 24) < 1e-9, `progresso com 1 = 1/25 e com 2 = 1/24 por s (${z1.progress.toFixed(4)} → ${z2.progress.toFixed(4)}/s)`);

@@ -22,6 +22,7 @@ import { DISC, stepDisc } from '../../shared/disc.js';
 import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from '../../shared/corn.js';
 import { EGG, eggSpeed, eggDmg, stepEgg } from '../../shared/egg.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
+import { spreadDirection, botShotSpread } from '../../shared/gunplay.js';
 import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
@@ -1062,8 +1063,8 @@ export class Game {
     if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + t.vel.x * lead + rand(-0.8, 0.8), y: t.pos.y + 0.25, z: t.pos.z + t.vel.z * lead + rand(-0.8, 0.8) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
     const aim = w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6)); aim.x += rand(-0.3, 0.3); aim.z += rand(-0.3, 0.3);
     const base = norm({ x: aim.x - o.x, y: aim.y - o.y, z: aim.z - o.z });
-    const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > this.T ? 2.5 : 1); // ovo na cara: erra mais
-    const dirs = []; for (let p = 0; p < Math.max(1, w.pellets); p++) dirs.push(norm({ x: base.x + (Math.random() - 0.5) * 2 * spread, y: base.y + (Math.random() - 0.5) * 2 * spread, z: base.z + (Math.random() - 0.5) * 2 * spread }));
+    const spread = botShotSpread(w, b, w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > this.T ? 2.5 : 1); // ovo na cara: erra mais
+    const dirs = []; for (let p = 0; p < Math.max(1, w.pellets); p++) dirs.push(spreadDirection(base, spread));
     this.hitscan(b, o, dirs, b.weapon);
     if (w.scope) b.aim = b.reaction * 0.4;
   }
@@ -1076,8 +1077,8 @@ export class Game {
     if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
     b.yaw = Math.atan2(hp.x - b.pos.x, hp.z - b.pos.z);
     b.mag[b.weapon]--; b.nextFire = this.T + w.rate * 1.6; b.invulnUntil = Math.min(b.invulnUntil, this.T);
-    const o = center(b, 1.3), base = norm({ x: hp.x - o.x, y: hp.y - o.y, z: hp.z - o.z }), sp = 0.05, dirs = [];
-    for (let i = 0; i < Math.max(1, w.pellets); i++) dirs.push(norm({ x: base.x + (Math.random() - 0.5) * 2 * sp, y: base.y + (Math.random() - 0.5) * 2 * sp, z: base.z + (Math.random() - 0.5) * 2 * sp }));
+    const o = center(b, 1.3), base = norm({ x: hp.x - o.x, y: hp.y - o.y, z: hp.z - o.z }), sp = botShotSpread(w, b, 0.05), dirs = [];
+    for (let i = 0; i < Math.max(1, w.pellets); i++) dirs.push(spreadDirection(base, sp));
     this.hitscan(b, o, dirs, b.weapon);
   }
   botThrow(b, t) {

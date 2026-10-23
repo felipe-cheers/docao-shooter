@@ -5,7 +5,7 @@
 //    linha de visão testada de 2 origens para 4 pontos do corpo (pés, peito, cabeça, ponto mais próximo) — basta um livre.
 //    Dano = maxDmg × (0,2 + 0,8 × (1 − d/raio)); o raio é o mesmo do efeito visual (o anel de choque termina no raio).
 //  • Foguete colide com a cápsula (com a folga do próprio foguete), então acerto direto sempre conta (d = 0 → dano máximo).
-//  • Sniper: dispersão zero com luneta e parado/quase parado; pequena andando ou sem luneta.
+//  • Precisão e recoil das armas ficam em shared/gunplay.js.
 // ============================================================
 import { stanceScale } from './stance.js';
 
@@ -60,11 +60,4 @@ export function rayCapsule(o, d, maxT, pos, pad = 0, crouch = 0) {
     if (cc <= 0) return 0; if (a > 1e-9 && h >= 0) take((-b - Math.sqrt(h)) / a);
   }
   return best;
-}
-// dispersão do Sniper: scoped = luneta aberta (o overlay aparece), speed = velocidade horizontal, air = no ar.
-// looseHip = Torresmo sem luneta: no quadril o tiro abre bem mais. Com a luneta e parado continua reto.
-export function sniperSpread(scoped, speed, air, looseHip = false) {
-  if (scoped) return air ? 0.02 : speed < 1.5 ? 0 : 0.012;
-  if (looseHip) return air ? 0.2 : speed < 1.5 ? 0.11 : 0.16;
-  return air ? 0.06 : speed < 1.5 ? 0.025 : 0.045;
 }
