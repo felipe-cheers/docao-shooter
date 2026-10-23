@@ -560,6 +560,66 @@ function endVictory() {
   const over = $('gameover'); if (over) over.classList.remove('dancing');
   if (camera.view && camera.view.enabled) camera.clearViewOffset();
 }
+// Fim de partida suave: o resultado fecha na hora (sem IA, dano, captura nem renascimento); a cena desacelera por 1,5 s
+// na visão do jogador, a mensagem de vitória/derrota/empate aparece logo e o placar entra aos 0,8 s. Se ganhou, a dança
+// da vitória começa quando o placar entra. Movimento reduzido: placar na hora.
+let matchEnding = null;
+const END_SLOWMO = 1.5, END_MENU_DELAY = 0.8;
+function clearMatchEnding() {
+  if (matchEnding) resetAds(); // o zoom do fim só sai quando a próxima partida/menu começa
+  matchEnding = null;
+  document.body.classList.remove('match-ended');
+  $('matchResult').classList.add('hidden');
+}
+function beginMatchEnding() {
+  state = 'over'; mouseDown = false; rightDown = false; clickLatch = 0;
+  matchEnding = { elapsed: 0, visualTime: gameTime, offset: camera.position.clone().sub(player.pos), firstPerson: !!(player.alive && !deathCamState.on),
+    duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : END_SLOWMO, revealed: false, dance: false };
+  for (const k of Object.keys(keys)) keys[k] = false;
+  player.charging = false; player.bowDraw = 0; player.eggDraw = 0; arcLine.visible = arcMark.visible = false;
+  if (online) online.evq = [];
+  ['pause', 'gameover', 'tabboard', 'teamPick'].forEach((id) => $(id).classList.add('hidden'));
+  document.body.classList.add('match-ended'); // o HUD some (style.css), o mundo fica na câmera atual
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function presentMatchResult(outcome) {
+  const titles = { win: 'VITÓRIA!', loss: 'DERROTA', draw: 'EMPATE!', end: 'FIM DE PARTIDA' };
+  $('resultTitle').textContent = titles[outcome] || titles.end; $('matchResult').dataset.outcome = outcome;
+  $('resultDetail').textContent = $('winner').textContent;
+  $('matchResult').classList.remove('hidden');
+  if (!matchEnding.duration) revealEndMenu();
+}
+function revealEndMenu() {
+  if (!matchEnding || matchEnding.revealed) return;
+  matchEnding.revealed = true;
+  $('matchResult').classList.add('hidden');
+  $('gameover').classList.remove('dancing'); $('gameover').classList.remove('hidden');
+  if (!matchEnding.duration) startEndDance(); // movimento reduzido: sem câmera lenta, a dança já pode começar
+}
+function startEndDance() { // a dança da vitória entra só quando a câmera lenta acaba (o placar já estava na tela)
+  if (!matchEnding || !matchEnding.dance || matchEnding.danced) return;
+  matchEnding.danced = true; beginVictory();
+}
+function updateMatchEnding(realDt) {
+  if (window.__endDt != null) realDt = window.__endDt; // testes: passo fixo da transição (independe do FPS da máquina)
+  const end = matchEnding, remaining = Math.max(0, end.duration - end.elapsed);
+  const k = end.duration ? Math.min(1, end.elapsed / end.duration) : 1;
+  const dt = Math.min(realDt, remaining, 0.05) * (0.22 * (1 - k) ** 2 + 0.025); // câmera lenta que vai parando
+  end.elapsed += realDt; // tempo real: o placar entra aos 0,8 s mesmo com o jogo lento
+  if (dt > 0 && !victory.on) {
+    // relógio visual separado: o placar e o tempo oficial ficam fechados
+    const finalTime = gameTime; end.visualTime += dt; gameTime = end.visualTime;
+    if (player.alive && end.firstPerson) { moveEntity(player, dt); camera.position.copy(player.pos).add(end.offset); updateFP(dt); }
+    for (const e of entities) if (!e.isPlayer && !e.zt && e.model) {
+      if (e.alive) { moveEntity(e, dt); animateBot(e, dt); }
+      else { deathFx(e); if (e.fxDeath === e.deathAt && e.baconOk && e.swallowedAt !== e.deathAt) popModel(e.model.group, gameTime - e.deathAt, e.yaw); }
+    }
+    updateGrenades(dt); updateRockets(dt); updateDiscs(dt); updateCorn(dt); updateEggs(dt); updateShocks(dt); updatePokeFx(dt); updateParticles(dt); updateBacon(dt); updateEffects(dt); updateShafts(dt);
+    gameTime = finalTime;
+  }
+  if (end.elapsed >= Math.min(END_MENU_DELAY, end.duration)) revealEndMenu();
+  if (end.elapsed >= end.duration) startEndDance();
+}
 function frameVictoryCam() {
   const m = victory.model; if (!m) return;
   const b = m.danceBase;
@@ -844,6 +904,7 @@ function blastFx(c, radius) {
   burst(c, radius);
 }
 function blast(c, owner, o, direct = null) {
+  if (state === 'over') { blastFx(c, o.radius); return; } // depois do resultado: só o efeito
   (o.fx === 'pop' ? popFx : blastFx)(c, o.radius); // pipoca: estouro pequeno; o resto: som, tremida, confete (conta a explosão)
   if (owner !== player) for (const sh of skyHelis()) {
     const d = c.distanceTo(sh.pos);
@@ -1148,6 +1209,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
 }
 
 function damage(t, amount, attacker, wIdx, head, back = false, fx = 0, origin = attacker && attacker !== t && !attacker.fog ? attacker.pos : null) { // origin: de onde veio o golpe (explosão: o centro dela)
+  if (state === 'over') return false; // resultado fechado
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker) || bombFrozen(bombS)) return false; // sem fogo amigo; Bomba: sem dano na preparação
   if (invMode() && !t.zt && attacker && !attacker.zt && !attacker.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
@@ -1159,6 +1221,7 @@ function damage(t, amount, attacker, wIdx, head, back = false, fx = 0, origin = 
 }
 
 function kill(t, a, wIdx, head, back = false, noReward = false, label = null, fx = 0) { // fx: 1 pela parede, 2 collateral
+  if (state === 'over') return; // resultado fechado
   if (t.zt) { killZombieLocal(t, a, wIdx, head, back); return; } // Invasão: zumbi
   t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + (t.dummy ? TRAIN.respawn : exploreMode() && t.isPlayer ? 1 : RESPAWN_TIME); t.killW = wIdx; t.killBack = !!back;
   if (a && a !== t) a.kills++;
@@ -3811,6 +3874,7 @@ function cycleExplorePrimary(dir) {
   flashMsg(WEAPONS[i].name);
 }
 function startGame(mapId) {
+  clearMatchEnding();
   endVictory(); stopEmote();
   resetAds(); stopInspect(true); // inspeção velha não sobrevive ao 'Jogar de novo'
   initAudio();
@@ -3848,32 +3912,36 @@ function startGame(mapId) {
   camera.clearViewOffset(); state = 'playing'; lockPointer();
 }
 function endGame() {
-  resetAds(); stopInspect(true); stopEmote(); // fim no meio da inspeção ou da dança
-  if (state === 'over') return;
-  state = 'over'; mouseDown = false; rightDown = false;
-  if (document.pointerLockElement) document.exitPointerLock();
+  stopInspect(true); stopEmote(); // fim no meio da inspeção ou da dança (a mira com zoom continua na câmera lenta)
+  if (state === 'over' || !player) return;
+  beginMatchEnding();
   const rows = entities.filter((e) => !e.zt).sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
   invClosePick();
-  if (invMode()) { $('winner').style.color = inv && inv.won ? '#ffd27a' : '#c070ff'; $('winner').textContent = invEndText(); }
-  else if (teamMode()) { const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1; setTeamWinner(w); }
-  else $('winner').textContent = rows[0] && rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0] ? rows[0].name : '???'} venceu!`;
   const teamW = teamMode() ? (teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1) : -1;
-  if (playerWonMatch({ mode, rows, teamW, invWon: inv && inv.won })) beginVictory();
-  else $('gameover').classList.remove('dancing');
+  let outcome;
+  if (invMode()) { $('winner').dataset.tone = inv && inv.won ? 'won' : 'lost'; $('winner').textContent = invEndText(); outcome = inv && inv.won ? 'win' : 'loss'; }
+  else if (teamMode()) { setTeamWinner(teamW); outcome = teamW < 0 ? 'draw' : player.team === teamW ? 'win' : 'loss'; }
+  else {
+    const tied = rows.length > 1 && scoreOf(rows[0]) === scoreOf(rows[1]) && rows[0].deaths === rows[1].deaths;
+    $('winner').textContent = tied ? 'Empate!' : rows[0] && rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0] ? rows[0].name : '???'} venceu!`;
+    outcome = tied ? 'draw' : rows[0] && rows[0].isPlayer ? 'win' : 'loss';
+  }
+  if (training()) outcome = 'end';
+  matchEnding.dance = outcome === 'win' && playerWonMatch({ mode, rows, teamW, invWon: inv && inv.won }); // a dança começa quando o placar entra
   $('finalboard').innerHTML = boardHtml();
   const nm = getMap(nextOfflineMap()); $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
   ['againBtn', 'nextMapBtn'].forEach((id) => $(id).classList.remove('hidden')); $('overWait').classList.add('hidden');
   $('overChat').classList.add('hidden');
-  $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden');
+  presentMatchResult(outcome);
 }
 function setTeamWinner(w) {
-  const el = $('winner'); el.style.color = w >= 0 ? TEAM_COLORS[w] : '';
+  const el = $('winner'); el.dataset.tone = w === 0 ? 'red' : w === 1 ? 'blue' : ''; // cor no papel da comanda (style.css)
   el.textContent = w < 0 ? `Empate! ${teamScore[0]} × ${teamScore[1]}` : `Time ${TEAM_NAMES[w]} venceu! ${teamScore[0]} × ${teamScore[1]}${player && player.team === w ? ' 🏆' : ''}`;
 }
 function refreshModeHud() {
   $('domhud').classList.toggle('hidden', mode !== 'dom'); $('bombhud').classList.toggle('hidden', mode !== 'bomb'); document.body.classList.toggle('bombmode', mode === 'bomb');
   if (teamMode() && player) { $('myTeam').textContent = `Você: Time ${TEAM_NAMES[player.team] || '?'}`; $('myTeam').style.color = TEAM_COLORS[player.team] || '#fff'; }
-  $('winner').style.color = '';
+  $('winner').dataset.tone = '';
 }
 // Pausa: trocar primária / secundária / corpo a corpo. data-pick próprio pra não brigar com os chips do menu.
 const PAUSE_GROUPS = [
@@ -3930,6 +3998,7 @@ buildPauseGuns();
 function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; rightDown = false; keys.Space = keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; player.eggDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); const note = document.querySelector('#pause .pause-note'); if (note) note.textContent = invMode() ? 'Na Invasão a troca de arma é no painel B, entre as waves.' : training() ? 'No estande a troca entra na hora e você continua de pé.' : 'Trocar uma arma te derruba. Você nasce de novo com o equipamento novo.'; buildPauseGuns(); $('pauseGuns').classList.toggle('hidden', invMode()); $('pauseDance').classList.toggle('hidden', invMode()); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
+  clearMatchEnding();
   if (online) leaveOnline();
   endVictory(); stopEmote(); document.body.classList.remove('deadgray');
   zone = null; mode = 'dm'; endBomb(); $('domhud').classList.add('hidden'); $('zoneMark').classList.add('hidden'); $('teamPick').classList.add('hidden');
@@ -4048,7 +4117,8 @@ addEventListener('blur', () => { voicePtt(false); for (const k in keys) keys[k] 
 const clock = new THREE.Clock(); let menuT = 0, danceT = 0;
 function loop() {
   requestAnimationFrame(loop);
-  let dt = Math.min(clock.getDelta(), 0.05);
+  const realDt = clock.getDelta();
+  let dt = Math.min(realDt, 0.05);
   if (window.__stopAt != null) dt = Math.max(0, Math.min(dt, window.__stopAt - gameTime)); // testes/screenshots: congela o tempo de jogo num instante exato
   if (state === 'playing' || (online && state === 'paused' && player)) { // online o jogo não pausa
     gameTime += dt;
@@ -4074,11 +4144,14 @@ function loop() {
     showcase.rotation.y = showCamYaw + 0.15 + showSpin + showIdle; showcase.position.y = showBaseY + (getSkin(selectedSkin).float ? 0.1 + Math.sin(menuT * 10) * 0.06 : Math.abs(Math.sin(menuT * 6)) * 0.06);
     for (const p of pickups) p.mesh.rotation.y += dt;
     renderDanceShadows(danceT);
-  } else if (state === 'over' && victory.on) {
-    if (window.__danceT != null) victory.clock = window.__danceT; // testes: congela o passo da dança
-    else victory.clock += dt;
-    poseVictory(victory.model, selectedDance, victory.clock);
-    frameVictoryCam();
+  } else if (state === 'over' && (victory.on || matchEnding)) {
+    if (matchEnding) updateMatchEnding(realDt); // câmera lenta do fim, na visão do jogador (e o relógio que leva à dança)
+    if (victory.on) {
+      if (window.__danceT != null) victory.clock = window.__danceT; // testes: congela o passo da dança
+      else victory.clock += dt;
+      poseVictory(victory.model, selectedDance, victory.clock);
+      frameVictoryCam();
+    }
   }
   renderer.clear();
   const camO = window.__cam; // testes/screenshots: câmera livre { p: [x, y, z], t: [x, y, z], fov }
@@ -4131,7 +4204,7 @@ function loop() {
   }
   poseGunnerRig(dt); if (gunner) fp.root.visible = false;
   mgWhirr.set(state === 'playing' && player && player.alive && player.weapon === MINIGUN && !gunner ? player.mgSpin || 0 : 0, !!(player && player.mgFiring)); // giro da minigun (zera fora do jogo: nunca fica zumbindo)
-  if (state !== 'menu' && state !== 'over' && !emote.on && player && player.alive && !camO) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
+  if (state !== 'menu' && (state !== 'over' || (matchEnding && matchEnding.firstPerson && !victory.on)) && !emote.on && player && player.alive && !camO) { renderer.clearDepth(); renderer.render(fpScene, fpCam); } // no fim suave a arma continua na mão
 }
 mountUav();
 mountStreakUi();
@@ -4577,8 +4650,8 @@ function onNetMessage(m) {
     case 'voices': voiceRoster(m.list); break;
     case 'sig': voiceSignal(m.from, m.kind, m.data); break;
     case 'start': startOnlineMatch(m); break;
-    case 's': if (o.inMatch) applySnapshot(m); break;
-    case 'p': if (o.inMatch) for (const ev of m.ev) personalEvent(ev); break;
+    case 's': if (o.inMatch && state !== 'over') applySnapshot(m); break; // resultado fechado: snapshot atrasado não mexe na cena
+    case 'p': if (o.inMatch && state !== 'over') for (const ev of m.ev) personalEvent(ev); break;
     case 'end': if (o.inMatch) onlineEnd(m); break;
     case 'teamOk': {
       o.myPref = m.pref; const msg = m.blocked ? 'Esse time ficaria com 2 jogadores a mais — você foi pro Automático (equilibrado).' : '';
@@ -4681,7 +4754,7 @@ function startOnlineMatch(m) {
     for (const info of m.ents) if (!o.ents.has(info.id) && info.id !== o.myId) remoteEnt(info);
     return;
   }
-  resetAds(); loadMap(m.map, isInvasion(m.mode)); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
+  clearMatchEnding(); resetAds(); loadMap(m.map, isInvasion(m.mode)); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
   mode = MODE_OK(m.mode); inv = null; invNet = m.iv ? parseState(m.iv) : null; window.__capLog = []; o.limit = m.limit > 0 ? m.limit : 0; endBomb();
   matchLimits = { weapons: (o.cfg && o.cfg.weapons) || null, powers: o.cfg && o.cfg.powers != null ? o.cfg.powers : null }; rulesLive = true;
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
@@ -4870,22 +4943,27 @@ function personalEvent(ev) {
   }
 }
 function onlineEnd(m) {
-  const o = online; resetAds(); stopInspect(true); stopEmote(); state = 'over'; mouseDown = false; rightDown = false; o.endMsg = m;
-  if (document.pointerLockElement) document.exitPointerLock();
+  const o = online; stopInspect(true); stopEmote(); // a mira com zoom continua na câmera lenta
+  if (state === 'over' || !player) return;
+  o.endMsg = m; beginMatchEnding();
   for (const [id, , k, d] of m.board) { const e = entOf(id); if (e) { e.kills = k; e.deaths = d; } }
   for (const r of m.board) { const e = entOf(r[0]); if (e && r[6] != null) e.caps = r[6]; }
   const w = m.board[0];
   invClosePick();
-  if (isInvasion(m.mode)) { $('winner').style.color = m.inv && m.inv.won ? '#ffd27a' : '#c070ff'; $('winner').textContent = invEndText(); }
+  if (isInvasion(m.mode)) { $('winner').dataset.tone = m.inv && m.inv.won ? 'won' : 'lost'; $('winner').textContent = invEndText(); }
   else if (m.mode === 'dom' || m.mode === 'bomb') { teamScore = m.ts || teamScore; setTeamWinner(m.winTeam ?? -1); }
   else $('winner').textContent = w && w[0] === o.myId ? 'Você venceu! 🏆' : `${w ? w[1] : '???'} venceu!`;
   const rows = entities.filter((e) => !e.zt).sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
-  if (playerWonMatch({ mode: m.mode, rows, teamW: m.winTeam ?? -1, invWon: m.inv && m.inv.won })) beginVictory();
-  else $('gameover').classList.remove('dancing');
+  const teamGame = m.mode === 'dom' || m.mode === 'bomb', winTeam = m.winTeam ?? -1;
+  const tied = !isInvasion(m.mode) && !teamGame && m.board.length > 1 && m.board[0][2] === m.board[1][2] && m.board[0][3] === m.board[1][3];
+  if (tied) $('winner').textContent = 'Empate!';
+  const outcome = isInvasion(m.mode) ? (m.inv && m.inv.won ? 'win' : 'loss') : teamGame ? (winTeam < 0 ? 'draw' : player.team === winTeam ? 'win' : 'loss') : tied ? 'draw' : w && w[0] === o.myId ? 'win' : 'loss';
+  matchEnding.dance = outcome === 'win' && playerWonMatch({ mode: m.mode, rows, teamW: winTeam, invWon: m.inv && m.inv.won });
   $('finalboard').innerHTML = boardHtml();
   $('overMap').innerHTML = `Mapa: <b>${escapeHtml(getMap(m.map).name)}</b> · próximo: <b>${escapeHtml(getMap(m.next).name)}</b>`;
   $('overChat').classList.remove('hidden');
-  $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden'); renderLobby();
+  renderLobby();
+  presentMatchResult(outcome);
   const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h);
 }
 // entrou no meio de uma partida de Dominação: escolhe o time antes de nascer
@@ -5412,7 +5490,7 @@ function invEndText() {
 }
 
 // ganchos para testes automatizados
-window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
+window.__docao = { get state() { return state; }, get ending() { return matchEnding; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get grenadeAim() { return { origin: throwOrigin().toArray(), velocity: throwVelocity(throwPower()).toArray(), points: Array.from(arcGeo.attributes.position.array.slice(0, arcGeo.drawRange.count * 3)), marker: arcMark.position.toArray(), visible: arcLine.visible, cupVisible: fp.cup.visible, handVisible: fp.cupHand.visible }; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,

@@ -1502,3 +1502,144 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 #hitDirs{position:fixed;inset:0;pointer-events:none;z-index:6;overflow:hidden}
 #hitDirs .hitmark{position:absolute;left:50%;top:50%;width:0;height:0}
 #hitDirs .hitmark i{position:absolute;left:-80px;top:calc(-1 * min(40vh,36vw));width:160px;height:46px;border-top:9px solid rgba(255,38,38,.95);border-radius:50% 50% 0 0 / 100% 100% 0 0;filter:drop-shadow(0 0 7px rgba(255,0,0,.9));-webkit-mask:linear-gradient(#000 0 26%,transparent 100%);mask:linear-gradient(#000 0 26%,transparent 100%)}
+
+/* Fim de partida na língua da comanda (igual à pausa): prancheta de madeira, papel, tinta e tijolo. */
+#gameover{
+  background:rgba(41,30,24,.46);--ink:#34402e;--ink-deep:#203e35;--paper:#f6e4bd;--paper-2:#efdfbb;
+  --wood:#674029;--cream:#fff0cc;--brick:#a52e26;--olive:#536044;--shadow:#291e18
+}
+#gameover.dancing{background:linear-gradient(90deg,rgba(41,30,24,.5),rgba(41,30,24,0) 56%)}
+#gameover .panel{
+  position:relative;isolation:isolate;display:grid;grid-template-columns:1fr 1fr;column-gap:10px;
+  align-content:start;width:min(540px,calc(100vw - 36px));min-width:0;max-width:min(540px,calc(100vw - 36px));
+  max-height:none;overflow:visible;text-align:left;color:var(--ink);
+  padding:22px 22px 16px;border:12px solid transparent;border-radius:0;
+  background:#f6e4bd url('./assets/menu/clipboard-wood.svg') center top/100% auto repeat-y;
+  background-clip:padding-box;box-shadow:none
+}
+#gameover .panel::before{
+  content:"";position:absolute;z-index:3;left:50%;top:-6px;width:54px;height:14px;
+  transform:translateX(-50%) rotate(-2deg);pointer-events:none;
+  background:linear-gradient(#7d817d,#b6b3a2 40%,#5c625e);border:2px solid #3b443e;border-radius:4px;
+  box-shadow:0 2px 2px #0004
+}
+#gameover .panel::after{
+  content:"";position:absolute;z-index:2;inset:-16px;pointer-events:none;
+  background:url('./assets/menu/clipboard-wood-irregular.svg') center/100% 100% no-repeat;
+  filter:drop-shadow(3px 5px 0 #30241966)
+}
+#gameover .panel>*{position:relative;z-index:1;grid-column:1 / -1}
+#gameover #againBtn,#gameover #nextMapBtn{grid-column:auto}
+#gameover h2{
+  margin:2px 0 6px;padding:0;font:900 30px/1.05 "Arial Black",Impact,sans-serif;letter-spacing:.3px;
+  color:var(--ink-deep);-webkit-text-stroke:0;text-shadow:none;text-align:left
+}
+#gameover h2[data-tone=red]{color:var(--brick)}
+#gameover h2[data-tone=blue]{color:#2b5c8a}
+#gameover h2[data-tone=won]{color:var(--olive)}
+#gameover h2[data-tone=lost]{color:#6a3a86}
+#gameover h2::after{
+  content:"";display:block;height:7px;margin-top:8px;
+  background:url('./assets/menu/paint-divider.svg') center/100% 100% no-repeat
+}
+/* placar: mesmo papel do Tab (cabeçalho em madeira, linhas em tinta, você em tijolo) */
+#gameover #finalboard{max-height:max(150px,calc(100dvh - 380px));overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#8e7855 transparent}
+#gameover #finalboard::-webkit-scrollbar{width:8px}
+#gameover #finalboard::-webkit-scrollbar-thumb{background:#8e7855;border-radius:4px}
+#gameover .board table{margin:2px 0 4px;font-variant-numeric:tabular-nums}
+#gameover .board th{
+  padding:4px 6px;color:var(--wood);border-bottom:2px solid #c9ad78;
+  font:900 10px/1.2 "Trebuchet MS",Arial,sans-serif;letter-spacing:.8px;text-transform:uppercase
+}
+#gameover .board td{padding:6px;color:var(--ink-deep);border-bottom:1px solid #e4d2ae;font:800 15px/1.2 "Trebuchet MS",Arial,sans-serif}
+#gameover .board tr:last-child td{border-bottom:0}
+#gameover .board th:not(:nth-child(2)),#gameover .board td:not(:nth-child(2)){text-align:center}
+#gameover .board td:first-child{color:var(--wood)}
+#gameover .board tr.me td{color:var(--brick)}
+#gameover .board tr.me td:nth-child(2){font-weight:900}
+#gameover .board .dot{border:2px solid var(--ink-deep);width:10px;height:10px}
+#gameover .overmap{margin:6px 0 2px;color:var(--wood);font:700 12px/1.35 "Trebuchet MS",Arial,sans-serif}
+#gameover .overmap b{color:var(--ink-deep)}
+/* ações: jogar de novo em tijolo, próximo mapa em oliva (lado a lado), menu em papel */
+#gameover #againBtn,#gameover #nextMapBtn{
+  width:100%;min-height:52px;margin:12px 0 0;padding:10px 8px;border-radius:6px;text-align:center;
+  font:900 clamp(13px,1.7vw,18px)/1.1 "Arial Black",Impact,sans-serif;letter-spacing:.4px;color:var(--cream);
+  white-space:normal
+}
+#gameover #againBtn{background:var(--brick);border:2px solid var(--ink);box-shadow:inset 0 2px #e76a45,0 3px #6a2d20}
+#gameover #againBtn:hover{background:#be3b2d}
+#gameover #againBtn:active{transform:translateY(2px);box-shadow:inset 0 2px #e76a45,0 1px #6a2d20}
+#gameover #nextMapBtn{background:var(--olive);border:2px solid #3c4934;box-shadow:0 2px #38442e}
+#gameover #nextMapBtn:hover{background:#61714f}
+#gameover #nextMapBtn:active{transform:translateY(2px);box-shadow:0 1px #38442e}
+#gameover #menuBtn{
+  width:100%;margin:10px 0 0;padding:9px 8px;background:var(--paper-2);color:var(--ink);
+  border:2px solid var(--ink);border-radius:4px;box-shadow:1px 2px 0 var(--shadow);
+  font:900 14px/1.1 "Arial Black",Impact,sans-serif;letter-spacing:.6px
+}
+#gameover #menuBtn:hover{background:var(--cream)}
+#gameover #menuBtn:active{transform:translateY(2px);box-shadow:0 0 0 var(--shadow)}
+#gameover #overWait{margin:12px 0 0;color:var(--wood);font:800 13px "Trebuchet MS",Arial,sans-serif;text-align:center}
+/* chat do fim (online) no papel */
+#gameover .chatpanel{margin:10px 0 0}
+#gameover .chatlog{
+  max-height:min(140px,22dvh);background:#fff1d0;border:2px solid #665035;border-radius:4px;
+  box-shadow:inset 0 2px 0 #fff9e8;padding:4px 6px
+}
+#gameover .chatlog:empty{display:none}
+#gameover .cline{background:transparent;color:var(--ink);text-shadow:none;padding:1px 2px}
+#gameover .cline i{color:var(--wood)}
+#gameover .cline b.tm0{color:var(--brick)}#gameover .cline b.tm1{color:#2b5c8a}#gameover .cline b.tmx{color:var(--brick)}
+#gameover .cline em{color:#8a5a3a}
+#gameover .cline.sys{color:var(--olive)}
+#gameover .chatform input{
+  background:#fff1d0;color:var(--ink-deep);border:2px solid var(--ink);border-radius:3px;
+  font:700 13px "Trebuchet MS",Arial,sans-serif
+}
+#gameover .chatform button.small{
+  width:auto;margin:0;padding:6px 10px;background:var(--paper-2);color:var(--ink);
+  border:2px solid var(--ink);border-radius:3px;box-shadow:1px 2px 0 var(--shadow);
+  font:800 12px "Trebuchet MS",Arial,sans-serif
+}
+#gameover .chatform button.small.on{background:var(--brick);color:var(--cream)}
+#gameover button:focus-visible,#gameover input:focus-visible{outline:3px solid var(--brick);outline-offset:2px}
+@media(max-width:520px){
+  #gameover .panel{grid-template-columns:1fr;padding:18px 14px 14px}
+  #gameover #againBtn,#gameover #nextMapBtn{grid-column:1 / -1}
+  #gameover h2{font-size:24px}
+  #gameover .board td{padding:5px 4px;font-size:13px}
+  #gameover .board th{padding:4px}
+}
+@media(max-height:620px){
+  #gameover .panel{padding-top:14px;padding-bottom:12px}
+  #gameover h2{font-size:24px}
+  #gameover #againBtn,#gameover #nextMapBtn{min-height:42px;margin-top:8px}
+  #gameover #menuBtn{margin-top:6px;padding:7px}
+}
+
+/* Fim suave: o HUD some e o mundo fica na câmera do jogador; o resultado entra como uma plaquinha da comanda. */
+.match-ended #hud > :not(#scope):not(#adsvig){visibility:hidden;pointer-events:none}
+.match-ended #socialHud,.match-ended #streakBar,.match-ended #streakCount{visibility:hidden}
+#matchResult{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:none}
+#matchResult .result-card{
+  --ink:#34402e;--ink-deep:#203e35;--wood:#674029;--brick:#a52e26;--olive:#536044;--shadow:#291e18;
+  max-width:min(560px,calc(100vw - 48px));padding:16px 28px 14px;text-align:center;color:var(--ink);
+  background:#f6e4bd url('./assets/menu/clipboard-wood.svg') center top/100% auto repeat-y;
+  border:3px solid var(--ink);border-radius:4px;box-shadow:4px 6px 0 var(--shadow);
+  transform:rotate(-2deg);animation:result-in .32s cubic-bezier(.22,1.4,.36,1) both
+}
+#resultTitle{
+  margin:0;font:900 clamp(40px,7vw,68px)/1 "Arial Black",Impact,sans-serif;letter-spacing:1px;
+  color:var(--ink-deep);-webkit-text-stroke:0;text-shadow:none;text-wrap:balance
+}
+#matchResult[data-outcome=win] #resultTitle{color:var(--brick)}
+#matchResult[data-outcome=draw] #resultTitle{color:var(--wood)}
+#resultTitle::after{
+  content:"";display:block;height:8px;margin:8px auto 0;width:86%;
+  background:url('./assets/menu/paint-divider.svg') center/100% 100% no-repeat
+}
+#resultDetail{margin:8px 0 0;font:800 clamp(15px,2vw,19px)/1.3 "Trebuchet MS",Arial,sans-serif;color:var(--wood);text-wrap:balance}
+@keyframes result-in{from{opacity:0;transform:rotate(-2deg) scale(.86)}to{opacity:1;transform:rotate(-2deg) scale(1)}}
+#gameover:not(.hidden){animation:end-menu-in .24s cubic-bezier(.22,1,.36,1) both}
+@keyframes end-menu-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#matchResult .result-card,#gameover:not(.hidden){animation:none}}
