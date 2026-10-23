@@ -26,6 +26,7 @@ import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from '../
 import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos, AC130 } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 import { BOMB, W_BOMB, bombLayout, newBombState, startRound, stepBomb, blastVictims, packBomb, spawnList, botObjective, bombFrozen } from '../../shared/bomb.js';
+import { SABER_KIT, profileOf, moveScale, ensureSaber, stepStamina, guardOpen, inFront, payGuard, payProjectile, bladeTouch, peekSwing, applySwing, tryDash, trySpecial, spinDue, catchBlade, botSkill, botPlan, targetsInArc } from '../../shared/saber.js';
 const MODE_OK = (m) => (m === 'dom' || m === 'bomb' || isTraining(m) || isInvasion(m) ? m : 'dm');
 
 export const MAX_PLAYERS = 10;
@@ -53,7 +54,7 @@ export class Game {
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
-    this.events = []; this.personal = new Map(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.projId = 1;
+    this.events = []; this.personal = new Map(); this.nades = []; this.shocks = []; this.rockets = []; this.blades = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.projId = 1;
     this.forcedWinTeam = null; this.nukeWinner = 0;
   }
   now() { return Date.now() / 1000; }
@@ -208,7 +209,7 @@ export class Game {
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
     this.nav = buildNav({ hx: map.size[0], hz: map.size[1], spacing: map.navSpacing || 2, collides: this.P.collides, groundAt: this.P.groundAt, solids, topAt: this.P.topAt, seeds: this.spawns.map((s) => [s.x, s.y, s.z]), extra: map.waypoints || [] });
     this.pickups = (this.invasion && map.invPickups ? [...map.pickups, ...map.invPickups] : map.pickups).map(([type, x, z, y]) => { const on = powerOn(type, this.cfg.powers); return { type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: on, respawnAt: on ? 0 : 1e9 }; });
-    this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.events = []; this.personal.clear();
+    this.nades = []; this.shocks = []; this.rockets = []; this.blades = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     this.curLimit = this.cfgLimit;
     for (const e of this.ents.values()) {
@@ -261,7 +262,7 @@ export class Game {
   endMatch() {
     const rows = [...this.ents.values()].filter((e) => (e.bot && !e.zt) || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
     for (const e of rows) if (e.acct && e.connected) this.flushStats(e, true, this.matchWon(e, rows));
-    this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.gunships = []; this.nukes = [];
+    this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.blades = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.gunships = []; this.nukes = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
   endMsg() {
@@ -380,6 +381,7 @@ export class Game {
   onUpdate(e, m) {
     if (this.state !== 'playing') return;
     const t = this.now(); if (Number.isFinite(m.pg)) e.ping = clamp(m.pg | 0, 0, 2000);
+    if (Array.isArray(m.ev)) for (const ev of m.ev) if (ev && ev[0] === 'sd') this.saberDash(e, ev); // a investida vale já neste pacote, senão o anti-cheat devolve o passo
     if (m.sq === e.sq && e.alive) {
       const p = obj3(m.p), v = obj3(m.v);
       if (p) {
@@ -389,7 +391,11 @@ export class Game {
         stepCrouch(e, m.c, dt, this.P);
         const horiz = Math.hypot(p.x - e.pos.x, p.z - e.pos.z);
         const knocked = this.T - e.lastKnock < 2.5;
-        const maxH = (SPEED * 1.35 * (e.ghostUntil > this.T ? 1.4 : 1) + (knocked ? 22 : 0)) * dt + 0.6;
+        const dash = e.saber && e.saber.dashUntil > this.T ? e.saber : null;
+        const dashRate = dash ? (dash.dashDist || 0) / Math.max(0.05, dash.dashDur || 0.16) : 0;
+        const dashExtra = dash ? Math.min((dash.dashDist || 0) + 0.5, dashRate * dt + 0.5) : 0;
+        // Sabre não reduz o teto: a punição de movimento saiu. A folga extra só existe enquanto a investida autorizada está no ar.
+        const maxH = (SPEED * 1.35 * (e.ghostUntil > this.T ? 1.4 : 1) + (knocked ? 22 : 0)) * dt + 0.6 + dashExtra;
         const [hx, hz] = this.map.size;
         const inside = Math.abs(p.x) <= hx && Math.abs(p.z) <= hz && p.y >= -0.5 && p.y < 45;
         if (this.test && m.tp) { e.pos = p; e.lastKnock = this.T; }
@@ -436,8 +442,8 @@ export class Game {
       return;
     }
     if (!e.alive) return;
-    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'af' || k === 'rl' || k === 'sk')) return;
-    if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
+    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sd' || k === 'ss' || k === 'sbg' || k === 'gf' || k === 'af' || k === 'rl' || k === 'sk')) return;
+    if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sd' || k === 'ss' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
     if (k === 'mgs') return this.mgSpin(e, ev[1], ev[2]);
@@ -448,7 +454,10 @@ export class Game {
     if (k === 'sk') return this.humanShock(e, ev[1], ev[2]);
     if (k === 'n') return this.humanNade(e, ev[1], ev[2], ev[3]);
     if (k === 'm') return this.humanMelee(e, ev[1], ev[2], ev[3], ev[4], ev[5]);
-    if (k === 'sw') return this.clockOk(e, ev[3], isSaber(e.weapon) ? e.weapon : SABER) && this.humanSwing(e, ev[1], ev[2]);
+    if (k === 'sw') return this.saberSwing(e, ev);
+    if (k === 'sd') return this.saberDash(e, ev);
+    if (k === 'ss') return this.saberSpecial(e, ev);
+    if (k === 'sbg') return this.saberBlock(e, ev[1]);
     if (k === 'ks') return this.useStreak(e, ev[1], ev[2]);
     if (k === 'ms') return this.missileImpact(e, ev[1]);
     if (k === 'pw' && this.inv) { const o = obj3(ev[2]), d = obj3(ev[3]); this.inv.usePower(e, ev[1] | 0, this.eyeOk(e, o) && d && vlen(d) > 0.5 ? { o, d: norm(d) } : null); return; } // poder da Invasão (slot, olho, direção)
@@ -725,20 +734,179 @@ export class Game {
     for (const t of eaten) this.damage(t, 9999, n.owner, W_NADE, false, false, 'pk');
     this.events.push(['pke', n.id, arr3(n.pos), eaten.map((t) => t.id)]);
   }
-  humanSwing(e, oA, dirA) {
-    const W = WEAPONS[e.weapon];
-    if (!e.alive || !isSaber(e.weapon)) return;
-    const o = obj3(oA), dir = obj3(dirA);
+  // ---------- sabres (shared/saber.js). O servidor é quem aplica dano, alcance, combo, cooldown e o bloqueio. ----------
+  saberSwing(e, ev) {
+    const prof = profileOf(WEAPONS[e.weapon]);
+    if (!e.alive || !prof) return;
+    const o = obj3(ev[1]), dir = obj3(ev[2]);
     if (!this.eyeOk(e, o) || !dir) return;
+    const st = ensureSaber(e);
+    const sw0 = peekSwing(st, this.T, prof, 0.08);
+    if (!sw0) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; }
+    if (!this.clockOk(e, ev[3], e.weapon)) return;
+    const sw = applySwing(st, this.T, sw0);
     const fl = Math.hypot(dir.x, dir.z) || 1;
-    const fx = dir.x / fl, fz = dir.z / fl;
+    this.saberArc(e, o, { x: dir.x / fl, z: dir.z / fl }, sw.dmg, sw.reach, sw.arc);
+    this.events.push(['swg', e.id, sw.idx, e.weapon]);
+  }
+  saberDash(e, ev) {
+    const prof = profileOf(WEAPONS[e.weapon]);
+    if (!e.alive || !prof || this.emoting(e) || e.stunUntil > this.T) return false;
+    const st = ensureSaber(e);
+    if (this.T + 0.05 < st.dashReady) return false;
+    const dx = Number(ev[1]), dz = Number(ev[2]);
+    if (!Number.isFinite(dx) || !Number.isFinite(dz)) return false;
+    const res = tryDash(st, this.T, prof, { x: dx, z: dz });
+    if (!res) return false;
+    this.events.push(['sdp', e.id, r2(res.dx), r2(res.dz), r2(res.dur)]);
+    return true;
+  }
+  saberSpecial(e, ev) {
+    const prof = profileOf(WEAPONS[e.weapon]);
+    if (!e.alive || !prof) return;
+    const st = ensureSaber(e);
+    const res = trySpecial(st, this.T, prof);
+    if (!res) return;
+    if (res.kind === 'spin') { this.events.push(['ssp', e.id, r2(res.dur)]); return; }
+    const d = obj3(ev[1]);
+    const o = center(e, EYE);
+    if (!d) { catchBlade(st); st.specialReady = this.T; return; }
+    this.launchBlade(e, o, norm(d), res);
+  }
+  saberBlock(e, on) {
+    if (!e.alive || !isSaber(e.weapon)) return;
+    const st = ensureSaber(e);
+    const want = !!on && this.T >= st.lockUntil && st.stam > 0;
+    if (want === st.wantBlock && want === st.blocking) return;
+    st.wantBlock = want;
+    if (want && !st.blocking) { st.blocking = true; st.blockAt = this.T; }
+    if (!want) st.blocking = false;
+    this.events.push(['sbb', e.id, want ? 1 : 0]);
+  }
+  saberArc(e, o, forward, dmg, reach, arc) {
+    const targets = [];
     for (const t of this.ents.values()) {
-      if (t === e || !t.alive || this.friends(t, e)) continue;
-      const dx = t.pos.x - o.x, dz = t.pos.z - o.z, dist = Math.hypot(dx, dz);
-      if (dist > W.reach || dist < 0.05) continue;
-      if ((dx / dist) * fx + (dz / dist) * fz < Math.cos(W.arc)) continue;
-      this.damage(t, W.dmg, e, e.weapon, false);
+      if (t === e || !t.alive || (!t.bot && !t.connected) || this.friends(t, e)) continue;
+      if (!this.P.losClear(o, center(t, 1))) continue;
+      targets.push({ e: t, x: t.pos.x, z: t.pos.z });
     }
+    const hits = targetsInArc(o, forward, reach, arc, targets);
+    for (const h of hits) this.damage(h.e, dmg, e, e.weapon, false);
+    return hits;
+  }
+  saberRadius(e, dmg, radius) {
+    const o = center(e, 1);
+    let n = 0;
+    for (const t of this.ents.values()) {
+      if (t === e || !t.alive || (!t.bot && !t.connected) || this.friends(t, e)) continue;
+      if (Math.abs(t.pos.y - e.pos.y) > 1.7) continue;
+      if (Math.hypot(t.pos.x - e.pos.x, t.pos.z - e.pos.z) > radius) continue;
+      if (!this.P.losClear(o, center(t, 1))) continue;
+      this.damage(t, dmg, e, e.weapon, false); n++;
+    }
+    if (n) this.events.push(['spr', e.id, 3, arr3(o)]);
+    return n;
+  }
+  launchBlade(e, o, d, spec) {
+    const id = this.projId++;
+    const b = { id, owner: e, pos: { x: o.x + d.x * 0.55, y: o.y - 0.1, z: o.z + d.z * 0.55 }, dir: { x: d.x, y: 0, z: d.z }, phase: 'out', traveled: 0, t: 0, hit: new Set(), backHit: new Set(), spec };
+    this.blades.push(b);
+    this.events.push(['sbl', id, e.id, arr3(b.pos), arr3(b.dir)]);
+  }
+  stepSabers(dt) {
+    for (const e of this.ents.values()) {
+      if (!e.alive || !isSaber(e.weapon)) { if (e.saber) { e.saber.blocking = false; e.saber.wantBlock = false; } continue; }
+      const st = ensureSaber(e), prof = profileOf(WEAPONS[e.weapon]);
+      const was = st.blocking;
+      stepStamina(st, this.T, dt, !!st.wantBlock);
+      if (st.blocking !== was) this.events.push(['sbb', e.id, st.blocking ? 1 : 0]);
+      if (!st.dashStruck && this.T >= st.dashStrikeAt) {
+        st.dashStruck = true;
+        const D = prof.dash;
+        this.saberArc(e, center(e, EYE), st.dashDir, D.dmg, D.reach, D.arc);
+        this.events.push(['swg', e.id, 3, e.weapon]);
+      }
+      const tick = spinDue(st, this.T, prof);
+      if (tick) this.saberRadius(e, tick.dmg, tick.radius);
+    }
+    this.stepBlades(dt);
+  }
+  stepBlades(dt) {
+    for (let i = this.blades.length - 1; i >= 0; i--) {
+      const b = this.blades[i], spec = b.spec || SABER_KIT.single.throw, owner = b.owner;
+      b.t += dt;
+      if (!owner || b.t > spec.life + 0.2) { this.endBlade(i, b, false); continue; }
+      if (b.phase === 'back') {
+        const eye = center(owner, 1.2);
+        const dx = eye.x - b.pos.x, dy = eye.y - b.pos.y, dz = eye.z - b.pos.z, L = Math.hypot(dx, dy, dz) || 1;
+        b.dir = { x: dx / L, y: dy / L, z: dz / L };
+        if (L < 0.85) { this.endBlade(i, b, true); continue; }
+      }
+      const step = spec.speed * (b.phase === 'back' ? 1.15 : 1) * dt;
+      const wall = this.P.rayWorld(b.pos, b.dir, step + 0.05);
+      let hit = null;
+      for (const t of this.ents.values()) {
+        if (t === owner || !t.alive || (!t.bot && !t.connected) || this.friends(t, owner)) continue;
+        const bag = b.phase === 'back' ? b.backHit : b.hit;
+        if (bag.has(t.id)) continue;
+        for (const [y, r] of HITBOXES) {
+          const tt = raySphere(b.pos, b.dir, center(t, y), r + spec.radius);
+          if (tt > 0 && tt <= step + 0.05 && (wall === null || tt < wall) && (!hit || tt < hit.tt)) hit = { t, tt };
+        }
+      }
+      if (hit) {
+        (b.phase === 'back' ? b.backHit : b.hit).add(hit.t.id);
+        this.events.push(['spr', owner.id, 1, arr3({ x: b.pos.x + b.dir.x * hit.tt, y: b.pos.y + b.dir.y * hit.tt, z: b.pos.z + b.dir.z * hit.tt })]);
+        this.damage(hit.t, b.phase === 'back' ? spec.backDmg : spec.outDmg, owner, SABER, false);
+      }
+      if (wall !== null && b.phase === 'out') { b.phase = 'back'; b.dir = { x: -b.dir.x, y: 0.05, z: -b.dir.z }; this.events.push(['sbr', b.id, arr3(b.pos)]); continue; }
+      b.pos.x += b.dir.x * step; b.pos.y += b.dir.y * step; b.pos.z += b.dir.z * step;
+      if (b.phase === 'out') { b.traveled += step; if (b.traveled >= spec.range) { b.phase = 'back'; this.events.push(['sbr', b.id, arr3(b.pos)]); } }
+    }
+  }
+  endBlade(i, b, caught) {
+    this.blades.splice(i, 1);
+    if (b.owner && b.owner.saber) catchBlade(b.owner.saber);
+    this.events.push(['sbx', b.id, caught ? 1 : 0, arr3(b.pos)]);
+  }
+  // Projétil cruzou a lâmina de quem está bloqueando. Parry perfeito devolve; segurar só desvia.
+  deflectProjectile(kind, proj, dt) {
+    if (!proj || (proj.guardSkip && this.T < proj.guardSkip)) return false;
+    const pos = proj.pos;
+    const vel = proj.vel;
+    const dir = vel ? norm(vel) : proj.dir;
+    if (!dir) return false;
+    const speed = vel ? Math.max(0.01, vlen(vel)) : (kind === 'rocket' ? WEAPONS[3].rocket.speed : kind === 'disc' ? DISC.speed : kind === 'corn' ? CORN.speed : 16);
+    const to = { x: pos.x + dir.x * speed * dt, y: pos.y + (dir.y || 0) * speed * dt, z: pos.z + dir.z * speed * dt };
+    for (const e of this.ents.values()) {
+      if (!e.alive || e === proj.owner || (proj.guardId === e.id && this.T < (proj.guardSkip || 0))) continue;
+      const saberOn = isSaber(e.weapon);
+      const touch = bladeTouch(e.pos, e.yaw, 'model', pos, to, dir, this.T, saberOn ? ensureSaber(e) : null, saberOn);
+      if (!touch) continue;
+      payProjectile(e.saber, this.T, touch.perfect);
+      const nd = touch.dir;
+      if (vel) proj.vel = { x: nd.x * speed, y: nd.y * speed, z: nd.z * speed };
+      else proj.dir = { x: nd.x, y: nd.y, z: nd.z };
+      if (touch.perfect) proj.owner = e;
+      if (kind === 'rocket') proj.born = this.T;
+      proj.guardSkip = this.T + 0.3; proj.guardId = e.id;
+      const code = kind === 'rocket' ? 'r' : kind === 'disc' ? 'd' : kind === 'egg' ? 'e' : 'c';
+      this.events.push(['srd', code, proj.id, e.id, arr3(pos), [r2(nd.x), r2(nd.y), r2(nd.z)], touch.perfect ? 1 : 0]);
+      this.events.push(['spr', e.id, touch.perfect ? 2 : 1, arr3(pos)]);
+      return true;
+    }
+    return false;
+  }
+  pileHit(hits, h) {
+    const a = hits.get(h.e) || { dmg: 0, head: false, fx: 0 };
+    a.dmg += h.dmg; a.head = a.head || h.head; a.fx |= (h.walls ? 1 : 0) | (h.bodies ? 2 : 0); hits.set(h.e, a);
+  }
+  saberGate(t, origin) {
+    if (!t || !isSaber(t.weapon) || this.T < t.invulnUntil) return null;
+    const open = guardOpen(t.saber, this.T);
+    if (!open) return null;
+    if (!inFront(t.yaw, 'model', t.pos, origin, SABER_KIT.block.half, 120)) return null;
+    return open;
   }
   // ---------- histórico de posições (rewind) ----------
   pushHist(e) { e.hist.push([this.T, e.pos.x, e.pos.y, e.pos.z, e.yaw, e.crouch]); while (e.hist.length > 2 && e.hist[0][0] < this.T - HIST) e.hist.shift(); }
@@ -764,16 +932,27 @@ export class Game {
     const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, crouch: this.crouchAt(t, rewindT), size: t.zt ? t.size : 1 })); // agachado achata o corpo (traceShot)
     const helis = []; for (const hl of this.helis) if (hl.alive && this.heliFoe(hl, shooter)) helis.push({ h: hl, c: this.heliAt(hl, heliT), r: this.heliR(hl) }, { h: hl, c: this.heliAt(hl, rewindT), r: this.heliR(hl) }); // o cliente desenha o Gavião sem atraso: vale o ping ou o rewind
     const shotW = this.inv ? { ...W, pierce: 8, pierceMul: 0.82 } : W; // Invasão: a bala segue na fila de zumbis (8 corpos, ×0,82 de dano). Fora dela, o pierce da arma.
+    const raw = new Map();
     for (const d of dirs) {
       const tr = traceShot(this.P, o, d, shotW, targets, helis, scale);
       ends.push([r2(o.x + d.x * tr.end), r2(o.y + d.y * tr.end), r2(o.z + d.z * tr.end), tr.hits.length ? 1 : 0]);
       for (const h of tr.holes) if (holes.length < 12) holes.push([r2(h.p.x), r2(h.p.y), r2(h.p.z), h.n.x, h.n.y, h.n.z, h.out ? 1 : 0]);
       if (tr.heli) heliDmg.set(tr.heli.h, (heliDmg.get(tr.heli.h) || 0) + tr.heli.dmg);
-      for (const h of tr.hits) { const a = hits.get(h.e) || { dmg: 0, head: false, fx: 0 }; a.dmg += h.dmg; a.head = a.head || h.head; a.fx |= (h.walls ? 1 : 0) | (h.bodies ? 2 : 0); hits.set(h.e, a); }
+      for (const h of tr.hits) { const a = raw.get(h.e) || []; a.push(h); raw.set(h.e, a); }
+    }
+    const bounced = [];
+    for (const [t, list] of raw) {
+      const gate = this.saberGate(t, o);
+      if (!gate) { for (const h of list) this.pileHit(hits, h); continue; }
+      const pay = payGuard(ensureSaber(t), this.T, { perfect: gate.perfect, dmgEach: list.map((h) => h.dmg) });
+      list.forEach((h, i) => { if (!pay.blocked[i]) this.pileHit(hits, h); });
+      if (pay.blocked.some(Boolean)) this.events.push(['spr', t.id, gate.perfect && pay.reflect > 0 ? 2 : 1, arr3(center(t, 1.1))]);
+      if (pay.reflect > 0) bounced.push({ t, dmg: pay.reflect });
     }
     this.events.push(holes.length ? ['sh', shooter.id, w, arr3(o), ends, holes] : ['sh', shooter.id, w, arr3(o), ends]); // [5] = furos [x,y,z,nx,ny,nz,saída]
     for (const [hl, dmg] of heliDmg) this.hurtHeli(hl, dmg, shooter);
     let kills = 0; const hurt = new Set(); for (const [t, h] of hits) { const hp0 = t.hp; if (this.damage(t, h.dmg, shooter, w, h.head, false, null, h.fx)) kills++; if (t.hp < hp0) hurt.add(t); }
+    for (const b of bounced) if (shooter && shooter.alive && shooter !== b.t) this.damage(shooter, b.dmg, b.t, isSaber(b.t.weapon) ? b.t.weapon : SABER, false);
     if (W.knock) for (const [t, h] of hits) { // Calibre 12: empurra quem sobreviveu e levou dano de fato (proteção de nascimento não é empurrada; bot no servidor, humano pelo 'kn' igual ao rocket jump)
       if (!t.alive || t.dummy || !hurt.has(t)) continue; const v = shotKnock(W, o, t.pos, h.dmg, t.zt); if (!v) continue; t.lastKnock = this.T;
       if (t.bot) { t.vel.x += v.x; t.vel.z += v.z; t.vel.y = Math.max(t.vel.y, v.y); t.onGround = false; } else this.toMe(t, ['kn', arr3(v)]);
@@ -843,7 +1022,9 @@ export class Game {
   }
   stepCorns(dt) {
     for (let i = this.corns.length - 1; i >= 0; i--) {
-      const g = this.corns[i], h = stepCorn(this.P, g, dt, this.live(), (t) => (t === g.owner && g.t < 0.15) || this.friends(t, g.owner)); if (!h) continue;
+      const g = this.corns[i];
+      if (this.deflectProjectile('corn', g, dt)) continue;
+      const h = stepCorn(this.P, g, dt, this.live(), (t) => (t === g.owner && g.t < 0.15) || this.friends(t, g.owner)); if (!h) continue;
       this.corns.splice(i, 1); popChain(this.P, h.pos, h.n, g.id).forEach((p, k) => this.cornPops.push({ at: this.T + k * CORN.gap, pos: p, owner: g.owner, pid: k ? 0 : g.id, direct: k ? null : h.e }));
     }
     for (let i = this.cornPops.length - 1; i >= 0; i--) { const q = this.cornPops[i]; if (this.T < q.at) continue; this.cornPops.splice(i, 1); this.blast(q.pos, q.owner, { ...popOpts(CORN_W), pid: q.pid }, q.direct); }
@@ -857,7 +1038,9 @@ export class Game {
   stepDiscs(dt) {
     const W = WEAPONS[DISC_W];
     for (let i = this.discs.length - 1; i >= 0; i--) {
-      const d = this.discs[i], from = { ...d.pos }, hits = stepDisc(this.P, d, dt);
+      const d = this.discs[i];
+      if (this.deflectProjectile('disc', d, dt)) { const step = DISC.speed * dt; d.pos.x += d.dir.x * step; d.pos.y += d.dir.y * step; d.pos.z += d.dir.z * step; continue; }
+      const from = { ...d.pos }, hits = stepDisc(this.P, d, dt);
       // pedaços do caminho deste passo (pode ter dobrado num quique) contra os corpos
       const pts = [from, ...hits.map((h) => h.pos), { ...d.pos }]; let hit = null;
       for (let k = 0; k < pts.length - 1 && !hit; k++) {
@@ -882,7 +1065,9 @@ export class Game {
   }
   stepEggs(dt) {
     for (let i = this.eggs.length - 1; i >= 0; i--) {
-      const g = this.eggs[i], st = stepEgg(this.P, g, dt), a = st.from, L = dist(a, g.pos); let hit = null;
+      const g = this.eggs[i];
+      if (this.deflectProjectile('egg', g, dt)) continue;
+      const st = stepEgg(this.P, g, dt), a = st.from, L = dist(a, g.pos); let hit = null;
       if (L > 1e-5) { const dir = { x: (g.pos.x - a.x) / L, y: (g.pos.y - a.y) / L, z: (g.pos.z - a.z) / L };
         for (const t of this.ents.values()) {
           if (t === g.owner || !t.alive || (!t.bot && !t.connected) || this.friends(t, g.owner)) continue;
@@ -906,7 +1091,9 @@ export class Game {
     }
     const R = WEAPONS[3].rocket;
     for (let i = this.rockets.length - 1; i >= 0; i--) {
-      const r = this.rockets[i], step = R.speed * dt; let hitT = this.P.rayWorld(r.pos, r.dir, step + 0.1), hitE = null;
+      const r = this.rockets[i], step = R.speed * dt;
+      if (this.deflectProjectile('rocket', r, dt)) { r.pos.x += r.dir.x * step; r.pos.y += r.dir.y * step; r.pos.z += r.dir.z * step; continue; }
+      let hitT = this.P.rayWorld(r.pos, r.dir, step + 0.1), hitE = null;
       for (const e of this.ents.values()) {
         if (!e.alive || (!e.bot && !e.connected) || (e === r.owner && this.T - r.born < 0.3)) continue;
         if (this.friends(e, r.owner)) continue;
@@ -988,7 +1175,7 @@ export class Game {
     if (this.state !== 'playing') return;
     const t = this.now(); let dt = clamp(t - this.lastTick, 0, 0.25); this.lastTick = t;
     this.T = t - this.t0; this.purge();
-    while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot && !e.zt) this.updateBot(e, h); if (this.inv) this.inv.step(h); this.stepProjectiles(h); this.stepHelis(h); this.stepGunships(); }
+    while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot && !e.zt) this.updateBot(e, h); this.stepSabers(h); if (this.inv) this.inv.step(h); this.stepProjectiles(h); this.stepHelis(h); this.stepGunships(); }
     this.stepNukes();
     for (const e of this.ents.values()) {
       if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.needRs && !e.rsReq && this.T < e.respawnAt + RS_SAFETY) && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }
@@ -1027,7 +1214,7 @@ export class Game {
       this.events.push(['bb', ...ev]);
       if (ev[0] === 'plant' || ev[0] === 'defuse') { const e = this.ents.get(ev[1]); if (e) e.caps++; } // conta como objetivo no placar
       else if (ev[0] === 'boom') { const pl = this.ents.get(ev[4]); for (const v of blastVictims(S, live, { x: ev[1], y: ev[2], z: ev[3] })) this.kill(v, pl && pl !== v && !this.friends(pl, v) ? pl : null, W_BOMB, false); }
-      else if (ev[0] === 'round') { this.bombRoundStreaks(); this.nades = []; this.rockets = []; for (const e of live) if (!e.pendingTeam) this.spawn(e); } // rodada nova: todo mundo volta pro spawn com vida cheia
+      else if (ev[0] === 'round') { this.bombRoundStreaks(); this.nades = []; this.rockets = []; this.blades = []; for (const e of live) if (!e.pendingTeam) this.spawn(e); } // rodada nova: todo mundo volta pro spawn com vida cheia
       else if (ev[0] === 'over') this.pendingEnd = true;
     }
   }
@@ -1147,6 +1334,7 @@ export class Game {
       if (zg) { const st = this.steer(b, zg); if (st) { mx += st.x * 1.5; mz += st.z * 1.5; } } // Dominação: vai pra zona atirando
       else if (this.zone || this.bomb) { /* dentro da zona / no objetivo: segura a posição, só strafe */ }
       else if (Math.abs(t.pos.y - b.pos.y) > 1.2 && d > 3) { const st = this.steer(b, t.pos); if (st) { mx += st.x; mz += st.z; } }
+      else if (isSaber(b.weapon)) { const reach = (profileOf(WEAPONS[b.weapon]) || { reach: 2.4 }).reach; if (d > reach - 0.15) { mx += tx; mz += tz; } this.botSaberThink(b, t, d); }
       else if (b.weapon === KNIFE) { if (d > 1.1) { mx += tx; mz += tz; } } // faca: cola no alvo
       else if (d > range + 3) { mx += tx; mz += tz; } else if (d < range - 3) { mx -= tx; mz -= tz; }
       b.strafeT -= dt; if (b.strafeT <= 0) { b.strafeDir = pick([-1, 1, 1, -1, 0]); b.strafeT = rand(0.6, 1.8); if (Math.random() < 0.15 && b.onGround) b.vel.y = JUMP; }
@@ -1170,23 +1358,49 @@ export class Game {
       if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5 && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
     }
     if (b.useHold) { mx = 0; mz = 0; } // plantando/desarmando: fica parado
-    const sp = BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > this.T ? SHOCK.slow : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
-    const acc = b.onGround ? 10 : 3; b.vel.x += (mx - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (mz - b.vel.z) * Math.min(1, acc * dt);
+    const sp = BOT_SPEED * moveScale(WEAPONS[b.weapon], b.weapon, KNIFE, MELEE.speedMul) * (b.stunUntil > this.T ? SHOCK.slow : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
+    const dashing = b.saber && this.T < b.saber.dashUntil;
+    if (dashing) { const rate = (b.saber.dashDist || 0) / Math.max(0.05, b.saber.dashDur || 0.16); b.vel.x = b.saber.dashDir.x * rate; b.vel.z = b.saber.dashDir.z * rate; }
+    else { const acc = b.onGround ? 10 : 3; b.vel.x += (mx - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (mz - b.vel.z) * Math.min(1, acc * dt); }
     const blocked = this.P.moveEntity(b, dt);
     if (blocked) { b.stuck += dt; if (b.onGround) b.vel.y = JUMP; if (b.stuck > 1.2) { b.wp = this.randomWaypoint(); b.path = null; b.lastSeenAt = -99; b.strafeDir *= -1; b.stuck = 0; b.stuckCount = (b.stuckCount || 0) + 1; } }
     else b.stuck = Math.max(0, b.stuck - dt);
     let d = desiredYaw - b.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); b.yaw += d * Math.min(1, dt * 9);
     for (const i of b.slots) if (b.reserve[i] < WEAPONS[i].mag && !(WEAPONS[i].rocket && b.reserve[i] > 0)) b.reserve[i] = WEAPONS[i].reserve;
   }
+  botSaberThink(b, t, d) {
+    const prof = profileOf(WEAPONS[b.weapon]); if (!prof || b.stunUntil > this.T) return;
+    const st = ensureSaber(b);
+    const skill = botSkill(b.reaction, b.accuracy);
+    if (this.T >= (b.saberPlanUntil || 0)) {
+      let foes = 0;
+      for (const o of this.ents.values()) if (o !== b && o.alive && (o.bot || o.connected) && !this.friends(o, b) && Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) <= (prof.spin ? prof.spin.radius : 3)) foes++;
+      const gun = !!(t && WEAPONS[t.weapon] && !WEAPONS[t.weapon].melee);
+      b.saberPlan = botPlan(skill, {
+        dist: d, dual: !!WEAPONS[b.weapon].dual, foesNear: foes, gun, hp: b.hp,
+        dashReady: this.T >= st.dashReady, specialReady: this.T >= st.specialReady && !st.bladeOut,
+        canBlock: this.T >= st.lockUntil && st.stam > 22, inReach: d <= prof.reach + 0.15, roll: Math.random(),
+      });
+      b.saberPlanUntil = this.T + (b.saberPlan.block ? b.saberPlan.blockSeconds || 0.25 : 0.28);
+    }
+    const plan = b.saberPlan || {};
+    let block = !!plan.block;
+    if (block && plan.blockSeconds <= 0.22 && st.blocking && this.T - st.blockAt > SABER_KIT.block.parry) block = false;
+    if (block !== st.wantBlock) this.saberBlock(b, block);
+    const forward = { x: Math.sin(b.yaw), z: Math.cos(b.yaw) };
+    if (plan.dash && this.T >= st.dashReady) this.saberDash(b, ['sd', forward.x, forward.z]);
+    else if (plan.special && this.T >= st.specialReady && !st.bladeOut) this.saberSpecial(b, ['ss', [forward.x, 0, forward.z]]);
+    else if (plan.swing && d <= prof.reach + 0.2 && peekSwing(st, this.T, prof, 0)) {
+      const sw = applySwing(st, this.T, peekSwing(st, this.T, prof, 0));
+      b.nextFire = st.nextSwing;
+      this.saberArc(b, center(b, EYE), forward, sw.dmg, sw.reach, sw.arc);
+      this.events.push(['swg', b.id, sw.idx, b.weapon]);
+    }
+  }
   botShoot(b, t, d) {
     const w = WEAPONS[b.weapon];
     if (b.stunUntil > this.T) return; // atordoado não atira
-    if (isSaber(b.weapon)) {
-      if (this.T < b.nextFire || d > w.reach) return;
-      b.nextFire = this.T + w.rate;
-      this.damage(t, w.dmg, b, b.weapon, false);
-      return;
-    }
+    if (isSaber(b.weapon)) return; // o sabre age em botSaberThink (combo, bloqueio, investida, especial)
     if (this.T < b.nextFire || b.reloadEnd > this.T) return;
     if (w.melee) { // faca dos bots: mesma regra dos humanos
       if (d > MELEE.slash.range + 0.8) return;
