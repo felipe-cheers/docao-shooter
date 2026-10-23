@@ -7,7 +7,7 @@ import { inspectKind } from './inspect.js';
 const fails = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 // ---- regras ----
 const W = WEAPONS[21];
-ok(LMG === 21 && W && W.key === 'lmg' && WEAPONS.length === 22 && WEAPONS.every(Boolean), `WEAPONS[21] = lmg, sem buraco (${WEAPONS.length})`);
+ok(LMG === 21 && W && W.key === 'lmg' && WEAPONS.length === 23 && WEAPONS[22] && WEAPONS[22].key === 'commando' && WEAPONS.every(Boolean), `WEAPONS[21] = lmg, [22] = commando, sem buraco (${WEAPONS.length})`);
 ok(W.mag === 100 && W.reserve === 300 && W.dmg === 15 && W.rate === 0.08 && W.auto === true && W.move === 0.95, `números: fita 100/300, 15 de dano, 0,08 s, anda 95% (${W.mag}/${W.reserve}, ${W.dmg}, ${W.rate}, ${W.move})`);
 ok(W.dmg / W.rate < WEAPONS[0].dmg / WEAPONS[0].rate, `DPS ${(W.dmg / W.rate).toFixed(0)} abaixo do fuzil ${(WEAPONS[0].dmg / WEAPONS[0].rate).toFixed(0)}`);
 ok(W.reload > WEAPONS[0].reload && W.pen > 0, `recarrega mais devagar que o fuzil (${W.reload} s) e atravessa parede fina (${W.pen} m)`);

@@ -23,7 +23,7 @@ import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from '../../shar
 import { EGG, eggSpeed, eggDmg, stepEgg } from '../../shared/egg.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, shotKnock } from '../../shared/combat.js';
 import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from '../../shared/shock.js';
-import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos } from '../../shared/killstreaks.js';
+import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos, AC130 } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
 export const MAX_PLAYERS = 10;
@@ -51,7 +51,8 @@ export class Game {
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
-    this.events = []; this.personal = new Map(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.nukes = []; this.projId = 1;
+    this.events = []; this.personal = new Map(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.projId = 1;
+    this.forcedWinTeam = null; this.nukeWinner = 0;
   }
   now() { return Date.now() / 1000; }
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
@@ -196,7 +197,7 @@ export class Game {
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
     this.nav = buildNav({ hx: map.size[0], hz: map.size[1], spacing: map.navSpacing || 2, collides: this.P.collides, groundAt: this.P.groundAt, solids, topAt: this.P.topAt, seeds: this.spawns.map((s) => [s.x, s.y, s.z]), extra: map.waypoints || [] });
     this.pickups = map.pickups.map(([type, x, z, y]) => { const on = powerOn(type, this.cfg.powers); return { type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: on, respawnAt: on ? 0 : 1e9 }; });
-    this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.nukes = []; this.events = []; this.personal.clear();
+    this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     this.curLimit = this.cfgLimit;
     for (const e of this.ents.values()) {
@@ -218,7 +219,7 @@ export class Game {
     }
     this.syncBots();
     if (this.teamMode) { for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = -1; for (const b of [...this.ents.values()].filter((x) => x.bot)) b.team = smallerTeam(this.teamCounts(null, false)); }
-    this.teamScore = [0, 0]; this.zone = this.teamMode ? newZoneState(pickZone(this.nav)) : null;
+    this.teamScore = [0, 0]; this.forcedWinTeam = null; this.nukeWinner = 0; this.zone = this.teamMode ? newZoneState(pickZone(this.nav)) : null;
     this.inv = this.invasion ? this.makeInvasion() : null; if (this.inv) this.inv.start();
     let si = 0; for (const e of this.ents.values()) if (e.bot || e.connected) { if (this.inv && !e.bot) e.firstSpawn = si++; this.spawn(e, true); }
     this.io.broadcast(this.startMsg()); this.sendLobby();
@@ -230,13 +231,18 @@ export class Game {
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
   startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, DROP_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
-    this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.nukes = [];
+    this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.gunships = []; this.nukes = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
   endMsg() {
     const rows = [...this.ents.values()].filter((e) => (e.bot && !e.zt) || e.connected).sort((a, b) => this.score(b) - this.score(a) || a.deaths - b.deaths);
-    const i = MAPS.findIndex((m) => m.id === this.mapId), ts = this.teamScore || [0, 0];
-    return { t: 'end', mode: this.cfg.mode, ts, winTeam: this.teamMode ? (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1) : null, board: rows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner: rows[0] ? rows[0].id : 0, map: this.mapId, next: this.mapList[(this.mapList.findIndex((m) => m.id === this.mapId) + 1) % this.mapList.length].id, hostId: this.hostId,
+    const ts = this.teamScore || [0, 0], forced = this.forcedWinTeam;
+    const winTeam = this.teamMode ? (forced === 0 || forced === 1 ? forced : (ts[0] > ts[1] ? 0 : ts[1] > ts[0] ? 1 : -1)) : null;
+    const nukeId = !this.teamMode && this.nukeWinner ? this.nukeWinner : 0;
+    const hit = nukeId && rows.find((e) => e.id === nukeId);
+    const boardRows = hit ? [hit, ...rows.filter((e) => e !== hit)] : rows; // mata-mata: quem estourou fica no topo mesmo com menos abates
+    const winner = nukeId || (rows[0] ? rows[0].id : 0);
+    return { t: 'end', mode: this.cfg.mode, ts, winTeam, board: boardRows.map((e) => [e.id, e.name, e.kills, e.deaths, e.bot, e.team, e.caps]), winner, map: this.mapId, next: this.mapList[(this.mapList.findIndex((m) => m.id === this.mapId) + 1) % this.mapList.length].id, hostId: this.hostId,
       inv: this.inv ? { wave: this.inv.wave, won: this.inv.won ? 1 : 0, kills: this.inv.kills } : undefined };
   }
   score(e) { return this.teamMode ? e.kills + 2 * e.caps : e.kills; }
@@ -396,7 +402,7 @@ export class Game {
       return;
     }
     if (!e.alive) return;
-    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'rl' || k === 'sk')) return;
+    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'af' || k === 'rl' || k === 'sk')) return;
     if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
@@ -413,9 +419,10 @@ export class Game {
     if (k === 'ms') return this.missileImpact(e, ev[1]);
     if (k === 'pw' && this.inv) { const o = obj3(ev[2]), d = obj3(ev[3]); this.inv.usePower(e, ev[1] | 0, this.eyeOk(e, o) && d && vlen(d) > 0.5 ? { o, d: norm(d) } : null); return; } // poder da Invasão (slot, olho, direção)
     if (k === 'gf') return this.gunnerFire(e, ev[1], ev[2]);
+    if (k === 'af') return this.ac130Fire(e, ev[1], ev[2]);
   }
   // ---------- killstreaks (servidor autoritativo; regras em shared/killstreaks.js) ----------
-  resetStreak(e) { e.ksKills = 0; e.ksBank = { missile: 0, heli: 0, gunner: 0, nuke: 0 }; e.ksMissile = null; }
+  resetStreak(e) { e.ksKills = 0; e.ksBank = { missile: 0, heli: 0, gunner: 0, ac130: 0, nuke: 0 }; e.ksMissile = null; }
   // abate que conta pra sequência (quem matou precisa estar vivo, igual ao cliente)
   streakKill(a) {
     if (!a.ksBank) this.resetStreak(a);
@@ -426,7 +433,7 @@ export class Game {
   // F: 'p' = Míssil (abre o laptop; o cliente pilota e manda o impacto em 'ms'), 'h' = Gavião, 'x' = nuke
   useStreak(e, kind, startA) {
     const B = e.ksBank; if (!B || e.bot || this.inv) return; // Invasão: servidor recusa killstreaks
-    const streakId = kind === 'p' ? 'missile' : kind === 'h' ? 'heli' : kind === 'g' ? 'gunner' : kind === 'x' ? 'nuke' : null;
+    const streakId = kind === 'p' ? 'missile' : kind === 'h' ? 'heli' : kind === 'g' ? 'gunner' : kind === 'a' ? 'ac130' : kind === 'x' ? 'nuke' : null;
     if (streakId && !powerOn(streakId, this.cfg.powers)) return;
     if (kind === 'p') {
       const st = obj3(startA); if (!B.missile || e.ksMissile || !st || Math.hypot(st.x - e.pos.x, st.z - e.pos.z) > PREDATOR.back + 2.5) return;
@@ -442,7 +449,13 @@ export class Game {
       this.helis.push(h); this.events.push(['hl', h.id, e.id, r2(h.ang), r2(h.orbit), r2(h.born), r2(h.until), h.hp, 1]);
     } else if (kind === 'gx') { // saiu antes do fim: o Chopper vai embora
       for (const h of this.helis) if (h.owner === e && h.gunner && h.alive) { h.alive = false; this.events.push(['hx', h.id, 0]); }
-    } else if (kind === 'x') {
+    } else if (kind === 'a') { // Grelha da granja: um avião por dono, fora da lista do Gavião
+      if (!B.ac130 || this.gunships.some((h) => h.owner === e && h.alive)) return; B.ac130--;
+      const h = { id: this.projId++, owner: e, alive: true, hp: AC130.hp, ang: Math.random() * Math.PI * 2, orbit: heliOrbit(this.map.size) * AC130.orbit, height: AC130.height, spin: AC130.spin, born: this.T, until: this.T + AC130.life, last: { espeto: -9, panela: -9, caldeirao: -9 } };
+      this.gunships.push(h); this.events.push(['al', h.id, e.id, r2(h.ang), r2(h.orbit), r2(h.born), r2(h.until), h.hp]);
+    } else if (kind === 'ax') { // saiu antes do fim: o avião vai embora
+      for (const h of this.gunships) if (h.owner === e && h.alive) { h.alive = false; this.events.push(['ae', h.id, 0]); }
+    } else if (kind === 'x') { // sem rádio: só arma a contagem; o dono não fica segurando o rádio
       if (!B.nuke || this.nukes.some((n) => n.owner === e)) return; B.nuke--;
       const n = { owner: e, at: this.T + NUKE.delay }; this.nukes.push(n); this.events.push(['nk', e.id, r2(n.at)]);
     }
@@ -474,6 +487,33 @@ export class Game {
     this.events.push(['gs', h.id, [r2(o.x + d.x * L), r2(o.y + d.y * L), r2(o.z + d.z * L)], mode === 'sniper' ? 1 : 0, best ? 1 : 0]);
     if (best) this.damage(best.t, M.dmg * (best.head ? M.headMul : 1), e, 0, best.head, false, 'g', 0, o);
   }
+  // tiro da Grelha: espeto é hitscan; panela e caldeirão estouram no chão ou na parede (alcance 180)
+  ac130Fire(e, mode, dA) {
+    const h = this.gunships.find((x) => x.owner === e && x.alive), M = AC130[mode], d0 = obj3(dA);
+    if (!h || !M || !d0 || (mode !== 'espeto' && mode !== 'panela' && mode !== 'caldeirao')) return;
+    if (this.T - h.last[mode] < M.rate * 0.5) { e.rejectedShots = (e.rejectedShots || 0) + 1; return; }
+    h.last[mode] = this.T;
+    const hp = this.heliAt(h), o = { x: hp.x, y: hp.y - 1.2, z: hp.z }, d = norm(d0), RANGE = 180;
+    if (M.radius > 0) {
+      const hit = this.P.rayWorld(o, d, RANGE), L = hit == null ? RANGE : hit;
+      const c = { x: o.x + d.x * L, y: o.y + d.y * L, z: o.z + d.z * L };
+      this.events.push(['as', h.id, arr3(c), mode === 'caldeirao' ? 2 : 1]);
+      for (const t of this.ents.values()) {
+        if (t === e || !t.alive || (!t.bot && !t.connected) || this.friends(t, e)) continue;
+        const dd = dist(c, center(t, 1));
+        if (dd < M.radius) this.damage(t, M.dmg * (1 - dd / M.radius), e, 0, false, false, 'a', 0, c);
+      }
+      return;
+    }
+    const wall = this.P.rayWorld(o, d, RANGE), wallD = wall ?? RANGE; let best = null;
+    for (const t of this.ents.values()) {
+      if (t === e || !t.alive || (!t.bot && !t.connected) || this.friends(t, e)) continue;
+      for (const [y, r] of HITBOXES) { const tt = raySphere(o, d, center(t, y), r); if (tt > 0 && tt < wallD && (!best || tt < best.tt)) best = { t, tt }; }
+    }
+    const L = best ? best.tt : wallD;
+    this.events.push(['as', h.id, [r2(o.x + d.x * L), r2(o.y + d.y * L), r2(o.z + d.z * L)], 0]);
+    if (best) this.damage(best.t, M.dmg, e, 0, false, false, 'a', 0, o);
+  }
   hurtHeli(h, amount, by) {
     if (!h.alive || !(amount > 0)) return;
     h.hp = Math.max(0, h.hp - amount); this.events.push(['hh', h.id, Math.round(h.hp)]);
@@ -501,14 +541,28 @@ export class Game {
     }
     this.helis = this.helis.filter((h) => h.alive);
   }
+  stepGunships() {
+    for (const h of this.gunships) {
+      if (!h.alive) continue;
+      if (this.T >= h.until) { h.alive = false; this.events.push(['ae', h.id, 0]); }
+    }
+    this.gunships = this.gunships.filter((h) => h.alive);
+  }
   stepNukes() {
-    for (const n of this.nukes.filter((x) => this.T >= x.at)) {
+    if (!this.inv) for (const n of this.nukes.filter((x) => this.T >= x.at)) {
       this.nukes = this.nukes.filter((x) => x !== n);
       const o = n.owner; if (!this.ents.has(o.id)) continue; // dono saiu de vez: cancela
-      this.events.push(['nb', o.id]); // morrer depois de puxar o rádio não cancela
+      this.events.push(['nb', o.id]); // morrer depois de chamar não cancela
       for (const t of [...this.ents.values()]) if (t !== o && t.alive && (t.bot || t.connected) && !this.friends(t, o)) this.kill(t, o, W_NADE, false, false, 'x');
-      if (this.pendingEnd) break;
+      if (this.teamMode && (o.team === 0 || o.team === 1)) this.forcedWinTeam = o.team;
+      else if (!this.teamMode) this.nukeWinner = o.id;
+      this.pendingEnd = true; // o tick manda os abates e o endMatch fecha a partida
+      break;
     }
+    // Offline: em updateRewards (main.js), quando a contagem chega a zero, chamar endGame()
+    // com o time do player — teamMode: esse time vence; mata-mata: o player é o vencedor.
+    // Não cancelar se ele morreu depois de chamar. Invasão não tem nuke.
+    // O cliente ainda não faz isso; ligar no main.js depois, sem mudar o ciclo de 15.
   }
   // Minigun (código no chat): no lugar da primária até morrer; o spawn remonta os slots com e.primary
   giveMinigun(e) { e.slots[0] = MINIGUN; e.mag[MINIGUN] = WEAPONS[MINIGUN].mag; e.reserve[MINIGUN] = WEAPONS[MINIGUN].reserve; e.weapon = MINIGUN; e.reload = null; e.mg = null; this.toMe(e, ['mgn', 1]); }
@@ -675,8 +729,9 @@ export class Game {
     const scale = W.key === 'arco' ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
     const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, crouch: this.crouchAt(t, rewindT), size: t.zt ? t.size : 1 })); // agachado achata o corpo (traceShot)
     const helis = []; for (const hl of this.helis) if (hl.alive && this.heliFoe(hl, shooter)) helis.push({ h: hl, c: this.heliAt(hl, heliT), r: this.heliR(hl) }, { h: hl, c: this.heliAt(hl, rewindT), r: this.heliR(hl) }); // o cliente desenha o Gavião sem atraso: vale o ping ou o rewind
+    const shotW = this.inv ? { ...W, pierce: 8, pierceMul: 0.82 } : W; // Invasão: a bala segue na fila de zumbis (8 corpos, ×0,82 de dano). Fora dela, o pierce da arma.
     for (const d of dirs) {
-      const tr = traceShot(this.P, o, d, W, targets, helis, scale);
+      const tr = traceShot(this.P, o, d, shotW, targets, helis, scale);
       ends.push([r2(o.x + d.x * tr.end), r2(o.y + d.y * tr.end), r2(o.z + d.z * tr.end), tr.hits.length ? 1 : 0]);
       for (const h of tr.holes) if (holes.length < 12) holes.push([r2(h.p.x), r2(h.p.y), r2(h.p.z), h.n.x, h.n.y, h.n.z, h.out ? 1 : 0]);
       if (tr.heli) heliDmg.set(tr.heli.h, (heliDmg.get(tr.heli.h) || 0) + tr.heli.dmg);
@@ -706,7 +761,7 @@ export class Game {
   kill(t, a, w, head, back = false, ks = null, fx = 0) {
     if (this.inv && t.zt) return this.killZombie(t, a, w, head, back, ks);
     t.alive = false; t.hp = 0; t.deaths++; t.respawnAt = this.T + (t.dummy ? TRAIN.respawn : RESPAWN_TIME); if (!t.bot) { t.needRs = true; t.rsReq = false; } // humano: só renasce clicando em Renascer
-    if (a && a !== t) { a.kills++; if (a.alive && ks !== 'h' && ks !== 'x' && ks !== 'g') this.streakKill(a); }
+    if (a && a !== t) { a.kills++; if (a.alive && ks !== 'h' && ks !== 'x' && ks !== 'g' && ks !== 'a') this.streakKill(a); }
     t.ksKills = 0; t.ksMissile = null; // morreu: sequência zera (míssil no ar cai junto); os streaks já ganhos (ksBank) continuam guardados
     // faca: ev[3] = pistola (clientes antigos não conhecem a arma 5) e ev[7] = 1 (faca) / 2 (pelas costas)
     const ev = ['k', a ? a.id : 0, t.id, w === KNIFE ? PISTOL : w, head ? 1 : 0, a ? a.kills : 0, t.deaths]; if (w === KNIFE) ev.push(back ? 2 : 1);
@@ -897,7 +952,7 @@ export class Game {
     if (this.state !== 'playing') return;
     const t = this.now(); let dt = clamp(t - this.lastTick, 0, 0.25); this.lastTick = t;
     this.T = t - this.t0; this.purge();
-    while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot && !e.zt) this.updateBot(e, h); if (this.inv) this.inv.step(h); this.stepProjectiles(h); this.stepHelis(h); }
+    while (dt > 1e-4) { const h = Math.min(TICK, dt); dt -= h; for (const e of this.ents.values()) if (e.bot && !e.zt) this.updateBot(e, h); if (this.inv) this.inv.step(h); this.stepProjectiles(h); this.stepHelis(h); this.stepGunships(); }
     this.stepNukes();
     for (const e of this.ents.values()) {
       if (!e.alive && (e.bot || e.connected) && this.T >= e.respawnAt && !(e.needRs && !e.rsReq && this.T < e.respawnAt + RS_SAFETY) && !(e.pendingTeam && this.now() - (e.pendingSince || 0) < PENDING_WAIT)) { if (e.pendingTeam) { e.pendingTeam = false; this.syncBots(); } this.spawn(e); }

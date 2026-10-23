@@ -1,4 +1,5 @@
 // Docão procedural: modelo 3D fiel à arte oficial + sistema de skins.
+// O loop da partida deve chamar makeNukeRider() e pôr o grupo na cena (cai no centro). Ainda não está ligado.
 import * as THREE from 'three';
 import { makeWorldSaber } from './saber-view.js';
 import { getSkin } from './skins.js';
@@ -538,7 +539,13 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.1, 0.16, 0.14), toon('#5c6b3a'), lm, 0.006).position.set(-0.12, -0.06, 0.02);
     mesh(new THREE.BoxGeometry(0.05, 0.14, 0.06), toon('#2a2d35'), lm, 0.006).position.set(0, -0.12, 0.1);
     guns.push(lm); // 21 = Metralhadora do Chiqueiro
-    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm]) o.visible = false;
+    const cd = new THREE.Group(); cd.name = 'commando'; cd.position.copy(r.position); g.add(cd);
+    mesh(new THREE.BoxGeometry(0.07, 0.08, 0.7), toon('#3a4038'), cd, 0.008).position.z = 0.02;
+    const cdb = mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.46, 8), toon('#22252c'), cd, 0.005); cdb.rotation.x = Math.PI / 2; cdb.position.set(0, 0.015, 0.56);
+    mesh(new THREE.BoxGeometry(0.06, 0.08, 0.22), toon('#5c4632'), cd, 0.006).position.set(0, -0.01, -0.32);
+    mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), toon('#2a2d35'), cd, 0.005).position.set(0, -0.1, 0.02);
+    guns.push(cd); // 22 = Commando da Granja
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -770,4 +777,50 @@ export function updateExpression(model, dt) {
   if (angry && !f.angryMap) f.angryMap = headTexture(...f.tex, true);
   const map = angry ? f.angryMap : f.neutralMap;
   if (f.faceM.map !== map) { f.faceM.map = map; f.faceM.emissiveMap = map; }
+}
+
+// Fim da chapa: Docão enorme, bravo, segurando a ogiva. O loop anima a queda; aqui só nasce o grupo.
+const NUKE_HOLD = 120;
+function makeFarmOgiva() {
+  const g = new THREE.Group();
+  g.name = 'ogiva';
+  g.position.set(0, 0.28, 0.62);
+  const add = (geo, color, th = 0.014) => {
+    const m = new THREE.Mesh(geo, toonWarm(color, 0.18));
+    outline(m, th); m.castShadow = true; g.add(m); return m;
+  };
+  add(new THREE.CylinderGeometry(0.4, 0.44, 1.28, 8), '#5f6b32');
+  const band = add(new THREE.CylinderGeometry(0.47, 0.47, 0.2, 8), '#fff0cc', 0.01); band.position.y = 0.08;
+  const stripe = add(new THREE.CylinderGeometry(0.48, 0.48, 0.07, 8), '#a52e26', 0.008); stripe.position.y = 0.32;
+  const nose = add(new THREE.CylinderGeometry(0.05, 0.44, 0.58, 8), '#a52e26', 0.012); nose.position.y = -0.9;
+  const snout = add(new THREE.CylinderGeometry(0.15, 0.17, 0.09, 8), '#ec5c0c', 0.008); snout.position.y = -1.22;
+  for (const s of [-1, 1]) {
+    const n = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 5), basic('#3a0806'));
+    n.position.set(s * 0.055, -1.22, 0.055); g.add(n);
+  }
+  const cap = add(new THREE.CylinderGeometry(0.26, 0.4, 0.14, 8), '#203e35', 0.01); cap.position.y = 0.68;
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    const fin = add(new THREE.BoxGeometry(0.34, 0.36, 0.05), '#203e35', 0.008);
+    fin.position.set(Math.cos(a) * 0.56, 0.62, Math.sin(a) * 0.56);
+    fin.rotation.y = a;
+  }
+  const plate = add(new THREE.BoxGeometry(0.02, 0.26, 0.32), '#fff0cc', 0.006); plate.position.set(0.49, 0.02, 0);
+  return g;
+}
+export function makeNukeRider() {
+  const root = new THREE.Group();
+  root.name = 'nukeRider';
+  const model = makeDocao(null, { withGun: false, pose: 'idle' });
+  model.arms[0].rotation.set(-0.35, 0.55, -0.7);
+  model.arms[1].rotation.set(-0.35, -0.55, 0.7);
+  setExpression(model, 'angry', NUKE_HOLD);
+  updateExpression(model, 1);
+  model.group.add(makeFarmOgiva());
+  root.add(model.group);
+  root.scale.setScalar(2.45); // ~5 m de altura
+  root.position.set(0, 44, 0);
+  root.rotation.x = -0.12;
+  root.userData.model = model;
+  return root;
 }
