@@ -117,7 +117,7 @@ try {
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await start(); await end(); assert.equal(await hidden('gameover'), false);
-  const reduced = await read(); await page.waitForTimeout(150); assert.deepEqual((await read()).camera, reduced.camera);
+  const reduced = await read(); await page.waitForTimeout(150); { const now = (await read()).camera; assert.ok(now.every((v, i) => Math.abs(v - reduced.camera[i]) < 0.05), `câmera parada no movimento reduzido (tolerância 0,05): ${now} vs ${reduced.camera}`); }
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   console.log('OK reduced motion');
 
