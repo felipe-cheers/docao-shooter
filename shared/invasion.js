@@ -19,6 +19,20 @@ export const INV = {
   MAX_PLAYERS: 10, DEFAULT_MAP: 'rodizio', ZOMBIE_LINGER: 2.4, SPAWN_MIN: 12,
 };
 export const isInvasion = (m) => m === INV.mode;
+// Munição na Invasão: caixas do mapa voltam rápido, dão mais (reserva até 1,5× e pente cheio, +2 foguetes) e zumbi também solta caixa.
+export const INV_AMMO = { respawn: 6, reserveMul: 1.5, rockets: 2, zdrop: { walker: 0.14, runner: 0.12, tank: 0.4, spitter: 0.2, boss: 1 } };
+// mesma conta no cliente offline, no cliente online (espelho do 'got'/'dg') e no servidor. Devolve true se pegou alguma coisa.
+export function invRefillAmmo(e, WEAPONS) {
+  let got = false;
+  for (const i of e.slots) {
+    const w = WEAPONS[i]; if (!w || !(w.reserve > 0)) continue;
+    const cap = Math.ceil(w.reserve * INV_AMMO.reserveMul);
+    if (e.reserve[i] >= cap && e.mag[i] >= w.mag) continue;
+    e.reserve[i] = Math.min(cap, e.reserve[i] + (w.rocket ? INV_AMMO.rockets : w.reserve));
+    e.mag[i] = Math.max(e.mag[i], w.mag); got = true;
+  }
+  return got;
+}
 export const PHASES = ['prep', 'wave', 'break', 'over'];
 
 // tipos de zumbi (animatrônicos do Docão). size = escala do corpo (hitbox e modelo).
@@ -40,6 +54,7 @@ export const POWERS = {
   revive: { name: 'Ressurreição', icon: '✨', w: 0.45, desc: 'Revive todos os aliados mortos' },
 };
 export const POWER_KEYS = ['pumpkin', 'howl', 'potion', 'lantern', 'ghost', 'revive'];
+export const DROP_KEYS = [...POWER_KEYS, 'ammo']; // índice enviado no 'dp'/'dg': poderes e a caixa de munição que o zumbi solta
 export const KEYS = { use: 'KeyG', useLabel: 'G', cycle: 'KeyX', cycleLabel: 'X' };
 export const SPIT_GRAV = 20;
 
@@ -304,8 +319,15 @@ export class InvasionCore {
         this.A.hurtPlayer(p, st.boom.dmg * (0.3 + 0.7 * k) * (z.dmgMul || 1), z);
       }
     }
-    if (z.id === this.bossId) { for (let i = 0; i < 2; i++) this.drop(z.pos, i === 0); return; }
+    if (z.id === this.bossId) { for (let i = 0; i < 2; i++) this.drop(z.pos, i === 0); this.dropAmmo(z.pos, 1.4); this.dropAmmo(z.pos, 1.4); return; }
     if (this.rnd() < st.drop) this.drop(z.pos, false);
+    if (this.rnd() < (INV_AMMO.zdrop[z.zt] || 0)) this.dropAmmo(z.pos, 0.6);
+  }
+  dropAmmo(pos, off) { // caixa de munição (não ocupa slot de poder): quem precisa de munição e pisa ganha
+    const a = this.rnd() * Math.PI * 2, x = clamp(pos.x + Math.cos(a) * off, -this.hx + 1, this.hx - 1), z = clamp(pos.z + Math.sin(a) * off, -this.hz + 1, this.hz - 1);
+    const d = { id: this.nid++, kind: 'ammo', x, y: this.A.P.groundAt(x, z, pos.y + 0.5), z, born: this.T };
+    this.drops.push(d); this.A.emit(['dp', d.id, DROP_KEYS.indexOf('ammo'), [r2(d.x), r2(d.y), r2(d.z)]]);
+    return d;
   }
   drop(pos, bossBonus) {
     const H = this.A.players(), someoneOut = H.some((p) => p.out || !p.alive);
@@ -325,8 +347,9 @@ export class InvasionCore {
     this.drops = this.drops.filter((d) => {
       if (T - d.born > INV.DROP_LIFE) { this.A.emit(['dg', d.id, 0]); return false; }
       for (const p of this.A.players()) {
-        if (!p.alive || p.inv.length >= INV.INV_MAX) continue;
+        if (!p.alive || (d.kind !== 'ammo' && p.inv.length >= INV.INV_MAX)) continue;
         const dx = p.pos.x - d.x, dz = p.pos.z - d.z; if (dx * dx + dz * dz > R2 || Math.abs(p.pos.y - d.y) > 1.6) continue;
+        if (d.kind === 'ammo') { if (!this.A.giveAmmo(p)) continue; this.A.emit(['dg', d.id, p.id, DROP_KEYS.indexOf('ammo')]); return false; }
         p.inv.push(d.kind); this.A.emit(['dg', d.id, p.id, POWER_KEYS.indexOf(d.kind)]); this.A.invChanged(p); return false;
       }
       return true;

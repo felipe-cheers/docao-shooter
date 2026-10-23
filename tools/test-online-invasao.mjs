@@ -83,6 +83,16 @@ const dpos = await G(A, () => { const p = window.__docao.player.pos; return [p.x
 await walkTo(A, dpos[0], dpos[1]);
 ok(await until(A, () => window.__docao.invInv.length === 1, 5000), 'Ana pegou o poder (inventário do servidor)');
 ok(await until(B, (id) => !window.__docao.invDrops.includes(id), 3000, did), 'drop sumiu pro Beto também');
+// caixa de munição que o zumbi solta (online): o servidor enche a munição e o cliente espelha
+const nd1 = await G(B, () => Math.max(0, ...window.__docao.invDrops));
+await T(A, { ammoDrop: true });
+await G(A, () => { const p = window.__docao.player; for (const i of p.slots) { p.reserve[i] = 0; p.mag[i] = 0; } });
+ok(await until(B, (n) => window.__docao.invDrops.some((d) => d > n), 5000, nd1), 'Beto vê a caixa de munição que caiu');
+const aid = await G(B, (n) => Math.min(...window.__docao.invDrops.filter((d) => d > n)), nd1);
+const apos = await G(A, () => { const p = window.__docao.player.pos; return [p.x + 2, p.z]; });
+await walkTo(A, apos[0], apos[1]);
+ok(await until(A, () => { const g = window.__docao, p = g.player, w = g.WEAPONS[p.slots[0]]; return p.reserve[p.slots[0]] >= w.reserve && p.mag[p.slots[0]] === w.mag; }, 5000), 'Ana pegou a caixa de munição do zumbi (reserva e pente cheios, espelhado no cliente)');
+ok(await until(B, (id) => !window.__docao.invDrops.includes(id), 3000, aid), 'caixa sumiu pro Beto também');
 await T(A, { give: ['potion'], hurt: 45 });
 ok(await until(A, () => window.__docao.invInv[0] === 'potion' && window.__docao.player.hp <= 56, 4000), 'gancho: poção no inventário e Ana machucada');
 await G(A, () => window.__docao.invUse());

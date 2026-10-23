@@ -21,7 +21,7 @@ import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } 
 import { SKINS, getSkin, DEFAULT_SKIN } from './skins.js';
 import './costumes.js';
 import { MAPS, PLAY_MAPS, INV_MAPS, getMap } from './maps.js';
-import { INV, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
+import { INV, INV_AMMO, DROP_KEYS, invRefillAmmo, isInvasion, ZOMBIES, POWERS, POWER_KEYS, KEYS, SPIT_GRAV, InvasionCore, parseState, coreView, scaleHit } from './shared/invasion.js';
 import { createInvMusic } from './invasion-music.js';
 import { makeZombie, animateZombie, dieZombie, applyHalloweenPalette, buildHalloween, makeFogWall, makeDropMesh, tickDrop, makeSpitMesh, makePowerPumpkin, makeRing, tickRing, makeLanternCone, setGhostLook } from './invasion-gfx.js';
 import { TRAIN, isTraining, dummyX } from './shared/training.js';
@@ -319,6 +319,7 @@ function placeDummy(b) {
 // ---------------- Pickups ----------------
 // caixa de munição: enche a reserva da primária e da pistola; a bazuca é escassa (+1 foguete por caixa)
 function refillAmmo(e) {
+  if (invMode()) return invRefillAmmo(e, WEAPONS); // Invasão: mais munição por caixa (mesma regra do servidor)
   let got = false;
   for (const i of e.slots) {
     const w = WEAPONS[i]; if (e.reserve[i] >= w.reserve) continue;
@@ -350,6 +351,11 @@ function makePickup(type, x, z, yHint = 0) {
   } else {
     const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.55), toon(0x6b7a3a)); outline(b, 0.025); g.add(b);
     const st = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.12, 0.57), toon(0xf2c94c)); g.add(st);
+    // Invasão: facho e anel amarelos pra achar a caixa de longe (só aparecem nesse modo)
+    const fxMat = () => new THREE.MeshBasicMaterial({ color: 0xf2c94c, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 8, 6, 1, true), fxMat()); beam.position.y = 4; g.add(beam);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.68, 28), fxMat()); ring.material.side = THREE.DoubleSide; ring.rotation.x = -Math.PI / 2; ring.position.y = -0.62; g.add(ring);
+    beam.visible = ring.visible = false; g.userData.fx = [beam, ring];
   }
   const y = groundAt(x, z, yHint + 0.3); g.position.set(x, y + 0.7, z); scene.add(g);
   pickups.push({ type, mesh: g, pos: new V3(x, y, z), active: true, respawnAt: 0, baseY: y + 0.7 });
@@ -359,6 +365,7 @@ function updatePickups(dt) {
   for (const p of pickups) {
     if (!p.active) { if (gameTime >= p.respawnAt) { p.active = true; p.mesh.visible = true; } continue; }
     p.mesh.rotation.y += dt * 1.6; p.mesh.position.y = p.baseY + Math.sin(gameTime * 3 + p.pos.x) * 0.12;
+    if (p.mesh.userData.fx) { const on = invMode(); for (const f of p.mesh.userData.fx) if (f.visible !== on) f.visible = on; }
     if (online) continue; // online: o servidor decide quem pegou
     for (const e of entities) {
       if (!e.alive || e.zt || !clientPower(p.type)) continue;
@@ -367,8 +374,8 @@ function updatePickups(dt) {
       if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
       else if (p.type === 'grenade') { if (e.nades >= NADE.max) continue; e.nades++; }
       else if (!refillAmmo(e)) continue;
-      p.active = false; p.mesh.visible = false; p.respawnAt = gameTime + (p.type === 'grenade' ? NADE.pickupRespawn : 15);
-      if (e.isPlayer) { sfx.pickup(); flashMsg(p.type === 'health' ? '+50 de vida' : p.type === 'grenade' ? `+1 Copo Bomba (${e.nades}/${NADE.max})` : e.primary === 3 ? `Munição! +1 foguete (${e.reserve[3]}/${WEAPONS[3].reserve})` : 'Munição cheia!'); }
+      p.active = false; p.mesh.visible = false; p.respawnAt = gameTime + (p.type === 'grenade' ? NADE.pickupRespawn : invMode() && p.type === 'ammo' ? INV_AMMO.respawn : 15);
+      if (e.isPlayer) { sfx.pickup(); flashMsg(p.type === 'health' ? '+50 de vida' : p.type === 'grenade' ? `+1 Copo Bomba (${e.nades}/${NADE.max})` : e.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${e.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!'); }
       break;
     }
   }
@@ -4518,7 +4525,7 @@ function startOnlineMatch(m) {
   player.primary = player.nextPrimary = selectedPrimary; player.nextSecondary = selectedSecondary; player.nextMelee = selectedMelee; player.slots = [selectedPrimary, selectedSecondary, selectedMelee]; setWeapon(player, selectedPrimary); // até o servidor mandar o renascimento
   entities.push(player); o.ents.set(o.myId, player); fp.setSkin(me.skin); player.caps = me.caps || 0; applyTeam(player, me.team ?? -1);
   for (const info of m.ents) remoteEnt(info);
-  invApplyLook(invMode()); if (invMode()) for (const [id, ki, pos] of m.drops || []) invAddDrop(id, POWER_KEYS[ki], pos);
+  invApplyLook(invMode()); if (invMode()) for (const [id, ki, pos] of m.drops || []) invAddDrop(id, DROP_KEYS[ki], pos);
   refreshModeHud(); $('teamPick').classList.add('hidden');
   if (teamMode() && me.pend) showTeamPick(m.ents);
   pickups.forEach((p, i) => { p.active = !!(m.pk ? m.pk[i] : 1); p.mesh.visible = p.active; });
@@ -4682,7 +4689,7 @@ function personalEvent(ev) {
   else if (ev[0] === 'egg') { if (p.alive) eggSplat(Number(ev[1]) || EGG.splat); } // levou ovada: tela suja (evento pessoal do servidor)
   else if (ev[0] === 'got') {
     const [, type, hp, nades] = ev; sfx.pickup(); p.hp = hp; p.nades = nades; if (type === 'ammo') refillAmmo(p);
-    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})` : p.primary === 3 ? `Munição! +1 foguete (${p.reserve[3]}/${WEAPONS[3].reserve})` : 'Munição cheia!');
+    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})` : p.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${p.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!');
   }
 }
 function onlineEnd(m) {
@@ -4801,6 +4808,7 @@ function startInvasionOffline() {
     heal(p, hp) { p.hp = Math.min(100, p.hp + hp); },
     revive(p, at) { p.reviveAt = at; p.respawnAt = gameTime; if (p.isPlayer && !p.alive) { respawn(p); if (state === 'playing') lockPointer(); } },
     invChanged(p) { if (p.isPlayer) invSetInv(p.inv.map((k) => POWER_KEYS.indexOf(k))); },
+    giveAmmo(p) { return !!p.isPlayer && refillAmmo(p); }, // caixa que o zumbi solta
     emit(ev) { invEvent(ev); },
     aimOf(p) { const d = new V3(); camera.getWorldDirection(d); return { o: camera.position.clone(), d }; },
     over(won, wave) { setTimeout(() => endGame(), 1800); },
@@ -4822,9 +4830,10 @@ function invEvent(ev) {
   else if (k === 'zs') { const [, id, big, p, v] = ev; const m = makeSpitMesh(!!big); m.position.set(...p); scene.add(m); invGfx.projs.set(id, { m, pos: a3v(p), vel: a3v(v), born: gameTime, spit: true }); if (player) tone('sawtooth', big ? 160 : 320, big ? 90 : 140, 0.18, 0.12 * distVol(a3v(p))); }
   else if (k === 'zx') { const [, id, c, big] = ev; invKillProj(id); const at = a3v(c); invRing(at, big ? '#ff8a1a' : '#7dff4a', 0.2, big ? 3.6 : 1.8, 0.4); if (big) blastFx(at, 3.6); else { puff(at, 0x7dff4a); noise(0.2, 900, 0.3 * distVol(at), 'bandpass'); } }
   else if (k === 'zb') { const at = a3v(ev[2]); blastFx(at, ZOMBIES.tank.boom.radius); invRing(at, '#ff7a1a', 0.5, ZOMBIES.tank.boom.radius, 0.5); }
-  else if (k === 'dp') { const [, id, ki, p] = ev; invAddDrop(id, POWER_KEYS[ki], p); }
+  else if (k === 'dp') { const [, id, ki, p] = ev; invAddDrop(id, DROP_KEYS[ki], p); }
   else if (k === 'dg') { const [, id, pid, ki] = ev; const d = invGfx.drops.get(id); if (d) { scene.remove(d.m); invGfx.drops.delete(id); }
-    if (pid && isMe(pid)) { sfx.pickup(); flashMsg(`${POWERS[POWER_KEYS[ki]].icon} ${POWERS[POWER_KEYS[ki]].name}! · ${KEYS.useLabel} usa`); }
+    if (DROP_KEYS[ki] === 'ammo') { if (pid && isMe(pid)) { if (online && player) refillAmmo(player); sfx.pickup(); flashMsg('📦 Munição!'); } } // offline o core já encheu (giveAmmo); online o servidor enche e a gente espelha
+    else if (pid && isMe(pid)) { sfx.pickup(); flashMsg(`${POWERS[POWER_KEYS[ki]].icon} ${POWERS[POWER_KEYS[ki]].name}! · ${KEYS.useLabel} usa`); }
     else if (pid) { const e = online ? entOf(pid) : null; if (e && POWER_KEYS[ki] === 'revive') flashMsg(`✨ ${e.name} pegou uma Ressurreição`); } }
   else if (k === 'pw') invPowerFx(ev);
   else if (k === 'pb') { const [, id, c] = ev; invKillProj(id); const at = a3v(c); blastFx(at, POWERS.pumpkin.radius); invRing(at, '#ff8a1a', 0.5, POWERS.pumpkin.radius, 0.45); }

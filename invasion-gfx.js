@@ -265,12 +265,12 @@ export function makeFogWall() {
 }
 
 // ---------------- drops de poder ----------------
-const POWER_COL = { pumpkin: '#ff8a1a', howl: '#a8c8ff', potion: '#5aff8a', lantern: '#fff27a', ghost: '#d8e8ff', revive: '#ffd24a' };
+const POWER_COL = { pumpkin: '#ff8a1a', howl: '#a8c8ff', potion: '#5aff8a', lantern: '#fff27a', ghost: '#d8e8ff', revive: '#ffd24a', ammo: '#f2c94c' };
 export const powerColor = (k) => POWER_COL[k] || '#ffffff';
 const iconTexCache = new Map();
 function iconTex(k) {
   if (iconTexCache.has(k)) return iconTexCache.get(k);
-  const t = canvasTex(128, 128, (x) => { const gr = x.createRadialGradient(64, 64, 10, 64, 64, 62); gr.addColorStop(0, powerColor(k) + 'cc'); gr.addColorStop(1, powerColor(k) + '00'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128); x.font = '72px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(POWERS[k].icon, 64, 70); });
+  const t = canvasTex(128, 128, (x) => { const gr = x.createRadialGradient(64, 64, 10, 64, 64, 62); gr.addColorStop(0, powerColor(k) + 'cc'); gr.addColorStop(1, powerColor(k) + '00'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128); x.font = '72px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(k === 'ammo' ? '📦' : POWERS[k].icon, 64, 70); });
   iconTexCache.set(k, t); return t;
 }
 export function makeDropMesh(kind) {
