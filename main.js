@@ -260,7 +260,7 @@ function invMusicOn(on) { if (on) { if (!actx) initAudio(); if (!actx) return; i
 const friends = (a, b) => (invMode() ? !!(a && b && a !== b && !a.zt === !b.zt) : teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0);
 let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
-const keys = {}; let mouseDown = false, firedThisPress = false;
+const keys = {}; let mouseDown = false, firedThisPress = false, lookInputSeq = 0;
 
 function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
   const skin = getSkin(skinId);
@@ -613,43 +613,59 @@ function stepEmote(dt) {
 
 // ---------------- Copo Bomba (granada) ----------------
 const grenades = [], particles = []; let shake = 0, explosions = 0, lastKnock = -99;
-function nadeBlocked(x, y, z) {
-  for (const sd of solidsAt(x, z)) {
-    if (x > sd.min.x - NADE.r && x < sd.max.x + NADE.r && z > sd.min.z - NADE.r && z < sd.max.z + NADE.r && y > sd.min.y - NADE.r) {
-      const top = topAt(sd, clamp(x, sd.min.x, sd.max.x), clamp(z, sd.min.z, sd.max.z));
-      if (y < top - 0.05) return true;
-    }
-  }
-  return false;
+const nadeBlocked = (x, y, z) => PHYS.nadeBlocked(x, y, z);
+const cupWorldScale = () => 0.55 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.tan(THREE.MathUtils.degToRad(fpCam.fov / 2));
+function poseGrenadeMesh(n, dt = 0) {
+  n.mesh.rotation.x += n.spin.x * dt; n.mesh.rotation.y += n.spin.y * dt; n.mesh.rotation.z += n.spin.z * dt;
+  const left = n.explodeAt - gameTime, base = n.poke ? 1.3 : 1.15;
+  const scale = THREE.MathUtils.lerp(n.launchScale ?? base, base, Math.min(1, (n.physicsTime || 0) / 0.18));
+  n.mesh.scale.setScalar(scale * (left < 0.6 ? 1 + Math.sin(gameTime * 40) * 0.08 : 1));
+  n.mesh.position.copy(n.pos);
+  if (!n.poke) n.mesh.position.add(new V3(0, -0.1 * n.mesh.scale.x, 0).applyQuaternion(n.mesh.quaternion));
 }
 function throwGrenade(e, origin, vel) {
   if (e.nades <= 0) return null;
   e.nades--; e.lastNadeT = gameTime;
   if (online && e.isPlayer) { netEv(['n', v3a(origin), v3a(vel)]); sfx.toss(1); return null; } // o copo aparece quando o servidor confirmar
-  const mesh = makeCup(1.15); scene.add(mesh);
+  const mesh = makeCup(1.15); mesh.position.copy(origin).y -= 0.1; scene.add(mesh);
   const gnd = { owner: e, pos: origin.clone(), vel: vel.clone(), explodeAt: gameTime + NADE.fuse, mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 };
+  if (e.isPlayer) { gnd.launchScale = cupWorldScale(); mesh.quaternion.copy(camera.quaternion).multiply(fp.cup.quaternion); }
+  poseGrenadeMesh(gnd);
   grenades.push(gnd); sfx.toss(e.isPlayer ? 1 : distVol(e.pos)); return gnd;
 }
-function stepNade(pos, vel, dt, onBounce) {
-  vel.y += NADE.grav * dt;
-  const nx = pos.x + vel.x * dt; if (nadeBlocked(nx, pos.y, pos.z)) { vel.x *= -0.45; if (onBounce) onBounce(); } else pos.x = nx;
-  const nz = pos.z + vel.z * dt; if (nadeBlocked(pos.x, pos.y, nz)) { vel.z *= -0.45; if (onBounce) onBounce(); } else pos.z = nz;
-  if (vel.y > 0 && nadeBlocked(pos.x, pos.y + vel.y * dt + NADE.r, pos.z)) { vel.y = -vel.y * 0.35; if (onBounce) onBounce(); } // quica no teto
-  const ny = pos.y + vel.y * dt; const g = groundAt(pos.x, pos.z, pos.y - NADE.r + 0.3) + NADE.r;
-  if (ny <= g) { pos.y = g; if (Math.abs(vel.y) > 1.5 && onBounce) onBounce(); vel.y = Math.abs(vel.y) > 1.2 ? -vel.y * 0.42 : 0; vel.x *= 0.72; vel.z *= 0.72; return true; }
-  pos.y = ny; return false;
-}
+const stepNade = (pos, vel, dt, onBounce) => PHYS.stepNade(pos, vel, dt, onBounce);
 function throwVelocity(power) { // direção da câmera + leve arco pra cima
   const dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion); dir.y += 0.28; dir.normalize();
   return dir.multiplyScalar(7 + 15 * power).add(new V3(player.vel.x * 0.5, 0, player.vel.z * 0.5));
 }
-const throwOrigin = () => camera.localToWorld(new V3(-0.25, -0.15, -0.5));
+// A pose e a origem usam o mesmo copo, inclusive com FOV/zoom diferentes.
+function poseChargeCup(k) {
+  fp.cup.position.set(-0.36 - k * 0.05, -0.27 + k * 0.06, -0.72 + k * 0.08);
+  fp.cup.rotation.set(0.25 - k * 0.5, 0.4, 0.15 + k * 0.3);
+  fp.cup.updateMatrixWorld(true);
+}
+function throwOrigin() {
+  poseChargeCup(player.charging ? chargePower() : 0);
+  const local = fp.cup.localToWorld(new V3(0, 0.1, 0));
+  const fovRatio = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.tan(THREE.MathUtils.degToRad(fpCam.fov / 2));
+  local.x *= fovRatio; local.y *= fovRatio;
+  const desired = local.applyQuaternion(camera.quaternion).add(camera.position);
+  const origin = camera.position.clone();
+  // Recolhe a origem se a mão visual atravessar uma parede/teto.
+  const offset = desired.clone().sub(camera.position), distance = offset.length();
+  for (let d = 0; d <= distance; d += 0.025) {
+    const test = camera.position.clone().addScaledVector(offset, Math.min(d + 0.025, distance) / distance);
+    if (nadeBlocked(test.x, test.y, test.z) || test.y < groundAt(test.x, test.z, camera.position.y) + NADE.r) break;
+    origin.copy(test);
+  }
+  return origin;
+}
 function updateGrenades(dt) {
   for (let i = grenades.length - 1; i >= 0; i--) {
     const n = grenades[i];
-    stepNade(n.pos, n.vel, dt, () => { if (gameTime - n.lastBounce > 0.12) { sfx.bounce(distVol(n.pos)); n.lastBounce = gameTime; } n.spin.multiplyScalar(0.6); });
-    n.mesh.position.copy(n.pos).y -= 0.1; n.mesh.rotation.x += n.spin.x * dt; n.mesh.rotation.y += n.spin.y * dt; n.mesh.rotation.z += n.spin.z * dt;
-    const left = n.explodeAt - gameTime; n.mesh.scale.setScalar((n.poke ? 1.3 : 1.15) * (left < 0.6 ? 1 + Math.sin(gameTime * 40) * 0.08 : 1));
+    PHYS.advanceNade(n, dt, () => { if (gameTime - n.lastBounce > 0.12) { sfx.bounce(distVol(n.pos)); n.lastBounce = gameTime; } n.spin.multiplyScalar(0.6); });
+    poseGrenadeMesh(n, dt);
+    const left = n.explodeAt - gameTime;
     if (n.net) { if (left < -1.5) { scene.remove(n.mesh); grenades.splice(i, 1); } continue; } // online: explode quando o servidor mandar
     if (left <= 0) { if (n.poke) pokeOpen(n); else explode(n); scene.remove(n.mesh); grenades.splice(i, 1); }
   }
@@ -835,27 +851,34 @@ function updateParticles(dt) {
   }
 }
 // pré-visualização da trajetória
-const arcGeo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 60 }, () => new V3()));
+const arcGeo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: Math.ceil(Math.max(NADE.fuse, POKE.fuse) / NADE.step) + 1 }, () => new V3()));
 const arcLine = new THREE.Line(arcGeo, new THREE.LineDashedMaterial({ color: COLORS.cyan, dashSize: 0.25, gapSize: 0.15, transparent: true, opacity: 0.9, depthTest: false }));
 arcLine.renderOrder = 10; arcLine.visible = false; arcLine.frustumCulled = false; scene.add(arcLine);
 const arcMark = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 28), new THREE.MeshBasicMaterial({ color: COLORS.cyan, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthTest: false }));
 arcMark.rotation.x = -Math.PI / 2; arcMark.visible = false; arcMark.renderOrder = 10; scene.add(arcMark);
-function updateArc(power) {
-  const pos = throwOrigin(), vel = throwVelocity(power); const pts = arcGeo.attributes.position; let landed = -1;
-  for (let i = 0; i < 60; i++) {
+function updateArc() {
+  const pos = throwOrigin(), vel = throwVelocity(throwPower());
+  const pts = arcGeo.attributes.position, steps = Math.round((player.pokeballs > 0 ? POKE.fuse : NADE.fuse) / NADE.step);
+  for (let i = 0; i <= steps; i++) {
     pts.setXYZ(i, pos.x, pos.y, pos.z);
-    if (landed < 0) { for (let s = 0; s < 3; s++) if (stepNade(pos, vel, 1 / 60) && landed < 0) landed = i; }
+    if (i < steps) PHYS.stepNade(pos, vel, NADE.step);
   }
-  if (landed >= 0) for (let i = landed; i < 60; i++) pts.setXYZ(i, pos.x, pos.y, pos.z);
+  arcGeo.setDrawRange(0, steps + 1);
   pts.needsUpdate = true; arcLine.computeLineDistances(); arcGeo.computeBoundingSphere();
   arcMark.position.set(pos.x, pos.y - NADE.r + 0.04, pos.z); arcMark.visible = true; arcLine.visible = true;
 }
 function startCharge() { const p = player; if (emote.on || !p || !p.alive || (p.nades <= 0 && !(p.pokeballs > 0)) || p.charging) { if (!emote.on && p && p.alive && p.nades <= 0 && !p.charging) flashMsg('Sem Copo Bomba! Pegue um copo vermelho'); return; } p.charging = true; p.chargeStart = gameTime; }
 function chargePower() { return clamp((gameTime - player.chargeStart) / NADE.charge, 0, 1); }
+const throwPower = () => 0.15 + 0.85 * chargePower();
 function releaseCharge() {
-  const p = player; if (!p || !p.charging) return; p.charging = false; arcLine.visible = arcMark.visible = false;
+  const p = player; if (!p || !p.charging) return;
+  const origin = throwOrigin(), vel = throwVelocity(throwPower());
+  p.charging = false; arcLine.visible = arcMark.visible = false;
+  fp.cup.visible = false;
   if (!p.alive || emote.on) return;
-  const power = 0.15 + 0.85 * chargePower(); if (p.pokeballs > 0) throwPokeball(p, throwOrigin(), throwVelocity(power)); else throwGrenade(p, throwOrigin(), throwVelocity(power)); fp.cupThrowT = 0.25;
+  fp.cupReleasePos = fp.cup.position.clone(); fp.cupReleaseRot = fp.cup.quaternion.clone();
+  if (p.pokeballs > 0) throwPokeball(p, origin, vel); else throwGrenade(p, origin, vel);
+  fp.cupThrowT = 0.25;
 }
 function botThrow(b, t) {
   const from = center(b, 1.6); const to = t.pos.clone().add(new V3(t.vel.x * 0.6 + rand(-1.2, 1.2), 0.2, t.vel.z * 0.6 + rand(-1.2, 1.2)));
@@ -2192,9 +2215,9 @@ const fp = (() => {
   const flash = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), basic(0xfff27a)); flash.position.set(0, 0.01, -0.78); flash.scale.set(1, 1, 2); flash.visible = false; root.add(flash);
   root.scale.setScalar(0.62);
   const cup = makeCup(0.55); cup.rotation.set(0.25, 0.4, 0.15); cup.visible = false; fpScene.add(cup);
-  const hoofHint = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 10), toon(0xee9c22)); hoofHint.position.set(0.0, 0.07, 0.07); outline(hoofHint, 0.006); cup.add(hoofHint);
+  const hoofHint = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 10), toon(0xee9c22)); hoofHint.position.set(0.0, 0.07, 0.07); outline(hoofHint, 0.006); const cupHand = new THREE.Group(); cupHand.scale.setScalar(0.55); cupHand.add(hoofHint); cupHand.visible = false; fpScene.add(cupHand);
   fpRef.saberR = saberR; fpRef.saberL = saberL; fpRef.bowGrip = bowGrip; fpRef.bowDraw = bowDraw;
-  return { root, guns, flash, setSkin, cup, cupThrowT: 0, kick: 0, bob: 0, flashT: 0, pumpPart, get pumpHand() { return pumpHand; }, pumpShoulder, rocketTip, slide, fpRef, actionT: 0, actionLen: 1, shellT: 0, stringT: 0, kr, kpiv, rMag, rCh, pMag, uMag, uCh, p90Mag, p90Ch, nStrip, semiMag, semiCh, lmgMag, lmgCh, discLoaded, famasMag, famasCh, famasCase, cornCob, cornCore, cornCrank, cornBits, cornKernels, cornCrankT: 0, sling, mini: { group: mini, barrels: mgBarrels, glow: mgGlow, glowMat: mgGlowMat }, mgBox, mgCase, cycT: 0, climb: 0, sShell, sRound, loadRocket, drops: [], reloadSeen: 0, knifeT: 9, knifeKind: 'slash', knifeDrawT: 0 };
+  return { root, guns, flash, setSkin, cup, cupHand, cupThrowT: 0, kick: 0, bob: 0, flashT: 0, pumpPart, get pumpHand() { return pumpHand; }, pumpShoulder, rocketTip, slide, fpRef, actionT: 0, actionLen: 1, shellT: 0, stringT: 0, kr, kpiv, rMag, rCh, pMag, uMag, uCh, p90Mag, p90Ch, nStrip, semiMag, semiCh, lmgMag, lmgCh, discLoaded, famasMag, famasCh, famasCase, cornCob, cornCore, cornCrank, cornBits, cornKernels, cornCrankT: 0, sling, mini: { group: mini, barrels: mgBarrels, glow: mgGlow, glowMat: mgGlowMat }, mgBox, mgCase, cycT: 0, climb: 0, sShell, sRound, loadRocket, drops: [], reloadSeen: 0, knifeT: 9, knifeKind: 'slash', knifeDrawT: 0 };
 })();
 fp.tablet = makeTablet(); fp.laptop = makeLaptop(); fp.radio = makeRadio(); fpScene.add(fp.tablet, fp.laptop, fp.radio);
 // Mãos dentro da arma (pump, ferrolho, braço da faca) não entram na camuflagem nem na miniatura.
@@ -2399,8 +2422,14 @@ function updateFP(dt) {
   let dyaw = p.yaw - (fp.lastYaw ?? p.yaw); dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
   const dpit = p.pitch - (fp.lastPitch ?? p.pitch); fp.lastYaw = p.yaw; fp.lastPitch = p.pitch;
   const sk = Math.min(1, dt * 10), sideVel = p.vel.x * Math.cos(p.yaw) - p.vel.z * Math.sin(p.yaw);
-  fp.swayX = (fp.swayX || 0) + (clamp(dyaw * 1.6, -0.09, 0.09) - (fp.swayX || 0)) * sk;
-  fp.swayY = (fp.swayY || 0) + (clamp(-dpit * 1.6, -0.07, 0.07) - (fp.swayY || 0)) * sk;
+  // Uma correção manual já moveu a mira. Cancele o balanço pendente para a arma
+  // não voltar sozinha à direção anterior depois que o mouse parar.
+  if (fp.lastLookInputSeq !== lookInputSeq) {
+    fp.swayX = 0; fp.swayY = 0; fp.lastLookInputSeq = lookInputSeq;
+  } else {
+    fp.swayX = (fp.swayX || 0) + (clamp(dyaw * 1.6, -0.09, 0.09) - (fp.swayX || 0)) * sk;
+    fp.swayY = (fp.swayY || 0) + (clamp(-dpit * 1.6, -0.07, 0.07) - (fp.swayY || 0)) * sk;
+  }
   fp.strafe = (fp.strafe || 0) + (clamp(-sideVel * 0.012, -0.09, 0.09) - (fp.strafe || 0)) * Math.min(1, dt * 8);
   const swA = 1 - ads * 0.85;
   if (w.pump || w.bolt) tilt += cyc * 0.12;
@@ -2430,9 +2459,16 @@ function updateFP(dt) {
   if (tabletK > 0.2 || radioK > 0.2 || laptopK > 0.2) fp.root.visible = false; // guarda a arma para segurar o tablet, o laptop ou o rádio
   // copo na mão enquanto carrega o arremesso
   fp.cupThrowT = Math.max(0, fp.cupThrowT - dt);
-  if (p.charging && p.alive) { const k = chargePower(); fp.cup.visible = true; fp.cup.position.set(-0.36 - k * 0.05, -0.27 + k * 0.06, -0.72 + k * 0.08); fp.cup.rotation.set(0.25 - k * 0.5, 0.4, 0.15 + k * 0.3); }
-  else if (fp.cupThrowT > 0) { const k = 1 - fp.cupThrowT / 0.25; fp.cup.visible = true; fp.cup.position.set(-0.3 + k * 0.2, -0.22 + k * 0.1, -0.7 - k * 0.8); }
-  else fp.cup.visible = false;
+  fp.cup.visible = p.charging && p.alive;
+  fp.cupHand.visible = p.alive && (p.charging || fp.cupThrowT > 0);
+  if (p.charging && p.alive) {
+    poseChargeCup(chargePower());
+    fp.cupHand.position.copy(fp.cup.position); fp.cupHand.quaternion.copy(fp.cup.quaternion);
+  } else if (fp.cupThrowT > 0 && fp.cupReleasePos) {
+    const k = 1 - fp.cupThrowT / 0.25, reach = Math.sin(k * Math.PI);
+    fp.cupHand.position.copy(fp.cupReleasePos).add(new V3(0.12 * reach, 0.08 * reach - 0.3 * k * k, -0.24 * reach));
+    fp.cupHand.quaternion.copy(fp.cupReleaseRot); fp.cupHand.rotation.x -= reach * 0.5;
+  }
 }
 
 // ---------------- Recarga em 1ª pessoa (tempo = WEAPONS[i].reload, sincronizado com a recarga de verdade) ----------------
@@ -2755,7 +2791,7 @@ function updatePlayer(dt) {
   // tiro
   finishReload(p);
   const w = WEAPONS[p.weapon];
-  if (p.charging) updateArc(chargePower());
+  if (p.charging) updateArc();
   // Calibre 12: atirar interrompe a recarga cartucho a cartucho
   const canFire = p.reloadEnd <= gameTime || (w.shellReload && p.mag[p.weapon] > 0);
   const latched = !mouseDown && clickLatch && performance.now() - clickLatch < (w.burst ? 450 : 250); // FAMAS: clique na pausa entre rajadas fica guardado pra próxima
@@ -3851,6 +3887,7 @@ document.addEventListener('mousemove', (e) => {
   }
   if (predator) return;
   const s = sens * (ads > 0.2 ? sensAds : 1) * (camera.fov / BASE_FOV); // mirando usa o slider "Mirando"; o zoom ainda deixa o mouse mais lento
+  lookInputSeq++;
   player.yaw -= e.movementX * 0.0015 * s; player.pitch = clamp(player.pitch - e.movementY * 0.0015 * s, -1.5, 1.5);
 });
 canvas.addEventListener('mousedown', (e) => {
@@ -5036,7 +5073,7 @@ function invEndText() {
 
 // ganchos para testes automatizados
 window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
-  set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
+  set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get grenadeAim() { return { origin: throwOrigin().toArray(), velocity: throwVelocity(throwPower()).toArray(), points: Array.from(arcGeo.attributes.position.array.slice(0, arcGeo.drawRange.count * 3)), marker: arcMark.position.toArray(), visible: arcLine.visible, cupVisible: fp.cup.visible, handVisible: fp.cupHand.visible }; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,
   get mode() { return mode; }, get zone() { return zone; }, set zone(v) { zone = v; }, get teamScore() { return teamScore; }, get spawnHold() { return spawnHold; }, get selectedPrimary() { return selectedPrimary; },

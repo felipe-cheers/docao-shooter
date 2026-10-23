@@ -786,7 +786,7 @@ export class Game {
   stepProjectiles(dt) {
     this.stepDiscs(dt); this.stepEggs(dt); this.stepCorns(dt);
     for (let i = this.nades.length - 1; i >= 0; i--) {
-      const n = this.nades[i]; for (let s = 0; s < 2; s++) this.P.stepNade(n.pos, n.vel, dt / 2);
+      const n = this.nades[i]; this.P.advanceNade(n, dt);
       if (this.T >= n.explodeAt && n.poke) { this.nades.splice(i, 1); this.pokeOpen(n); continue; }
       if (this.T >= n.explodeAt) { this.nades.splice(i, 1); this.blast({ ...n.pos }, n.owner, { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE, kind: 'n', pid: n.id }); }
     }
