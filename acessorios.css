@@ -70,9 +70,13 @@
 .cls-top{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:52px;flex:none}
 .cls-headline{
   position:absolute;left:50%;top:0;transform:translateX(-50%);
-  width:min(560px,54vw);text-align:center;pointer-events:none
+  width:min(760px,72vw);text-align:center;pointer-events:none
 }
-.cls-headline h2{margin:0;color:#fff6e8;font:800 clamp(18px,2.1vw,28px)/1.15 Georgia,serif}
+.cls-headline h2{
+  margin:0;color:#fff6e8;
+  font:900 clamp(22px,2.3vw,32px)/1.15 "Arial Black",Impact,sans-serif;
+  -webkit-text-stroke:0;text-shadow:none;letter-spacing:.2px
+}
 .cls-headline p{margin:3px 0 0;color:#e8bc67;font:700 13px/1.3 "Trebuchet MS",Arial,sans-serif}
 .cls-clock{
   position:relative;top:auto;left:auto;transform:none;z-index:1;
@@ -122,8 +126,8 @@ button.clsrow:active{transform:none}
   font:800 10px/1.2 "Trebuchet MS",Arial,sans-serif;font-style:normal
 }
 .cls-gun,.cls-main{min-width:0}
-.cls-main{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end}
-.cls-main .cls-gun{grid-column:1 / -1;grid-row:1}
+.cls-main{position:relative;display:flex;flex-direction:column;align-items:stretch;min-width:0}
+.cls-main .cls-gun{min-width:0}
 .gs-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .gs-head b{font:800 22px/1.1 Georgia,serif;color:#fff6e8}
 .gs-head small{color:#ffe3a5;font-weight:700;text-align:right}
@@ -163,16 +167,18 @@ button.clsrow:active{transform:none}
 .gs-side-card small{color:#e8bc67}
 .gs-side-card b,.gs-side-card em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gs-side-card em{color:#ffe3a5;font-style:normal;font-size:12px}
-.gs-hint{margin:8px 0 0;padding-right:230px;color:#ffe3a5;font-size:12px;line-height:1.35}
+.gs-hint{margin:8px 0 0;padding:0;color:#ffe3a5;font-size:12px;line-height:1.35}
 #hud #deathpick.cls-screen #respawnBtn{
-  grid-column:2;grid-row:1;align-self:end;z-index:2;
-  width:min(240px,42%);min-height:58px;margin:0 0 2px;padding:8px 12px;
+  position:static;align-self:flex-end;z-index:1;float:none;
+  display:block;width:min(320px,100%);min-width:240px;min-height:58px;
+  margin:10px 0 0 auto;padding:8px 14px;
   background:#c4372f;color:#fff6e8;-webkit-text-fill-color:#fff6e8;
   border:2px solid #2a1410;border-radius:4px;box-shadow:0 3px 0 #6a201c;
-  text-align:center;letter-spacing:0;animation:none;opacity:1;cursor:pointer
+  text-align:center;letter-spacing:0;animation:none;opacity:1;cursor:pointer;
+  font:900 18px/1.1 "Arial Black",Impact,sans-serif
 }
-#hud #deathpick.cls-screen #respawnBtn b{display:block;font:900 18px/1.1 "Arial Black",Impact,sans-serif}
-#hud #deathpick.cls-screen #respawnBtn small{display:block;margin-top:3px;color:#ffe3a5;font:700 11px/1.2 "Trebuchet MS",Arial,sans-serif}
+#hud #deathpick.cls-screen #respawnBtn b{display:block;white-space:nowrap;font:900 18px/1.1 "Arial Black",Impact,sans-serif}
+#hud #deathpick.cls-screen #respawnBtn small{display:block;margin-top:3px;white-space:nowrap;color:#ffe3a5;font:700 11px/1.2 "Trebuchet MS",Arial,sans-serif}
 #hud #deathpick.cls-screen #respawnBtn:hover,
 #hud #deathpick.cls-screen #respawnBtn.ready,
 #hud #deathpick.cls-screen #respawnBtn.ready:hover{background:#d4473a;color:#fff6e8;-webkit-text-fill-color:#fff6e8;animation:none}
@@ -191,6 +197,76 @@ button.clsrow:active{transform:none}
   width:72px;height:40px;background-color:transparent;background-size:contain;background-position:center;box-shadow:none
 }
 .wthumb{display:inline-block;width:64px;height:40px;flex:none;background:transparent center/contain no-repeat;border-radius:3px}
+
+/* O CSS antigo da morte (#deathList em grade, polegar de 28px, botão genérico vermelho)
+   perde para estes seletores. Morte, Bomba e waves ficam iguais à pausa. */
+#hud #deathpick.cls-screen #deathList.cls-list,
+#bLoad.cls-screen .cls-list,
+#iLoad.cls-screen .cls-list,
+#pauseClass.cls-screen .cls-list{
+  display:flex;flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;
+  grid-template-columns:none;gap:6px;max-width:none;width:auto
+}
+#hud #deathpick.cls-screen button.clsrow,
+#hud #deathpick.cls-screen button.clsrow:hover,
+#hud #deathpick.cls-screen button.clsrow:focus,
+#hud #deathpick.cls-screen button.clsrow:active,
+#bLoad.cls-screen button.clsrow,
+#bLoad.cls-screen button.clsrow:hover,
+#bLoad.cls-screen button.clsrow:focus,
+#bLoad.cls-screen button.clsrow:active,
+#iLoad.cls-screen button.clsrow,
+#iLoad.cls-screen button.clsrow:hover,
+#iLoad.cls-screen button.clsrow:focus,
+#iLoad.cls-screen button.clsrow:active,
+#pauseClass.cls-screen button.clsrow,
+#pauseClass.cls-screen button.clsrow:hover,
+#pauseClass.cls-screen button.clsrow:focus,
+#pauseClass.cls-screen button.clsrow:active{
+  display:flex;flex-direction:row;align-items:center;gap:8px;
+  width:100%;min-width:0;min-height:52px;margin:0;padding:6px 8px;
+  background:#3e281a;color:#fff0d1;border:2px solid transparent;border-radius:6px;
+  box-shadow:none;outline:none;transform:none;text-align:left;cursor:pointer;
+  font:800 15px/1.15 "Trebuchet MS",Arial,sans-serif
+}
+#hud #deathpick.cls-screen button.clsrow.on,
+#hud #deathpick.cls-screen button.clsrow.on:hover,
+#hud #deathpick.cls-screen button.clsrow.on:focus,
+#bLoad.cls-screen button.clsrow.on,
+#bLoad.cls-screen button.clsrow.on:hover,
+#iLoad.cls-screen button.clsrow.on,
+#iLoad.cls-screen button.clsrow.on:hover,
+#pauseClass.cls-screen button.clsrow.on,
+#pauseClass.cls-screen button.clsrow.on:hover{
+  background:#3e281a;color:#fff0d1;border-color:#e8bc67;box-shadow:inset 0 0 0 1px #e8bc67
+}
+#hud #deathpick.cls-screen .clsrow kbd,
+#bLoad.cls-screen .clsrow kbd,
+#iLoad.cls-screen .clsrow kbd,
+#pauseClass.cls-screen .clsrow kbd{
+  flex:none;width:28px;height:28px;margin:0;padding:0;display:flex;align-items:center;justify-content:center;
+  background:#2a1a12;color:#f3e2c2;border-radius:4px;font:800 16px/1 Georgia,serif
+}
+#hud #deathpick.cls-screen .cls-list .wthumb,
+#hud #deathpick.cls-screen .gs-side .wthumb,
+#bLoad.cls-screen .cls-list .wthumb,
+#bLoad.cls-screen .gs-side .wthumb,
+#iLoad.cls-screen .cls-list .wthumb,
+#iLoad.cls-screen .gs-side .wthumb,
+#pauseClass.cls-screen .cls-list .wthumb,
+#pauseClass.cls-screen .gs-side .wthumb{
+  width:72px;height:40px;flex:none;border-radius:3px;
+  background-color:transparent;background-size:contain;background-repeat:no-repeat;background-position:center;
+  box-shadow:none
+}
+#hud #deathpick.cls-screen .gs-stage .wthumb.is-big,
+#bLoad.cls-screen .gs-stage .wthumb.is-big,
+#iLoad.cls-screen .gs-stage .wthumb.is-big,
+#pauseClass.cls-screen .gs-stage .wthumb.is-big{
+  grid-area:gun;display:block;width:100%;height:148px;min-height:132px;max-width:none;margin:0;flex:none;
+  background-color:#24160f;background-size:contain;background-repeat:no-repeat;background-position:center;
+  border-radius:6px;box-shadow:inset 0 0 0 1px #120c09
+}
 
 #pause.overlay{z-index:90}
 #pauseClass.cls-screen{z-index:100}
@@ -211,16 +287,26 @@ body.cls-on #invPowers,body.cls-on #inspect,body.bombpick #bombBanner,body.invpi
   #hud #deathpick.cls-screen,#bLoad.cls-screen,#iLoad.cls-screen,#pauseClass.cls-screen{padding:8px 8px 12px}
   .cls-top{flex-direction:column;align-items:stretch;min-height:0}
   .cls-headline{position:static;transform:none;width:auto}
+  .cls-headline h2{font-size:22px}
   .cls-clock{width:100%}
   .cls-pig{width:56px;height:44px;margin:4px auto}
   .cls-sheet{grid-template-columns:1fr;max-height:none}
-  .cls-list{flex-direction:row;overflow-x:auto;padding-bottom:4px}
-  button.clsrow{width:auto;min-width:168px;flex:none}
+  #hud #deathpick.cls-screen #deathList.cls-list,
+  #bLoad.cls-screen .cls-list,
+  #iLoad.cls-screen .cls-list,
+  #pauseClass.cls-screen .cls-list{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  #hud #deathpick.cls-screen button.clsrow,
+  #hud #deathpick.cls-screen button.clsrow:hover,
+  #bLoad.cls-screen button.clsrow,
+  #iLoad.cls-screen button.clsrow,
+  #pauseClass.cls-screen button.clsrow{width:auto;min-width:168px;flex:none}
   .clsmeta b,.clsmeta small,.gs-slot b{white-space:nowrap}
   .gs-stage{grid-template-columns:minmax(84px,1fr) minmax(120px,1.3fr) minmax(84px,1fr);min-height:140px}
-  .gs-stage .wthumb.is-big{height:96px}
-  .gs-hint{padding-right:0}
+  #hud #deathpick.cls-screen .gs-stage .wthumb.is-big,
+  #bLoad.cls-screen .gs-stage .wthumb.is-big,
+  #iLoad.cls-screen .gs-stage .wthumb.is-big,
+  #pauseClass.cls-screen .gs-stage .wthumb.is-big{height:110px;min-height:96px}
   .gbar{grid-template-columns:72px minmax(0,1fr) auto}
-  .cls-main{grid-template-columns:1fr}
-  #hud #deathpick.cls-screen #respawnBtn{grid-column:1;grid-row:2;width:100%;margin-top:8px;position:static}
+  #hud #deathpick.cls-screen #respawnBtn{width:100%;min-width:0;margin:8px 0 0}
+  #hud #deathpick.cls-screen #respawnBtn small{white-space:normal}
 }

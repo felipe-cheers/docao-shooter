@@ -109,6 +109,29 @@ ok(morte.rows === 5 && morte.foto && /Renasce em/.test(morte.clock) && morte.nom
 ok(morte.who === `Você foi pururucado por ${matador}` && !/^\?|por \?\?\?/.test(morte.who), `o cabeçalho diz quem matou: "${morte.who}"`);
 ok(morte.opaco && morte.cobre && morte.hud, `fundo opaco cobre a tela e o HUD some (opaco ${morte.opaco}, cobre ${morte.cobre}, hud ${morte.hud})`);
 ok(morte.slot && morte.slotAlto > 0 && morte.slotAlto < 28, `o slot cabe numa linha ("${morte.slot}", ${morte.slotAlto.toFixed(0)}px)`);
+const grade = await G(() => {
+  const list = getComputedStyle(document.getElementById('deathList'));
+  const rows = [...document.querySelectorAll('#deathList .clsrow')];
+  const tops = rows.map((r) => Math.round(r.getBoundingClientRect().top));
+  const last = getComputedStyle(rows[4]);
+  const foto = document.querySelector('#classGun .wthumb.is-big').getBoundingClientRect();
+  const btn = document.getElementById('respawnBtn').getBoundingClientRect();
+  const bars = document.querySelector('#classGun .gbars').getBoundingClientRect();
+  const who = getComputedStyle(document.getElementById('deathWho'));
+  return {
+    col: list.flexDirection === 'column' && list.display === 'flex',
+    pilha: tops.every((t, i) => i === 0 || t > tops[i - 1] + 20),
+    fundo: last.backgroundColor,
+    foto: Math.round(foto.height),
+    folga: Math.round(btn.top - bars.bottom),
+    fonte: who.fontFamily,
+    peso: who.fontWeight,
+  };
+});
+ok(grade.col && grade.pilha, `lista da morte é uma coluna (${grade.pilha ? '5 linhas' : 'grade'})`);
+ok(grade.fundo === 'rgb(62, 40, 26)', `classe 5 no mesmo marrom das outras (${grade.fundo})`);
+ok(grade.foto >= 100 && grade.folga >= 0, `foto grande (${grade.foto}px) e o botão Nascer fica abaixo das barras (${grade.folga}px)`);
+ok(/Arial Black|Impact/i.test(grade.fonte) && Number(grade.peso) >= 800, `título em negrito (${grade.fonte}, ${grade.peso})`);
 await page.screenshot({ path: `${SHOTS}/morte-desktop.png` });
 await page.keyboard.press('Digit2');
 await wait(200);
@@ -142,6 +165,12 @@ await page.selectOption('#modeSel', 'bomb');
 await page.click('#menuTeamBtns .teambtn.t0');
 await G(() => document.getElementById('playBtn').click());
 ok(await until(() => window.__docao.mode === 'bomb' && !document.getElementById('bLoad').classList.contains('hidden') && document.querySelectorAll('#bLoad .clsrow').length === 5, 15000), 'na preparação da Bomba a ficha abre em tela cheia');
+ok(await G(() => {
+  const list = getComputedStyle(document.querySelector('#bLoad .cls-list'));
+  const foto = document.querySelector('#bLoad .wthumb.is-big').getBoundingClientRect().height;
+  const tops = [...document.querySelectorAll('#bLoad .clsrow')].map((r) => r.getBoundingClientRect().top);
+  return list.display === 'flex' && list.flexDirection === 'column' && tops.every((t, i) => i === 0 || t > tops[i - 1] + 20) && foto >= 100;
+}), 'Bomba usa a mesma lista vertical e a foto grande');
 await page.screenshot({ path: `${SHOTS}/bomba-classes.png` });
 await page.keyboard.press('Escape');
 await wait(150);
@@ -155,6 +184,12 @@ await G(() => document.getElementById('playBtn').click());
 ok(await until(() => window.__docao.mode === 'inv' && window.__docao.player && window.__docao.player.alive, 15000), 'a Invasão começa');
 await G(() => window.__docao.invOpenPick());
 ok(await until(() => !document.getElementById('iLoad').classList.contains('hidden') && document.querySelectorAll('#iLoad .clsrow').length === 5, 8000), 'entre as waves a ficha abre em tela cheia');
+ok(await G(() => {
+  const list = getComputedStyle(document.querySelector('#iLoad .cls-list'));
+  const foto = document.querySelector('#iLoad .wthumb.is-big').getBoundingClientRect().height;
+  const tops = [...document.querySelectorAll('#iLoad .clsrow')].map((r) => r.getBoundingClientRect().top);
+  return list.display === 'flex' && list.flexDirection === 'column' && tops.every((t, i) => i === 0 || t > tops[i - 1] + 20) && foto >= 100;
+}), 'entre as waves a lista é vertical e a foto é grande');
 await page.screenshot({ path: `${SHOTS}/waves-classes.png` });
 await page.keyboard.press('Escape');
 await wait(150);
@@ -176,6 +211,16 @@ await G(() => document.getElementById('playBtn').click());
 ok(await until(() => window.__docao.state === 'playing' && window.__docao.player && window.__docao.player.alive, 15000), 'partida na tela estreita');
 await G(() => { const g = window.__docao; const bot = g.entities.find((e) => e !== g.player && e.name); g.player.invulnUntil = 0; g.damage(g.player, 999, bot, 0, false); });
 ok(await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 20000), 'morte na tela estreita');
+ok(await G(() => {
+  const list = getComputedStyle(document.getElementById('deathList'));
+  const rows = [...document.querySelectorAll('#deathList .clsrow')];
+  const lefts = rows.map((r) => Math.round(r.getBoundingClientRect().left));
+  const foto = document.querySelector('#classGun .wthumb.is-big').getBoundingClientRect().height;
+  const btn = document.getElementById('respawnBtn').getBoundingClientRect();
+  const bars = document.querySelector('#classGun .gbars').getBoundingClientRect();
+  const faixa = list.flexDirection === 'row' && lefts.every((x, i) => i === 0 || x > lefts[i - 1] + 40);
+  return faixa && foto >= 80 && btn.top >= bars.bottom - 2 && btn.width > 300;
+}), 'na estreita a lista é faixa, a foto cabe e o Nascer fica embaixo');
 await page.screenshot({ path: `${SHOTS}/morte-estreita.png` });
 
 console.log('\nERROS:', errors.length ? errors.slice(0, 8) : 'nenhum');
