@@ -13,6 +13,7 @@ import { renderWeaponThumb } from './weapon-thumbs.js';
 import { camoLevel, camoInfo, nextCamo, applyWeaponCamo, resetWeaponCamo } from './weapon-camo.js';
 import { INSPECT_DUR, INSPECT_HOLD, INSPECT_FADE, INSPECT_PROFILES, inspectKind, inspectPose } from './inspect.js';
 import { createSaberSfx } from './saber-sfx.js';
+import { createSniperSfx } from './sniper-sfx.js';
 import { HIT_DIR_LIFE, addHit } from './damage-dir.js';
 import { resetFeedback, feedbackPoints, feedbackHit, feedbackKill, feedbackAward, feedbackMedal, tickFeedback } from './feedback.js';
 import { SMOKE, makeTacticalMesh, makeSmokeCloud, inRadius, makeShockStake, makeShockArc } from './tactical-nades.js';
@@ -155,7 +156,7 @@ function initAudio() {
     master = actx.createGain(); master.gain.value = menuMuted ? 0 : 0.4; master.connect(actx.destination);
     noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    saberSfx.bind(actx, master); bindGrenadeVoice(actx, master);
+    saberSfx.bind(actx, master); bindGrenadeVoice(actx, master); sniperSfx.bind(actx, master);
   } catch (e) { actx = null; }
 }
 function noise(dur, freq, vol, type = 'lowpass', delay = 0) {
@@ -180,9 +181,10 @@ const sfx = {
   stake: (v = 1) => { if (v < 0.02) return; tone('square', 900, 300, 0.05, 0.1 * v); noise(0.06, 1500, 0.3 * v, 'bandpass'); }, // tchac da estaca fincando
   pump: (v = 1, d = 0) => { noise(0.05, 1800, 0.35 * v, 'bandpass', d); tone('square', 240, 180, 0.04, 0.08 * v, d); noise(0.05, 2600, 0.4 * v, 'bandpass', d + 0.17); tone('square', 320, 260, 0.04, 0.1 * v, d + 0.17); },
   shell: () => { tone('square', 620, 520, 0.03, 0.08); noise(0.04, 3000, 0.15, 'bandpass', 0.02); },
-  sniper: (v = 1) => { noise(0.9, 1800, 1.3 * v); tone('sine', 140, 28, 0.7, 0.6 * v); noise(0.18, 7000, 0.5 * v, 'highpass'); noise(1.4, 500, 0.35 * v, 'lowpass', 0.15); },
-  canhao: (v = 1) => { noise(1.15, 700, 1.5 * v); tone('sine', 70, 22, 0.85, 0.75 * v); noise(0.22, 5000, 0.35 * v, 'highpass'); noise(1.6, 280, 0.45 * v, 'lowpass', 0.12); },
-  carabina: (v = 1) => { noise(0.35, 2400, 0.85 * v); tone('sine', 200, 55, 0.28, 0.4 * v); noise(0.08, 6000, 0.3 * v, 'highpass'); },
+  // Snipers: amostras sintetizadas (sniper-sfx.js). O bloco antigo fica de reserva se o arquivo ainda não decodificou.
+  sniper: (v = 1, dist = 0, pan = 0) => { if (!sniperSfx.shot('sniper', v, dist, pan)) { noise(0.9, 1800, 1.3 * v); tone('sine', 140, 28, 0.7, 0.6 * v); noise(0.18, 7000, 0.5 * v, 'highpass'); noise(1.4, 500, 0.35 * v, 'lowpass', 0.15); } },
+  canhao: (v = 1, dist = 0, pan = 0) => { if (!sniperSfx.shot('canhao', v, dist, pan)) { noise(1.15, 700, 1.5 * v); tone('sine', 70, 22, 0.85, 0.75 * v); noise(0.22, 5000, 0.35 * v, 'highpass'); noise(1.6, 280, 0.45 * v, 'lowpass', 0.12); } },
+  carabina: (v = 1, dist = 0, pan = 0) => { if (!sniperSfx.shot('carabina', v, dist, pan)) { noise(0.35, 2400, 0.85 * v); tone('sine', 200, 55, 0.28, 0.4 * v); noise(0.08, 6000, 0.3 * v, 'highpass'); } },
   bolt: (v = 1, d = 0) => { tone('square', 420, 380, 0.04, 0.1 * v, d); noise(0.06, 2400, 0.3 * v, 'bandpass', d + 0.12); noise(0.05, 3200, 0.3 * v, 'bandpass', d + 0.42); tone('square', 520, 480, 0.03, 0.1 * v, d + 0.55); },
   bazooka: (v = 1) => { noise(0.6, 900, 0.9 * v, 'bandpass'); tone('sawtooth', 180, 60, 0.4, 0.3 * v); noise(1.0, 2500, 0.2 * v, 'highpass', 0.05); },
   pistol: (v = 1) => { noise(0.08, 3600, 0.45 * v); tone('square', 330, 90, 0.06, 0.14 * v); },
@@ -242,6 +244,19 @@ const mgWhirr = { o: null, o2: null, f: null, g: null, last: '', set(spin, firin
   this.o.frequency.setTargetAtTime(hz, t, 0.05); this.o2.frequency.setTargetAtTime(hz * 2.01, t, 0.05); this.f.frequency.setTargetAtTime(400 + 1400 * spin, t, 0.05); this.g.gain.setTargetAtTime(0.07 * spin, t, 0.06);
 } };
 const distVol = (p) => clamp(1 - p.distanceTo(player.pos) / 60, 0.05, 1);
+const sniperSfx = createSniperSfx();
+// Pan simples pro tiro de outra pessoa: o jogo não usa Panner 3D, só volume. As snipers ganham lado também.
+function stereoPan(pos) {
+  if (!player || !pos) return 0;
+  const dx = pos.x - player.pos.x, dz = pos.z - player.pos.z;
+  const ang = Math.atan2(dx, dz) - player.yaw;
+  return clamp(Math.sin(ang), -1, 1) * 0.8;
+}
+// Ferrolho no tempo da animação (o arquivo já começa com a mão indo no ferrolho). Outras armas continuam no clique antigo.
+function playSniperBolt(w, v, dist, pan) {
+  if (w && sniperSfx.handles(w.key) && sniperSfx.bolt(w.key, v, dist, pan)) return;
+  sfx.bolt(v, 0.3);
+}
 const nadeEarVol = (p, range = 50) => (player ? clamp(1 - p.distanceTo(player.pos) / range, 0, 1) : 1); // vozes do copo: caem com a distância e somem além de `range` m (banana 50, granada 60)
 const saberSfx = createSaberSfx();
 
@@ -1249,7 +1264,7 @@ function startReload(e) {
   e.reloadStartT = gameTime;
   if (online && e.isPlayer) netEv(['rl', e.weapon]);
   if (w.shellReload) e.reloadEnd = gameTime + w.reloadStart + w.reload; // Calibre 12: cartucho por cartucho
-  else { e.reloadEnd = gameTime + w.reload; reloadSfx(w, e.isPlayer ? 1 : distVol(e.pos) * 0.5); }
+  else { e.reloadEnd = gameTime + w.reload; reloadSfx(w, e.isPlayer ? 1 : distVol(e.pos) * 0.5, e.isPlayer || !player ? 0 : e.pos.distanceTo(player.pos), e.isPlayer ? 0 : stereoPan(e.pos)); }
 }
 function finishReload(e) {
   if (!e.reloadEnd || gameTime < e.reloadEnd) return;
@@ -1272,7 +1287,7 @@ function switchWeapon(e, idx) {
   const side = idx === PISTOL || idx === NAIL || idx === CROSS || idx === BOW || idx === EGG_W;
   if (e.mgWant) { e.mgWant = false; if (online && e.isPlayer) netEv(['mgs', 0, +(performance.now() / 1000).toFixed(3)]); } e.mgSpin = 0; e.mgFiring = false; // trocou de arma: os canos param na hora (servidor faz igual)
   setWeapon(e, idx); e.reloadEnd = 0; e.burstLeft = 0; e.switchDur = idx === KNIFE ? MELEE.draw : isSaber(idx) ? 0.22 : WEAPONS[idx].heavy ? 0.7 : side ? 0.28 : 0.4; e.switchEnd = gameTime + e.switchDur; // minigun pesada: saque de 0,7 s
-  if (e.isPlayer) { fp.ins = null; showInspectHud(null); fp.actionT = 0; fp.stringT = 0; e.bowDraw = 0; e.eggDraw = 0; if (idx === KNIFE) { fp.knifeDrawT = MELEE.draw + 0.1; sfx.knifeDraw(0.8); rightStale = rightDown; } } // mirando (botão direito segurado) e trocou pra faca: só estoca num clique novo
+  if (e.isPlayer) { sniperSfx.cutFoley(); fp.ins = null; showInspectHud(null); fp.actionT = 0; fp.stringT = 0; e.bowDraw = 0; e.eggDraw = 0; if (idx === KNIFE) { fp.knifeDrawT = MELEE.draw + 0.1; sfx.knifeDraw(0.8); rightStale = rightDown; } } // mirando (botão direito segurado) e trocou pra faca: só estoca num clique novo
 }
 // troca rápida (V): corpo a corpo (faca ou sabre) ↔ última arma
 function quickKnife(e) {
@@ -2828,7 +2843,8 @@ const RELOAD_SFX = { // momentos (fração do tempo de recarga) dos cliques
   minigun: [['clank', 0.15], ['out', 0.25], ['in', 0.68], ['charge', 0.88]], // caixa sai, caixa nova engata, puxa a fita
   sniper: [['bolt', 0.12], ['round', 0.4], ['round', 0.53], ['round', 0.66], ['bolt', 0.86]], bazooka: [['clank', 0.2], ['slide', 0.55], ['thunk', 0.8], ['in', 0.92]],
 };
-function reloadSfx(w, v = 1) {
+function reloadSfx(w, v = 1, dist = 0, pan = 0) {
+  if (sniperSfx.handles(w.key) && sniperSfx.reload(w.key, v, dist, pan)) return;
   for (const [k, f] of RELOAD_SFX[w.key] || []) { const d = f * w.reload;
     if (k === 'out') { tone('square', 520, 400, 0.04, 0.1 * v, d); noise(0.05, 2400, 0.25 * v, 'bandpass', d); }
     else if (k === 'in') { noise(0.06, 1600, 0.4 * v, 'bandpass', d); tone('square', 300, 240, 0.05, 0.14 * v, d); }
@@ -3180,7 +3196,7 @@ function updatePlayer(dt) {
       sfx[w.key](); fp.kick = Math.min(0.14, fp.kick + w.recoil * 2.5); fp.flashT = w.rocket ? 0.08 : 0.04;
       if (p.weapon === CROSS || p.weapon === BOW) { fp.stringT = 0.14; launchShaft(muzzle, dir, p.weapon === CROSS ? 42 : 28); }
       if (w.pump) { sfx.pump(0.9, 0.3); fp.actionT = fp.actionLen = w.rate; fp.kick = 0.2; shake = Math.max(shake, 0.2); } // Calibre 12: coice e tranco de câmera mais pesados
-      if (w.bolt) { sfx.bolt(0.9, 0.3); fp.actionT = fp.actionLen = w.rate; }
+      if (w.bolt) { playSniperBolt(w, 0.9, 0, 0); fp.actionT = fp.actionLen = w.rate; }
       if (w.burst) { fp.cycT = 0.06; fp.climb = Math.min(0.12, fp.climb + 0.04); ejectCase(fp.famasCase); } // alavanca corre, arma sobe na rajada, cápsula sai pela direita
       if (w.scope) shake = Math.max(shake, 0.15);
       if (!w.scope) { p.pitch = clamp(p.pitch + w.recoil * (0.5 + Math.random() * 0.5), -1.5, 1.5); p.yaw += (Math.random() - 0.5) * w.recoil * (w.burst ? 0.15 : 0.4); } // rajada sobe reto, quase sem desvio pro lado // Sniper: coice só visual, a mira não sai do lugar
@@ -3421,8 +3437,9 @@ function botShoot(b, t, dist = 10) {
     fire(b, origin, dir, b.weapon, spread, muzzle);
     if (w.scope) b.aim = b.reaction * 0.4; // precisa remirar depois de cada tiro de sniper
   }
-  sfx[w.key](distVol(b.pos) * 0.7);
-  if (w.pump) sfx.pump(distVol(b.pos) * 0.5, 0.3); if (w.bolt) sfx.bolt(distVol(b.pos) * 0.5, 0.3);
+  const bDist = b.pos.distanceTo(player.pos), bPan = stereoPan(b.pos), bVol = distVol(b.pos);
+  sfx[w.key](bVol * 0.7, bDist, bPan);
+  if (w.pump) sfx.pump(bVol * 0.5, 0.3); if (w.bolt) playSniperBolt(w, bVol * 0.55, bDist, bPan);
   b.invulnUntil = Math.min(b.invulnUntil, gameTime);
 }
 
@@ -5066,7 +5083,7 @@ function applySnapshot(s) {
     else if (!alive && e.alive) { e.alive = false; e.deathAt = gameTime; }
     if (w !== e.weapon) setWeapon(e, w);
     e.invulnUntil = fl & 2 ? gameTime + 0.15 : 0; e.reloadEnd = fl & 8 ? gameTime + 0.15 : 0;
-    if ((fl & 8) && !e.wasRl) { e.reloadStartT = gameTime; const W = WEAPONS[w]; if (W && !W.shellReload && !W.melee) reloadSfx(W, distVol(e.pos) * 0.5); } e.wasRl = !!(fl & 8);
+    if ((fl & 8) && !e.wasRl) { e.reloadStartT = gameTime; const W = WEAPONS[w]; if (W && !W.shellReload && !W.melee) reloadSfx(W, distVol(e.pos) * 0.5, e.pos.distanceTo(player.pos), stereoPan(e.pos)); } e.wasRl = !!(fl & 8);
     e.buf.push({ t: now, x, y, z, yaw, crouch: crouchAmount(crouch) });
     if (e.buf.length > 30) e.buf.shift();
   }
@@ -5080,7 +5097,8 @@ function netEvent(ev) {
   if (INV_EVENTS.has(k)) { invEvent(ev); return; } // Invasão
   if (k === 'sh') {
     const [, sid, w, , ends] = ev; if (sid === o.myId) return; const e = entOf(sid); if (!e) return; const W = WEAPONS[w];
-    const vol = distVol(e.pos) * 0.7; sfx[W.key](vol); if (W.pump) sfx.pump(vol * 0.7, 0.3); if (W.bolt) sfx.bolt(vol * 0.7, 0.3);
+    const dist = e.pos.distanceTo(player.pos), pan = stereoPan(e.pos), vol = distVol(e.pos) * 0.7;
+    sfx[W.key](vol, dist, pan); if (W.pump) sfx.pump(vol * 0.7, 0.3); if (W.bolt) playSniperBolt(W, vol * 0.75, dist, pan);
     e.invulnUntil = 0; const mz = remoteMuzzle(e); if (W.spin) e.mgShotT = gameTime;
     ends.slice(0, 4).forEach(([x, y, z, hit]) => { const end = new V3(x, y, z); tracer(mz, end, !!W.beam); puff(end, hit ? 0xff9fb0 : 0xffffff); });
     const hs = ev[5] || []; for (const q of hs) bulletHole({ p: { x: q[0], y: q[1], z: q[2] }, n: { x: q[3], y: q[4], z: q[5] }, out: !!q[6] }, true); // furos da bala que atravessou parede
@@ -5765,6 +5783,8 @@ window.__docao = { get state() { return state; }, get ending() { return matchEnd
   cornAt: (o, d, owner) => launchCorn(owner || player, new V3(...o), new V3(...d).normalize()), get corns() { return corns; }, get cornPopsQ() { return cornPops; }, fpCorn: () => ({ vis: fp.guns[CORN_W].visible, cobY: fp.cornCob.position.y, cobVis: fp.cornCob.visible, crank: fp.cornCrank.rotation.x, kernels: fp.cornKernels.filter((g) => g.visible).length, cobScr: (() => { fp.root.updateMatrixWorld(true); const v = fp.cornCob.localToWorld(new V3(0, 0.1, 0)).project(fpCam); return [v.x, v.y]; })() }), setWeaponOf: (e, i) => setWeapon(e, i),
   rewardKill: () => onRewardKill(), endAc130, get ac130On() { return !!ac130; }, get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, get netHelis() { return [...netHelis.values()].map((h) => ({ id: h.id, owner: h.owner ? h.owner.name : '', hp: h.hp, alive: h.alive, pos: h.pos.toArray() })); }, get netNukeAt() { return netNukeAt; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical(), throwStun: () => throwShock(), throwShock: () => throwShock(), spawnShock: (owner, pos, vel) => spawnShock({ owner, pos: new V3(...pos), vel: new V3(...vel) }), get shocks() { return shocks; }, SHOCK, get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
   swingSaber: () => swingSaber(player),
+  sniperAudioReady: () => ['sniper', 'canhao', 'carabina'].every((k) => sniperSfx.ready(k)),
+  sniperHeard: (key, dist = 28) => { const vol = clamp(1 - dist / 60, 0.05, 1) * (dist > 0.5 ? 0.7 : 1); const shot = sniperSfx.shot(key, vol, dist, 0); if (shot) sniperSfx.bolt(key, vol * 0.7, dist, 0); return shot; },
   // Invasão 🎃
   get inv() { return inv; }, get invView() { return invView(); }, get invInv() { return invGfx.inv.slice(); }, get invSel() { return invGfx.sel; }, get invDrops() { return [...invGfx.drops.keys()]; }, get invPick() { return invPick; },
   invUse: () => invUsePower(), invCycle: () => invCycle(), invOpenPick: () => invOpenPick(), invEquipNow, INV, POWERS, ZOMBIES, INV_MAPS, makeZombieEnt, get invHal() { return invGfx.hal; }, get invMusic() { return invMusic && { on: invMusic.on, level: invMusic.level }; },
