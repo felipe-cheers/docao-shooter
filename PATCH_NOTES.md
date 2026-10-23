@@ -4,6 +4,15 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.17.1 — Boca Aberta 🎙️🐷 (23/10/2026)
+🎙️ **O JANOR ABRIU O MICROFONE!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #19** e agora a voz do Docão tem dois jeitos de falar, escolha o seu:
+🔘 **Apertar:** o clássico. Só fala quem está **segurando K**. Ideal pra quem tem cachorro latindo, panela no fogo ou tio dando opinião ao fundo.
+🔓 **Aberto:** microfone **livre**, sem segurar tecla nenhuma. Falou, a sala ouve. E o anel do seu nome **acende** quando você fala, pra todo mundo saber quem é o porco tagarela.
+🔇 **Mudo cala nos dois modos.** Nada de "mas eu tava no Aberto!": Mudo manda mais que tudo.
+🪟 **Trocou de janela?** Com o mic aberto, sair da aba **corta o áudio na hora** e voltar **religa**. Fim do papo particular vazando pra sala inteira. 🙏
+💾 **O Docão lembra da sua escolha** neste navegador. Por padrão continua no **Apertar**, porque porco prevenido não conta o que come no almoço.
+🧩 Os botões **Apertar** e **Aberto** aparecem no menu, no lobby e na pausa, ao lado de Mudo, Todos e Time. **Todos** continua falando pra sala e **Time** só pro time. Só cliente: o servidor nem percebeu.
+
 ## v1.17 — Crachá do Porquinho 🪪🐷 (23/10/2026)
 🪪 **O DOCÃO AGORA TEM CRACHÁ!** Chegou o **login**, e o melhor: ele é **opcional**. Não quer conta? Joga de **convidado** como sempre, sem perguntar nada nem pedir e-mail (o chiqueiro é democrático).
 🐷 **Apelido fixo:** criou a conta, o apelido é **seu e só seu**. Ninguém mais entra na sala com o seu nome (quem tentar vira "(conv)", o impostor), e você também não troca de nome no meio do jogo. Reputação de porco se constrói.
