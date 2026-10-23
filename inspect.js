@@ -11,6 +11,7 @@ export const INSPECT_PROFILES = {
   saber: { a: P(0.35, 0.25, 0.05, -0.05, 0.03, 0), b: P(-0.3, -0.3, 0.08, -0.03, 0.04, 0), twist: 1.2 }, // torce o cabo
   disc: { a: P(0.7, 0.3, -0.15, -0.07, 0.06, 0.04), b: P(-0.45, -0.6, 0.2, -0.05, 0.07, 0.03) },
   heavy: { a: P(0.45, 0.2, -0.05, -0.05, -0.03, 0), b: P(-0.25, -0.35, 0.12, -0.03, -0.01, 0), spin: true }, // minigun: pesada, gira pouco
+  lmg: { a: P(-1.25, 0.14, 0.06, -0.02, -0.04, 0.02), b: P(0.7, -0.18, 0.05, 0.03, -0.035, 0.02) }, // giro largo pro lado da caixa de fita e do cano; baixada leve
 };
 // perfil pelas flags que já existem (arma nova funciona sem mexer aqui); w.inspect força um perfil
 export function inspectKind(w) {

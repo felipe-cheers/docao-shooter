@@ -4,6 +4,29 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.10.1 — Metralhadora do Chiqueiro 🔫 (22/10/2026)
+Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #13).
+
+**Arma nova**
+- **Metralhadora do Chiqueiro:** fita gigante de **100 balas** (300 de reserva), automática e barulhenta. Faz um pouquinho menos de dano por segundo que o fuzil, recarrega mais devagar e anda 5% mais devagar. Está no menu de **Rajada**, tem inspeção só dela e os bots também sacam a bichinha.
+
+**Visual da fazenda na partida**
+- **Killfeed** sem bloco, só o texto flutuando.
+- **Munição e armas** com ícones: nome da arma, modo de tiro (AUTO, RAJADA...) e os slots 1, 2 e 3 desenhados.
+- **Tela de morte** nova, no estilo da fazenda.
+- **Barra de streak** ao lado do prêmio que está sendo ganho (3, 5, 7 e 10).
+- **Olho da granja** com o mapa ocupando o painel todo, mostrando bem mais terreno.
+
+**Míssil mais esperto**
+- Segurando o tiro, o **míssil da granja acelera** (1,85× mais rápido). Quem aperta e segura chega primeiro.
+
+**Trocar de arma na pausa**
+- Pausou e escolheu outra arma? O Docão **cai e nasce de novo na hora** com o equipamento novo, sem esperar os 5 segundos. No Treino a troca é instantânea e ele nem cai.
+- Pra ninguém virar mágico do respawn, online dá pra trocar **uma vez a cada 10 segundos**.
+- **Na Invasão não tem essa:** lá a troca de arma continua no painel **B**, entre as waves, e não gasta vida. 🎃
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.10 — Modo Invasão 🎃 (22/10/2026)
 **A noite caiu no chiqueiro e os Docões zumbis levantaram!** 🧟🐷 Modo novo, co-op, no menu em **Modo de jogo → Invasão 🎃**.
 
@@ -94,6 +117,7 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.9 · Arsenal da Quermesse** ([@rramosjoao](https://github.com/rramosjoao), PR #12): FAMAS, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo, bala que atravessa parede, inspecionar no I e Chopper da granja aos 10
 - **v1.9.1 · Docão Bravo:** o Docão faz cara de brava ao atirar e ao golpear com faca ou sabre
 - **v1.10 · Modo Invasão:** co-op contra hordas de Docões zumbis em 20 waves, com chefão a cada 5, poderes, 2 vidas e o mapa Fazenda Mal-Assombrada
+- **v1.10.1 · Metralhadora do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #13): arma nova de 100 balas, HUD da fazenda, míssil que acelera segurando o tiro e troca de arma na pausa
 
 ---
 

@@ -12,7 +12,7 @@
 //   side  = dx*rx + dz*rz   // positivo = à direita
 //   screenX = cx + side * scale
 //   screenY = cy - along * scale   // frente = para cima
-//   scale = (SIZE/2 - 28) / VIEW
+//   scale = (SIZE/2 - INSET) / VIEW
 //
 // Bússola, sentido horário a partir do norte (+Z):
 //   facing = atan2(-fx, fz)  // leste = −X (de frente pro norte +Z, a direita é −X); yaw 0 => PI (sul)
@@ -22,8 +22,8 @@
 
 const SIZE = 210;
 const SCALE = 2;
-const VIEW = 16;
-const INSET = 28;
+const VIEW = 22;
+const INSET = 8;
 
 const COMPASS = [
   { label: 'N', ang: 0 },

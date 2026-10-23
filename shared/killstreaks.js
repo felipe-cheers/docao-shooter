@@ -12,7 +12,7 @@ export function streakRewards(kills) {
   if (kills > 0 && kills % STREAK_LAP === 0) out.push('nuke');
   return out;
 }
-export const PREDATOR = { radius: 26, maxDmg: 460, selfMul: 0.4, knock: 20, lift: 14, speed: 28, life: 16, height: 98, laptop: 0.7, back: 8 };
+export const PREDATOR = { radius: 26, maxDmg: 460, selfMul: 0.4, knock: 20, lift: 14, speed: 28, boost: 1.85, life: 16, height: 98, laptop: 0.7, back: 8 };
 export const HELI = { hp: 280, life: 30, height: 17, hit: 3.1, dmg: 16, rate: 0.22, spin: 0.42, points: 25, miss: 0.3 }; // miss = chance de errar o tiro (passa do lado)
 // Chopper da granja (Chopper Gunner): você pilota a arma de um helicóptero que roda o mapa em círculo por 60 s.
 // Dobro da vida do Gavião. Minigun esquenta (heat por tiro, esfria sozinha; no talo trava até zerar). Sniper: 1 tiro forte com zoom.

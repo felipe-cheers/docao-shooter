@@ -516,7 +516,13 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.12, 0.15, 0.2), toon('#5c6b3a'), mg, 0.006).position.set(-0.14, -0.07, -0.04);
     mesh(new THREE.BoxGeometry(0.05, 0.1, 0.03), toon('#2a2d35'), mg, 0.004).position.set(0, 0.14, -0.02); // alça
     mg.userData.barrels = mgb; guns.push(mg); // 20 = Minigun
-    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg]) o.visible = false;
+    const lm = new THREE.Group(); lm.name = 'lmg'; lm.position.copy(r.position); g.add(lm);
+    mesh(new THREE.BoxGeometry(0.12, 0.14, 0.72), toon('#3a4034'), lm, 0.01).position.z = 0.04;
+    const lmb = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.4, 8), toon('#22252c'), lm, 0.006); lmb.rotation.x = Math.PI / 2; lmb.position.set(0, 0.02, 0.52);
+    mesh(new THREE.BoxGeometry(0.1, 0.16, 0.14), toon('#5c6b3a'), lm, 0.006).position.set(-0.12, -0.06, 0.02);
+    mesh(new THREE.BoxGeometry(0.05, 0.14, 0.06), toon('#2a2d35'), lm, 0.006).position.set(0, -0.12, 0.1);
+    guns.push(lm); // 21 = Metralhadora do Chiqueiro
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm]) o.visible = false;
   }
   setPose({ arms }, pose);
 

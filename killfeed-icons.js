@@ -23,6 +23,7 @@ const P = {
   estilingue: 'M2 7h12v2H2zM14 6l8-5h3l-9 6zM14 10l8 5h3l-9-6zM24 2h1v12h-1zM31 8a5 4 0 1 0 10 0a5 4 0 1 0-10 0z', // forquilha + elástico + ovo
   milho: 'M2 6h7v5H2zM9 4h20a4.5 4.5 0 0 1 0 9H9zM29 6h11v4H29zM40 5h3v6h-3zM15 1h8l-1 3h-6zM17 13h3v3h-4zM46 3a1.6 1.6 0 1 0 .1 0zM46 11a1.6 1.6 0 1 0 .1 0z', // pipoqueira com espiga e pipocas na frente
   minigun: 'M4 5h16v7H4zM20 4h3v9h-3zM23 5h21v1H23zM23 7h23v1H23zM23 9h23v1H23zM23 11h21v1H23zM40 4h2v9h-2zM8 2h10v1H8zM8 2h1v3H8zM17 2h1v3h-1zM6 12h8v3H6z', // carcaça, 6 canos (4 linhas), anel, alça e caixa de munição
+  lmg: 'M2 6h28v3H2zM8 3h16v2H8zM30 6h14v2H30zM36 4h3v6h-3zM6 9h8v4H6zM18 9h10v5H16z', // corpo longo, cano, quebra-chama, caixa de fita e cabo
   // granada e killstreaks
   nade: 'M18 3h12l-2 12h-8zM17 2h14v2H17z',
   missile: 'M4 6h30l8 2-8 2H4zM4 4l6 2H4zM4 12l6-2H4z',
@@ -42,6 +43,10 @@ const HEAD = '<svg class="kfi-hs" viewBox="0 0 18 16" width="18" height="16" ari
 const WALL = '<svg class="kfi-wall" viewBox="0 0 18 16" width="18" height="16" aria-hidden="true"><path fill="currentColor" d="M1 2h7v3H1zM10 2h7v3h-7zM1 7h3v3H1zM6 7h7v3H6zM15 7h2v3h-2zM1 12h7v3H1zM10 12h7v3h-7z"/></svg>';
 const COL = '<svg class="kfi-col" viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><circle cx="7" cy="9" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="9" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path fill="currentColor" d="M0 8h24v2H0z"/></svg>';
 // fx: 1 pela parede, 2 collateral
+export function weaponSvg(key) {
+  const d = P[key] || P.rifle;
+  return `<svg class="wico" viewBox="0 0 48 16" aria-hidden="true"><path fill="currentColor" d="${d}"/></svg>`;
+}
 export function killIcon(key, label, head, fx = 0) {
   const k = (label && LABEL[label]) || key;
   const d = P[k] || P.rifle;

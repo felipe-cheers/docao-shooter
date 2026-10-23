@@ -25,8 +25,12 @@ const CSS = `
 }
 #streakBar{
   position:fixed;right:12px;bottom:210px;z-index:20;
-  display:flex;flex-direction:column-reverse;align-items:flex-end;gap:7px;
+  display:flex;flex-direction:row;align-items:stretch;justify-content:flex-end;gap:6px;
+  padding-right:28px;
   pointer-events:none;user-select:none;
+}
+#streakBar .streak-stack{
+  display:flex;flex-direction:column-reverse;align-items:flex-end;gap:7px;
 }
 #streakBar .streak-card{
   position:relative;display:flex;align-items:center;justify-content:flex-end;gap:6px;
@@ -38,14 +42,14 @@ const CSS = `
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.55);
 }
 #streakBar .streak-pips{
-  width:22px;height:54px;flex:none;display:flex;flex-direction:column;
-  justify-content:center;gap:4px;visibility:hidden;
+  position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:6px;
+  width:20px;display:flex;flex-direction:column;justify-content:center;gap:2px;
 }
-#streakBar .streak-card.next .streak-pips{visibility:visible}
 #streakBar .streak-pips i{
-  display:block;height:7px;border-radius:1px;background:#4a1820;
+  display:block;height:5px;width:100%;flex:none;border-radius:1px;background:#4a1820;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.55);
 }
+#streakBar .streak-pips i.is-hidden{display:none}
 #streakBar .streak-pips i.on{
   background:#e02028;box-shadow:0 0 6px #ff2a2a,inset 0 0 0 1px rgba(0,0,0,.25);
 }
@@ -245,6 +249,8 @@ function ensureBar() {
     document.body.appendChild(bar);
   }
   if (!bar.querySelector('.streak-card')) {
+    const stack = document.createElement('div');
+    stack.className = 'streak-stack';
     for (const reward of REWARDS) {
       const card = document.createElement('div');
       card.className = 'streak-card locked';
@@ -255,12 +261,13 @@ function ensureBar() {
       const num = document.createElement('b');
       num.textContent = String(reward.need);
       sq.append(makeGlyph(reward.icon), num);
-      const pips = document.createElement('div');
-      pips.className = 'streak-pips';
-      for (let i = 0; i < segmentOf(reward.need); i++) pips.appendChild(document.createElement('i'));
-      card.append(sq, pips);
-      bar.appendChild(card);
+      card.append(sq);
+      stack.appendChild(card);
     }
+    const pips = document.createElement('div');
+    pips.className = 'streak-pips';
+    for (let i = 0; i < 10; i++) pips.appendChild(document.createElement('i'));
+    bar.append(stack, pips);
   }
   return bar;
 }
@@ -326,12 +333,6 @@ function ensureNuke() {
 
 // faltam = cycle >= need ? 0 : need - cycle
 // próximo = menor need com faltam > 0; faltam 0 = earned; o resto = locked
-function segmentOf(need) {
-  if (need <= 3) return 3;
-  if (need <= 7) return 2;
-  return 3; // 10: do 7 ao 10
-}
-
 function remainingFor(need, cycle) {
   const c = Number.isFinite(cycle) ? cycle : 0;
   const goal = Number(need);
@@ -371,10 +372,20 @@ function applyCycle(cycle) {
     const num = card.querySelector('b');
     const left = remainingFor(need, cycle);
     if (num) num.textContent = remainingText(left);
-    const pips = card.querySelectorAll('.streak-pips i');
-    const filled = state === 'next' ? Math.max(0, pips.length - left) : 0;
-    pips.forEach((pip, i) => pip.classList.toggle('on', pips.length - 1 - i < filled));
   });
+  const bar = document.getElementById('streakBar');
+  const pipBox = bar && bar.querySelector('.streak-pips');
+  const pips = pipBox ? pipBox.querySelectorAll('i') : [];
+  const steps = Number.isFinite(cycle) ? Math.max(0, Math.floor(cycle)) : 0;
+  const goal = nextNeed(cycle) || pips.length;
+  const filled = Math.min(goal, steps);
+  pips.forEach((pip, i) => {
+    const show = i < goal;
+    pip.classList.toggle('is-hidden', !show);
+    pip.classList.toggle('on', show && i >= goal - filled);
+  });
+  const anchor = bar && bar.querySelector('.streak-card[data-need="' + goal + '"]');
+  if (pipBox && anchor && pipBox.parentElement !== anchor) anchor.appendChild(pipBox);
 }
 
 // ready = ids guardados ('uav', 'missile', 'heli'); o card brilha enquanto tiver um pra usar

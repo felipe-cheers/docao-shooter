@@ -25,6 +25,7 @@ import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smaller
 
 export const MAX_PLAYERS = 10;
 const RS_SAFETY = 60; // s: cliente antigo que nunca manda 'rs' renasce sozinho depois disso
+const PX_COOLDOWN = 10; // s: mínimo entre duas trocas de arma na pausa que derrubam o jogador (fora Treino e Invasão)
 const PENDING_WAIT = 60; // s de relógio de parede pra escolher o time ao entrar no meio; depois vai no Automático
 const TICK = 0.05, HIST = 1.0, DC_GRACE = 30;
 const TICK_DT = (g) => clamp(g.T - (g.lastZoneT ?? g.T), 0, 0.25) + (g.lastZoneT = g.T, 0);
@@ -354,6 +355,21 @@ export class Game {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
     if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if ((this.training || (this.inv && (this.inv.phase === 'break' || this.inv.phase === 'prep'))) && e.alive) this.equipNow(e); return; }
+    // pausa: troca o loadout. Treino equipa na hora. Invasão: só como o 'pr' do main (preparação/pausa entre waves, sem matar nem gastar vida).
+    // Nos outros modos morre (sem abate) e nasce neste tick, no máximo 1 vez a cada PX_COOLDOWN s (senão vira fuga de tiroteio).
+    if (k === 'px') {
+      const okP = PRIMARIES.includes(ev[1]), okS = SECONDARIES.includes(ev[2]), okM = MELEES.includes(ev[3]);
+      if (okP) e.nextPrimary = ev[1]; if (okS) e.nextSecondary = ev[2]; if (okM) e.nextMelee = ev[3];
+      if (!e.alive || !okP || !okS || !okM) return;
+      if (this.training || (this.inv && (this.inv.phase === 'break' || this.inv.phase === 'prep'))) { this.equipNow(e); return; }
+      if (this.inv) return; // Invasão no meio da wave: vale só no próximo renascimento, nunca mata
+      if (e.slots[0] === e.nextPrimary && e.slots[1] === e.nextSecondary && e.slots[2] === e.nextMelee) return;
+      if (this.T - (e.pxAt ?? -1e9) < PX_COOLDOWN) { this.toMe(e, ['pxw', Math.ceil(PX_COOLDOWN - (this.T - e.pxAt))]); return; }
+      e.pxAt = this.T;
+      this.kill(e, null, e.weapon, false); // atacante null: deaths++, ninguém ganha o abate
+      e.respawnAt = this.T; e.rsReq = true; // o laço spawna humano quando rsReq e T >= respawnAt, sem os 5 s
+      return;
+    }
     if (!e.alive) return;
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
@@ -404,9 +420,9 @@ export class Game {
   // impacto do míssil pilotado: precisa ter um míssil no ar e o ponto tem que ser alcançável desde o lançamento
   missileImpact(e, cA) {
     const M = e.ksMissile, c = obj3(cA); if (!M || !c) return;
-    const fly = this.T - M.T0 - PREDATOR.laptop, slack = 6 + clamp(e.ping / 1000, 0, 0.5) * PREDATOR.speed;
+    const fly = this.T - M.T0 - PREDATOR.laptop, cap = PREDATOR.speed * (PREDATOR.boost || 1), slack = 6 + clamp(e.ping / 1000, 0, 0.5) * cap;
     const [hx, hz] = this.map.size;
-    if (fly < -0.4 || fly > PREDATOR.life + 2 || dist(M.start, c) > PREDATOR.speed * Math.max(0, fly) + slack || Math.abs(c.x) > hx + 2 || Math.abs(c.z) > hz + 2 || c.y > M.start.y + 1) { e.rejectedShots = (e.rejectedShots || 0) + 1; e.ksMissile = null; return; }
+    if (fly < -0.4 || fly > PREDATOR.life + 2 || dist(M.start, c) > cap * Math.max(0, fly) + slack || Math.abs(c.x) > hx + 2 || Math.abs(c.z) > hz + 2 || c.y > M.start.y + 1) { e.rejectedShots = (e.rejectedShots || 0) + 1; e.ksMissile = null; return; }
     e.ksMissile = null;
     this.blast(c, e, { radius: PREDATOR.radius, maxDmg: PREDATOR.maxDmg, selfMul: PREDATOR.selfMul, knock: PREDATOR.knock, lift: PREDATOR.lift, wIdx: W_NADE, kind: 'p', ks: 'p' });
   }
