@@ -4,6 +4,14 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.14.1 — Granada, Banana! 🍌💣 (23/10/2026)
+📣 **O Copo Bomba agora fala!** E fala com a voz do próprio Matheus, gravada com todo o carinho (e nenhum ensaio):
+🗣️ **"GRANADA!"** no exato instante em que o copo sai da sua mão. Não é quando você começa a segurar o botão, é quando solta. Avisar o inimigo faz parte do estilo.
+🍌 **"BANANA!"** quando o copo explode. Ninguém sabe por quê. O Docão também não pergunta.
+🔊 **Todo mundo ouve:** a granada dos outros jogadores (e dos bots) também grita, com **volume que cai com a distância**. Quem está perto ouve alto; quem está do outro lado do mapa fica em paz (a "granada" some a uns 60 metros e a "banana" a uns 50).
+🙅 **Só o Copo Bomba:** a Pokébola, o míssil e o foguete continuam na dieta de sempre, sem frutas.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.14 — Operação Bacon 🥓💣 (23/10/2026)
 🚨 **NOVO MODO: BOMBA!** Dois times, um botijão de churrasco e muita pressão. O **Ataque** (Vermelho) leva o **Botijão do Churrasco** até o site **A** ou **B**. A **Defesa** (Azul) tem que impedir, ou desarmar antes de virar torresmo. Estilo "plante e defenda", mas com cheiro de bacon. 🥓
 🧯 **Plantar:** segure **E** por **4 segundos** dentro do site. Quanto mais nervoso o time, mais o dedo escorrega.

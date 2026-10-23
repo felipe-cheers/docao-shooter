@@ -50,6 +50,7 @@ import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from './shared/c
 import { EGG, eggSpeed, eggDmg, stepEgg } from './shared/egg.js';
 import { killIcon, weaponSvg } from './killfeed-icons.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, FAMAS, DISC_W, SABER2, CORN_W, EGG_W, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, LMG, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
+import { bindGrenadeVoice, playGrenadeVoice } from './grenade-voice.js';
 import { POWER_UPS, normHand, clampLoadout, botPool, powerOn, savedToLimits, limitsToSaved } from './shared/loadout.js';
 
 const V3 = THREE.Vector3;
@@ -152,7 +153,7 @@ function initAudio() {
     master = actx.createGain(); master.gain.value = menuMuted ? 0 : 0.4; master.connect(actx.destination);
     noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    saberSfx.bind(actx, master);
+    saberSfx.bind(actx, master); bindGrenadeVoice(actx, master);
   } catch (e) { actx = null; }
 }
 function noise(dur, freq, vol, type = 'lowpass', delay = 0) {
@@ -238,6 +239,7 @@ const mgWhirr = { o: null, o2: null, f: null, g: null, last: '', set(spin, firin
   this.o.frequency.setTargetAtTime(hz, t, 0.05); this.o2.frequency.setTargetAtTime(hz * 2.01, t, 0.05); this.f.frequency.setTargetAtTime(400 + 1400 * spin, t, 0.05); this.g.gain.setTargetAtTime(0.07 * spin, t, 0.06);
 } };
 const distVol = (p) => clamp(1 - p.distanceTo(player.pos) / 60, 0.05, 1);
+const nadeEarVol = (p, range = 50) => (player ? clamp(1 - p.distanceTo(player.pos) / range, 0, 1) : 1); // vozes do copo: caem com a distância e somem além de `range` m (banana 50, granada 60)
 const saberSfx = createSaberSfx();
 
 // ---------------- Entidades ----------------
@@ -638,12 +640,12 @@ function poseGrenadeMesh(n, dt = 0) {
 function throwGrenade(e, origin, vel) {
   if (e.nades <= 0) return null;
   e.nades--; e.lastNadeT = gameTime;
-  if (online && e.isPlayer) { netEv(['n', v3a(origin), v3a(vel)]); sfx.toss(1); return null; } // o copo aparece quando o servidor confirmar
+  if (online && e.isPlayer) { netEv(['n', v3a(origin), v3a(vel)]); sfx.toss(1); playGrenadeVoice('granada', 1); return null; } // o copo aparece quando o servidor confirmar
   const mesh = makeCup(1.15); mesh.position.copy(origin).y -= 0.1; scene.add(mesh);
   const gnd = { owner: e, pos: origin.clone(), vel: vel.clone(), explodeAt: gameTime + NADE.fuse, mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 };
   if (e.isPlayer) { gnd.launchScale = cupWorldScale(); mesh.quaternion.copy(camera.quaternion).multiply(fp.cup.quaternion); }
   poseGrenadeMesh(gnd);
-  grenades.push(gnd); sfx.toss(e.isPlayer ? 1 : distVol(e.pos)); return gnd;
+  grenades.push(gnd); sfx.toss(e.isPlayer ? 1 : distVol(e.pos)); playGrenadeVoice('granada', e.isPlayer ? 1 : nadeEarVol(e.pos, 60), e.isPlayer ? 0 : 0.3); return gnd; // "granada": no instante que sai da mão
 }
 const stepNade = (pos, vel, dt, onBounce) => PHYS.stepNade(pos, vel, dt, onBounce);
 function throwVelocity(power) { // direção da câmera + leve arco pra cima
@@ -735,7 +737,7 @@ function pokeOpen(n) { // offline: engole quem estiver no raio com linha livre
   pokeOpenFx(n.pos.clone(), eaten);
   window.__pokeEaten = (window.__pokeEaten || 0) + eaten.length;
 }
-function explode(n) { blast(n.pos.clone(), n.owner, { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE }); }
+function explode(n) { playGrenadeVoice('banana', nadeEarVol(n.pos), 0.25); blast(n.pos.clone(), n.owner, { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE }); }
 
 const tacticals = [], smokes = [];
 function smoked(a, b) { for (const s of smokes) if (s.blocks(a, b)) return true; return false; }
@@ -4799,7 +4801,7 @@ function netEvent(ev) {
   else if (k === 'nd') {
     const [, pid, oid, op, vel, pk] = ev; const mesh = pk ? makePokeball() : makeCup(1.15); scene.add(mesh); const owner = entOf(oid);
     grenades.push({ net: true, poke: !!pk, pid, owner, pos: a3v(op), vel: a3v(vel), explodeAt: gameTime + (pk ? POKE.fuse : NADE.fuse), mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 });
-    if (oid !== o.myId && owner) sfx.toss(distVol(owner.pos));
+    if (oid !== o.myId && owner) { sfx.toss(distVol(owner.pos)); if (!pk) playGrenadeVoice('granada', nadeEarVol(owner.pos, 60), 0.3); } // Pokébola (pk) não tem a voz
   } else if (k === 'pke') { // Pokébola abriu (o servidor já matou quem foi engolido)
     const [, pid, pos, ids] = ev; const i = grenades.findIndex((x) => x.pid === pid); if (i >= 0) { scene.remove(grenades[i].mesh); grenades.splice(i, 1); }
     pokeOpenFx(a3v(pos), ids.map((id) => entOf(id)).filter(Boolean));
@@ -4826,6 +4828,7 @@ function netEvent(ev) {
   } else if (k === 'bm') {
     const [, pid, kind, c] = ev;
     const list = kind === 'n' ? grenades : rockets; const i = list.findIndex((x) => x.pid === pid && pid); if (i >= 0) { scene.remove(list[i].mesh); list.splice(i, 1); }
+    if (kind === 'n') playGrenadeVoice('banana', nadeEarVol(a3v(c)), 0.25); // só o Copo Bomba (não míssil/foguete)
     blastFx(a3v(c), kind === 'n' ? NADE.radius : kind === 'p' ? PREDATOR.radius : WEAPONS[3].rocket.radius);
     if (kind === 'p') shake = Math.max(shake, 0.9);
   }
