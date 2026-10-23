@@ -78,7 +78,6 @@ export function fillSheet(list, gun, spec) {
     stage.appendChild(empty);
   }
   gun.appendChild(stage);
-  bars(gun, g.bars);
   const side = document.createElement('div');
   side.className = 'gs-side';
   for (const s of g.side || []) {
@@ -86,11 +85,12 @@ export function fillSheet(list, gun, spec) {
     card.className = 'gs-side-card';
     card.appendChild(photo(s.weapon, spec.thumbs[s.weapon], ''));
     const t = document.createElement('span');
-    t.innerHTML = `<small>${esc(s.label)}</small><b>${esc(s.name)}</b>`;
+    t.innerHTML = `<small>${esc(s.label)}</small><b>${esc(s.name)}</b>${s.note ? `<em>${esc(s.note)}</em>` : ''}`;
     card.appendChild(t);
     side.appendChild(card);
   }
   gun.appendChild(side);
+  bars(gun, g.bars);
   if (spec.hint) {
     const hint = document.createElement('p');
     hint.className = 'gs-hint';

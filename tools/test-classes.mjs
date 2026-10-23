@@ -75,15 +75,40 @@ const mirando = await G(() => window.__docao.fov);
 await G(() => document.getElementById('game').dispatchEvent(new MouseEvent('mouseup', { button: 2, bubbles: true })));
 ok(Math.abs(mirando - 34) < 1.5, `zoom da câmera ${mirando.toFixed(1)}`);
 
-await G(() => { const g = window.__docao; g.player.invulnUntil = 0; g.kill(g.player); });
+const matador = await G(() => {
+  const g = window.__docao;
+  const bot = g.entities.find((e) => e !== g.player && e.alive && e.name);
+  g.player.invulnUntil = 0;
+  g.damage(g.player, 999, bot, 0, false);
+  return bot ? bot.name : '';
+});
+ok(!!matador, `um bot mata o jogador (${matador})`);
 ok(await until(() => !document.getElementById('deathpick').classList.contains('hidden') && document.querySelector('#deathList .clsrow.on'), 20000), 'na morte abre a lista de classes');
-const morte = await G(() => ({
-  rows: document.querySelectorAll('#deathList .clsrow').length,
-  foto: /url\(/.test((document.querySelector('#classGun .wthumb.is-big') || {}).style?.backgroundImage || ''),
-  clock: document.getElementById('classClockTxt').textContent,
-  nome: document.querySelector('#deathList .clsrow.on .clsmeta b').textContent,
-}));
+const morte = await G((nome) => {
+  const tela = document.getElementById('deathpick');
+  const st = getComputedStyle(tela);
+  const stamp = getComputedStyle(document.getElementById('stamp'));
+  const feed = getComputedStyle(document.getElementById('killfeed'));
+  const msg = getComputedStyle(document.getElementById('centermsg'));
+  const slot = document.querySelector('#classGun .gs-slot b');
+  const foto = document.querySelector('#classGun .wthumb.is-big');
+  return {
+    rows: document.querySelectorAll('#deathList .clsrow').length,
+    foto: /url\(/.test((foto && foto.style.backgroundImage) || ''),
+    clock: document.getElementById('classClockTxt').textContent,
+    nome: document.querySelector('#deathList .clsrow.on .clsmeta b').textContent,
+    who: document.getElementById('deathWho').textContent,
+    opaco: st.opacity === '1' && st.backgroundColor !== 'rgba(0, 0, 0, 0)',
+    cobre: tela.getBoundingClientRect().width > 1000 && tela.getBoundingClientRect().height > 600,
+    hud: stamp.display === 'none' && feed.display === 'none' && msg.display === 'none',
+    slot: slot ? slot.textContent : '',
+    slotAlto: slot ? slot.getBoundingClientRect().height : 0,
+  };
+}, matador);
 ok(morte.rows === 5 && morte.foto && /Renasce em/.test(morte.clock) && morte.nome === 'Arame', `ficha da morte: ${morte.rows} classes, foto ${morte.foto}, "${morte.clock}", ${morte.nome}`);
+ok(morte.who === `Você foi pururucado por ${matador}` && !/^\?|por \?\?\?/.test(morte.who), `o cabeçalho diz quem matou: "${morte.who}"`);
+ok(morte.opaco && morte.cobre && morte.hud, `fundo opaco cobre a tela e o HUD some (opaco ${morte.opaco}, cobre ${morte.cobre}, hud ${morte.hud})`);
+ok(morte.slot && morte.slotAlto > 0 && morte.slotAlto < 28, `o slot cabe numa linha ("${morte.slot}", ${morte.slotAlto.toFixed(0)}px)`);
 await page.screenshot({ path: `${SHOTS}/morte-desktop.png` });
 await page.keyboard.press('Digit2');
 await wait(200);
@@ -95,11 +120,46 @@ const troca = await G(() => { const g = window.__docao, h = g.held; return { fov
 ok(troca.fov === 40 && troca.mag === 18 && troca.nome === 'Bolso', `a classe nova vale: zoom ${troca.fov} (fábrica) e pente ${troca.mag}`);
 await page.keyboard.press('Escape');
 await wait(300);
-ok(await G(() => window.__docao.state === 'paused' && window.__docao.player.alive && document.querySelectorAll('#pauseGuns .clsrow').length === 5), 'na pausa a lista de classes aparece e não derruba');
+ok(await G(() => {
+  const pausa = !document.getElementById('pause').classList.contains('hidden');
+  const listaFora = document.getElementById('pauseClass').classList.contains('hidden');
+  const semFicha = !document.querySelector('#pause .cls-sheet');
+  const morte = document.getElementById('deathpick');
+  const morteFora = getComputedStyle(morte).display === 'none';
+  return window.__docao.state === 'paused' && window.__docao.player.alive && pausa && listaFora && semFicha && morteFora && !document.body.classList.contains('dead');
+}), 'a pausa abre o modal, sem a ficha da morte por trás');
 await page.screenshot({ path: `${SHOTS}/pausa-desktop.png` });
+await page.click('#pauseClassBtn');
+await wait(250);
+ok(await G(() => !document.getElementById('pauseClass').classList.contains('hidden') && document.querySelectorAll('#pauseGuns .clsrow').length === 5 && window.__docao.player.alive), 'Trocar classe abre a ficha inteira e não derruba');
+await page.screenshot({ path: `${SHOTS}/pausa-classes.png` });
+await page.click('#pauseClassBack');
+await wait(200);
+await page.click('#quitBtn');
+await until(() => window.__docao.state === 'menu', 8000);
+
+await page.selectOption('#modeSel', 'bomb');
+await page.click('#menuTeamBtns .teambtn.t0');
+await G(() => document.getElementById('playBtn').click());
+ok(await until(() => window.__docao.mode === 'bomb' && !document.getElementById('bLoad').classList.contains('hidden') && document.querySelectorAll('#bLoad .clsrow').length === 5, 15000), 'na preparação da Bomba a ficha abre em tela cheia');
+await page.screenshot({ path: `${SHOTS}/bomba-classes.png` });
+await page.keyboard.press('Escape');
+await wait(150);
 await page.keyboard.press('Escape');
 await wait(200);
+await page.click('#quitBtn');
+await until(() => window.__docao.state === 'menu', 8000);
 
+await page.selectOption('#modeSel', 'inv');
+await G(() => document.getElementById('playBtn').click());
+ok(await until(() => window.__docao.mode === 'inv' && window.__docao.player && window.__docao.player.alive, 15000), 'a Invasão começa');
+await G(() => window.__docao.invOpenPick());
+ok(await until(() => !document.getElementById('iLoad').classList.contains('hidden') && document.querySelectorAll('#iLoad .clsrow').length === 5, 8000), 'entre as waves a ficha abre em tela cheia');
+await page.screenshot({ path: `${SHOTS}/waves-classes.png` });
+await page.keyboard.press('Escape');
+await wait(150);
+await page.keyboard.press('Escape');
+await wait(200);
 await page.click('#quitBtn');
 await until(() => window.__docao.state === 'menu', 8000);
 await page.setViewportSize({ width: 390, height: 844 });
@@ -114,7 +174,7 @@ await page.click('#menuBack');
 await until(() => document.getElementById('menu-arsenal').hidden, 8000);
 await G(() => document.getElementById('playBtn').click());
 ok(await until(() => window.__docao.state === 'playing' && window.__docao.player && window.__docao.player.alive, 15000), 'partida na tela estreita');
-await G(() => { const g = window.__docao; g.player.invulnUntil = 0; g.kill(g.player); });
+await G(() => { const g = window.__docao; const bot = g.entities.find((e) => e !== g.player && e.name); g.player.invulnUntil = 0; g.damage(g.player, 999, bot, 0, false); });
 ok(await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 20000), 'morte na tela estreita');
 await page.screenshot({ path: `${SHOTS}/morte-estreita.png` });
 

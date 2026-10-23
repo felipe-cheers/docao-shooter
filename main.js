@@ -1247,6 +1247,8 @@ function kill(t, a, wIdx, head, back = false, noReward = false, label = null, fx
   if (state === 'over') return; // resultado fechado
   if (t.zt) { killZombieLocal(t, a, wIdx, head, back); return; } // Invasão: zumbi
   t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + (t.dummy ? TRAIN.respawn : exploreMode() && t.isPlayer ? 1 : RESPAWN_TIME); t.killW = wIdx; t.killBack = !!back;
+  if (a) t.lastAttacker = a;
+  if (t.isPlayer) t.killerName = a && a !== t && a.name ? a.name : (label || '');
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head, back, label, fx);
   sfx.die(t.isPlayer ? 1 : distVol(t.pos));
@@ -2318,8 +2320,15 @@ function updateHud(dt) {
   updateHitDirs();
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
-  if (!p.alive) cm.textContent = `${p.killW === W_BOMB ? 'Você explodiu com o botijão 💥' : `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''}`} · ${respawnReady(p) ? (rsSent ? 'renascendo...' : 'clique em RENASCER (ou Espaço)') : Number.isFinite(p.respawnAt) ? `renasce em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'aguarde...'}`;
-  else if (msgTimer > 0) { msgTimer -= dt; if (cm.textContent.startsWith('Você foi ')) cm.textContent = ''; } // mensagem (ex.: "Mapa: …") tem prioridade; tira o "Você foi pururucado" que sobrou de antes de nascer
+  const veil = document.body.classList.contains('dead') || bombPick || invPick || pauseClassOpen();
+  document.body.classList.toggle('cls-on', veil);
+  if (!p.alive) {
+    const line = deathLine(p);
+    const who = $('deathWho'); if (who && who.textContent !== line) who.textContent = line;
+    if (document.body.classList.contains('dead')) { if (cm.textContent) cm.textContent = ''; }
+    else if (cm.textContent !== line) cm.textContent = line;
+  }
+  else if (msgTimer > 0) { msgTimer -= dt; if (cm.textContent.startsWith('Você foi ') || cm.textContent.startsWith('Você se ') || cm.textContent.startsWith('Você explodiu')) cm.textContent = ''; } // mensagem (ex.: "Mapa: …") tem prioridade; tira o aviso de morte que sobrou de antes de nascer
   else if (gameTime < p.invulnUntil) cm.textContent = 'PROTEGIDO';
   else cm.textContent = '';
   if (!$('tabboard').classList.contains('hidden')) $('tabboard').innerHTML = boardHtml();
@@ -3723,6 +3732,8 @@ function renderWardrobePreview() {
 let selectedSkin = getSkin(localStorage.getItem('docao.skin') || DEFAULT_SKIN).id, preview = null;
 // Cinco classes no navegador. A última usada é a que nasce. docao.primary continua espelhando a classe armada.
 let classes = [], classIndex = 0, spawnedClass = 0, benchOn = false, benchWeapon = 0, benchSlot = 'optic', benchLook = '', arsenalFocus = -1;
+const DEATH_HINT = 'W S e setas andam na lista · 1–5 escolhe · U volta pra última · Espaço nasce. O tracinho branco é a arma de fábrica.';
+const LIVE_HINT = '1–5 entra agora · W/S ou setas · U última. O pente não enche sozinho. O tracinho branco é a arma de fábrica.';
 let selectedPrimary = 0, selectedSecondary = PISTOL, selectedMelee = KNIFE;
 function bootClasses() {
   let raw = null, legacy = {};
@@ -4264,21 +4275,36 @@ let pauseSwapUntil = 0; // online: o 'k' da troca chega depois do clique; enquan
 let pauseSwapWeapon = -1; // arma que o clique escolheu, pra nascer com ela na mão
 const pauseSwapQuiet = () => performance.now() < pauseSwapUntil;
 function buildPauseGuns() { paintClassSurfaces(); }
+function pauseClassOpen() { const el = $('pauseClass'); return !!(el && !el.classList.contains('hidden')); }
+function openPauseClass() {
+  if (invMode() || !$('pauseClass')) return;
+  buildPauseGuns();
+  const sub = $('pauseClassSub');
+  if (sub) sub.textContent = training() ? 'No estande a classe entra agora e o pente não enche sozinho.' : 'A classe escolhida entra na próxima vida. Não derruba.';
+  $('pauseClass').classList.remove('hidden');
+  document.body.classList.add('cls-on');
+}
+function closePauseClass() {
+  const el = $('pauseClass'); if (!el || el.classList.contains('hidden')) return;
+  el.classList.add('hidden');
+  if (!document.body.classList.contains('dead') && !bombPick && !invPick) document.body.classList.remove('cls-on');
+}
 let pauseSwapLast = -1e9; // online: último pedido que derrubou (o servidor também limita; aqui é só pra avisar)
 const PX_COOLDOWN = 10; // s, igual ao servidor
 buildPauseGuns();
 function releaseLook() { mouseDown = false; rightDown = false; keys.Space = keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; player.bowDraw = 0; player.eggDraw = 0; arcLine.visible = arcMark.visible = false; } if (pickingStrike) { pickingStrike = false; closeStrikeMap(); } }
-function pause() { if (state !== 'playing') return; softPauseOn = false; state = 'paused'; releaseLook(); $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); const note = document.querySelector('#pause .pause-note'); if (note) note.textContent = invMode() ? 'Na Invasão a classe entra no painel B, entre as waves.' : training() ? 'No estande a classe entra agora e o pente não enche sozinho.' : 'A classe escolhida entra na próxima vida. Não derruba.'; buildPauseGuns(); $('pauseGuns').classList.toggle('hidden', invMode()); $('pauseDance').classList.toggle('hidden', invMode()); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function tuckDeathMenu() { const el = $('deathpick'); if (el) el.classList.add('hidden'); }
+function pause() { if (state !== 'playing') return; softPauseOn = false; state = 'paused'; releaseLook(); closePauseClass(); tuckDeathMenu(); if (player && player.alive) document.body.classList.remove('dead', 'deadgray', 'cls-on'); $('pauseInvite').classList.toggle('hidden', !online); $('pauseVoice').classList.toggle('hidden', !online); const note = $('pauseClassNote'); if (note) note.textContent = invMode() ? 'Na Invasão a classe entra no painel B, entre as waves.' : training() ? 'No estande a classe entra agora e o pente não enche sozinho.' : 'A classe escolhida entra na próxima vida. Não derruba.'; const swap = $('pauseClassBtn'); if (swap) swap.classList.toggle('hidden', invMode()); buildPauseGuns(); $('pauseDance').classList.toggle('hidden', invMode()); $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 // ` solta o mouse como o Esc, sem a pausa na chapa: o HUD fica como estava. Clique ou ` de novo volta a mirar.
 function softPause() { if (state !== 'playing') return; state = 'paused'; softPauseOn = true; releaseLook(); if (document.pointerLockElement) document.exitPointerLock(); }
-function resume() { softPauseOn = false; $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
+function resume() { closePauseClass(); softPauseOn = false; $('pause').classList.add('hidden'); state = 'playing'; if (!document.body.classList.contains('dead') && !bombPick && !invPick) document.body.classList.remove('cls-on'); lockPointer(); }
 function toMenu() {
   clearMatchEnding();
   if (online) leaveOnline();
   endVictory(); stopEmote(); document.body.classList.remove('deadgray');
   zone = null; mode = 'dm'; endBomb(); $('domhud').classList.add('hidden'); $('zoneMark').classList.add('hidden'); $('teamPick').classList.add('hidden');
   state = 'menu'; rulesLive = false; clearBots(); inv = null; invNet = null; if (selectedMap !== 'random') loadMap(selectedMap); invApplyLook(false); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
-  ['pause', 'gameover', 'hud'].forEach((id) => $(id).classList.add('hidden')); $('menu').classList.remove('hidden');
+  closePauseClass(); ['pause', 'pauseClass', 'gameover', 'hud'].forEach((id) => { const el = $(id); if (el) el.classList.add('hidden'); }); document.body.classList.remove('cls-on', 'dead'); $('menu').classList.remove('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
 }
 // pede o pointer lock DENTRO do gesto do usuário (clique/tecla). Se o navegador recusar, mostra o aviso e o próximo clique no jogo tenta de novo.
@@ -4291,6 +4317,10 @@ function lockPointer() {
 
 $('playBtn').onclick = () => startGame(); $('menuBtn').onclick = toMenu;
 $('resumeBtn').onclick = resume; $('quitBtn').onclick = toMenu;
+if ($('pauseClassBtn')) $('pauseClassBtn').onclick = () => openPauseClass();
+if ($('pauseClassBack')) $('pauseClassBack').onclick = () => closePauseClass();
+if ($('bLoadClose')) $('bLoadClose').onclick = () => closeBombPick();
+if ($('iLoadClose')) $('iLoadClose').onclick = () => invClosePick();
 $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); e.stopPropagation(); });
 
 document.addEventListener('pointerlockchange', () => {
@@ -4761,22 +4791,35 @@ function gunView(c) {
   const i = pack.primary;
   const fac = WEAPONS[i];
   const w = resolveWeapon(i, pack.kits[fac.key]);
+  const kit = pack.kits[fac.key] || {};
   const slots = slotsOf(i).map((s) => ({
     id: s.id,
     label: s.label,
-    piece: (pieceInfo(i, s.id, (pack.kits[fac.key] || {})[s.id] || '') || {}).name || '',
+    piece: (pieceInfo(i, s.id, kit[s.id] || '') || {}).name || '',
   }));
+  const noteOf = (wi) => {
+    if (!familyOf(wi)) return 'sem peça';
+    const own = pack.kits[WEAPONS[wi].key] || {};
+    return slotsOf(wi).some((s) => own[s.id]) ? 'temperada' : 'de fábrica';
+  };
+  const sec = WEAPONS[pack.secondary], mel = WEAPONS[pack.melee];
   return {
     name: fac.name,
-    className: c.name,
+    className: `Classe ${c.name} · ${sec.short} · ${mel.short}`,
     weapon: i,
     slots,
-    bars: statBars(w, fac),
+    bars: statBars(w, fac).map((b) => ({ ...b, num: barCaption(b) })),
     side: [
-      { label: 'Secundária', weapon: pack.secondary, name: WEAPONS[pack.secondary].short },
-      { label: 'Faca', weapon: pack.melee, name: WEAPONS[pack.melee].short },
+      { label: 'Secundária', weapon: pack.secondary, name: sec.short, note: noteOf(pack.secondary) },
+      { label: 'Faca', weapon: pack.melee, name: mel.short, note: noteOf(pack.melee) },
     ],
   };
+}
+function barCaption(b) {
+  if (b.id === 'alcance' && / m$/.test(b.num)) return 'cai aos ' + b.num;
+  if (b.id === 'mobilidade') return b.fill >= 60 ? 'anda mais' : b.fill >= 40 ? 'passo firme' : 'anda menos';
+  if (b.id === 'controle') return 'recuo ' + b.num;
+  return b.num;
 }
 function sheetSpec(hint) {
   return { rows: classRows(), thumbs: weaponThumbs, gun: gunView(classes[classIndex]), hint, onPick: (i) => armClass(i) };
@@ -4786,14 +4829,10 @@ function paintPair(listId, gunId, hint) {
   if (list && gun) fillSheet(list, gun, sheetSpec(hint));
 }
 function paintClassSurfaces() {
-  paintPair('deathList', 'classGun', '1–5 escolhe · W/S ou setas · U última · Espaço nasce');
-  const host = $('pauseGuns');
-  if (host) {
-    if (!host.querySelector('.cls-list')) host.innerHTML = '<div class="cls-sheet"><div class="cls-list"></div><div class="cls-gun"></div></div>';
-    fillSheet(host.querySelector('.cls-list'), host.querySelector('.cls-gun'), sheetSpec('A classe dourada entra na próxima vida.'));
-  }
-  paintPair('bLoadList', 'bLoadGun', 'Na preparação a classe entra agora e o pente não enche sozinho.');
-  paintPair('iLoadList', 'iLoadGun', 'Entre as waves a classe entra agora e o pente não enche sozinho.');
+  paintPair('deathList', 'classGun', DEATH_HINT);
+  paintPair('pauseGuns', 'pauseGun', '1–5 escolhe · W/S ou setas · U última. Vale na próxima vida.');
+  paintPair('bLoadList', 'bLoadGun', LIVE_HINT);
+  paintPair('iLoadList', 'iLoadGun', LIVE_HINT);
   const chips = $('lobbyClasses');
   if (chips) fillChips(chips, { rows: classRows(), onPick: (i) => armClass(i) });
   if (benchOn) paintBench();
@@ -4905,12 +4944,16 @@ function benchKey(e) {
   return false;
 }
 function classMenuOn() {
-  if (bombPick || invPick) return true;
+  if (bombPick || invPick || pauseClassOpen()) return true;
   if (player && !player.alive && $('deathpick') && !$('deathpick').classList.contains('hidden')) return true;
-  if (state === 'paused' && $('pause') && !$('pause').classList.contains('hidden') && $('pauseGuns') && !$('pauseGuns').classList.contains('hidden')) return true;
   return false;
 }
 function classMenuKey(e) {
+  if (e.code === 'Escape') {
+    if (pauseClassOpen()) { closePauseClass(); return true; }
+    if (bombPick) { closeBombPick(); return true; }
+    if (invPick) { invClosePick(); return true; }
+  }
   if (!classMenuOn()) return false;
   const n = classes.length;
   if (/^Digit[1-5]$/.test(e.code)) { armClass(Number(e.code.slice(5)) - 1); return true; }
@@ -5008,12 +5051,26 @@ function buildDeathMelee() {
 let rsSent = false;
 const invMeOut = () => { const v = invMode() && invView(); const s = v && v.lives.get(online ? online.myId : player && player.id); return !!(s && s.out); };
 const respawnReady = (p) => !!p && !p.alive && Number.isFinite(p.respawnAt) && gameTime >= p.respawnAt && !invMeOut();
+function deathLine(p) {
+  if (!p) return '';
+  if (p.killW === W_BOMB) return 'Você explodiu com o botijão';
+  const who = p.killerName || (p.lastAttacker && p.lastAttacker !== p && p.lastAttacker.name) || '';
+  if (p.killW === KNIFE) return who ? `Você foi moggado por ${who}${p.killBack ? ' pelas costas' : ''}` : 'Você se moggou';
+  if (p.killW === EGG_W) return who ? `Você foi omeletado por ${who}` : 'Você se omeletou';
+  return who ? `Você foi pururucado por ${who}` : 'Você se pururucou';
+}
 function updateRespawnBtn(p) {
   const b = $('respawnBtn'), ok = respawnReady(p) && !rsSent;
   const left = Number.isFinite(p.respawnAt) ? Math.max(0, p.respawnAt - gameTime) : RESPAWN_TIME;
   const nome = (classes[classIndex] && classes[classIndex].name) || 'a classe';
-  const txt = invMeOut() ? 'Sem vidas · espere a ✨ Ressurreição' : rsSent ? 'Nascendo...' : ok ? `Nasce com ${nome}` : Number.isFinite(p.respawnAt) ? `Nascer em ${left.toFixed(1).replace('.', ',')}s` : 'Aguarde...';
-  if (b.disabled === ok) b.disabled = !ok; if (b.textContent !== txt) b.textContent = txt; b.classList.toggle('ready', ok);
+  const ultima = classIndex === spawnedClass;
+  const txt = invMeOut() ? 'Sem vidas' : rsSent ? 'Nascendo...' : ok ? `Nasce com ${nome}` : Number.isFinite(p.respawnAt) ? `Nascer em ${left.toFixed(1).replace('.', ',')}s` : 'Aguarde...';
+  const sub = invMeOut() ? 'Espere a ressurreição' : `Espaço · classe ${nome}${ultima ? ', a última' : ''}`;
+  const main = b && b.querySelector('b'), small = b && b.querySelector('small');
+  if (b) { if (b.disabled === ok) b.disabled = !ok; b.classList.toggle('ready', ok); }
+  if (main) { if (main.textContent !== txt) main.textContent = txt; }
+  else if (b && b.textContent !== txt) b.textContent = txt;
+  if (small && small.textContent !== sub) small.textContent = sub;
   const clock = $('classClockTxt'), bar = $('classClockBar');
   if (clock) { const ct = invMeOut() ? 'Sem vidas' : rsSent ? 'Nascendo' : ok ? 'Pode nascer' : `Renasce em ${left.toFixed(1).replace('.', ',')}s`; if (clock.textContent !== ct) clock.textContent = ct; }
   if (bar) bar.style.width = (!Number.isFinite(p.respawnAt) ? 0 : ok || rsSent ? 100 : (1 - left / RESPAWN_TIME) * 100).toFixed(1) + '%';
@@ -5026,7 +5083,7 @@ function requestRespawn() {
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
 function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
-function onPlayerRespawn() { clearHitMarks(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
+function onPlayerRespawn() { clearHitMarks(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; tuckDeathMenu(); document.body.classList.remove('deadgray', 'dead'); if (!bombPick && !invPick && !pauseClassOpen()) document.body.classList.remove('cls-on'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 
@@ -5345,6 +5402,7 @@ function netEvent(ev) {
       return;
     }
     if (a) a.kills = aK; t.deaths = tD; t.mgSpinOn = false; t.alive = false; t.hp = 0; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME; t.lastAttacker = a || null; t.killW = w; t.killBack = back;
+    { const named = a && a !== t && a.name ? a.name : ''; const row = !named && aid && o.lobby && o.lobby.players && o.lobby.players.find((p) => p.id === aid); t.killerName = named || (row && row.name) || (ks === 'fog' ? 'Névoa Assombrada' : ''); }
     if (w === -2) { t.fxDeath = t.deathAt; return; } // trocou de time (sem bacon)
     addKillFeed(a, t, w, head, back, ks === 'fog' ? 'Névoa Assombrada' : KS_KILL_NAME[ks] || null, fx); sfx.die(t === player ? 1 : distVol(t.pos));
     if (a === player && t !== player) { sfx.kill(); if (ks === 'h' || ks === 'x' || ks === 'g' || ks === 'a') { if (ks === 'h' || ks === 'g') feedbackAward(HELI.points); } else { notePlayerKill(t, !!head, fx); if (w >= 0) noteWeaponKill(player, w); } }
@@ -5542,7 +5600,7 @@ function clearBombGfx() {
 // Bomba: na preparação escolhe uma das cinco classes. Vale na hora. B fecha/abre. G solta o mouse.
 let bombPick = false;
 function renderBLoad() {
-  paintPair('bLoadList', 'bLoadGun', 'Na preparação a classe entra agora e o pente não enche sozinho.');
+  paintPair('bLoadList', 'bLoadGun', LIVE_HINT);
 }
 function openBombPick() {
   if (!player || !isBomb() || !bombFrozen(bombS)) return;
@@ -5742,7 +5800,7 @@ function invSpectate() {
 // ---------- classes entre as waves (mesmo painel da Bomba) ----------
 let invPick = false;
 function invRenderPick() {
-  paintPair('iLoadList', 'iLoadGun', 'Entre as waves a classe entra agora e o pente não enche sozinho.');
+  paintPair('iLoadList', 'iLoadGun', LIVE_HINT);
 }
 const invCanPick = () => { const v = invView(); return !!(invMode() && v && (v.phase === 'break' || v.phase === 'prep') && player && player.alive); };
 function invOpenPick(unlock = false) { if (!invCanPick()) return; if (unlock) { deathUnlock = true; if (document.pointerLockElement) document.exitPointerLock(); } invPick = true; document.body.classList.add('invpick'); invRenderPick(); $('iLoad').classList.remove('hidden'); window.__invPicks = (window.__invPicks || 0) + 1; }
