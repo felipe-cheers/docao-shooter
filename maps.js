@@ -685,12 +685,80 @@ export const MAPS = [];
     pickups: [['health', -36, 52], ['health', 36, 52], ['health', 0, 20], ['health', -20, -4, H], ['health', -30, -56], ['health', 31, -52.5, 1.2],
       ['ammo', 0, 56], ['ammo', -40, 0], ['ammo', 40, 0], ['ammo', 0, -44], ['ammo', -16, 55, H], ['ammo', 20, 30, H],
       ['grenade', -33, 31], ['grenade', 35, 30], ['grenade', 0, -18], ['grenade', -40, -50.5, H], ['grenade', 0, 66], ['grenade', 0, -66]],
+    // Invasão: mais caixas de munição espalhadas (perto dos spawns, no meio e pelas pontas). Só na Invasão (a Bomba usa o Rodízio com as caixas normais).
+    invPickups: [['ammo', 7, 1], ['ammo', -27, -29], ['ammo', 27, -29], ['ammo', -9, 31], ['ammo', -17, 9], ['ammo', -19, -49], ['ammo', 19, -49], ['ammo', -9, -9], ['ammo', 7, -27], ['ammo', 23, -7], ['ammo', -11, -25], ['ammo', 3, 41], ['ammo', 33, 75], ['ammo', 41, -71], ['ammo', -37, -73], ['ammo', -37, 75], ['ammo', 15, -73], ['ammo', -13, -73], ['ammo', 11, 75], ['ammo', -11, 75], ['ammo', 41, -43], ['ammo', -35, 19]],
     showcase: [0, 0, 30], view: [0, 0, 58, 0, -0.02], openMax: 8, laneMin: 35,
     test: { stairs: { from: [-23, 0, 51.5], to: [-23, H, 59], level: H }, under: { from: [-26.5, 0, 48], to: [-20.5, 0, 48], ceil: 3.2 }, roof: { from: [-15.5, H, 52], to: [-15.5, 2 * H, 44.2], level: 2 * H } },
   });
 }
 
 export const BOMB_MAP = 'rodizio'; // mapa padrão do modo Bomba (menu, criar sala, lobby)
+// ---------- 🎃 Fazenda Mal-Assombrada (feito pro Modo Invasão: noite de Halloween) ----------
+//  Casarão de dois andares no meio (escada pro 1º andar e pro telhado), celeiro velho a noroeste, cemitério com mausoléu
+//  a nordeste, capela em ruínas a sudoeste e milharal a sudeste. Os zumbis saem da névoa pelas bordas.
+{
+  const H = 3.5, boxes = [], props = [];
+  const wood = '#5a3e2b', wood2 = '#4a3222', roofC = '#3a2a3e', roofC2 = '#2e2032', stone = '#7d7a72', stone2 = '#6a675f', tomb = '#8c8a85', moss = '#556b2f', corn = '#b59a3a', corn2 = '#a08a30', hayC = '#c9a64a';
+  const casa = { wall: '#6b5844', wall2: '#5e4c3a', inner: '#7a6650', floor: '#4a3a2c', roof: roofC, roof2: roofC2, stair: wood, trim: '#2a1d14' };
+  // casarão (meio)
+  boxes.push(...building(-9, -7, 9, 7, { col: casa, floors: 2,
+    ops: [{ s: 'n', a: -1.2, b: 1.2 }, { s: 's', a: -1.2, b: 1.2 }, { s: 'w', a: -1, b: 1 }, { s: 'e', a: -1, b: 1 },
+      { s: 'n', a: -7, b: -4.5, k: 'win' }, { s: 'n', a: 4.5, b: 7, k: 'win' }, { s: 's', a: -7, b: -4.5, k: 'win' }, { s: 's', a: 4.5, b: 7, k: 'win' },
+      ...['n', 's'].flatMap((q) => [{ s: q, a: -6, b: -2.5, f: 1, k: 'win', lo: 0.9 }, { s: q, a: 2.5, b: 6, f: 1, k: 'win', lo: 0.9 }]), ...['w', 'e'].map((q) => ({ s: q, a: -2, b: 2, f: 1, k: 'win', lo: 0.9 }))],
+    stairs: [{ f: 0, r: [-8, -6.5, -2, -4.5], axis: 'x', dir: 1 }, { f: 1, r: [2, 4.5, 8, 6.5], axis: 'x', dir: -1 }] }));
+  boxes.push(B(-9.6, 7, 9.6, 9.5, 0.3, wood2, 0), B(-9.6, 9.2, -9.3, 9.5, 2.6, wood), B(9.3, 9.2, 9.6, 9.5, 2.6, wood), B(-9.8, 7, 9.8, 9.8, 0.25, roofC, 2.6)); // varanda
+  boxes.push(crate(-6, 3, 1.4, 1.0, '#7a5a3a'), crate(6, -3, 1.2, 1.2, '#7a5a3a'), crate(5, 2, 1.0, 0.9, '#7a5a3a', H), crate(-5, 1, 1.4, 0.9, '#7a5a3a', H));
+  // celeiro velho (noroeste): portão largo pro sul, porta a leste, fardos dentro
+  boxes.push(...building(-37, -37, -21, -23, { col: { wall: '#6e2f25', wall2: '#5e271f', floor: '#4a3a2c', roof: '#3a1f1a', roof2: '#2e1814' }, floors: 1, H: 5,
+    ops: [{ s: 's', a: -31, b: -27, k: 'wide' }, { s: 'e', a: -31, b: -29 }, { s: 'n', a: -34, b: -31, k: 'win', lo: 2, hi: 3.4 }, { s: 'w', a: -32, b: -28, k: 'win', lo: 2, hi: 3.4 }], parapet: 0 }));
+  boxes.push(B(-35.5, -35.5, -32, -33, 1.2, hayC), B(-35.5, -33, -33.5, -31, 1.2, hayC), B(-25, -35.5, -22.5, -33, 2.4, hayC), crate(-24, -27, 1.6, 1.4, '#7a5a3a'));
+  // cemitério (nordeste): mureta com portões, lápides, cruzes e o mausoléu
+  boxes.push(...wallX(15, 39, -13.5, 0.5, 1.1, stone, [{ a: 22, b: 25, y0: 0, y1: 9 }, { a: 31, b: 33, y0: 0, y1: 9 }]));
+  boxes.push(...wallZ(-39, -13.5, 15, 0.5, 1.1, stone, [{ a: -30, b: -27, y0: 0, y1: 9 }]));
+  for (let x = 18.5; x <= 36; x += 3.5) for (let z = -34; z <= -17; z += 4) {
+    if (x > 25 && x < 35 && z < -27) continue; // espaço do mausoléu
+    if ((Math.round(x * 3 + z) % 3) === 0) { boxes.push(B(x - 0.09, z - 0.09, x + 0.09, z + 0.09, 1.5, stone2), B(x - 0.45, z - 0.09, x + 0.45, z + 0.09, 0.16, stone2, 0.95)); }
+    else boxes.push(B(x - 0.5, z - 0.16, x + 0.5, z + 0.16, 1.05, tomb), B(x - 0.55, z + 0.25, x + 0.55, z + 1.6, 0.14, moss));
+  }
+  boxes.push(...building(26, -38, 34, -30, { col: { wall: '#8d8a82', wall2: '#7d7a72', floor: '#5a5650', roof: '#4a4744', roof2: '#3a3836' }, floors: 1, H: 3.8,
+    ops: [{ s: 's', a: 29, b: 31 }], parapet: 0.6 }));
+  boxes.push(B(28.5, -30, 31.5, -29.4, 0.25, stone, 0), B(27.6, -29.6, 28.2, -29.0, 3.9, stone), B(31.8, -29.6, 32.4, -29.0, 3.9, stone));
+  // capela em ruínas (sudoeste): sem telhado, paredes com janelões
+  boxes.push(...building(-35, 17, -23, 33, { col: { wall: '#9a9488', wall2: '#8a8478', floor: '#5a5650' }, floors: 1, H: 4.6, roof: false,
+    ops: [{ s: 'n', a: -30.2, b: -27.8 }, { s: 'e', a: 24, b: 26 }, { s: 'w', a: 21, b: 24, k: 'win', lo: 1.4, hi: 3.6 }, { s: 'w', a: 27, b: 30, k: 'win', lo: 1.4, hi: 3.6 }, { s: 'e', a: 28, b: 31, k: 'win', lo: 1.4, hi: 3.6 }] }));
+  boxes.push(B(-31, 29.5, -27, 31, 1.0, stone2), B(-29.15, 30, -28.85, 30.3, 2.6, stone2, 1.0), B(-29.9, 30, -28.1, 30.3, 0.25, stone2, 2.8)); // altar e cruz
+  for (const z of [21, 24, 27]) boxes.push(B(-33, z, -30.5, z + 0.6, 0.55, wood), B(-27.5, z, -25, z + 0.6, 0.55, wood)); // bancos
+  // poço e carroça
+  boxes.push(B(-14, 15, -12, 17, 0.9, stone), B(-14.1, 15.8, -13.9, 16.2, 2.3, wood), B(-12.1, 15.8, -11.9, 16.2, 2.3, wood), B(-14.4, 15.4, -11.6, 16.6, 0.2, roofC, 2.3));
+  boxes.push(B(9, 15, 13, 17.2, 1.0, wood), B(9, 15, 13, 15.2, 1.6, wood2, 1.0), B(9, 17, 13, 17.2, 1.6, wood2, 1.0), crate(11, 16.1, 1.2, 1.0, hayC, 1.0));
+  // milharal (sudeste): fileiras com corredores
+  for (let z = 16.5, r = 0; z <= 37; z += 2.8, r++) for (let x = 16 + (r % 2) * 2.2; x < 38.5; x += 6) boxes.push(B(x, z, Math.min(38.5, x + 4), z + 0.7, 2.3, r % 2 ? corn : corn2));
+  // cercas, fardos e caixotes pelo campo
+  const fence = (x0, z0, x1, z1) => { boxes.push(B(x0, z0, x1, z1, 1.1, wood)); };
+  fence(-19, -12, -12, -11.8); fence(-19, 11.8, -12, 12); fence(12, -12, 19, -11.8); fence(-4, 21, 4, 21.2); fence(-4, -21.2, 4, -21); fence(-24, -4, -23.8, 4); fence(23.8, -4, 24, 4);
+  boxes.push(crate(-16, -4, 1.6, 1.4, hayC), crate(16, 5, 1.6, 1.4, hayC), crate(-6, -17, 1.4, 1.2, '#7a5a3a'), crate(7, -17, 1.6, 1.6, hayC), crate(-21, 9, 1.4, 1.2, '#7a5a3a'), crate(20, -8, 1.4, 1.2, '#7a5a3a'));
+  boxes.push(crate(0, 27, 1.6, 1.4, hayC), crate(-8, 33, 1.4, 1.2, '#7a5a3a'), crate(30, 0, 1.6, 1.4, hayC), crate(-32, 6, 1.6, 1.4, hayC), crate(-10, -30, 1.6, 1.4, hayC), crate(6, -33, 1.4, 1.2, '#7a5a3a'));
+  // espantalhos (poste + braço)
+  for (const [x, z] of [[-15, 24], [24, 10], [-26, -12], [6, 36]]) boxes.push(B(x - 0.1, z - 0.1, x + 0.1, z + 0.1, 2.5, wood2), B(x - 0.9, z - 0.07, x + 0.9, z + 0.07, 0.14, wood2, 1.85));
+  props.push({ t: 'tree', x: -40, z: 0 }, { t: 'tree', x: 40, z: -4 }, { t: 'tree', x: -4, z: -40 }, { t: 'tree', x: 2, z: 40 }, { t: 'tree', x: -18, z: -18 }, { t: 'tree', x: 18, z: -6 }, { t: 'tree', x: -40, z: 38 }, { t: 'tree', x: 40, z: -40 }, { t: 'tree', x: 13, z: 40 });
+  props.push({ t: 'hay', x: -18, z: 4 }, { t: 'hay', x: 17, z: -15 }, { t: 'hay', x: -6, z: 24 }, { t: 'hay', x: 27, z: 12 }, { t: 'keg', x: 10.5, z: 9 }, { t: 'keg', x: -10.5, z: 9 });
+  props.push({ t: 'sign', x: 0, y: 4.0, z: 9.65, w: 8, h: 1.3, rot: 0, text: 'FAZENDA MAL-ASSOMBRADA', bg: '#2a1410', fg: '#ff9a2e' });
+  props.push({ t: 'sign', x: 23.5, y: 2.2, z: -13.2, w: 4, h: 0.9, rot: 0, text: 'CEMITÉRIO', bg: '#1a1420', fg: '#c9a4ff' });
+  MAPS.push({
+    id: 'fazenda-assombrada', name: 'Fazenda Mal-Assombrada', desc: '🎃 Feito pro Modo Invasão: casarão de dois andares no meio, celeiro velho, cemitério com mausoléu, capela em ruínas e milharal. Os zumbis saem da névoa.',
+    invasionOnly: true, size: [42, 42], wallH: 3, wallColor: ['#3a2f2a', '#2e2420'],
+    palette: { sky: '#1a1030', fog: ['#2b1d40', 28, 110], hemi: ['#a89ad8', '#2e2438', 1.25], sun: ['#ffb27a', 1.0], ground: '#3e3b2c', tiles: ['#46422f', '#3a3728', 84, 28], stars: true,
+      lights: [['#ff8a2a', 0, 2.4, 9.4, 6, 14], ['#a070ff', 30, 3, -26, 5, 16], ['#ff8a2a', -29, 3.2, -22, 4, 14], ['#ff8a2a', -29, 3, 30, 4, 14]] },
+    ...fin(boxes), props,
+    spawns: [[0, 12], [12, 0], [0, -12], [-12, 0], [9, 10], [-9, 10.5], [10, -10], [-10, -10], [3, 13], [-3, -13]],
+    pickups: [['health', -14, 0], ['health', 14, 0], ['health', 0, -16], ['ammo', 0, 15], ['ammo', -20, -20], ['ammo', 17, 20], ['ammo', -4, 4, H], ['grenade', -20, 14], ['grenade', 20, -20], ['grenade', 4, -4, H],
+      // Invasão: mais caixas de munição espalhadas (casarão, cemitério, milharal e pontas)
+      ['ammo', 11, -13], ['ammo', -11, -9], ['ammo', 11, 7], ['ammo', -15, 9], ['ammo', -1, -9], ['ammo', -9, 15], ['ammo', -35, 37], ['ammo', 37, -31], ['ammo', 37, -3], ['ammo', 1, -35], ['ammo', -35, -3], ['ammo', -5, 37], ['ammo', -31, 19], ['ammo', 33, 29]],
+    showcase: [0, 0, 15], view: [0, 1.6, 22, 0, -0.04], openMax: 9, laneMin: 30,
+    test: { stairs: { from: [-7.8, 0, -5.5], to: [0, H, -5.5], level: H }, under: { from: [-6, 0, 2], to: [6, 0, 2], ceil: 3.2 }, roof: { from: [7.9, H, 5.5], to: [0, 2 * H, 5.5], level: 2 * H } },
+  });
+}
+
 // ---------- HOTMILK: interiores dos dois blocos ----------
 const HM = { H: 3.3, col: { wall: '#e7e1d6', wall2: '#d7c4a4', inner: '#cfc6b8', floor: '#d5cfc4', roof: '#3c4248', roof2: '#2c3238', stair: '#8d3a3a', trim: '#2f6b45' }, facade: '#c9c2b4', wood: '#c4a574', green: '#2f6b45', red: '#e23b3b' };
 
@@ -1105,6 +1173,10 @@ function flipHotmilkZ(part, cz) {
 
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
 // mapas jogáveis nas listas/rodízio (o Estande só abre no modo Treino)
-export const PLAY_MAPS = MAPS.filter((m) => !m.training);
-// mapas do Modo Bomba (só os com sites/spawns feitos à mão; Pátio Ferrugem é pequeno demais e o Estande é do Treino)
-export const BOMB_MAPS = PLAY_MAPS.filter((m) => m.bomb);
+// Modo Invasão: o Rodízio do Docão e a Fazenda Mal-Assombrada só abrem na Invasão (os outros modos continuam com os mapas de sempre)
+const INV_ONLY = new Set(['rodizio', 'fazenda-assombrada']);
+export const PLAY_MAPS = MAPS.filter((m) => !m.training && !m.invasionOnly && !INV_ONLY.has(m.id));
+// mapas da Invasão: os dois feitos pra ela primeiro, depois os de sempre (com decoração de Halloween só nesse modo)
+// mapas do Modo Bomba: só os com sites/spawns feitos à mão (o Rodízio, que na Invasão é exclusivo, vale aqui: foi feito pra Bomba); Pátio Ferrugem é pequeno demais e o Estande é do Treino
+export const BOMB_MAPS = MAPS.filter((m) => m.bomb && !m.training && !m.invasionOnly);
+export const INV_MAPS = [...MAPS.filter((m) => INV_ONLY.has(m.id)), ...PLAY_MAPS];

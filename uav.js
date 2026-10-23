@@ -5,25 +5,25 @@
 //
 // Câmera: camera.rotation.set(pitch, yaw, 0) — Euler XYZ.
 // Frente no mundo (x, z): fx = -sin(yaw), fz = -cos(yaw). yaw 0 olha para -Z.
-// Direita do personagem: rx = -cos(yaw), rz = sin(yaw).
+// Direita do personagem (igual ao main.js): rx = cos(yaw), rz = -sin(yaw). yaw 0 => direita = +X.
 // Para um ponto (x, z) e o jogador (px, pz):
 //   dx = x - px; dz = z - pz
 //   along = dx*fx + dz*fz   // positivo = na frente
 //   side  = dx*rx + dz*rz   // positivo = à direita
 //   screenX = cx + side * scale
 //   screenY = cy - along * scale   // frente = para cima
-//   scale = (SIZE/2 - 28) / VIEW
+//   scale = (SIZE/2 - INSET) / VIEW
 //
 // Bússola, sentido horário a partir do norte (+Z):
-//   facing = atan2(fx, fz)   // atan2(leste, norte); yaw 0 => PI (sul)
+//   facing = atan2(-fx, fz)  // leste = −X (de frente pro norte +Z, a direita é −X); yaw 0 => PI (sul)
 //   delta = atan2(sin(ang - facing), cos(ang - facing))   // -PI..PI
 //   x = cx + delta / (PI/4) * 36
 // Norte = 0, NE = PI/4, E = PI/2, e assim por diante. A letra do centro é a frente.
 
 const SIZE = 210;
 const SCALE = 2;
-const VIEW = 16;
-const INSET = 28;
+const VIEW = 22;
+const INSET = 8;
 
 const COMPASS = [
   { label: 'N', ang: 0 },
@@ -132,8 +132,8 @@ function frame(player) {
   const yaw = player && Number.isFinite(Number(player.yaw)) ? Number(player.yaw) : 0;
   const fx = -Math.sin(yaw);
   const fz = -Math.cos(yaw);
-  const rx = -Math.cos(yaw);
-  const rz = Math.sin(yaw);
+  const rx = Math.cos(yaw);
+  const rz = -Math.sin(yaw);
   const scale = (SIZE / 2 - INSET) / VIEW;
   const cx = SIZE / 2;
   const cy = SIZE / 2;
@@ -148,7 +148,7 @@ function frame(player) {
     scale,
     cx,
     cy,
-    facing: Math.atan2(fx, fz),
+    facing: Math.atan2(-fx, fz),
     left: cx - half,
     top: cy - half,
     w: half * 2,

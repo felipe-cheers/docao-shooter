@@ -4,8 +4,167 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## Resumo de 21 e 22/10/2026
-Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
+## v1.13 — Calibre 12 Meteoro ⚡🐗 (23/10/2026)
+🤝 **MAIS UMA DO CHIQUEIRO!** O **João** (@rramosjoao) chegou com o **PR #16** e entregou três presentes de uma vez. O Docão agradece, o resto do servidor chora:
+🔫 **Calibre 12 virou SPAS-12 (e agora é de verdade):** 9 chumbos por tiro, cone fechado, **acerta andando**, bombeia mais rápido e recarrega cartucho em velocidade de quem tá atrasado pro churrasco. Modelo novinho (preto, protetor de calor furado, coronha dobrada) em 1ª e 3ª pessoa, coice de ombro, tremida de tela e um **estrondo bem mais grave**. Quem leva tiro de perto **sai voando pra trás** (Barrigão e chefe da Invasão são pesados demais pra isso, sorry). A Semi continua sendo a das 2 rajadinhas.
+🏹 **Besta consertada:** antes ela atravessava a tela na diagonal, gigante, como se fosse uma antena de TV. Agora aponta **reta pra frente**, centraliza quando você mira, e a mão de apoio só vai na corda na hora de recarregar.
+⚡ **Pau de choque (tecla 5), finalmente funciona:** você arremessa uma **estaca elétrica** que finca onde bater (chão, parede, rampa) e dá **choque por 3 segundos** em quem estiver perto. Quem leva fica **lento, sem atirar, com a mira tremendo e a tela azul piscando**. Funciona no online e na Invasão (zumbi também leva um susto!). Você ganha 1 por vida, e a caixa de Copo Bomba dá outro.
+😇 **O pau de choque NUNCA mata:** é só um **susto elétrico**. Quem tá com pouca vida fica com 1 de vida, tremendo, mas vivo. O Docão é bagunceiro, não assassino.
+🎯 Levou choque? O **arco vermelho de dano aponta pra estaca**, não pra quem jogou. Dá pra fugir sabendo de onde vem o zumbido.
+🙏 Valeu, João! (PR #16)
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
+🤝 **PARCERIA DO CHIQUEIRO!** O **Felipe Gomes** (@felipe-cheers) mandou o **PR #15** com um indicador de dano parecido com o nosso... e, em vez de brigar, o Docão **roubou as melhores ideias dele** (com crédito, claro 🫡🐷):
+💥 **Explosão e helicóptero agora apontam pro lugar certo:** antes, se o foguete (ou o Gavião) te acertava, o arco apontava pro *dono* do tiro, que podia estar do outro lado do mapa. Agora o servidor manda **de onde a explosão realmente veio**, e o arco aponta pra ela. Tomou foguete na cara? O arco olha pra fumaça, não pro fofoqueiro.
+🧲 **Golpes parecidos viram um arco só:** levou rajada de dois caras do mesmo lado (até 30° de diferença)? Em vez de uma fila de arcos empilhados, o jogo **junta tudo num arco só** e renova o tempo dele. Tela menos poluída, mais tempo pra olhar pro encrenqueiro. (Máximo de 4 arcos ao mesmo tempo.)
+🙏 Valeu, Felipe! O resto continua igual: flash leve quando o dano não tem dono, e morreu/renasceu/pausou os arcos somem.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.12 — Ai, de Onde Veio Isso? 🎯🩸 (23/10/2026)
+🚨 **NOVIDADE QUENTINHA!** O Docão apanhava calado e sem saber de quem: "ai! quem foi? foi você? foi o vento?" 😵🐷 Chega de levar bala misteriosa. Agora o jogo aponta o dedo pro culpado:
+🔴 **Indicador de dano estilo Fortnite:** quando você leva dano, aparece um **arco vermelho na borda da tela apontando de onde veio o golpe**. Vira a câmera e o arco gira junto, então é só olhar pra onde ele aponta e devolver o carinho. 💥
+🌀 **Vários inimigos, vários arcos:** levou tiro de três lados? Três arcos, um pra cada vizinho mal-educado. Cada um some sozinho em **1,5 segundo**.
+🧟 **Funciona em tudo:** jogador, bot e **zumbi na Invasão** (o Barrigão agora é pego em flagrante).
+🌫️ **Dano sem dono** (névoa, queda, você mesmo): só um flash vermelho leve nas bordas, porque aí o culpado é você.
+💀 Morreu? Os arcos somem. Não adianta apontar o dedo pro cadáver.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11.3 — Mouse Fujão 🖱️💀 (23/10/2026)
+🚑 **FIX RELÂMPAGO!** Tinha um bug cruel: você morria, ia clicar na arma nova... e o jogo **sequestrava o seu mouse** de volta, o cursor sumia e o painel fugia da sua mão. O Docão morto não tinha nem direito de escolher o armamento em paz. 😭
+🖱️ **Morreu? O cursor é seu.** Clicar na tela não prende mais o mouse enquanto você está morto: o cursor fica **livre e visível** pra você clicar na arma que quiser.
+📦 **Painel B da Invasão também:** com o painel aberto nas pausas, o clique no jogo não rouba o mouse. Apertou **B** de novo ou renasceu, o mouse volta pra mira.
+🎯 Renasceu? A mira volta na hora, como sempre.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11.2 — Cara de Morto 💀📹 (23/10/2026)
+🚑 **FIX RÁPIDO!** Até hoje, quando o Docão virava bacon, ele ficava ali olhando pro nada, sem nem saber quem foi o desgraçado. Agora ele tem **direito à vingança visual**:
+📹 **Câmera do assassino:** morreu? A câmera passa a **seguir quem te matou** (jogador, bot ou até zumbi na Invasão), pra você encarar o culpado com a cara que ele merece. Se o assassino sumir ou morrer, a câmera fica no lugar da sua morte, de luto. Renasceu, volta tudo ao normal.
+🩶 **Tela de morto:** enquanto você está morto, o mundo fica **cinza e sem graça**, tipo segunda-feira. Renasceu, as cores voltam.
+🗂️ **Painel de armas tímido:** a escolha de arma na morte e o painel **B** da Invasão agora ficam **pequenininhos, no cantinho e meio transparentes** (passa o mouse e eles acordam). Dá pra ver quem te matou e a dança da vitória sem um cardápio gigante na cara. 💃
+🚫 Na Invasão o B continua só abrindo o painel de armas. Dançar lá? Nem pensar, tem zumbi no meio!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11.1 — Hotfix da Munição 📦🧟 (23/10/2026)
+🚨 **HOTFIX URGENTE!** Os zumbis comeram TODA a munição do chiqueiro. 🧟🍽️ O Docão abriu a gaveta, só achou uma bala mofada e saiu correndo pro mercado. 🐷🛒 Voltou com o carrinho lotado:
+📦 **Caixas de munição pra todo lado na Invasão:** **Rodízio 6 → 28** e **Fazenda Mal-Assombrada 4 → 18**, espalhadas pelos spawns, pelo meio e pelas pontas.
+⏱️ **Caixa nova em 6 segundos** (antes eram 15). Nem dá tempo de sentir saudade.
+🔫 **Cada caixa dá mais:** a reserva vai até **1,5×** o normal, o pente já sai cheio e a bazuca ganha **+2 foguetes**.
+🧟 **Zumbi agora solta caixa de munição!** O Barrigão de Gás é o mais generoso (a barriga tá cheia de bala, vai entender), e o chefão larga duas.
+✨ **Facho e anel amarelos** em cada caixa, pra você achar de longe e parar de apanhar com a pistola vazia.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.11 — Salão de Festa 💃 (23/10/2026)
+Feito pelo **[@paulo-cheers](https://github.com/paulo-cheers)** (PR #14).
+
+**Quem manda na sala escolhe o arsenal**
+- Ao criar a sala, o **dono escolhe quais armas e quais power-ups valem**: quer uma sala só de rajada, ou só de pistola e faca? Pode! Os poderes de killstreak e os que caem no chão só funcionam se estiverem liberados.
+- Os **bots só sacam armas que a sala permite**, e quem entra no meio da partida já encontra tudo certinho.
+- O menu agora **lembra a sua arma padrão** (primária, pistola e corpo a corpo), e o lobby mostra o que a sala liberou.
+
+**Dança da vitória na tecla B** 🕺
+- Apertou **B** no meio da partida, o Docão **dança em 3ª pessoa** por uns 3 segundos. Escolha o seu passo no menu inicial ou na pausa:
+  - 🌙 **Moonwalk:** desliza pra trás
+  - 🤫 **Mewing:** dedo no queixo
+  - 6️⃣7️⃣ **Sixseven:** um de cada vez
+- Dançando você **não atira**, então escolha bem a hora. 😅
+- **Na Invasão não tem dança:** lá o **B continua abrindo o painel de armas** entre as waves. E nada de dançar com o chat aberto ou digitando.
+
+**No menu**
+- O **Docão agora gira**: arraste com o mouse pra ver ele de todos os lados. 🐷🔄
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.10.1 — Metralhadora do Chiqueiro 🔫 (22/10/2026)
+🐷💥 **PATCH v1.10.1: A METRALHADORA DO CHIQUEIRO!** 💥🐷
+:alphabet-white-b::alphabet-white-d::alphabet-white-c:
+O Docão acordou hoje com uma ideia: "e se eu atirasse **MUITO** mais rápido?" E o João (@rramosjoao) respondeu: "segura essa." 🔫🌽
+🔫 **Metralhadora do Chiqueiro**: arma automática nova na categoria Rajada. Fita de 100 balas, 15 de dano por tiro e uma cadência que faz o porquinho suar. Cuidado: ela deixa você um pouquinho mais lento. 🐢
+🌾 **HUD da fazenda**: tudo mais bonito e mais fácil de ler:
+💀 Killfeed novo
+🔫 Munição com ícones
+☠️ Tela de morte nova, pra você sofrer com estilo
+📊 Barra de streak redesenhada
+🦅 Olho da granja com mapa maior
+🚀 **Míssil turbinado**: segura o gatilho e o míssil acelera! Dá pra ir mais longe que o vizinho, e mais rápido. 💨
+🔄 **Trocou de arma na pausa? Renasce na hora!** Escolheu uma arma nova, você volta pro jogo equipado. Mas segura a ansiedade: só dá pra fazer isso **a cada 10 segundos**, e na Invasão os zumbis não deixam. 🧟 Lá a troca continua só pelo painel **B** entre as waves.
+🤫 E sim, o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+👏 Obrigado, João, pela metralhadora e pela caprichada no HUD!
+👉 **Joga agora:** [docao.mvalentim.dev](https://docao.mvalentim.dev/)
+
+## v1.10 — Modo Invasão 🎃 (22/10/2026)
+**A noite caiu no chiqueiro e os Docões zumbis levantaram!** 🧟🐷 Modo novo, co-op, no menu em **Modo de jogo → Invasão 🎃**.
+
+**Como funciona**
+- 👥 **Todo mundo no mesmo time** (até 10 jogadores online, ou solo no offline) contra **hordas de Docões zumbis**. Sem fogo amigo.
+- 🌊 **20 waves** cada vez mais difíceis, com mais zumbis, mais vida e mais velocidade. **A cada 5 waves vem o chefão Docão Abóbora.** Sobreviveu à 20, venceu!
+- 🧟 Zumbis variados: **Docão Podre**, **Esqueleto Corredor**, **Barrigão de Gás** (explode quando cai) e **Cuspidor** (cospe de longe).
+- ❤️ **Só 2 vidas.** Acabou, você fica assistindo até alguém usar a **Ressurreição**. Todo mundo fora, fim de jogo.
+- 🌫️ **Névoa Assombrada:** a área segura encolhe e muda de lugar a cada wave. Fora dela você perde vida.
+- 😠 O Docão continua fechando a cara quando atira.
+- 🚫 Na Invasão não tem killstreak: nada de sequência, rádio, Gavião, Chopper ou Fim da chapa. Aqui quem manda são os poderes.
+
+**Poderes** (caem dos zumbis; passe por cima pra pegar, guarda até 3)
+- 🎃 **Abóbora Explosiva:** arremessa uma abóbora que explode em área.
+- 🐺 **Uivo do Lobisomem:** empurra e atordoa os zumbis em volta.
+- 🧪 **Poção de Cura:** cura você e os aliados perto.
+- 🔦 **Lanterna Sagrada:** cone de luz que queima os zumbis.
+- 👻 **Fantasma:** invisível pros zumbis e mais rápido por alguns segundos.
+- ✨ **Ressurreição** (rara): revive todos os aliados mortos.
+
+**Controles**
+- **G** usa o poder selecionado · **X** troca de poder
+- **B** abre o painel de armas na pausa entre as waves (troque primária, secundária e corpo a corpo)
+
+**Mapas da Invasão**
+- 🏚️ **Fazenda Mal-Assombrada** (novo!): noite de Halloween na fazenda.
+- 🍖 **Rodízio do Docão**: o mapa padrão da Invasão.
+- Os mapas de sempre também entram, com decoração de Halloween e névoa só nesse modo.
+
+🎶 Trilha de terror própria, que pesa mais na luta contra o chefão.
+
+---
+
+🎃🐷 **ATENÇÃO, CHIQUEIRO!** 🐷🎃
+
+Hoje o Docão não parou: foram **6 atualizações em um dia só!** 🔥
+
+🚀 **v1.8 "Míssil Pilotado"**: 5 abates seguidos e você mesmo guia o míssil até o alvo. Tem camuflagens novas e o F ativa as killstreaks.
+💬 **v1.8.2**: o chat foi pro canto da tela.
+🌾 **v1.8.3**: menu novo com cara de fazendinha.
+🦵 **v1.8.4 "Agachadinha"**: Shift agacha e a mira fica no botão direito.
+🌽 **v1.9 "Arsenal da Quermesse"**: FAMAS da Pocilga, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo. Tem tiro que atravessa parede, helicóptero com 10 abates e NUKE com 15! ☢️
+😠 **v1.9.1 "Docão Bravo"**: agora o Docão fecha a cara toda vez que atira.
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## 🧟 MAS HOJE AINDA TEM MAIS... 🧟
+Quando a noite cair, os mortos levantam do chiqueiro. 🌫️
+# 🎃 MODO INVASÃO 🎃
+👥 Até 10 jogadores no mesmo time contra **hordas de Docões zumbis**.
+🌊 **20 waves** que vão ficando mais difíceis, com um **chefão a cada 5**.
+🔮 Poderes que caem dos zumbis.
+❤️ Só **2 vidas**. Depois disso, só um milagre traz você de volta...
+🏚️ Mapa novo: **Fazenda Mal-Assombrada**.
+🌙 **JÁ ESTÁ NO AR!** Corre pro menu e escolhe a Invasão. 💥
+Prepara a lanterna, chama os amigos e não sai do chiqueiro... 👀🐷
+
+---
+
+## Próxima versão
+
+- Menu com nova logo, lettering cartoon, moldura irregular de madeira, campos padronizados e carimbo suíno. A chama do título tem animação discreta.
+- Jogar e Juntar a Porcada ficam lado a lado, com menor destaque visual para a ação online.
+- Docão fica sobre uma caixa de armas 3D, com madeira quente, ferragens e inscrição pintada. Trocar Visual é uma mala de figurinos apoiada na quina.
+- O Arsenal abre a tampa e leva a câmera ao interior da caixa, onde as armas aparecem em bandejas de madeira.
+- A mala abre pela lateral e revela um provador com forro verde e prévia 3D do figurino selecionado.
+- Chão e paisagem têm profundidade e paralaxe durante as transições. Fechar ou Esc faz o caminho inverso; a preferência por movimento reduzido pula a viagem.
+- Layout adaptado para telas estreitas, navegação por teclado e foco restaurado ao sair dos menus.
+
+---
+
+## Resumo de 21 a 23/10/2026
+Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.2 · Mapas v2:** os 7 mapas refeitos com casas, andares, escadas e telhados
 - **v1.3 · Bacon & Nomes:** morte vira bacon e cada jogador escolhe o nome
 - **v1.4 · Pururucado:** kill feed com frases de porco
@@ -18,6 +177,17 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
 - **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
 - **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
+- **v1.8.3 · Comanda da Fazendinha** ([@hiro-cheers](https://github.com/hiro-cheers), PR #8): menu inicial novo com cenário de fazendinha ao entardecer
+- **v1.8.4 · Agachadinha** ([@felipe-cheers](https://github.com/felipe-cheers), PR #9): Shift agacha com hitbox sincronizada no online, mira só no botão direito e um pulo por toque no Espaço
+- **v1.9 · Arsenal da Quermesse** ([@rramosjoao](https://github.com/rramosjoao), PR #12): FAMAS, Disco Voador, Lança-Milho, Estilingue de Ovo e Sabre Duplo, bala que atravessa parede, inspecionar no I e Chopper da granja aos 10
+- **v1.9.1 · Docão Bravo:** o Docão faz cara de brava ao atirar e ao golpear com faca ou sabre
+- **v1.10 · Modo Invasão:** co-op contra hordas de Docões zumbis em 20 waves, com chefão a cada 5, poderes, 2 vidas e o mapa Fazenda Mal-Assombrada
+- **v1.10.1 · Metralhadora do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #13): arma nova de 100 balas, HUD da fazenda, míssil que acelera segurando o tiro e troca de arma na pausa
+- **v1.11 · Salão de Festa** ([@paulo-cheers](https://github.com/paulo-cheers), PR #14): o dono da sala escolhe as armas e os power-ups, o menu lembra sua arma padrão, dança da vitória no B (moonwalk, mewing e sixseven; fora da Invasão) e o Docão do menu gira ao arrastar
+- **v1.11.1 · Hotfix da Munição:** Invasão com bem mais caixas de munição (Rodízio 6 → 28, Fazenda 4 → 18), caixa nova em 6 s, mais munição e +2 foguetes por caixa, zumbi solta caixa e facho amarelo pra achar
+- **v1.11.2 · Cara de Morto:** câmera segue quem te matou, tela cinza enquanto está morto e painel de armas discreto no canto
+- **v1.11.3 · Mouse Fujão:** morto (ou com o painel B aberto) o clique no jogo não prende mais o mouse, então dá pra clicar nas armas
+- **v1.12 · Ai, de Onde Veio Isso?:** arco vermelho na borda da tela mostra de onde veio o dano (jogador, bot e zumbi), gira com a câmera e some em 1,5 s
 
 ---
 
@@ -36,6 +206,51 @@ Ainda **não está no site**. Modo estilo Valorant, com o Docão:
 - Funciona offline e online, com chat, voz e killstreaks online da v1.8. **Chat no canto da v1.8.2 junto:** T fala com todos, Y/U com o seu time (na Bomba o time é o seu lado), e na Bomba o painel do chat fica mais estreito e o placar/tempo da rodada se ajeita no espaço livre, sem ficar um por cima do outro. As teclas da Bomba (E, e B/N/M/G/1–9 só na preparação) não brigam com T/Y/U/J/K/F/V/Q/R.
 
 ---
+## v1.9.1 — Docão Bravo 😠 (22/10/2026)
+- Quando atira, o Docão agora **fecha a cara**: sobrancelhas em V, olhos apertados e dentes cerrados no lugar do sorrisão.
+- Vale pra todas as armas, inclusive a rajada da FAMAS, a metralhadora giratória, a bazuca, o Lança-Milho, o Disco Voador e o Estilingue, e também pros golpes de faca e de sabre (simples ou duplo).
+- A cara de brava aparece rapidinho no disparo, fica enquanto o Docão continua atirando e some meio segundo depois do último tiro, quando volta o sorriso.
+- Dá pra ver nos bots e nos outros jogadores online, com todas as skins (de óculos, de pintura de caveira ou de capuz).
+
+## v1.9 — Arsenal da Quermesse 🌽 (22/10/2026)
+Feito pelo **[@rramosjoao](https://github.com/rramosjoao)** (PR #12).
+
+**Armas novas**
+- **FAMAS da Pocilga:** rajada de 3 por clique, com o recuo subindo reto.
+- **Disco Voador:** um disco-OVNI que quica 3 vezes nas paredes antes de se desfazer.
+- **Lança-Milho da Quermesse:** solta 3 grãos por tiro, e cada grão estoura 3 vezes em pipoca.
+- **Estilingue de Ovo:** secundária quase silenciosa. Segure o clique pra esticar o elástico, e o ovo suja a tela de quem leva.
+- **Sabre Duplo:** um sabre em cada mão, com golpes alternados. O Sabre de Luz agora fica em guarda de cavaleiro e anda só 15% mais devagar.
+
+**Tiroteio**
+- **Penetração de parede:** a bala atravessa paredes finas, muretas e caixotes, perdendo dano conforme a espessura. Cada arma tem o seu limite.
+- **Collateral:** nas snipers a bala atravessa corpos, perdendo dano a cada um.
+- **Inspecionar (I):** gira a arma na mão e mostra a camuflagem e os abates com ela.
+- **Kill feed com ícones:** cada abate mostra o ícone da arma ou do killstreak.
+- **Animações:** balanço com inércia ao virar e andar de lado, e saque com a arma subindo girando.
+
+**Killstreaks**
+- **Chopper da granja aos 10 abates:** você vai pra porta do helicóptero por 60 s, com metralhadora giratória ou sniper.
+- **Fim da chapa** agora sai aos **15** abates.
+- O streak ganho **fica guardado depois de morrer**, e a barra só brilha no que está pronto.
+- O Olho da granja, o Gavião e o Chopper chegam por uma **chamada no rádio**.
+- O minimapa não fica mais espelhado.
+
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.8.4 — Agachadinha 🐖 (22/10/2026)
+Feito pelo **[@felipe-cheers](https://github.com/felipe-cheers)** (PR #9).
+- Segure **Shift** (esquerdo ou direito) para agachar, com animação e câmera mais baixa. O Docão anda mais devagar e só levanta se houver espaço acima da cabeça.
+- A mira com zoom agora fica só no **botão direito** do mouse (o Shift virou o agachar).
+- A hitbox acompanha a transição ao agachar e levantar, inclusive nos tiros, golpes de faca e explosões. A postura também é sincronizada no multiplayer, e o servidor confere a troca.
+- Corrigido o pulo que se repetia ao pular, agachar e soltar o agachar no ar. Cada pressão em Espaço agora dispara apenas um pulo.
+
+## v1.8.3 — Comanda da Fazendinha 🌅 (22/10/2026)
+Feito pelo **[@hiro-cheers](https://github.com/hiro-cheers)** (PR #8).
+- Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
+- A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.
+- O menu virou a comanda da fazendinha: papel de açougue, placas de madeira e o botão Jogar. Arsenal e visual são acessados pelas placas junto do Docão; ajustes e áudio ficam no canto superior direito.
+- O Docão fica de frente na vitrine. Os botões de jogar continuam à mão, mesmo ao escolher armas ou skins, e o menu se adapta a telas menores.
 
 ## v1.8.2 — Chat no canto 💬 (22/10/2026)
 Feito pelo **[@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers)** (PR #7).

@@ -66,23 +66,27 @@ export function makeLaptop() {
   const lid = new THREE.Group();
   lid.position.set(0, 0.02, -0.19);
   put(lid, new THREE.BoxGeometry(0.58, 0.36, 0.022), '#1c1c1e', 0, 0.18, 0);
-  put(lid, new THREE.PlaneGeometry(0.5, 0.28), '#8fd0ff', 0, 0.19, 0.013);
+  const screen = put(lid, new THREE.PlaneGeometry(0.5, 0.28), '#8fd0ff', 0, 0.19, 0.013);
   g.add(lid);
   g.userData.lid = lid;
+  g.userData.screen = screen;
   addTabletHand(g, -1);
   addTabletHand(g, 1);
   g.visible = false;
   return g;
 }
 
-export function poseLaptop(group, k) {
-  const t = clamp01(k);
+// big = 0..1: laptop grudado no rosto, tela em pé no meio da visão (míssil pilotado pela tela)
+const LAPTOP_BIG = { s: 1.25, y: -0.2925, z: -0.289 }; // centro da tela em (0, -0.03, -0.51) na câmera
+export function poseLaptop(group, k, big = 0) {
+  const t = clamp01(k), b = clamp01(big) * t;
   // Sobe na frente do rosto. Rotação X negativa inclina a tela pra gente, igual o tablet.
   // A tampa começa deitada no teclado (1.35) e abre até ficar quase em pé (0.02).
-  group.position.set(lerp(0.04, 0, t), lerp(-0.52, -0.2, t), lerp(-0.32, -0.55, t));
-  group.rotation.set(lerp(0.15, -0.42, t), 0, 0);
+  group.position.set(lerp(lerp(0.04, 0, t), 0, b), lerp(lerp(-0.52, -0.2, t), LAPTOP_BIG.y, b), lerp(lerp(-0.32, -0.55, t), LAPTOP_BIG.z, b));
+  group.rotation.set(lerp(lerp(0.15, -0.42, t), 0, b), 0, 0);
+  group.scale.setScalar(lerp(1, LAPTOP_BIG.s, b));
   const lid = group.userData.lid;
-  if (lid) lid.rotation.x = lerp(1.35, 0.02, t);
+  if (lid) lid.rotation.x = lerp(lerp(1.35, 0.02, t), 0.02, b);
 }
 
 export function poseTablet(group, k) {

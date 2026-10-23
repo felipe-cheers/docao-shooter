@@ -80,12 +80,14 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **W A S D** (ou setas) | andar |
 | **Mouse** | mirar |
 | **Espaço** | pular |
+| **Shift** (segurar, esquerdo ou direito) | agachar: câmera e corpo abaixam, anda mais devagar; só levanta quando há espaço |
 | **Clique esquerdo** | atirar · golpe da faca · corte do sabre · segurar = puxar a corda do arco |
-| **Botão direito** ou **Shift** | mirar com zoom (luneta nas snipers) · **com a faca na mão: estocada** |
+| **Botão direito** | mirar com zoom (luneta nas snipers) · **com a faca na mão: estocada** |
 | **R** | recarregar |
 | **1** / **2** / **3** | primária / secundária / corpo a corpo |
 | **Rodinha do mouse** | gira entre as três armas |
 | **V** | troca rápida: faca ↔ última arma |
+| **I** | inspecionar a arma (segure pra ficar olhando) · mostra camuflagem e abates |
 | **Q** (segurar e soltar) | carrega e arremessa o **Copo Bomba** |
 | **4** | granada de **fumaça** (só offline) |
 | **5** | granada de **atordoamento** (só offline) |
@@ -228,6 +230,9 @@ Você leva **uma primária + uma secundária + uma arma corpo a corpo**, escolhi
 | **Fuzil Pururuca** (automático) | 30 / 120 | 20 | ×2 | 0,1 s | 1,6 s | 140 m | — | 40° |
 | **Mini Uzi do Leitão** (automática) | 25 / 100 | 11 | ×1,6 | 0,055 s | 1,35 s | 70 m | 8 → 28 m, até 35% | 55° |
 | **P90 da Granja** (automática) | 50 / 150 | 14 | ×1,5 | 0,07 s | 1,7 s | 110 m | 16 → 48 m, até 45% | 48° |
+| **FAMAS da Pocilga** (rajada de 3) | 30 / 120 | 34 | ×1,5 | 0,065 s na rajada · 0,3 s entre rajadas | 2,1 s | 150 m | 16 → 50 m, até 60% | 46° |
+
+Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto.
 
 ### 💥 Escopeta (primária)
 
@@ -255,12 +260,25 @@ Você leva **uma primária + uma secundária + uma arma corpo a corpo**, escolhi
 
 O foguete voa a 24 m/s e explode ao bater em parede, chão ou Docão (acerto direto dá o dano máximo). Atire no chão embaixo de você pra dar um **rocket jump**. A caixa de munição dá só **+1 foguete**.
 
+| Arma | Pente / reserva | Dano | Cadência | Recarga | Zoom |
+|---|---|---|---|---|---|
+| **Lança-Milho da Quermesse** | 6 / 24 | 3 grãos por tiro; cada grão estoura **3 vezes** em pipoca (até 18 por estouro, raio 2 m, 30% em você) | 0,7 s | 2,3 s | 58° |
+
+### 🛸 Especial (primária)
+
+| Arma | Pente / reserva | Dano | Cabeça | Cadência | Recarga | Zoom |
+|---|---|---|---|---|---|---|
+| **Disco Voador** | 4 / 16 | 60 | ×1,5 | 0,6 s | 1,7 s | 55° |
+
+O disco voa a 22 m/s, **quica 3 vezes** nas paredes e se desfaz no 4º contato.
+
 ### 🔪 Corpo a corpo
 
 | Arma | Golpe | Detalhes |
 |---|---|---|
 | **Faca de churrasqueiro** | clique: **40** de dano, 1,6 m, a cada 0,42 s · botão direito: estocada de **75**, 1,8 m, a cada 1 s | **pelas costas mata na hora**, e com ela na mão você corre **15% mais rápido** |
-| **Sabre de Luz** | **100** de dano por corte, 2,5 m, a cada 0,48 s | um corte na frente mata · você anda **30% mais devagar** · 6 cores: vermelho, azul, verde, roxo, amarelo e branco |
+| **Sabre de Luz** | **100** de dano por corte, 2,5 m, a cada 0,48 s | um corte na frente mata · em guarda de cavaleiro, você anda **15% mais devagar** · 6 cores: vermelho, azul, verde, roxo, amarelo e branco |
+| **Sabre Duplo** | **100** de dano por corte, 2,5 m, a cada 0,36 s, alternando as mãos | um sabre em cada mão · você anda **30% mais devagar** |
 
 Quem é esfaqueado vê o carimbo **MOGGADO!**, e no feed aparece "X moggou Y [Faca]".
 
@@ -272,8 +290,20 @@ Quem é esfaqueado vê o carimbo **MOGGADO!**, e no feed aparece "X moggou Y [Fa
 | **Furadeira de Prego** | 16 / 64 | 18 | ×1,4 | 0,11 s | 1,25 s | 40 m | 6 → 22 m, até 25% | 58° |
 | **Besta do Leitão** | 1 / 10 | 38 | ×1,35 | 0,45 s | 1,35 s (arma a corda) | 80 m | 12 → 40 m, até 45% | 58° |
 | **Arco da Granja** | 1 / 16 | 26 × força da corda | ×1,4 | 0,35 s | 0,85 s | 65 m | 10 → 36 m, até 40% | 62° |
+| **Estilingue de Ovo** (quase silencioso) | 1 / 14 | 34 × força (de 70% a 100%) | ×1,5 | 0,3 s | 0,7 s | arco de tiro | — | 62° |
 
-No **arco**, segure o clique pra puxar a corda: em 0,7 s ela chega no talo, e a força vai de 0,35× (soltando na hora) até 1,3× (no talo). A besta e o arco são fracos de propósito, então um tiro no corpo não mata.
+No **arco**, segure o clique pra puxar a corda: em 0,7 s ela chega no talo, e a força vai de 0,35× (soltando na hora) até 1,3× (no talo). A besta e o arco são fracos de propósito, então um tiro no corpo não mata. No **estilingue**, segure o clique pra esticar o elástico (0,55 s até o talo). O ovo **suja a tela** de quem leva por 2 s.
+
+### 🧱 Penetração e collateral
+
+- A bala **atravessa paredes finas, muretas e caixotes**, perdendo dano conforme a espessura. Chão, laje, muro grosso, contêiner e ônibus seguram a bala.
+- Limite de parede por arma: Canhão 1,6 m · Sniper 0,9 m · Carabina 0,6 m · Fuzil e FAMAS 0,35 m · P90 0,25 m · Pistola e Uzi 0,2 m. As escopetas, a Furadeira, a besta, o arco e os projéteis não atravessam.
+- **Collateral** nas snipers: a bala atravessa corpos. Sniper até 2 extras (×0,75 a cada um), Canhão até 3 (×0,85) e Carabina 1 (×0,6).
+- A regra é a mesma no cliente e no servidor (`shared/penetration.js`).
+
+### 🔍 Inspecionar
+
+Segure **I** pra girar a arma na mão e ver um cartão com a camuflagem e os abates com ela.
 
 ---
 
@@ -300,9 +330,12 @@ Abates seguidos sem morrer enchem a barra da direita. Quando um prêmio fica pro
 | **3** | 👁️ **Olho da granja** | minimapa que mostra os inimigos por **10 s** |
 | **5** | 🚀 **Míssil da granja** | abre o laptop e você **pilota um míssil em primeira pessoa**, que sai do alto do céu e vai pra onde o mouse aponta: até **460** de dano num raio de **26 m** (40% em você) |
 | **7** | 🚁 **Gavião da granja** | helicóptero que fica até **30 s** atirando nos inimigos (16 de dano por tiro). Ele tem 280 de vida e dá pra derrubar |
-| **10** | ☢️ **Fim da chapa** *(secreto)* | puxa o rádio, roda uma contagem de **5 s** e **todo mundo morre, menos você** (e o seu time na Dominação). Morrer depois de puxar o rádio não cancela |
+| **10** | 🚁 **Chopper da granja** | você vai pra porta de um helicóptero que roda o mapa por **60 s** e escolhe entre a **metralhadora giratória** (20 por tiro, esquenta) e a **sniper** com luneta (140 por tiro). Ele tem **560** de vida e dá pra derrubar |
+| **15** | ☢️ **Fim da chapa** *(secreto)* | puxa o rádio, roda uma contagem de **5 s** e **todo mundo morre, menos você** (e o seu time na Dominação). Morrer depois de puxar o rádio não cancela |
 
-- Depois do 10º abate a sequência recomeça.
+- Depois do 15º abate a sequência recomeça. O prêmio ganho **fica guardado mesmo se você morrer**.
+- O Olho da granja, o Gavião e o Chopper chegam por uma **chamada no rádio** de 1 s. O Gavião erra 30% dos tiros.
+- No kill feed cada abate mostra o **ícone da arma** ou do killstreak.
 - Os abates do Gavião e da nuke não contam pra sequência. Cada abate do Gavião vale 25 pontos.
 - **Online** quem manda é o servidor: ele conta a sequência, confere o prêmio e aplica o dano do míssil, do Gavião e do Fim da chapa, e todo mundo vê o efeito. Os outros jogadores podem derrubar o Gavião.
 - **Pontos:** +10 por acerto, +100 por abate e +150 por abate na cabeça.
@@ -452,6 +485,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | Sem navegador | Offline (navegador) | Online (precisa do `wrangler dev`) |
 |---|---|---|
 | `test-shared.mjs`: regras compartilhadas | `test.mjs`: fluxo geral | `test-online.mjs` |
+| `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Shift, câmera e animação | |
 | `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-dom.mjs` |
 | `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-idle.mjs` |
 | `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-names.mjs` |

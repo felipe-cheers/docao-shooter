@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { makeWorldSaber } from './saber-view.js';
 import { getSkin } from './skins.js';
 import { mergeVertices } from './vendor/BufferGeometryUtils.js';
+import { crouchAmount, stanceScale } from './shared/stance.js';
 
 const V3 = THREE.Vector3, V2 = THREE.Vector2;
 const TAU = Math.PI * 2;
@@ -112,15 +113,15 @@ export function drawLogo(x, cx, cy, h, color, outlineColor = null) {
   x.strokeStyle = x.fillStyle = color; x.lineWidth = h * 0.26; paths(); x.stroke(); bang(0);
 }
 const texCache = new Map();
-function headTexture(tone, beard = null, paint = null) {
-  const key = 'head' + tone + beard + paint; if (texCache.has(key)) return texCache.get(key);
+function headTexture(tone, beard = null, paint = null, angry = false) { // angry: cara de bravo (dentes cerrados, sem blush)
+  const key = 'head' + tone + beard + paint + (angry ? ':angry' : ''); if (texCache.has(key)) return texCache.get(key);
   const W = 1024, H = 512;
   const t = canvasTex(W, H, (x) => {
     x.fillStyle = tone; x.fillRect(0, 0, W, H);
     const P = (theta, y) => [(0.5 + theta / TAU) * W, (1 - (y - HEAD.y0) / (HEAD.y1 - HEAD.y0)) * H];
     const pxH = (y) => W / (TAU * headR(y)), pxV = H / (HEAD.y1 - HEAD.y0);
     // bochechas (blush) suaves
-    for (const s of [-1, 1]) {
+    for (const s of angry ? [] : [-1, 1]) {
       const [cx, cy] = P(s * 0.86, 1.47); const g = x.createRadialGradient(cx, cy, 2, cx, cy, 0.13 * pxH(1.47));
       g.addColorStop(0, PALETTE.blush); g.addColorStop(0.55, PALETTE.blush + 'cc'); g.addColorStop(1, PALETTE.blush + '00');
       x.save(); x.translate(cx, cy); x.scale(1, pxV / pxH(1.47) * 0.85); x.translate(-cx, -cy); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, 0.13 * pxH(1.47), 0, TAU); x.fill(); x.restore();
@@ -133,15 +134,28 @@ function headTexture(tone, beard = null, paint = null) {
       for (let i = 0; i < 900; i++) { const [px, py] = P((rnd() * 2 - 1) * 0.9, 1.04 + rnd() * 0.33); x.fillRect(px, py, 2, 2); }
       x.restore();
     }
+    if (angry) { // boca de bravo: dentes cerrados, cantos caídos
+      const pts = [[-0.36, 1.13], [-0.3, 1.22], [0, 1.26], [0.3, 1.22], [0.36, 1.13], [0.3, 1.09], [0, 1.1], [-0.3, 1.09]].map(([t, y]) => P(t, y));
+      const path = () => { x.beginPath(); x.moveTo(...pts[0]); x.quadraticCurveTo(...pts[1], ...P(-0.12, 1.255)); x.quadraticCurveTo(...pts[2], ...P(0.12, 1.255)); x.quadraticCurveTo(...pts[3], ...pts[4]);
+        x.quadraticCurveTo(...pts[5], ...P(0.1, 1.098)); x.quadraticCurveTo(...pts[6], ...P(-0.1, 1.098)); x.quadraticCurveTo(...pts[7], ...pts[0]); x.closePath(); };
+      path(); x.fillStyle = PALETTE.teeth; x.fill();
+      x.save(); path(); x.clip(); x.strokeStyle = PALETTE.mouth; x.lineWidth = 5; x.beginPath();
+      const ym = P(0, 1.175)[1]; x.moveTo(P(-0.4, 0)[0], ym); x.lineTo(P(0.4, 0)[0], ym);
+      for (const t of [-0.24, -0.12, 0, 0.12, 0.24]) { const [tx] = P(t, 0); x.moveTo(tx, P(0, 1.3)[1]); x.lineTo(tx, P(0, 1.05)[1]); }
+      x.stroke(); x.restore();
+      path(); x.lineWidth = 7; x.strokeStyle = PALETTE.outline; x.lineJoin = 'round'; x.stroke();
+    }
     // boca: sorriso aberto com dentes e língua (logo abaixo do focinho)
     const L = P(-0.5, 1.37), R = P(0.5, 1.37), topC = P(0, 1.2), botC = P(0, 0.86);
     const mouthPath = () => { x.beginPath(); x.moveTo(...L); x.quadraticCurveTo(...topC, ...R); x.quadraticCurveTo(...botC, ...L); x.closePath(); };
+    if (!angry) {
     mouthPath(); x.fillStyle = PALETTE.mouth; x.fill();
     x.save(); mouthPath(); x.clip();
     const tg = P(0.05, 1.1); x.fillStyle = PALETTE.tongue; x.beginPath(); x.ellipse(tg[0], tg[1] + 12, 80, 34, 0, 0, TAU); x.fill();
     x.fillStyle = PALETTE.teeth; x.beginPath(); x.moveTo(L[0], L[1] - 6); x.quadraticCurveTo(topC[0], topC[1] - 6, R[0], R[1] - 6); x.lineTo(R[0], R[1] + 16); x.quadraticCurveTo(topC[0], topC[1] + 16, L[0], L[1] + 16); x.closePath(); x.fill();
     x.restore();
     mouthPath(); x.lineWidth = 7; x.strokeStyle = PALETTE.outline; x.lineJoin = 'round'; x.stroke();
+    }
     if (paint === 'skull') { // pintura de caveira leve: máscara branca ao redor dos olhos + detalhes verdes (bochechas e focinho continuam)
       for (const s of [-1, 1]) {
         const [cx, cy] = P(s * 0.33, 1.71); const rx = 0.2 * pxH(1.71), ry = 0.21 * pxV;
@@ -152,7 +166,7 @@ function headTexture(tone, beard = null, paint = null) {
       const [fx, fy] = P(0, 1.9); x.fillStyle = '#f7f7f2'; x.beginPath(); x.moveTo(fx, fy - 26); x.lineTo(fx + 20, fy + 8); x.lineTo(fx - 20, fy + 8); x.closePath(); x.fill(); // losango na testa
       x.strokeStyle = '#2e0503'; x.lineWidth = 3; for (const s of [-1, 1]) { const [mx, my] = P(s * 0.55, 1.33); for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(mx + s * k * 10, my - 8); x.lineTo(mx + s * k * 10, my + 8); x.stroke(); } } // pontinhos de costura no canto da boca
     }
-    for (const [p, s] of [[L, -1], [R, 1]]) { x.beginPath(); x.moveTo(p[0] - s * 4, p[1] - 14); x.quadraticCurveTo(p[0] + s * 14, p[1] - 4, p[0] + s * 4, p[1] + 14); x.lineWidth = 6; x.stroke(); }
+    for (const [p, s] of angry ? [] : [[L, -1], [R, 1]]) { x.beginPath(); x.moveTo(p[0] - s * 4, p[1] - 14); x.quadraticCurveTo(p[0] + s * 14, p[1] - 4, p[0] + s * 4, p[1] + 14); x.lineWidth = 6; x.stroke(); }
   });
   texCache.set(key, t); return t;
 }
@@ -336,12 +350,14 @@ export function makeDocao(skinOrId, opts = {}) {
   const sp = headPoint(0, snoutY);
   const snout = mesh(roundedCyl(0.2, snoutDepth, 0.065), snoutM, head, 0.012);
   snout.rotation.x = Math.PI / 2 - 0.12; snout.scale.set(1.22, 1, 0.82); snout.position.set(0, snoutY, sp.z + snoutDepth / 2 - 0.08);
+  const jaw = mesh(new THREE.BoxGeometry(0.34, 0.13, 0.18), snoutM, head, 0.008); // queixo quadrado, só aparece no Mewing
+  jaw.position.set(0, snoutY - 0.22, sp.z + 0.06); jaw.visible = false;
   for (const s of [-1, 1]) {
     const n = new THREE.Mesh(new THREE.CircleGeometry(0.042, 18), dark); n.scale.set(0.85, 1.35, 1);
     n.position.set(s * 0.085, snoutY + 0.01, sp.z + snoutDepth - 0.08 + 0.004); n.rotation.set(-0.12, 0, -s * 0.2); head.add(n);
   }
   // olhos grandes: branco + íris marrom + pupila + brilho; sobrancelhas grossas
-  const eyes = [];
+  const eyes = [], brows = [];
   for (const s of [-1, 1]) {
     const th = s * 0.33, ey = 1.7; const n = headNormal(th, ey); const p = headPoint(th, ey, -0.02);
     const eye = new THREE.Group(); eye.position.copy(p); eye.lookAt(p.clone().add(n)); eye.userData.n = n; head.add(eye);
@@ -357,7 +373,7 @@ export function makeDocao(skinOrId, opts = {}) {
     const bp = headPoint(s * 0.36, 1.95, 0.02), bn = headNormal(s * 0.36, 1.95);
     const brow = new THREE.Group(); brow.position.copy(bp); brow.lookAt(bp.clone().add(bn)); head.add(brow);
     const arc = 1.5; const b = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.032, 8, 20, arc), basic(PALETTE.brow));
-    b.rotation.z = (Math.PI - arc) / 2 - s * 0.18; b.position.y = -0.1; b.scale.set(1, 0.8, 0.6); brow.add(b);
+    b.rotation.z = (Math.PI - arc) / 2 - s * 0.18; b.position.y = -0.1; b.scale.set(1, 0.8, 0.6); brow.add(b); brows.push(brow);
   }
 
   // braços: manga (cor da camiseta) + punho escuro + braço + mão-luva (punho fechado)
@@ -375,9 +391,13 @@ export function makeDocao(skinOrId, opts = {}) {
     }
     mesh(new THREE.CapsuleGeometry(0.125, 0.28, 4, 12), skinM, piv, 0.012).position.y = -0.33;
     const fist = mesh(new THREE.SphereGeometry(0.155, 18, 14), skinM, piv, 0.012); fist.position.y = -0.57; fist.scale.set(1, 0.95, 1.05);
-    const thumb = mesh(new THREE.CapsuleGeometry(0.04, 0.06, 4, 8), skinM, piv, 0.008); thumb.position.set(-s * 0.08, -0.5, 0.08); thumb.rotation.z = s * 0.6;
+    const thumb = mesh(new THREE.CapsuleGeometry(0.04, 0.06, 4, 8), skinM, piv, 0.008); thumb.position.set(-s * 0.08, -0.5, 0.08); thumb.rotation.z = s * 0.6; if (s === -1) thumb.userData.isThumb = true;
     arms.push(piv); fists.push({ fist, thumb });
   }
+  // dedo indicador da mão direita: só aparece no Mewing, arrastando a mandíbula
+  const point = new THREE.Group(); point.visible = false; arms[0].add(point);
+  mesh(new THREE.CapsuleGeometry(0.03, 0.13, 4, 8), skinM, point, 0.005).position.y = 0.095;
+  const nail = mesh(new THREE.SphereGeometry(0.026, 8, 6), toon('#fff3dc'), point, 0); nail.scale.set(0.8, 0.45, 1); nail.position.y = 0.175;
   // armas em 3ª pessoa
   const guns = [];
   if (withGun) {
@@ -385,9 +405,19 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.11, 0.13, 0.62), toon('#3b3f4a'), r, 0.01);
     mesh(new THREE.BoxGeometry(0.07, 0.2, 0.1), toon('#e63946'), r, 0.01).position.set(0, -0.13, 0.02);
     const br = mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8), toon('#222'), r, 0); br.position.set(0, 0.01, 0.42); br.rotation.x = Math.PI / 2;
+    // Calibre 12 em 3ª pessoa: SPAS-12 (preta, protetor de calor furado, tubo, telha com sulcos, coronha dobrada por cima)
     const sg = new THREE.Group(); sg.position.copy(r.position); g.add(sg);
-    mesh(new THREE.BoxGeometry(0.14, 0.12, 0.5), toon('#8b5a2b'), sg, 0.01).position.z = -0.05;
-    for (const s of [-1, 1]) { const b = mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 10), toon('#55555f'), sg, 0.01); b.position.set(s * 0.035, 0.03, 0.35); b.rotation.x = Math.PI / 2; }
+    const spM = toon('#2a2d33'), spD = toon('#1b1d22'), spP = toon('#202227'), spH = toon('#08090b');
+    mesh(new THREE.BoxGeometry(0.11, 0.13, 0.32), spM, sg, 0.01).position.z = -0.04;
+    const spG = mesh(new THREE.BoxGeometry(0.06, 0.15, 0.07), spP, sg, 0.008); spG.position.set(0, -0.12, -0.14); spG.rotation.x = 0.35;
+    const spB = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.55, 10), toon('#3a3d44'), sg, 0.008); spB.rotation.x = Math.PI / 2; spB.position.set(0, 0.035, 0.38);
+    const spS = mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.3, 12), spD, sg, 0.008); spS.rotation.x = Math.PI / 2; spS.position.set(0, 0.04, 0.3);
+    for (const z of [0.2, 0.28, 0.36]) mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 8), spH, sg, 0).position.set(0, 0.077, z); // furos
+    const spT = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.48, 10), spM, sg, 0.008); spT.rotation.x = Math.PI / 2; spT.position.set(0, -0.035, 0.36);
+    mesh(new THREE.BoxGeometry(0.1, 0.085, 0.2), spP, sg, 0.008).position.set(0, -0.035, 0.32); // telha
+    for (const z of [0.25, 0.3, 0.35, 0.4]) mesh(new THREE.BoxGeometry(0.104, 0.089, 0.012), spH, sg, 0).position.set(0, -0.035, z);
+    for (const x of [-0.04, 0.04]) mesh(new THREE.BoxGeometry(0.01, 0.014, 0.4), spD, sg, 0.004).position.set(x, 0.09, 0); // coronha dobrada
+    mesh(new THREE.BoxGeometry(0.09, 0.05, 0.02), spD, sg, 0.004).position.set(0, 0.075, 0.2);
     // sniper (cano longo + luneta)
     const sn = new THREE.Group(); sn.position.copy(r.position); g.add(sn);
     mesh(new THREE.BoxGeometry(0.1, 0.12, 0.75), toon('#5c7a3a'), sn, 0.01).position.z = 0.02;
@@ -456,7 +486,59 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.035, 0.62, 0.03), toon('#6b3f22'), bw, 0.008);
     mesh(new THREE.BoxGeometry(0.012, 0.52, 0.012), toon('#f4efe4'), bw, 0.004).position.z = 0.05;
     const arr = mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.38, 6), toon('#c4a574'), bw, 0.004); arr.rotation.x = Math.PI / 2; arr.position.set(0, 0.02, 0.18);
-    guns.push(xb, bw); for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw]) o.visible = false;
+    guns.push(xb, bw);
+    // FAMAS (bullpup): corpo comprido, alça de transporte em cima, pente atrás do cabo
+    const fm = new THREE.Group(); fm.position.copy(r.position); g.add(fm);
+    mesh(new THREE.BoxGeometry(0.1, 0.12, 0.66), toon('#4b5240'), fm, 0.01).position.z = 0.02;
+    mesh(new THREE.BoxGeometry(0.03, 0.03, 0.4), toon('#2a2d35'), fm, 0.006).position.set(0, 0.13, 0.04);
+    for (const z of [-0.14, 0.22]) mesh(new THREE.BoxGeometry(0.03, 0.08, 0.03), toon('#2a2d35'), fm, 0.004).position.set(0, 0.09, z);
+    mesh(new THREE.BoxGeometry(0.05, 0.14, 0.06), toon('#2a2d35'), fm, 0.006).position.set(0, -0.12, 0.12);
+    mesh(new THREE.BoxGeometry(0.06, 0.15, 0.08), toon('#e63946'), fm, 0.006).position.set(0, -0.13, -0.14);
+    const fmb = mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 8), toon('#22252c'), fm, 0.006); fmb.rotation.x = Math.PI / 2; fmb.position.set(0, 0.01, 0.45);
+    guns.push(fm);
+    // Disco Voador: lançador roxo com o disquinho em cima da boca
+    const dk = new THREE.Group(); dk.position.copy(r.position); g.add(dk);
+    mesh(new THREE.BoxGeometry(0.12, 0.12, 0.5), toon('#5b3fa0'), dk, 0.008).position.z = 0.02;
+    const dkc = mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.04, 16), toon('#2a2d35'), dk, 0.006); dkc.position.set(0, 0.07, 0.36);
+    const dks = mesh(new THREE.SphereGeometry(0.15, 14, 8), toon('#c9d1d9'), dk, 0.006); dks.position.set(0, 0.11, 0.36); dks.scale.set(1, 0.26, 1);
+    mesh(new THREE.SphereGeometry(0.06, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon('#7df9ff'), dk, 0.004).position.set(0, 0.12, 0.36);
+    guns.push(dk);
+    // Sabre Duplo: um em cada mão (o da esquerda é o twin; main.js liga/desliga os dois juntos)
+    const dualHold = (arm, s) => { const h = new THREE.Group(); h.position.set(0, -0.64, 0.05); h.rotation.set(-Math.PI / 2, s * 0.2, s * 0.05); arm.add(h); const sb = makeWorldSaber(); h.add(sb); h.userData.blade = sb.userData.blade; h.userData.glow = sb.userData.glow; return h; };
+    const d2r = dualHold(arms[0], 1), d2l = dualHold(arms[1], -1); d2r.userData.twin = d2l;
+    guns.push(d2r);
+    // Lança-Milho: tambor de pipoqueira vermelho/branco, cano curto com boca amarela e a espiga em cima
+    const mh = new THREE.Group(); mh.position.copy(r.position); g.add(mh);
+    const mhd = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.34, 14), toon('#e63946'), mh, 0.008); mhd.rotation.x = Math.PI / 2;
+    const mhs = mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.05, 14), toon('#f5f1e8'), mh, 0); mhs.rotation.x = Math.PI / 2; mhs.position.z = 0.04;
+    const mhb = mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.24, 10), toon('#2a2d35'), mh, 0.006); mhb.rotation.x = Math.PI / 2; mhb.position.z = 0.3;
+    mesh(new THREE.TorusGeometry(0.052, 0.012, 6, 14), toon('#ffd23f'), mh, 0).position.z = 0.42;
+    mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.16, 8), toon('#f2c230'), mh, 0.005).position.set(0, 0.17, 0);
+    guns.push(mh); // 18 = Lança-Milho
+    // Estilingue de Ovo: forquilha de madeira, elástico vermelho e o ovinho puxado pra trás
+    const es = new THREE.Group(); es.name = 'estilingue'; es.position.set(0.04, 1.0, 0.6); g.add(es);
+    mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.14, 8), toon('#8b5a2b'), es, 0.006);
+    for (const s of [-1, 1]) { const f = mesh(new THREE.BoxGeometry(0.025, 0.12, 0.025), toon('#8b5a2b'), es, 0.005); f.position.set(s * 0.05, 0.11, 0); f.rotation.z = -s * 0.45; }
+    mesh(new THREE.BoxGeometry(0.12, 0.012, 0.012), toon('#e63946'), es, 0.004).position.set(0, 0.17, -0.04);
+    const eo = mesh(new THREE.SphereGeometry(0.04, 10, 8), toon('#fff3dc'), es, 0.004); eo.scale.set(1, 1.3, 1); eo.position.set(0, 0.17, -0.07);
+    guns.push(es); // 19 = Estilingue de Ovo
+    // Minigun: carcaça, 6 canos num grupo que gira (main.js gira por userData.barrels), caixa de munição à esquerda
+    const mg = new THREE.Group(); mg.position.copy(r.position); mg.position.y -= 0.08; g.add(mg);
+    mesh(new THREE.BoxGeometry(0.15, 0.16, 0.42), toon('#3a3f4a'), mg, 0.01).position.z = 0.0;
+    mesh(new THREE.BoxGeometry(0.155, 0.04, 0.1), toon('#e63946'), mg, 0.006).position.set(0, 0.09, 0.05);
+    const mgb = new THREE.Group(); mgb.position.set(0, 0, 0.42); mg.add(mgb);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, b = mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.46, 8), toon('#22252c'), mgb, 0.005); b.rotation.x = Math.PI / 2; b.position.set(Math.cos(a) * 0.045, Math.sin(a) * 0.045, 0); }
+    mesh(new THREE.TorusGeometry(0.062, 0.012, 6, 16), toon('#1a1c22'), mgb, 0.004).position.z = 0.2;
+    mesh(new THREE.BoxGeometry(0.12, 0.15, 0.2), toon('#5c6b3a'), mg, 0.006).position.set(-0.14, -0.07, -0.04);
+    mesh(new THREE.BoxGeometry(0.05, 0.1, 0.03), toon('#2a2d35'), mg, 0.004).position.set(0, 0.14, -0.02); // alça
+    mg.userData.barrels = mgb; guns.push(mg); // 20 = Minigun
+    const lm = new THREE.Group(); lm.name = 'lmg'; lm.position.copy(r.position); g.add(lm);
+    mesh(new THREE.BoxGeometry(0.12, 0.14, 0.72), toon('#3a4034'), lm, 0.01).position.z = 0.04;
+    const lmb = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.4, 8), toon('#22252c'), lm, 0.006); lmb.rotation.x = Math.PI / 2; lmb.position.set(0, 0.02, 0.52);
+    mesh(new THREE.BoxGeometry(0.1, 0.16, 0.14), toon('#5c6b3a'), lm, 0.006).position.set(-0.12, -0.06, 0.02);
+    mesh(new THREE.BoxGeometry(0.05, 0.14, 0.06), toon('#2a2d35'), lm, 0.006).position.set(0, -0.12, 0.1);
+    guns.push(lm); // 21 = Metralhadora do Chiqueiro
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -468,7 +550,21 @@ export function makeDocao(skinOrId, opts = {}) {
     (obj.userData.anchor === 'head' || ['cap', 'glasses', 'sunglasses', 'headphones'].includes(part.type) ? head : g).add(obj);
   }
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
-  return { group: g, legs, arms, guns, head, skin, flashMats: [skinM, faceM, shirtM, snoutM] };
+  for (const b of brows) b.userData.base = { p: b.position.clone(), q: b.quaternion.clone() };
+  const face = { eyes, brows, faceM, tex: [tone, beard, facePaint], neutralMap: faceM.map, angryMap: null, t: 0, target: 0, hold: 0 };
+  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
+}
+
+// Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.
+// amount é a mesma transição usada pelas hitboxes, inclusive no multiplayer.
+export function setCrouchPose(model, amount) {
+  const c = crouchAmount(amount), bend = c * 0.7;
+  model.group.scale.y = stanceScale(c);
+  model.legs.forEach((leg, i) => {
+    leg.rotation.x += bend;
+    leg.rotation.z = (i === 0 ? -1 : 1) * c * 0.12;
+    leg.position.y = 0.4 + 0.36 * (Math.cos(bend) - 1) + 0.04 * Math.sin(bend);
+  });
 }
 
 export function sleeveColor(shirt) { return shirt.sleeveColor || (shirt.pattern ? shirt.pattern.colors[0] : (shirt.color || '#d8261c')); }
@@ -489,6 +585,7 @@ export function setPose(model, pose) {
     if (pose === 'gun') a.rotation.set(-1.32, -s * 0.5, s * 0.12);
     else if (pose === 'reload') a.rotation.set(-0.8, -s * 0.4, s * 0.1);
     else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
+    else if (pose === 'saber2') { if (i === 0) a.rotation.set(-1.25, 0.15, -0.4); else a.rotation.set(-1.25, -0.15, 0.4); } // um sabre em cada mão, abertos
     else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
@@ -645,4 +742,32 @@ export function makeKnife(scale = 1, th = 0.004) {
   for (const z of [-0.058, -0.026, 0.066]) for (const sx of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.004, 10), toon('#e8edf2')); r.rotation.z = Math.PI / 2; r.position.set(sx * 0.0165, -0.004, z); g.add(r); }
   for (const sx of [-1, 1]) { const lg = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 0.02), new THREE.MeshBasicMaterial({ map: knifeLogoTex, transparent: true })); lg.position.set(sx * 0.0162, -0.004, 0.022); lg.rotation.y = sx * Math.PI / 2; g.add(lg); }
   g.scale.setScalar(scale); return g;
+}
+
+// ---------- expressão: 'neutral' (sorrisão) e 'angry' (bravo ao atirar/golpear) ----------
+// setExpression(model, 'angry', hold) segura a cara de bravo por `hold` s depois do último chamado; updateExpression(model, dt)
+// faz a mistura (~0,08 s pra entrar, ~0,15 s pra voltar). Só mexe em transform das sobrancelhas/olhos e troca a textura do rosto
+// (variante 'brava' criada uma vez por combinação tom/barba/pintura e reaproveitada): nada de geometria nova por frame.
+const _eq = new THREE.Quaternion(), _ez = new V3(0, 0, 1), _ey = new V3();
+export function setExpression(model, expr = 'neutral', hold = 0.5) {
+  const f = model && model.face; if (!f) return;
+  if (expr === 'angry') { f.target = 1; f.hold = Math.max(f.hold, hold); } else { f.target = 0; f.hold = 0; }
+  model.expression = expr;
+}
+export function updateExpression(model, dt) {
+  const f = model && model.face; if (!f) return;
+  if (f.target && (f.hold -= dt) <= 0) { f.target = 0; model.expression = 'neutral'; }
+  if (f.t === f.target && f.applied) return;
+  f.t = f.target > f.t ? Math.min(f.target, f.t + dt / 0.08) : Math.max(f.target, f.t - dt / 0.15); f.applied = true;
+  const t = f.t * f.t * (3 - 2 * f.t);
+  for (let i = 0; i < f.brows.length; i++) { // sobrancelhas descem, achatam e giram pro centro (V)
+    const b = f.brows[i], s = i === 0 ? -1 : 1, B = b.userData.base;
+    b.quaternion.copy(B.q).multiply(_eq.setFromAxisAngle(_ez, s * 0.7 * t)); b.scale.set(1 + 0.4 * t, 1 - 0.15 * t, 1 + 0.4 * t);
+    _ey.set(0, 1, 0).applyQuaternion(B.q); b.position.copy(B.p).addScaledVector(_ey, -0.1 * t);
+  }
+  for (const e of f.eyes) e.scale.set(1, 1 - 0.42 * t, 1); // aperta os olhos
+  const angry = f.t > 0.5;
+  if (angry && !f.angryMap) f.angryMap = headTexture(...f.tex, true);
+  const map = angry ? f.angryMap : f.neutralMap;
+  if (f.faceM.map !== map) { f.faceM.map = map; f.faceM.emissiveMap = map; }
 }
