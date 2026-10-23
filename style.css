@@ -1752,3 +1752,25 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 .closet-card button:disabled{opacity:.55;cursor:default;background:var(--ink);border-color:#162c25}
 .closet-note{margin:6px 0;font:700 12px/1.35 "Trebuchet MS",sans-serif;color:#5b4a2c}
 @media (max-width:700px){.closet-main{flex-direction:column}.closet-left{width:100%}.closet-left canvas{margin:0 auto}}
+
+.closet-left canvas{cursor:grab;touch-action:none}.closet-left canvas.drag{cursor:grabbing}
+.closet-turn{display:flex;gap:6px;justify-content:center;margin-top:6px}.closet-turn button{margin:0;width:auto;padding:4px 12px;font:900 12px "Trebuchet MS",sans-serif;color:var(--ink);background:#fff5d3;border:2px solid #9f8b66;border-radius:4px;cursor:pointer}.closet-turn button:hover{border-color:#203e35}
+.closet-slot h4 small,.closet-sec h4 small{font-weight:700;letter-spacing:0;text-transform:none;color:#7a6a4a}
+.closet-card small{display:block;margin-top:2px;font:700 11px/1.25 "Trebuchet MS",sans-serif;color:#5b4a2c}
+
+/* desafios do dia (aba do ateliê + atalho na faixa do menu) */
+button.chal-link{margin:0;padding:0 2px;width:auto;font:inherit;font-weight:900;color:#8a2a1c;background:none;border:0;border-bottom:2px dotted #8a2a1c;cursor:pointer;box-shadow:none}
+button.chal-link:hover{color:#203e35;border-color:#203e35}
+.chal-head{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px;font:900 15px "Trebuchet MS",sans-serif;color:var(--ink)}.chal-head span{font-size:12px;color:#5b4a2c}
+.chal-card{margin:0 0 8px;padding:9px 11px;background:#fff5d3;border:2px solid #9f8b66;border-left-width:7px;border-radius:5px}
+.chal-card.tF{border-left-color:#3d8b4f}.chal-card.tM{border-left-color:#d38b1d}.chal-card.tD{border-left-color:#b3261e}
+.chal-card.done{background:#e7f3d9}
+.chal-top{display:flex;gap:8px;align-items:center;font:900 11px "Trebuchet MS",sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#5b4a2c}
+.chal-tier{padding:1px 6px;border-radius:3px;color:#fff;background:#3d8b4f}.tM .chal-tier{background:#d38b1d}.tD .chal-tier{background:#b3261e}
+.chal-prize{margin-left:auto;font-size:13px;color:#7a5a08}
+.chal-text{margin:5px 0 6px;font:800 14px/1.3 "Trebuchet MS",sans-serif;color:var(--ink)}
+.chal-bar{height:9px;background:#e6d3a8;border:1px solid #9f8b66;border-radius:5px;overflow:hidden}.chal-bar i{display:block;height:100%;background:linear-gradient(90deg,#f2c94c,#d4a82a)}
+.done .chal-bar i{background:#3d8b4f}
+.chal-prog{margin-top:3px;font:800 12px "Trebuchet MS",sans-serif;color:#5b4a2c;text-align:right}
+#menu .acct-strip button.chal-link{display:inline;padding:0 1px;font:900 12px/1.3 "Trebuchet MS",sans-serif;letter-spacing:0;color:#8a2a1c;background:none;border:0;border-bottom:2px dotted #8a2a1c;border-radius:0;box-shadow:none;transform:none;white-space:nowrap}
+#menu .acct-strip button.chal-link:hover{color:#203e35;border-color:#203e35;filter:none}

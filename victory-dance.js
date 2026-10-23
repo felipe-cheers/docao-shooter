@@ -1,6 +1,8 @@
 // Danças da vitória. O mesmo pose serve a sombra do menu e o Docão no mapa.
 import * as THREE from 'three';
 import { makeDocao } from './docao.js';
+import { DANCE_IDS } from './shared/emote.js';
+import { danceItems } from './shared/closet.js';
 
 export const DANCES = [
   { id: 'moonwalk', name: 'Moonwalk', line: 'Desliza pra trás' },
@@ -8,7 +10,11 @@ export const DANCES = [
   { id: 'sixseven', name: '6 7', line: 'Um de cada vez' },
 ];
 
-export const normDance = (id) => (DANCES.some((d) => d.id === id) ? id : 'moonwalk');
+// Danças da loja (compradas com a moeda do jogo): mesmo formato, vêm do catálogo em shared/closet.js
+export const PAID_DANCE_LIST = danceItems().map((i) => ({ id: i.dance, name: i.name, line: i.line, item: i.id, price: i.price }));
+export const ALL_DANCES = [...DANCES, ...PAID_DANCE_LIST];
+export const isPaidDance = (id) => PAID_DANCE_LIST.some((d) => d.id === id);
+export const normDance = (id) => (DANCE_IDS.includes(id) ? id : 'moonwalk');
 
 function rest(model) {
   model.arms.forEach((a, i) => { const s = i === 0 ? -1 : 1; a.rotation.set(0.05, 0, s * 0.22); });
@@ -27,7 +33,7 @@ export function poseVictory(model, id, t) {
   rest(model);
   const g = model.group;
   g.rotation.order = 'YXZ';
-  let hop = 0, lean = 0, sway = 0, slide = 0;
+  let hop = 0, lean = 0, sway = 0, slide = 0, spin = 0;
   if (id === 'moonwalk') {
     const u = (t % 1.7) / 1.7;
     const glide = Math.sin(u * Math.PI * 2);
@@ -60,6 +66,48 @@ export function poseVictory(model, id, t) {
       model.jaw.scale.set(1.15 + 0.35 * grow, 0.8 + 0.7 * grow, 0.75 + 0.35 * grow);
     }
     pointAlongJaw(model, stroke);
+  } else if (id === 'floss') {
+    const p = Math.sin(t * 8.2);
+    const A = model.arms;
+    A[0].rotation.set(-0.35, 0, 0.1 + 0.95 * p); A[1].rotation.set(-0.35, 0, 0.1 + 0.95 * p);
+    sway = -0.2 * p; slide = 0; hop = Math.abs(Math.sin(t * 8.2)) * 0.04;
+    model.legs[0].rotation.set(0.1 * p, 0, -0.1); model.legs[1].rotation.set(-0.1 * p, 0, 0.1);
+    model.head.rotation.set(0.05, 0.25 * p, 0);
+    lean = 0.12;
+  } else if (id === 'robot') {
+    const q = Math.floor(t * 3.4) % 4, ph = (t * 3.4) % 1;
+    const POSE = [[-1.57, 0, -1.57, 0.2], [-0.5, 0, -2.5, 0.2], [-2.3, 0.2, -0.3, 0], [-1.57, 0, -1.57, 0.2]];
+    const [a0, , a1] = POSE[q]; const sn = ph < 0.18 ? ph / 0.18 : 1;
+    model.arms[0].rotation.set(a0 * sn - 0.1 * (1 - sn), 0, -0.7 * (q === 1 ? 0.2 : 1));
+    model.arms[1].rotation.set(a1 * sn - 0.1 * (1 - sn), 0, 0.7 * (q === 2 ? 0.2 : 1));
+    model.head.rotation.set(0, [0, 0.55, 0, -0.55][q], 0);
+    model.legs[q % 2].rotation.x = -0.35; model.legs[1 - (q % 2)].rotation.x = 0.1;
+    hop = 0; lean = 0.03;
+  } else if (id === 'chicken') {
+    const f = Math.sin(t * 15);
+    model.arms[0].rotation.set(-0.15, 0, -(1.0 + 0.45 * f)); model.arms[1].rotation.set(-0.15, 0, 1.0 + 0.45 * f);
+    model.head.rotation.set(0.28 * Math.sin(t * 7.5), 0.3 * Math.sin(t * 3.75), 0);
+    model.legs[0].rotation.x = 0.5 * Math.max(0, Math.sin(t * 7.5)); model.legs[1].rotation.x = 0.5 * Math.max(0, -Math.sin(t * 7.5));
+    hop = Math.abs(Math.sin(t * 7.5)) * 0.1; lean = 0.18;
+  } else if (id === 'dab') {
+    const u = (t % 1.9) / 1.9;
+    const k = u < 0.16 ? smooth(u / 0.16) : u < 0.78 ? 1 : 1 - smooth((u - 0.78) / 0.22);
+    model.arms[0].rotation.set(-1.9 * k, 0.9 * k, 0.1 + 0.3 * k);
+    model.arms[1].rotation.set(-0.35 - 1.1 * k, -0.2 * k, -0.22 - 1.2 * k);
+    model.head.rotation.set(0.55 * k, -0.2 * k, 0.12 * k);
+    lean = 0.12 * k; sway = 0.06 * k; hop = 0;
+    model.legs[0].rotation.set(0.05 * k, 0, -0.04); model.legs[1].rotation.set(0.05 * k, 0, 0.04);
+  } else if (id === 'wiggle') {
+    const w = Math.sin(t * 7.4);
+    model.arms[0].rotation.set(-2.5 + 0.12 * w, 0, -0.35 + 0.25 * w); model.arms[1].rotation.set(-2.5 - 0.12 * w, 0, 0.35 + 0.25 * w);
+    spin = 0.55 * w; sway = 0.22 * Math.sin(t * 7.4 + Math.PI / 2); hop = Math.abs(Math.sin(t * 7.4)) * 0.05;
+    model.legs[0].rotation.set(0.06, 0, -0.14); model.legs[1].rotation.set(0.06, 0, 0.14);
+    model.head.rotation.set(-0.05, -0.2 * w, 0.1 * w);
+  } else if (id === 'spin') {
+    spin = t * 9.5; hop = 0.12 + 0.05 * Math.sin(t * 9.5);
+    model.arms[0].rotation.set(0, 0, -1.55); model.arms[1].rotation.set(0, 0, 1.55);
+    model.legs[0].rotation.set(0.5, 0, -0.1); model.legs[1].rotation.set(-0.3, 0, 0.1);
+    model.head.rotation.set(0.08, 0, 0); lean = 0.05;
   } else {
     const beat = (t * 0.95) % 2;
     const side = beat < 1 ? 0 : 1;
@@ -77,7 +125,7 @@ export function poseVictory(model, id, t) {
   const b = model.danceBase;
   if (b) {
     const yaw = b.yaw || 0;
-    g.rotation.y = yaw;
+    g.rotation.y = yaw + spin;
     g.position.set(b.x - Math.sin(yaw) * slide, b.y + hop, b.z - Math.cos(yaw) * slide);
   }
   g.rotation.x = lean;

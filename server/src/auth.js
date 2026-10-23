@@ -7,7 +7,7 @@
 // ============================================================
 import { cleanNick, nickKey, nickError, passError } from '../../shared/nick.js';
 import { SKINS, skinOk } from '../../skins.js';
-import { coinCreditStmt, wallet, buyItem, equipSkin } from './shop.js';
+import { coinCreditStmt, chalUpdates, wallet, buyItem, equipSkin } from './shop.js';
 
 const ITERS = 100000; // teto do WebCrypto do Workers
 const SESSION_TTL = 30 * 24 * 3600; // s
@@ -87,7 +87,10 @@ export async function recordStats(env, items) {
   if (!env.DB || !items || !items.length) return;
   const c = (n) => Math.max(0, Math.min(5000, n | 0));
   const st = items.filter((i) => i && STAT_MODES.includes(i.mode) && i.acct > 0).map((i) => env.DB.prepare('INSERT INTO stats (account_id, mode, kills, deaths, wins, matches) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(account_id, mode) DO UPDATE SET kills = kills + ?3, deaths = deaths + ?4, wins = wins + ?5, matches = matches + ?6').bind(i.acct, i.mode, c(i.k), c(i.d), c(i.w), c(i.m)));
-  const cs = items.filter((i) => i && i.acct > 0 && i.c > 0 && STAT_MODES.includes(i.mode)).map((i) => coinCreditStmt(env, i.acct, i.c)).filter(Boolean);
+  const ok = items.filter((i) => i && i.acct > 0 && STAT_MODES.includes(i.mode));
+  const ch = await chalUpdates(env, ok).catch((e) => { console.error('desafios', e && e.message); return new Map(); }); // só lê se a sala contou algo
+  const coins = new Map(); for (const i of ok) if (i.c > 0) coins.set(i.acct, (coins.get(i.acct) || 0) + i.c);
+  const cs = [...new Set([...coins.keys(), ...ch.keys()])].map((a) => coinCreditStmt(env, a, coins.get(a) || 0, ch.get(a) || null)).filter(Boolean);
   if (st.length || cs.length) await env.DB.batch([...st, ...cs]);
 }
 
@@ -164,7 +167,7 @@ export async function handleAccountRoute(req, env, url, json) {
     if (p === '/api/me' && m === 'GET') {
       const a = await accountFromToken(env, tok); if (!a) return json({ error: 'Sessão inválida' }, 401);
       const w = await wallet(env, a.id);
-      return json({ account: { ...publicAcc(a), custom: w.custom, coins: w.coins }, stats: await myStats(env, a.id), items: w.items, earn: { today: w.earnToday, cap: w.dayCap } });
+      return json({ account: { ...publicAcc(a), custom: w.custom, coins: w.coins }, stats: await myStats(env, a.id), items: w.items, earn: { today: w.earnToday, cap: w.dayCap }, chal: w.chal });
     }
     if (p === '/api/me/skin' && m === 'PUT') {
       const a = await accountFromToken(env, tok); if (!a) return json({ error: 'Sessão inválida' }, 401);

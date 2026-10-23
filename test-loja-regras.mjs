@@ -1,4 +1,4 @@
-// Regras de ganho de Torresmos no servidor (sem navegador, sem D1): abates, fim de partida, vitória, teto por partida, saída, Treino.
+// Regras de ganho de Docoins no servidor (sem navegador, sem D1): abates, fim de partida, vitória, teto por partida, saída, Treino.
 // Uso: node test-loja-regras.mjs
 import { Game } from './server/src/game.js';
 import { EARN } from './shared/closet.js';
@@ -13,7 +13,7 @@ function mk(mode = 'dm', map = 'arena') {
   return { g, a, stats, step, killBots };
 }
 { const { g, a, stats, killBots } = mk(); killBots(4);
-  ok(a.ck === 4 * EARN.killBot, `4 abates em bots = ${4 * EARN.killBot} Torresmos acumulados (${a.ck})`);
+  ok(a.ck === 4 * EARN.killBot, `4 abates em bots = ${4 * EARN.killBot} Docoins acumulados (${a.ck})`);
   g.T = 5; g.endMatch(); const s = stats.find((x) => x.acct === 7);
   ok(s && s.c === 4 * EARN.killBot, `fim de partida curta (<${EARN.minSecs}s): só os abates (c=${s && s.c})`); }
 { const { g, a, stats, killBots } = mk(); killBots(1); a.jt = 0; g.T = EARN.minSecs + 10; g.endMatch(); const s = stats.find((x) => x.acct === 7);
@@ -26,6 +26,6 @@ function mk(mode = 'dm', map = 'arena') {
   }
 { const { g, a, stats, killBots } = mk(); killBots(2); g.T = 70; g.flushStats(a, false); const n1 = stats.reduce((t, x) => t + (x.c | 0), 0); g.flushStats(a, false); g.flushStats(a, false);
   ok(stats.reduce((t, x) => t + (x.c | 0), 0) === n1, 'gravar o mesmo ganho várias vezes nunca soma de novo (delta por jogador)'); }
-{ const { g, a, stats } = mk('treino', 'estande'); g.flushStats(a, true, true); ok(stats.length === 0, 'Treino: nada é gravado (sem Torresmos, sem ranking)'); }
+{ const { g, a, stats } = mk('treino', 'estande'); g.flushStats(a, true, true); ok(stats.length === 0, 'Treino: nada é gravado (sem Docoins, sem ranking)'); }
 { const { g, a, stats, killBots } = mk(); const t = [...g.ents.values()].find((x) => x.bot); a.ck = 0; g.kill(a, a, 0, false); ok(a.ck === 0, 'suicídio não rende'); }
 console.log(fails.length ? `\n${fails.length} FALHA(S)` : '\nTUDO OK'); process.exit(fails.length ? 1 : 0);

@@ -14,6 +14,8 @@ export const getAccount = () => account;
 export const getStats = () => stats;
 export const getItems = () => items.slice(); // mochila no cliente: vem do /api/me e da compra (sem polling)
 export const getEarn = () => earn;
+let chal = null, chalAt = 0; // desafios do dia (vêm no /api/me; o relógio do reset anda no cliente)
+export const getChal = () => (chal ? { ...chal, resetIn: Math.max(0, Math.round(chal.resetIn - (Date.now() - chalAt) / 1000)) } : null);
 export const onAccount = (f) => { subs.add(f); return () => subs.delete(f); };
 function setToken(t) { token = t || ''; try { if (token) localStorage.setItem(KEY, token); else localStorage.removeItem(KEY); } catch (e) { /* sem storage */ } }
 
@@ -34,7 +36,7 @@ export function dropSession() { setToken(''); account = null; stats = null; item
 export async function refreshStats() {
   if (!token) return null; const r = await api('/api/me', { auth: true });
   if (r.status === 401) { dropSession(); return null; }
-  if (r.ok) { account = r.data.account; stats = r.data.stats; items = r.data.items || []; earn = r.data.earn || earn; emit(); } return r.ok ? r.data : null;
+  if (r.ok) { account = r.data.account; stats = r.data.stats; items = r.data.items || []; earn = r.data.earn || earn; chal = r.data.chal || null; chalAt = Date.now(); emit(); } return r.ok ? r.data : null;
 }
 export const loadMe = refreshStats; // no começo: confere o token guardado (se vencer, volta a convidado)
 let skinTimer = 0, skinWant = '';

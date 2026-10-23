@@ -296,18 +296,20 @@
   <div class="ticket-panel closet-panel">
     <h2 id="closetTitle">Ateliê do Docão</h2>
     <div id="closetGuest" class="hidden">
-      <p class="acct-note">O ateliê é para quem tem <b>conta</b>: seu visual personalizado fica salvo e você compra partes de skin com <b>Torresmos</b>, que só se ganham jogando.</p>
+      <p class="acct-note">O ateliê é para quem tem <b>conta</b>: seu visual personalizado fica salvo e você compra partes de skin com <b>Docoins 🪙</b>, que se ganham jogando e completando os desafios do dia.</p>
       <button type="button" id="closetLogin" class="ticket-btn">ENTRAR / CRIAR CONTA</button>
     </div>
     <div id="closetMain" class="closet-main hidden">
       <div class="closet-left">
         <canvas id="closetCanvas" width="260" height="330" aria-label="Prévia 3D do visual"></canvas>
+        <div class="closet-turn" aria-label="Girar a prévia"><button type="button" data-turn="-0.6" aria-label="Girar para a esquerda">◀</button><button type="button" data-turn="front">Frente</button><button type="button" data-turn="0.6" aria-label="Girar para a direita">▶</button></div>
         <div id="closetWallet" class="closet-wallet"></div>
       </div>
       <div class="closet-right">
-        <div class="otabs"><button type="button" id="closetTabLook" class="otab active">Personalizar</button><button type="button" id="closetTabShop" class="otab">Loja</button></div>
+        <div class="otabs"><button type="button" id="closetTabLook" class="otab active">Personalizar</button><button type="button" id="closetTabShop" class="otab">Loja</button><button type="button" id="closetTabChal" class="otab">🎯 Desafios</button></div>
         <div id="closetLook"></div>
         <div id="closetShop" class="hidden"></div>
+        <div id="closetChal" class="hidden"></div>
         <div id="closetMsg" class="acct-err" role="status"></div>
       </div>
     </div>

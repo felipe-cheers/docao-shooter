@@ -2,17 +2,19 @@
 //  Telas de conta e ranking (menu): faixa "Convidado / Logado", janela de entrar/criar conta e ranking.
 //  Textos em pt-BR, estilo comanda. Não mexe no jogo: só avisa quem mudou via onAccount.
 // ============================================================
-import { getAccount, getStats, onAccount, register, login, logout, loadRank, refreshStats } from './account.js';
+import { getAccount, getStats, getChal, onAccount, register, login, logout, loadRank, refreshStats } from './account.js';
 import { nickError, passError, cleanNick } from './shared/nick.js';
+import { COIN_ICON, CURRENCY } from './shared/closet.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const RANK_MODES = [['all', 'Geral'], ['dm', 'Mata-mata'], ['dom', 'Dominação'], ['bomb', 'Bomba'], ['inv', 'Invasão']];
 let reg = false, rankMode = 'all', rankSort = 'kills', busy = false;
 
+const chalChip = () => { const c = getChal(); if (!c || !c.list) return ''; const n = c.list.filter((x) => x.done).length; return ` · <button type="button" id="chalLink" class="chal-link" title="Desafios do dia">🎯 Desafios ${n}/${c.list.length}</button>`; };
 function renderStrip(a) {
   const t = $('acctTxt'), b = $('acctBtn');
-  if (a) { t.innerHTML = `🐷 Logado como <b>${esc(a.nick)}</b> · 🥓 <b>${a.coins | 0}</b> Torresmos`; b.textContent = 'MINHA CONTA'; }
+  if (a) { t.innerHTML = `🐷 Logado como <b>${esc(a.nick)}</b> · ${COIN_ICON} <b>${a.coins | 0}</b> ${CURRENCY}${chalChip()}`; b.textContent = 'MINHA CONTA'; }
   else { t.textContent = 'Convidado · crie uma conta para ter apelido só seu, skin guardada e ranking'; b.textContent = 'ENTRAR'; }
 }
 function renderUser() {

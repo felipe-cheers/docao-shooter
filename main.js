@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeWardrobeCase } from './menu-wardrobe.js';
 import { makeMenuBackdrop } from './menu-backdrop.js';
 import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, setCrouchPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife, setExpression, updateExpression, makeNukeRider } from './docao.js';
-import { DANCES, normDance, poseVictory, makeShadowDancer, hideVictoryGuns, resetVictoryPose } from './victory-dance.js';
+import { DANCES, PAID_DANCE_LIST, isPaidDance, normDance, poseVictory, makeShadowDancer, hideVictoryGuns, resetVictoryPose } from './victory-dance.js';
 import { DANCE_TIME, danceId } from './shared/emote.js';
 import { makeFPSniper, poseSniperBolt } from './sniper-view.js';
 import { makeFPSaber, makeWorldSaber, setSaberColor, poseSaber } from './saber-view.js';
@@ -50,7 +50,7 @@ import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from './shared/c
 import { EGG, eggSpeed, eggDmg, stepEgg } from './shared/egg.js';
 import { killIcon, weaponSvg } from './killfeed-icons.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, FAMAS, DISC_W, SABER2, CORN_W, EGG_W, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, LMG, COMMANDO, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
-import { getAccount, onAccount, loadMe, saveSkin as saveAcctSkin, dropSession } from './account.js';
+import { getAccount, getItems, onAccount, loadMe, saveSkin as saveAcctSkin, dropSession } from './account.js';
 import { initAccountUI } from './account-ui.js';
 import { initCloset } from './closet-ui.js';
 import { bindGrenadeVoice, playGrenadeVoice, grenadeVoiceEnabled, setGrenadeVoiceEnabled } from './grenade-voice.js';
@@ -265,6 +265,8 @@ let spawnHold = 'primary'; // arma na mão ao nascer: primary | secondary | mele
 try { spawnHold = normHand(localStorage.getItem('docao.hand')); } catch (e) { /* sem storage */ }
 let selectedDance = 'moonwalk';
 try { selectedDance = normDance(localStorage.getItem('docao.dance')); } catch (e) { /* sem storage */ }
+// dança da loja só vale se estiver na mochila da conta; senão cai no Moonwalk (o servidor só repassa o id: é enfeite)
+const myDance = () => { if (!isPaidDance(selectedDance)) return selectedDance; const d = PAID_DANCE_LIST.find((x) => x.id === selectedDance); return d && getAccount() && getItems().includes(d.item) ? selectedDance : 'moonwalk'; };
 let matchLimits = { weapons: null, powers: null }; // cópia dos limites no instante em que a partida solo começa
 let rulesLive = false;
 const teamMode = () => mode === 'dom' || mode === 'bomb'; // modos com times
@@ -678,7 +680,7 @@ function stepEmote(dt) {
   emote.clock += dt;
   const m = emote.model;
   m.danceBase = { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw + Math.PI };
-  poseVictory(m, selectedDance, emote.clock);
+  poseVictory(m, myDance(), emote.clock);
   camTgt.set(m.group.position.x, player.pos.y + 1.05, m.group.position.z);
   let bestD = 0, bx = camTgt.x, by = camTgt.y, bz = camTgt.z + 3;
   for (let i = 0; i < 6; i++) {
@@ -3938,6 +3940,7 @@ function buildDancePicks() {
   setDance(selectedDance);
 }
 buildDancePicks();
+document.addEventListener('docao-dance-pick', (e) => setDance(e.detail));
 function layoutDanceCast() {
   danceCast.forEach((d) => {
     if (!d.model) { d.model = makeShadowDancer(); danceScene.add(d.model.group); }
@@ -4395,7 +4398,7 @@ function loop() {
     if (victory.on) {
       if (window.__danceT != null) victory.clock = window.__danceT; // testes: congela o passo da dança
       else victory.clock += dt;
-      poseVictory(victory.model, selectedDance, victory.clock);
+      poseVictory(victory.model, myDance(), victory.clock);
       frameVictoryCam();
     }
   }
@@ -5031,7 +5034,7 @@ function startOnlineMatch(m) {
 function netTick(dt) {
   const o = online; if (!o || !o.inMatch || !player) return;
   o.sendAcc += dt; if (o.sendAcc < 1 / SEND_HZ) return; o.sendAcc = 0;
-  const p = player, msg = { t: 'u', sq: p.sq, y: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3), c: +p.crouch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping, dn: emote.on ? selectedDance : '' };
+  const p = player, msg = { t: 'u', sq: p.sq, y: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3), c: +p.crouch.toFixed(3), g: p.onGround ? 1 : 0, w: p.weapon, pg: o.net.ping, dn: emote.on ? myDance() : '' };
   if (p.alive) { msg.p = v3a(p.pos); msg.v = v3a(p.vel); }
   if (bombS && p.useHold) msg.bk = 1; // Bomba: segurando E
   if (o.evq.length) { msg.ev = o.evq; o.evq = []; }
@@ -5200,7 +5203,7 @@ function personalEvent(ev) {
   }
 }
 function onlineEnd(m) {
-  if (getAccount()) setTimeout(() => loadMe(), 3500); // com conta: confere o saldo de Torresmos uma vez por fim de partida (o servidor já gravou), sem polling
+  if (getAccount()) setTimeout(() => loadMe(), 3500); // com conta: confere o saldo de Docoins uma vez por fim de partida (o servidor já gravou), sem polling
   dropNukeRider(); // o fim online já veio do servidor; só tira o docão se o 'nb' não tiver passado
   const o = online; stopInspect(true); stopEmote(); // a mira com zoom continua na câmera lenta
   if (state === 'over' || !player) return;

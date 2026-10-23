@@ -1,14 +1,16 @@
 // ============================================================
-//  ATELIÊ DO DOCÃO: partes de skin à venda (moeda do jogo: Torresmos) e "visual personalizado".
+//  ATELIÊ DO DOCÃO: partes de skin à venda (moeda do jogo: Docoins 🪙) e "visual personalizado".
 //  Só dados e funções puras: o cliente (prévia, loja) e o Worker (validação, compra, equipar) usam este mesmo arquivo.
 //  O visual personalizado vira um CÓDIGO curto de texto (ex.: "x1.3.5.h3.f2.s1") que viaja pela rede no lugar do id da skin.
-//  Cores da camiseta e do shorts são grátis (paleta fixa). As PARTES custam Torresmos e só podem ser usadas se estiverem na mochila (D1).
+//  Cores da camiseta e do shorts são grátis (paleta fixa). As PARTES custam Docoins e só podem ser usadas se estiverem na mochila (D1).
 //  As peças 3D são as que já existem em costumes.js/docao.js, só com cores novas: nada de modelo novo, nada de alterar skins atuais.
 // ============================================================
-export const CURRENCY = 'Torresmos';
+export const CURRENCY = 'Docoins', CURRENCY_ONE = 'Docoin', COIN_ICON = '🪙'; // moeda do jogo (escolhida pelo Matheus)
+export const SHOP_NAME = 'Ateliê'; // nome da loja PROVISÓRIO: trocar só aqui (botão do menu e título da janela usam esta constante)
+export const coinsText = (n) => `${COIN_ICON} ${n | 0} ${(n | 0) === 1 ? CURRENCY_ONE : CURRENCY}`;
 export const COLORS = ['#d8261c', '#e8702a', '#f2c94c', '#6fbf3b', '#17b394', '#2b8fd8', '#1446b8', '#7a3fb5', '#e66fa8', '#f4f4f4', '#8a8a8a', '#2c2c30', '#1d1410', '#7a4a24'];
-export const SLOTS = [['h', 'Cabeça'], ['f', 'Rosto'], ['n', 'Pescoço'], ['b', 'Corpo'], ['w', 'Cintura'], ['g', 'Mãos'], ['s', 'Pés']];
-// id = letra do espaço + número. price em Torresmos. part = peça 3D (type + opções) já existente no modelo do Docão.
+export const SLOTS = [['c', 'Fantasia completa'], ['h', 'Cabeça'], ['f', 'Rosto'], ['n', 'Pescoço'], ['b', 'Corpo'], ['w', 'Cintura'], ['g', 'Mãos'], ['s', 'Pés']];
+// id = letra do espaço + número. price em Docoins. part = peça 3D (type + opções) já existente no modelo do Docão.
 export const ITEMS = [
   { id: 'h1', name: 'Boné do Churrasqueiro', emoji: '🧢', price: 60, part: { type: 'cap', color: '#d8261c', brim: '#7d1f19' } },
   { id: 'h2', name: 'Boné Verde Granja', emoji: '🧢', price: 60, part: { type: 'cap', color: '#203e35', brim: '#12261f' } },
@@ -17,6 +19,16 @@ export const ITEMS = [
   { id: 'h5', name: 'Gorro do Inverno Sulista', emoji: '🧶', price: 90, part: { type: 'roundCap', color: '#2a6f4a', knot: '#f2c94c' } },
   { id: 'h6', name: 'Cabeleira de Roqueiro', emoji: '🎸', price: 180, part: { type: 'longHair', color: '#3b2414' } },
   { id: 'h7', name: 'Cabeleira Pimenta com Faixa', emoji: '🌶️', price: 200, part: { type: 'longHair', color: '#b3261e', headband: '#f4f4f4' } },
+  { id: 'h8', name: 'Boné Dourado de Dono da Granja', emoji: '👑', price: 150, part: { type: 'cap', color: '#d4a82a', brim: '#8a6a14' } },
+  { id: 'h9', name: 'Boné Rosa Choque', emoji: '🩷', price: 60, part: { type: 'cap', color: '#e66fa8', brim: '#a8487a' } },
+  { id: 'h10', name: 'Chapéu de Palha da Roça', emoji: '👒', price: 70, part: { type: 'bucketHat', color: '#e2c97a', band: '#b3261e' } },
+  { id: 'h11', name: 'Fone Gamer Neon', emoji: '🎧', price: 130, part: { type: 'headphones', color: '#15151a', accent: '#7dff6a' } },
+  { id: 'h12', name: 'Chifrinhos de Boi', emoji: '🐂', price: 160, part: { type: 'boiHorns', color: '#fbfbf6', band: '#1b4fbf' } },
+  { id: 'h13', name: 'Topete Rockabilly', emoji: '🎸', price: 140, part: { type: 'quiffHair', color: '#1d1410', side: '#2a1a10' } },
+  { id: 'h14', name: 'Cabelo Bagunçado de Madrugada', emoji: '💤', price: 100, part: { type: 'messyHair', color: '#4a2a18' } },
+  { id: 'h15', name: 'Gorro de Natal do Chiqueiro', emoji: '🎄', price: 90, part: { type: 'roundCap', color: '#d8261c', knot: '#f4f4f4' } },
+  { id: 'h16', name: 'Fedora Branco de Domingo', emoji: '🤍', price: 160, part: { type: 'fedora', color: '#f4f4f4', band: '#15151a' } },
+  { id: 'h17', name: 'Capuz de Coelhinho', emoji: '🐰', price: 200, part: { type: 'hood', color: '#f4f4f4', tip: '#e66fa8', cheeks: '#e66fa8' } },
   { id: 'f1', name: 'Óculos de Intelectual', emoji: '👓', price: 50, part: { type: 'glasses', color: '#15151a' } },
   { id: 'f2', name: 'Óculos Escuros de Churrasco', emoji: '🕶️', price: 90, part: { type: 'sunglasses', color: '#15151a', lens: '#1a1a1a' } },
   { id: 'f3', name: 'Óculos Quadrado de Dev', emoji: '🤓', price: 70, part: { type: 'squareGlasses', color: '#121214' } },
@@ -43,7 +55,40 @@ export const ITEMS = [
   { id: 's3', name: 'Meiões Brancos', emoji: '🧦', price: 40, part: { type: 'socks', color: '#f4f4f4' } },
   { id: 's4', name: 'Tênis Azul Royal', emoji: '👟', price: 80, part: { type: 'shoes', color: '#1446b8', sole: '#f4f4f4' } },
 ];
+// ---------- FANTASIAS COMPLETAS (espaço "c"): trocam camiseta, shorts e peças de uma vez, como as skins prontas; não combinam com outras partes ----------
+// costume = mesmo formato de skins.js (shirt, pants, parts, face, eyes), só com peças que o modelo já tem.
+ITEMS.push(
+  { id: 'c1', name: 'Super Porco', emoji: '🦸', price: 900, costume: { shirt: { color: '#1446b8', trim: '#d8261c', details: [{ type: 'star', color: '#f2c94c', outline: '#7d1f19', size: 0.3 }] }, pants: '#d8261c',
+    parts: [{ type: 'robe', color: '#d8261c', lining: '#f2c94c' }, { type: 'glove', hand: 'both', color: '#d8261c' }, { type: 'shoes', color: '#d8261c', sole: '#f2c94c' }] } },
+  { id: 'c2', name: 'Ninja do Chiqueiro', emoji: '🥷', price: 750, costume: { shirt: { color: '#15151a', trim: '#15151a', sleeves: 'long', details: [{ type: 'backStripes', color: '#b3261e' }] }, pants: '#15151a',
+    parts: [{ type: 'roundCap', color: '#15151a', knot: '#b3261e' }, { type: 'bandana', color: '#b3261e' }, { type: 'sash', color: '#15151a', belt: '#b3261e', buckle: '#8a8a8a' }, { type: 'armWraps', color: '#b3261e' }, { type: 'shoes', color: '#15151a', sole: '#b3261e' }] } },
+  { id: 'c3', name: 'Peão de Rodeio', emoji: '🤠', price: 650, costume: { shirt: { color: '#c8102e', trim: '#7d1f19', sleeves: 'long', pattern: { type: 'stripes', colors: ['#c8102e', '#f4f4f4'], count: 10 } }, pants: '#2e3a55',
+    parts: [{ type: 'bucketHat', color: '#7a4a24', band: '#3a2412' }, { type: 'bandana', color: '#1446b8' }, { type: 'sash', color: '#6b4a2a', belt: '#3a2412', buckle: '#d4a82a' }, { type: 'shoes', color: '#5a3a1c', sole: '#2a1a0c' }] } },
+  { id: 'c4', name: 'Chef Supremo do Rodízio', emoji: '👨‍🍳', price: 600, costume: { shirt: { color: '#f4f4f4', trim: '#d8d8d8', sleeves: 'long' }, pants: '#2c2c30',
+    parts: [{ type: 'roundCap', color: '#f4f4f4', knot: '#f4f4f4' }, { type: 'scarf', colors: ['#d8261c', '#f4f4f4'] }, { type: 'vest', color: '#f4f4f4', pocket: '#cfcfcf' }, { type: 'shoes', color: '#15151a', sole: '#f4f4f4' }] } },
+  { id: 'c5', name: 'Estrela do Rock', emoji: '🎤', price: 800, costume: { shirt: { color: '#15151a', trim: '#7a3fb5', sleeves: 'long', details: [{ type: 'star', color: '#e66fa8', outline: '#f4f4f4', size: 0.28 }] }, pants: '#7a3fb5',
+    parts: [{ type: 'longHair', color: '#e66fa8' }, { type: 'sunglasses', color: '#d4a82a', lens: '#2a1a4a' }, { type: 'chain', color: '#d4a82a' }, { type: 'glove', hand: 'right', color: '#15151a' }, { type: 'shoes', color: '#15151a', sole: '#e66fa8' }] } },
+  { id: 'c6', name: 'Capitão Costelinha', emoji: '🏴‍☠️', price: 850, costume: { shirt: { color: '#f4f4f4', trim: '#1446b8', sleeves: 'long', pattern: { type: 'hoops', colors: ['#f4f4f4', '#1446b8'], count: 8 } }, pants: '#2c2c30',
+    parts: [{ type: 'fedora', color: '#15151a', band: '#d4a82a' }, { type: 'beard', color: '#2a1a10' }, { type: 'sash', color: '#b3261e', belt: '#3a2412', buckle: '#d4a82a' }, { type: 'epaulettes', color: '#d4a82a' }, { type: 'shoes', color: '#2a1a10', sole: '#15151a' }] } },
+  { id: 'c7', name: 'Caipira de Festa Junina', emoji: '🌽', price: 550, costume: { shirt: { color: '#c8102e', trim: '#f2c94c', pattern: { type: 'stripes', colors: ['#c8102e', '#17203a'], count: 12 } }, pants: '#2b5c8a',
+    parts: [{ type: 'bucketHat', color: '#e2c97a', band: '#b3261e' }, { type: 'bandana', color: '#f2c94c' }, { type: 'socks', color: '#f4f4f4' }, { type: 'shoes', color: '#5a3a1c', sole: '#2a1a0c' }] } },
+  { id: 'c8', name: 'Docão Dourado', emoji: '🏆', price: 1500, costume: { shirt: { color: '#d4a82a', trim: '#8a6a14', logo: { text: 'C!', color: '#fff3c4' } }, pants: '#d4a82a', float: true,
+    parts: [{ type: 'fedora', color: '#d4a82a', band: '#8a6a14' }, { type: 'sunglasses', color: '#8a6a14', lens: '#2a1a0a' }, { type: 'chain', color: '#f4f4f4' }, { type: 'epaulettes', color: '#fff3c4' }, { type: 'glove', hand: 'both', color: '#fff3c4', sparkle: true }, { type: 'shoes', color: '#8a6a14', sole: '#fff3c4' }] } },
+);
+// ---------- DANÇAS (espaço "d"): não entram no visual (código), vão pra mochila e a escolhida é a do botão B. As 3 de sempre continuam grátis. ----------
+ITEMS.push(
+  { id: 'd1', name: 'Escovinha', emoji: '🪥', price: 400, dance: 'floss', line: 'Braços varrendo o quadril' },
+  { id: 'd2', name: 'Robozão da Granja', emoji: '🤖', price: 450, dance: 'robot', line: 'Travadinho e mecânico' },
+  { id: 'd3', name: 'Galinha Maluca', emoji: '🐔', price: 350, dance: 'chicken', line: 'Asinhas e pescoço de galinha' },
+  { id: 'd4', name: 'Espirro do Porquinho', emoji: '🤧', price: 300, dance: 'dab', line: 'Atchim no cotovelo' },
+  { id: 'd5', name: 'Rebolado do Leitão', emoji: '💃', price: 400, dance: 'wiggle', line: 'Quadril solto e mãos pro alto' },
+  { id: 'd6', name: 'Helicóptero', emoji: '🚁', price: 500, dance: 'spin', line: 'Gira, gira, gira' },
+);
 for (const it of ITEMS) it.slot = it.id[0];
+export const COSTUME_SLOT = 'c', DANCE_SLOT = 'd';
+export const isLookSlot = (k) => SLOTS.some(([x]) => x === k);
+export const danceItems = () => ITEMS.filter((i) => i.slot === DANCE_SLOT);
+export const itemForDance = (dance) => ITEMS.find((i) => i.dance === dance) || null;
 export const itemById = (id) => ITEMS.find((i) => i.id === id) || null;
 export const itemPrice = (id) => { const i = itemById(id); return i ? i.price : 0; };
 
@@ -54,7 +99,8 @@ export const DEFAULT_LOOK = { shirt: 0, pants: 12, items: {} }; // camiseta verm
 export const isLookCode = (s) => typeof s === 'string' && s.length <= 48 && LOOK_RE.test(s);
 export function encodeLook(look) {
   const sh = Math.max(0, Math.min(COLORS.length - 1, look.shirt | 0)), pn = Math.max(0, Math.min(COLORS.length - 1, look.pants | 0));
-  const its = SLOTS.map(([k]) => look.items && look.items[k]).filter((id) => id && itemById(id));
+  let its = SLOTS.map(([k]) => look.items && look.items[k]).filter((id) => id && itemById(id));
+  const cos = its.find((id) => id[0] === COSTUME_SLOT); if (cos) its = [cos]; // fantasia completa: sozinha
   return LOOK_PREFIX + sh.toString(16) + '.' + pn.toString(16) + its.map((i) => '.' + i).join('');
 }
 // Devolve { shirt, pants, items:{slot:id} } ou null se o código for inválido (formato, cor fora da paleta, item inexistente, dois itens no mesmo espaço).
@@ -63,7 +109,8 @@ export function parseLook(code) {
   const f = code.split('.'); const shirt = parseInt(f[1], 16), pants = parseInt(f[2], 16);
   if (!(shirt < COLORS.length) || !(pants < COLORS.length)) return null;
   const items = {};
-  for (const id of f.slice(3)) { const it = itemById(id); if (!it || items[it.slot]) return null; items[it.slot] = id; }
+  for (const id of f.slice(3)) { const it = itemById(id); if (!it || !isLookSlot(it.slot) || items[it.slot]) return null; items[it.slot] = id; }
+  if (items[COSTUME_SLOT] && Object.keys(items).length > 1) return null; // fantasia não mistura com outras partes
   if (encodeLook({ shirt, pants, items }) !== code) return null; // só a forma canônica (ordem dos espaços fixa)
   return { shirt, pants, items };
 }
@@ -71,13 +118,15 @@ export const lookItemIds = (code) => { const l = parseLook(code); return l ? Obj
 // Skin pronta pro modelo (mesmo formato de skins.js). O id é o próprio código.
 export function lookToSkin(code) {
   const l = typeof code === 'string' ? parseLook(code) : code; if (!l) return null;
+  const cid = l.items[COSTUME_SLOT];
+  if (cid) { const c = itemById(cid).costume; return { ...JSON.parse(JSON.stringify(c)), id: typeof code === 'string' ? code : encodeLook(l), name: itemById(cid).name, custom: true }; }
   const parts = Object.values(l.items).map((id) => ({ ...itemById(id).part }));
   return { id: typeof code === 'string' ? code : encodeLook(l), name: 'Visual personalizado', custom: true,
     shirt: { color: COLORS[l.shirt], trim: '#1d1410', logo: { text: 'C!', color: '#f5e6d0' } }, pants: COLORS[l.pants], parts };
 }
 export const priceOfLook = (code, owned = []) => lookItemIds(code).filter((i) => !owned.includes(i)).reduce((s, i) => s + itemPrice(i), 0);
 
-// ---------- ganho de Torresmos (regras; quem aplica é o servidor) ----------
+// ---------- ganho de Docoins (regras; quem aplica é o servidor) ----------
 export const EARN = {
   killHuman: 2, killBot: 1,        // por abate (adversário humano / bot ou zumbi)
   finish: 10, win: 15,             // fim de partida jogada (>= minSecs) e vitória

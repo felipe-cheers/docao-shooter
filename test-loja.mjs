@@ -1,4 +1,4 @@
-// Teste do servidor da loja/ateliê: ganho de Torresmos, tetos, compra, compra dupla, equipar item que não é seu, skins na rede.
+// Teste do servidor da loja/ateliê: ganho de Docoins, tetos, compra, compra dupla, equipar item que não é seu, skins na rede.
 // Precisa: cd server && npx wrangler d1 migrations apply docao-contas --local && npx wrangler dev --var ALLOW_TEST:1 --var RATE_REG_MAX:500   (SÓ LOCAL)
 // Uso: node test-loja.mjs [http://127.0.0.1:8787]
 import { execSync } from 'node:child_process';
@@ -19,7 +19,7 @@ const today = Math.floor(Date.now() / 86400000);
 
 // ---- carteira e segurança básica ----
 const tA = await reg('Loja'); let m = await me(tA);
-ok(m.account.coins === 0 && Array.isArray(m.items) && m.items.length === 0 && m.earn.cap === EARN.dayCap, 'conta nova: 0 Torresmos, mochila vazia, teto diário informado');
+ok(m.account.coins === 0 && Array.isArray(m.items) && m.items.length === 0 && m.earn.cap === EARN.dayCap, 'conta nova: 0 Docoins, mochila vazia, teto diário informado');
 let r = await call('POST', '/api/shop/buy', { item: 'h1' }); ok(r.status === 401, 'comprar sem login: 401');
 r = await call('POST', '/api/shop/buy', { item: 'h1' }, tA); ok(r.status === 402, 'sem saldo: 402 (nada é cobrado nem entregue)');
 r = await call('POST', '/api/shop/buy', { item: 'nao-existe' }, tA); ok(r.status === 400, 'item inexistente: 400');
@@ -49,7 +49,7 @@ r = await call('PUT', '/api/me/skin', { skin: mine }, tA); m = await me(tA);
 ok(r.status === 200 && m.account.skin === mine && m.account.custom === mine, 'equipar visual com parte própria: salvo na conta');
 r = await call('PUT', '/api/me/skin', { skin: SKINS[2].id }, tA); m = await me(tA);
 ok(r.status === 200 && m.account.skin === SKINS[2].id && m.account.custom === mine, 'voltar a uma skin da lista mantém o visual personalizado guardado');
-// ---- ganho de Torresmos (partida online com bots, servidor local com ALLOW_TEST) ----
+// ---- ganho de Docoins (partida online com bots, servidor local com ALLOW_TEST) ----
 function join(code, { name = 'x', token, skin = SKINS[0].id } = {}) {
   return new Promise((res) => {
     const q = new URLSearchParams({ name, skin, primary: '0', secondary: '', melee: '', token: '' });
@@ -67,7 +67,7 @@ async function playMatch(token, kills, mode = 'dm') {
 }
 const tB = await reg('Ganha'); const idB = sql(`SELECT id FROM accounts WHERE nick = '${'Ganha' + tag}'`)[0].id;
 await playMatch(tB, 3); m = await me(tB);
-ok(m.account.coins === 3 * EARN.killBot, `3 abates em bots rendem ${3 * EARN.killBot} Torresmos e partida curta não leva bônus de fim (saldo ${m.account.coins})`);
+ok(m.account.coins === 3 * EARN.killBot, `3 abates em bots rendem ${3 * EARN.killBot} Docoins e partida curta não leva bônus de fim (saldo ${m.account.coins})`);
 sql(`UPDATE accounts SET earn_day = ${today}, earn_today = ${EARN.dayCap - 1}, coins = 0 WHERE id = ${idB}`);
 await playMatch(tB, 4); m = await me(tB);
 ok(m.account.coins === 1 && m.earn.today === EARN.dayCap, `teto diário: faltava 1 pra ${EARN.dayCap}, só entrou 1 (saldo ${m.account.coins}, hoje ${m.earn.today})`);
@@ -83,7 +83,7 @@ ok(m.account.coins === 1 + 2 * EARN.killBot && m.earn.today === 2 * EARN.killBot
   const P = await join(code, { token: tB }); P.send({ t: 'start' }); await wait(4500);
   for (let i = 0; i < 5; i++) { P.send({ t: 'testKill' }); await wait(150); }
   P.ws.close(); await wait(1500);
-  ok((await me(tB)).account.coins === before, 'Treino não rende Torresmos (abates e saída)');
+  ok((await me(tB)).account.coins === before, 'Treino não rende Docoins (abates e saída)');
 }
 // teto por partida: servidor limita no jogo (80) mesmo que passem mais abates
 ok(EARN.matchCap === 80 && EARN.dayCap === 400, 'regras: teto por partida 80 e por dia 400');

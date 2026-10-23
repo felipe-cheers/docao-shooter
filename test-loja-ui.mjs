@@ -23,18 +23,18 @@ await page.screenshot({ path: `${SHOTS}/1-guest.png` });
 await page.click('#closetLogin'); ok(await vis('#acctModal'), 'convite abre a janela de conta');
 await page.click('#acctTabReg'); await page.fill('#acctNick', NICK); await page.fill('#acctPass', 'senha-forte-123'); await page.fill('#acctPass2', 'senha-forte-123'); await page.click('#acctSubmit');
 ok(await until(() => document.getElementById('acctModal').classList.contains('hidden')), 'conta criada');
-ok(/0<\/b> Torresmos|🥓 0 Torresmos/.test(await page.innerHTML('#acctTxt')) || /Torresmos/.test(await page.textContent('#acctTxt')), 'faixa do menu mostra o saldo de Torresmos');
+ok(/0<\/b> Docoins|🪙 0 Docoins/.test(await page.innerHTML('#acctTxt')) || /Docoins/.test(await page.textContent('#acctTxt')), 'faixa do menu mostra o saldo de Docoins');
 // ateliê com conta
 await page.click('#closetBtn'); await until(() => !document.getElementById('closetMain').classList.contains('hidden'));
 ok(await vis('#closetMain') && await vis('#closetCanvas'), 'conta: ateliê abre com prévia 3D');
-ok(/🥓\s*0/.test(await page.textContent('#closetWallet')), 'saldo 0 na carteira');
+ok(/🪙\s*0/.test(await page.textContent('#closetWallet')), 'saldo 0 na carteira');
 await page.click('#closetTabShop');
 ok((await page.$$('#closetShop .closet-card')).length >= 30, 'loja lista as partes (30+)');
-ok(await page.isDisabled('[data-buy="h1"]') && /FALTAM 60/.test(await page.textContent('[data-buy="h1"]')), 'sem Torresmos o botão de comprar fica travado ("FALTAM 60")');
+ok(await page.isDisabled('[data-buy="h1"]') && /FALTAM 60/.test(await page.textContent('[data-buy="h1"]')), 'sem Docoins o botão de comprar fica travado ("FALTAM 60")');
 await page.click('[data-try="h3"]'); ok(await page.evaluate(() => document.querySelector('[data-try="h3"]').classList.contains('try')), 'clicar no cartão experimenta a parte na prévia (sem comprar)');
 await page.click('[data-try="h3"]');
 await page.click('#closetClose');
-// ganha Torresmos "jogando": no teste, coloca saldo direto no D1 LOCAL
+// ganha Docoins "jogando": no teste, coloca saldo direto no D1 LOCAL
 const id = sql(`SELECT id FROM accounts WHERE nick = '${NICK}'`)[0].id; sql(`UPDATE accounts SET coins = 200 WHERE id = ${id}`);
 await page.click('#closetBtn'); await until(() => /200/.test(document.getElementById('closetWallet').textContent), 8000);
 ok(/200/.test(await page.textContent('#closetWallet')), 'ao abrir, o saldo vem do servidor (200)');
@@ -42,8 +42,8 @@ await page.click('#closetTabShop'); await page.screenshot({ path: `${SHOTS}/2-lo
 ok(!(await page.isDisabled('[data-buy="h1"]')), 'com saldo o botão COMPRAR libera');
 await page.click('[data-buy="h1"]');
 ok(await until(() => /NA MOCHILA/.test(document.querySelector('[data-buy="h1"]').textContent), 8000), 'compra feita: cartão vira "NA MOCHILA"');
-ok(/🥓\s*140/.test(await page.textContent('#closetWallet')), 'saldo caiu pra 140 (preço decidido pelo servidor)');
-ok(sql(`SELECT coins FROM accounts WHERE id = ${id}`)[0].coins === 140 && sql(`SELECT item FROM inventory WHERE account_id = ${id}`).length === 1, 'D1 confirma: 140 Torresmos e 1 item na mochila');
+ok(/🪙\s*140/.test(await page.textContent('#closetWallet')), 'saldo caiu pra 140 (preço decidido pelo servidor)');
+ok(sql(`SELECT coins FROM accounts WHERE id = ${id}`)[0].coins === 140 && sql(`SELECT item FROM inventory WHERE account_id = ${id}`).length === 1, 'D1 confirma: 140 Docoins e 1 item na mochila');
 // personalizar
 await page.click('#closetTabLook');
 ok(await vis('[data-slot="h"][data-item="h1"]') && !(await vis('[data-slot="h"][data-item="h3"]')), 'personalizador só oferece partes que estão na mochila');
@@ -71,9 +71,9 @@ const parts = await page.evaluate(async () => {
   const c = await import('./shared/closet.js'), d = await import('./docao.js'); await import('./costumes.js');
   const count = (g) => { let n = 0; g.traverse(() => n++); return n; };
   const base = count(d.makeDocao(c.encodeLook({ shirt: 0, pants: 12, items: {} }), { withGun: false, pose: 'idle' }).group); const bad = [];
-  for (const it of c.ITEMS) { try { const m = d.makeDocao(c.encodeLook({ shirt: 1, pants: 3, items: { [it.slot]: it.id } }), { withGun: false, pose: 'idle' }); if (count(m.group) <= base) bad.push(it.id + ':sem-marca'); } catch (e) { bad.push(it.id + ':' + e.message); } }
+  for (const it of c.ITEMS.filter((i) => c.isLookSlot(i.slot))) { try { const m = d.makeDocao(c.encodeLook({ shirt: 1, pants: 3, items: { [it.slot]: it.id } }), { withGun: false, pose: 'idle' }); if (count(m.group) <= base) bad.push(it.id + ':sem-marca'); } catch (e) { bad.push(it.id + ':' + e.message); } }
   try { d.makeDocao(c.encodeLook({ shirt: 2, pants: 4, items: Object.fromEntries(c.SLOTS.map(([k]) => [k, c.ITEMS.find((i) => i.slot === k).id])) }), { withGun: false, pose: 'idle' }); } catch (e) { bad.push('tudo-junto:' + e.message); }
-  return { n: c.ITEMS.length, bad };
+  return { n: c.ITEMS.filter((i) => c.isLookSlot(i.slot)).length, bad };
 });
 ok(parts.bad.length === 0, `as ${parts.n} partes da loja montam no modelo (e todas juntas) ${parts.bad.join(', ')}`);
 const bad = errors.filter((e) => !/favicon|WebGL|GPU|swiftshader|status of 401/i.test(e)); ok(bad.length === 0, 'sem erros no console ' + (bad[0] || ''));
