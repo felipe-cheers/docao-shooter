@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.11.3 — Mouse Fujão 🖱️💀 (23/10/2026)
+🚑 **FIX RELÂMPAGO!** Tinha um bug cruel: você morria, ia clicar na arma nova... e o jogo **sequestrava o seu mouse** de volta, o cursor sumia e o painel fugia da sua mão. O Docão morto não tinha nem direito de escolher o armamento em paz. 😭
+🖱️ **Morreu? O cursor é seu.** Clicar na tela não prende mais o mouse enquanto você está morto: o cursor fica **livre e visível** pra você clicar na arma que quiser.
+📦 **Painel B da Invasão também:** com o painel aberto nas pausas, o clique no jogo não rouba o mouse. Apertou **B** de novo ou renasceu, o mouse volta pra mira.
+🎯 Renasceu? A mira volta na hora, como sempre.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.11.2 — Cara de Morto 💀📹 (23/10/2026)
 🚑 **FIX RÁPIDO!** Até hoje, quando o Docão virava bacon, ele ficava ali olhando pro nada, sem nem saber quem foi o desgraçado. Agora ele tem **direito à vingança visual**:
 📹 **Câmera do assassino:** morreu? A câmera passa a **seguir quem te matou** (jogador, bot ou até zumbi na Invasão), pra você encarar o culpado com a cara que ele merece. Se o assassino sumir ou morrer, a câmera fica no lugar da sua morte, de luto. Renasceu, volta tudo ao normal.
@@ -153,6 +160,7 @@ Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.11 · Salão de Festa** ([@paulo-cheers](https://github.com/paulo-cheers), PR #14): o dono da sala escolhe as armas e os power-ups, o menu lembra sua arma padrão, dança da vitória no B (moonwalk, mewing e sixseven; fora da Invasão) e o Docão do menu gira ao arrastar
 - **v1.11.1 · Hotfix da Munição:** Invasão com bem mais caixas de munição (Rodízio 6 → 28, Fazenda 4 → 18), caixa nova em 6 s, mais munição e +2 foguetes por caixa, zumbi solta caixa e facho amarelo pra achar
 - **v1.11.2 · Cara de Morto:** câmera segue quem te matou, tela cinza enquanto está morto e painel de armas discreto no canto
+- **v1.11.3 · Mouse Fujão:** morto (ou com o painel B aberto) o clique no jogo não prende mais o mouse, então dá pra clicar nas armas
 
 ---
 
