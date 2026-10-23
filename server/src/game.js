@@ -12,6 +12,7 @@ import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName, NAME_MAX } from '../../shared/names.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { normBotDiff, applyBotDiff, profileOf, nextThink, considerTarget, hitscanAim, nadeChoice, nadeWaitFor, nadeCooldown, rollStrafe, wantPanicReload, wantSafeReload, refreshCover, refreshFlank, hearGunshot as noteGunshot, scopeDelay } from '../../shared/bot-difficulty.js';
 import { normWeapons, normPowers, clampLoadout, botPool, weaponOn, powerOn } from '../../shared/loadout.js';
 import { DANCE_TIME, danceId } from '../../shared/emote.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
@@ -48,7 +49,7 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y * stanceScale(e.
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: MODE_OK(cfg.mode), time: normTime(cfg.time), chat: cfg.chat !== false, weapons: normWeapons(cfg.weapons), powers: normPowers(cfg.powers) };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, botDiff: normBotDiff(cfg.botDiff), mode: MODE_OK(cfg.mode), time: normTime(cfg.time), chat: cfg.chat !== false, weapons: normWeapons(cfg.weapons), powers: normPowers(cfg.powers) };
     this.chatLog = Array.isArray(cfg.chatLog) ? cfg.chatLog.filter((x) => x && typeof x.text === 'string').slice(-30) : [];
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
@@ -150,7 +151,8 @@ export class Game {
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
       connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off' };
-    if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
+    if (bot) Object.assign(e, { think: 0, target: null, aim: 0, strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
+    if (bot) applyBotDiff(e, this.cfg.botDiff);
     this.ents.set(id, e); return e;
   }
   entInfo(e) { const o = { id: e.id, name: e.name, skin: e.skin, bot: e.bot, tag: e.tag, kills: e.kills, deaths: e.deaths, alive: e.alive, primary: e.primary, w: e.weapon, team: e.team, caps: e.caps, pend: e.pendingTeam ? 1 : 0 };
@@ -291,6 +293,7 @@ export class Game {
         if (isInvasion(m.mode) && m.max) m.max = Math.min(m.max | 0, INV.MAX_PLAYERS);
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
+        if (typeof m.botDiff === 'string') { const next = normBotDiff(m.botDiff); if (next !== this.cfg.botDiff) { this.cfg.botDiff = next; for (const b of this.ents.values()) if (b.bot && !b.zt && !b.dummy) applyBotDiff(b, next); } else this.cfg.botDiff = next; }
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
         if ((m.mode === 'dm' || m.mode === 'dom' || m.mode === 'bomb' || isTraining(m.mode) || isInvasion(m.mode)) && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom' || m.mode === 'bomb') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
         if (typeof m.chat === 'boolean') this.cfg.chat = m.chat;
@@ -759,6 +762,7 @@ export class Game {
   // ---------- combate ----------
   // bala: atravessa parede leve e corpos (collateral) pela regra de shared/penetration.js (a mesma do cliente offline)
   hitscan(shooter, o, dirs, w, rewindT = this.T, mul = 1) {
+    this.hearGunshot(o, shooter);
     const W = WEAPONS[w], hits = new Map(), ends = [], holes = [], heliDmg = new Map(); const heliT = this.T - (shooter.bot ? 0 : clamp(shooter.ping / 1000, 0, 0.4));
     const scale = W.key === 'arco' ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
     const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, crouch: this.crouchAt(t, rewindT), size: t.zt ? t.size : 1 })); // agachado achata o corpo (traceShot)
@@ -826,7 +830,9 @@ export class Game {
     const n = { id: this.projId++, owner: e, pos: { ...o }, vel: { ...v }, explodeAt: this.T + (poke ? POKE.fuse : NADE.fuse), poke };
     this.nades.push(n); this.events.push(['nd', n.id, e.id, arr3(o), arr3(v), poke ? 1 : 0]);
   }
+  hearGunshot(origin, shooter) { noteGunshot([...this.ents.values()], origin, shooter, this.T); }
   launchRocket(e, o, d) {
+    this.hearGunshot(o, e);
     const R = WEAPONS[3].rocket, near = this.P.rayWorld(o, d, 0.7);
     this.events.push(['sh', e.id, 3, arr3(o), []]);
     if (near !== null) { const t = Math.max(0, near - 0.12); this.blast({ x: o.x + d.x * t, y: o.y + d.y * t, z: o.z + d.z * t }, e, { ...R, wIdx: 3, kind: 'r' }); return; }
@@ -1043,7 +1049,7 @@ export class Game {
   makeInvasion() {
     const g = this;
     return new InvasionCore({
-      T: () => g.T, P: g.P, nav: g.nav, size: g.map.size,
+      T: () => g.T, P: g.P, nav: g.nav, size: g.map.size, botDiff: () => g.cfg.botDiff,
       players: () => g.humans(),
       spawnZombie(type, pos) {
         const z = g.makeEnt({ name: '', skin: SKINS[0].id, primary: 0, bot: true }); z.zt = type;
@@ -1107,8 +1113,12 @@ export class Game {
     return { x: z.x + b.zoneOff.x, y: z.y, z: z.z + b.zoneOff.zz };
   }
   botWeaponFor(b, d) {
-    if (d < 3 && this.T > (b.knifeRoll || 0)) { b.knifeRoll = this.T + 1.5; b.knifeMode = Math.random() < 0.45; } // às vezes saca a faca colado no alvo
+    const mind = profileOf(b), hp = b.target ? b.target.hp : 100;
+    const hasAmmo = (i) => b.mag[i] > 0 || b.reserve[i] > 0;
+    // faca: colado no alvo; no Cachaço só pra acabar quem já está baixo
+    if (d < 3 && this.T > (b.knifeRoll || 0)) { b.knifeRoll = this.T + 1.5; b.knifeMode = hp <= mind.knifeHp && Math.random() < mind.knifeP; }
     if (b.knifeMode && d < 7) return b.slots[2] ?? KNIFE; if (d >= 7) b.knifeMode = false;
+    if (b.sloppy && hasAmmo(b.weapon)) return b.weapon; // Leitão insiste na arma errada pro alcance
     const side = b.slots[1] ?? PISTOL;
     const pr = b.primary; if (pr === 1) return d < 14 ? pr : side;
     if (WEAPONS[pr] && WEAPONS[pr].scope) { const min = pr === 5 ? 14 : pr === 6 ? 6 : 9; return d >= min ? pr : side; }
@@ -1124,17 +1134,29 @@ export class Game {
     if (bombFrozen(this.bomb)) { b.vel.x = b.vel.z = 0; b.useHold = false; return; } // Bomba: preparação, todo mundo parado
     if (b.dummy) { this.placeDummy(b); return; } // Treino: alvo não pensa, não mira, não atira
     if (b.reloadEnd && this.T >= b.reloadEnd) { b.mag[b.weapon] = WEAPONS[b.weapon].mag; b.reloadEnd = 0; }
+    const mind = profileOf(b);
     b.think -= dt;
     if (b.think <= 0) {
-      b.think = rand(0.18, 0.32); let best = null, bs = 1e9; const eye = center(b, 1.5);
+      b.think = nextThink(mind);
+      b.sloppy = Math.random() < mind.wrongGun;
+      let best = null, bs = 1e9; const eye = center(b, 1.5);
       for (const o of this.ents.values()) {
-        if (o === b || !o.alive || (!o.bot && !o.connected) || this.friends(o, b)) continue; const d = dist(o.pos, b.pos); if (d > 55) continue;
-        const score = d * (o.id === b.lastAttacker ? 0.5 : 1) * (!o.bot ? 0.85 : 1);
-        if (score < bs && this.P.losClear(eye, center(o, 1.2))) { best = o; bs = score; }
+        if (o === b || !o.alive || (!o.bot && !o.connected) || this.friends(o, b)) continue;
+        const d = dist(o.pos, b.pos);
+        const score = considerTarget(mind, d, { attacker: o.id === b.lastAttacker, player: !o.bot, hp: o.hp });
+        if (score != null && score < bs && this.P.losClear(eye, center(o, 1.2))) { best = o; bs = score; }
       }
       if (b.stunUntil > this.T) best = null; // levou choque: não trava alvo
       if (best !== b.target) { b.target = best; b.aim = 0; }
-      if (best) { b.lastSeen = { ...best.pos }; b.lastSeenAt = this.T; }
+      if (best) {
+        b.lastSeen = { ...best.pos }; b.lastSeenAt = this.T;
+        refreshCover(mind, b, best.pos, () => this.nav.randomNode(), (a, c) => this.P.losClear(a, c), this.T);
+        if (!(b.coverUntil > this.T)) refreshFlank(mind, b, best.pos, dist(best.pos, b.pos), this.T);
+        else { b.flankUntil = 0; b.flankGoal = null; }
+        const W = WEAPONS[b.weapon]; if (W && W.mag && wantPanicReload(mind, b.mag[b.weapon] / W.mag) && !b.reloadEnd) b.reloadEnd = this.T + W.reload;
+      } else if (mind.nadeFlush && b.nades > 0 && b.lastSeen && this.T - b.lastSeenAt < mind.nadeFlush && this.T > b.nextNade && Math.random() < mind.nadeP) {
+        this.botThrow(b, { pos: b.lastSeen, vel: { x: 0, y: 0, z: 0 } }); // copo no último lugar visto, não através da parede
+      }
     }
     if (b.target && !b.target.alive) b.target = null;
     const t = b.target; let mx = 0, mz = 0, desiredYaw = b.yaw;
@@ -1142,20 +1164,27 @@ export class Game {
     if (t) {
       let tx = t.pos.x - b.pos.x, tz = t.pos.z - b.pos.z; const d = Math.hypot(tx, tz) || 1; tx /= d; tz /= d; desiredYaw = face(tx, tz);
       const want = this.botWeaponFor(b, d); if (want !== b.weapon && !b.reloadEnd) { b.weapon = want; b.nextFire = Math.max(b.nextFire, this.T + 0.35); }
-      const range = BOT_RANGE[b.weapon];
+      const range = (BOT_RANGE[b.weapon] || 10) + mind.rangeBias;
       const zg = this.zoneGoal(b);
+      const coverOn = b.coverUntil > this.T && b.coverGoal;
+      const flankOn = !coverOn && b.flankUntil > this.T && b.flankGoal;
       if (zg) { const st = this.steer(b, zg); if (st) { mx += st.x * 1.5; mz += st.z * 1.5; } } // Dominação: vai pra zona atirando
       else if (this.zone || this.bomb) { /* dentro da zona / no objetivo: segura a posição, só strafe */ }
+      else if (coverOn) { const st = this.steer(b, b.coverGoal); if (st) { mx += st.x; mz += st.z; } } // ferido: some da linha de visão
+      else if (flankOn) { const st = this.steer(b, b.flankGoal); if (st) { mx += st.x; mz += st.z; } } // dá a volta em vez de correr reto
       else if (Math.abs(t.pos.y - b.pos.y) > 1.2 && d > 3) { const st = this.steer(b, t.pos); if (st) { mx += st.x; mz += st.z; } }
       else if (b.weapon === KNIFE) { if (d > 1.1) { mx += tx; mz += tz; } } // faca: cola no alvo
       else if (d > range + 3) { mx += tx; mz += tz; } else if (d < range - 3) { mx -= tx; mz -= tz; }
-      b.strafeT -= dt; if (b.strafeT <= 0) { b.strafeDir = pick([-1, 1, 1, -1, 0]); b.strafeT = rand(0.6, 1.8); if (Math.random() < 0.15 && b.onGround) b.vel.y = JUMP; }
-      mx += tz * b.strafeDir * 0.8; mz += -tx * b.strafeDir * 0.8;
-      if (b.nades > 0 && d > 8 && d < 24 && this.T > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < 0.35) this.botThrow(b, t); else b.nextNade = this.T + rand(1.5, 3); }
+      b.strafeT -= dt; if (b.strafeT <= 0) { const s = rollStrafe(mind); b.strafeDir = s.dir; b.strafeT = s.t; if (s.jump && b.onGround) b.vel.y = JUMP; }
+      if (mind.burstStop && b.aim > b.reaction * 0.75 && this.T >= (b.burstAt || 0)) { b.holdUntil = this.T + mind.burstStop; b.burstAt = this.T + mind.burstEvery; }
+      const stopping = this.T < (b.holdUntil || 0); // contra-strafe: para um instante pra o tiro sair reto
+      if (!coverOn && !stopping) { mx += tz * b.strafeDir * mind.strafeW; mz += -tx * b.strafeDir * mind.strafeW; }
+      const nade = nadeChoice(mind, b, d, t.pos.y - b.pos.y, this.T);
+      if (nade === 'throw') this.botThrow(b, t); else if (nade === 'wait') b.nextNade = this.T + nadeWaitFor(mind);
       b.aim += dt;
       let diff = desiredYaw - b.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      const scopeWait = WEAPONS[b.weapon].scope ? (b.weapon === 5 ? 1.15 : b.weapon === 6 ? 0.45 : 0.8) : 0;
-      if (b.aim > b.reaction + scopeWait && Math.abs(diff) < 0.35) this.botShoot(b, t, d);
+      const scopeWait = scopeDelay(mind, b.weapon, !!(WEAPONS[b.weapon] && WEAPONS[b.weapon].scope));
+      if (b.aim > b.reaction + scopeWait && Math.abs(diff) < mind.aimGate) this.botShoot(b, t, d);
     } else {
       this.botShootHeli(b); // sem alvo no chão: atira no Gavião inimigo que estiver à vista (como os bots offline)
       let goal = null;
@@ -1163,11 +1192,18 @@ export class Game {
       const hp = b.hp < 45 ? near('health', 1e9) : null, np = !hp && b.nades < 2 ? near('grenade', 22) : null;
       const zg = this.zoneGoal(b);
       let bc = null; if (b.hp < 60) { let bd = 12; for (const x of this.bacons) { if (x.id === b.id || this.T - x.born < BACON_ITEM.from || Math.abs(x.y - b.pos.y) >= BACON_ITEM.dy) continue; const d = dist(x, b.pos); if (d < bd) { bd = d; bc = x; } } }
-      if (bc) goal = bc; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone || this.bomb) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos; else if (b.lastSeen && this.T - b.lastSeenAt < 4) goal = b.lastSeen; else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
+      const heardFresh = b.heard && this.T - b.heardAt < mind.hearMemory;
+      const seenFresh = b.lastSeen && this.T - b.lastSeenAt < mind.memory;
+      if (bc) goal = bc; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (this.zone || this.bomb) goal = b.pos; else if (hp) goal = hp.pos; else if (np) goal = np.pos;
+      else if (heardFresh && (!seenFresh || b.heardAt >= b.lastSeenAt)) goal = { x: b.heard.x, y: b.heard.y || b.pos.y, z: b.heard.z };
+      else if (seenFresh) goal = b.lastSeen;
+      else { if (!b.wp) b.wp = this.randomWaypoint(); goal = b.wp; }
       const gx = goal.x - b.pos.x, gz = goal.z - b.pos.z;
-      if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5 && !(bc && Math.hypot(gx, gz) > 0.1)) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
+      if (Math.hypot(gx, gz) < 1.5 && Math.abs(goal.y - b.pos.y) < 1.5 && !(bc && Math.hypot(gx, gz) > 0.1)) {
+        if (goal === b.wp) b.wp = null; else if (goal === b.lastSeen) b.lastSeenAt = -99; else if (b.heard && goal.x === b.heard.x && goal.z === b.heard.z) b.heardAt = -99;
+      }
       else { const st = this.steer(b, goal) || { x: gx / Math.hypot(gx, gz), z: gz / Math.hypot(gx, gz) }; mx = st.x; mz = st.z; desiredYaw = face(st.x, st.z); }
-      if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5 && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
+      const W = WEAPONS[b.weapon]; if (W && W.mag && wantSafeReload(mind, b.mag[b.weapon] / W.mag) && !b.reloadEnd) b.reloadEnd = this.T + W.reload;
     }
     if (b.useHold) { mx = 0; mz = 0; } // plantando/desarmando: fica parado
     const sp = BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > this.T ? SHOCK.slow : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
@@ -1175,7 +1211,7 @@ export class Game {
     const blocked = this.P.moveEntity(b, dt);
     if (blocked) { b.stuck += dt; if (b.onGround) b.vel.y = JUMP; if (b.stuck > 1.2) { b.wp = this.randomWaypoint(); b.path = null; b.lastSeenAt = -99; b.strafeDir *= -1; b.stuck = 0; b.stuckCount = (b.stuckCount || 0) + 1; } }
     else b.stuck = Math.max(0, b.stuck - dt);
-    let d = desiredYaw - b.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); b.yaw += d * Math.min(1, dt * 9);
+    let d = desiredYaw - b.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); b.yaw += d * Math.min(1, dt * mind.turn);
     for (const i of b.slots) if (b.reserve[i] < WEAPONS[i].mag && !(WEAPONS[i].rocket && b.reserve[i] > 0)) b.reserve[i] = WEAPONS[i].reserve;
   }
   botShoot(b, t, d) {
@@ -1197,14 +1233,18 @@ export class Game {
     if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
     if (w.rocket && d < 6) return;
     if (w.corn && d < 4) return;
-    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * ([rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6), 1.15, 1.05][b.weapon] || 1.2); b.invulnUntil = Math.min(b.invulnUntil, this.T);
+    const mind = profileOf(b);
+    const stopping = this.T < (b.holdUntil || 0);
+    const selfMoving = !stopping && Math.hypot(b.vel.x, b.vel.z) > 1.15;
+    if (mind.holdFire && selfMoving && !w.melee && !w.rocket && !w.corn && !(w.pellets > 1)) return; // Cachaço só dispara hitscan no contra-strafe
+    b.mag[b.weapon]--; b.nextFire = this.T + w.rate * ([rand(2.2, 3.4), 1.4, 1.6, 1, rand(1.8, 2.6), 1.15, 1.05][b.weapon] || 1.2) * mind.fireMul; b.invulnUntil = Math.min(b.invulnUntil, this.T);
     if (w.burst) { b.burstLeft = (b.burstLeft || w.burst) - 1; b.nextFire = this.T + (b.burstLeft > 0 ? w.rate : w.burstDelay * rand(1.6, 2.6)); } // FAMAS: rajada de 3 e respira
-    const o = center(b, 1.3), tMoving = Math.hypot(t.vel.x, t.vel.z) > 2 ? 1.5 : 1;
-    if (w.corn) { const oo = center(b, 1.4); this.launchCorn(b, oo, cornAim(oo, { x: t.pos.x + t.vel.x * 0.35 + rand(-0.6, 0.6), y: t.pos.y + 0.7, z: t.pos.z + t.vel.z * 0.35 + rand(-0.6, 0.6) })); return; }
-    if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + t.vel.x * lead + rand(-0.8, 0.8), y: t.pos.y + 0.25, z: t.pos.z + t.vel.z * lead + rand(-0.8, 0.8) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
-    const aim = w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6)); aim.x += rand(-0.3, 0.3); aim.z += rand(-0.3, 0.3);
-    const base = norm({ x: aim.x - o.x, y: aim.y - o.y, z: aim.z - o.z });
-    const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > this.T ? 2.5 : 1); // ovo na cara: erra mais
+    const o = center(b, 1.3), tMoving = Math.hypot(t.vel.x, t.vel.z) > 2;
+    if (w.corn) { const oo = center(b, 1.4); this.launchCorn(b, oo, cornAim(oo, { x: t.pos.x + (t.vel.x || 0) * mind.cornLead + rand(-mind.cornErr, mind.cornErr), y: t.pos.y + 0.7, z: t.pos.z + (t.vel.z || 0) * mind.cornLead + rand(-mind.cornErr, mind.cornErr) })); return; }
+    if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + (t.vel.x || 0) * lead + rand(-mind.rocketErr, mind.rocketErr), y: t.pos.y + 0.25, z: t.pos.z + (t.vel.z || 0) * lead + rand(-mind.rocketErr, mind.rocketErr) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
+    const aimPt = hitscanAim(mind, b, t.pos, t.vel, { aimTime: b.aim, scope: !!w.scope, pellets: w.pellets, pistol: b.weapon === PISTOL, targetMoving: tMoving, selfMoving, egged: b.eggUntil > this.T, weaponSpread: w.spread, stance: stanceScale(t.crouch) });
+    const base = norm({ x: aimPt.x - o.x, y: aimPt.y - o.y, z: aimPt.z - o.z });
+    const spread = aimPt.spread; // ovo na cara e movimento já entram no perfil
     const dirs = []; for (let p = 0; p < Math.max(1, w.pellets); p++) dirs.push(norm({ x: base.x + (Math.random() - 0.5) * 2 * spread, y: base.y + (Math.random() - 0.5) * 2 * spread, z: base.z + (Math.random() - 0.5) * 2 * spread }));
     this.hitscan(b, o, dirs, b.weapon);
     if (w.scope) b.aim = b.reaction * 0.4;
@@ -1223,8 +1263,9 @@ export class Game {
     this.hitscan(b, o, dirs, b.weapon);
   }
   botThrow(b, t) {
-    const from = center(b, 1.6), to = { x: t.pos.x + t.vel.x * 0.6 + rand(-1.2, 1.2), y: t.pos.y + 0.2, z: t.pos.z + t.vel.z * 0.6 + rand(-1.2, 1.2) };
+    const p = profileOf(b), from = center(b, 1.6), tp = t.pos, tv = t.vel || { x: 0, y: 0, z: 0 };
+    const to = { x: tp.x + (tv.x || 0) * p.nadeLead + rand(-p.nadeErr, p.nadeErr), y: tp.y + 0.2, z: tp.z + (tv.z || 0) * p.nadeLead + rand(-p.nadeErr, p.nadeErr) };
     const dx = to.x - from.x, dz = to.z - from.z, T = 0.55 + Math.hypot(dx, dz) / 16, g = -NADE.grav;
-    b.nades--; this.throwNade(b, from, { x: dx / T, y: (to.y - from.y + 0.5 * g * T * T) / T, z: dz / T }); b.nextNade = this.T + rand(7, 13);
+    b.nades--; this.throwNade(b, from, { x: dx / T, y: (to.y - from.y + 0.5 * g * T * T) / T, z: dz / T }); b.nextNade = this.T + nadeCooldown(p);
   }
 }

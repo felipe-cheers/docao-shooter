@@ -11,7 +11,10 @@
 //  • Névoa Assombrada (estilo tempestade do Fortnite): círculo seguro diminui e muda de lugar a cada wave.
 //    Fora dele o jogador perde vida; zumbi não sente a névoa.
 //  Integração: o host (main.js offline ou server/src/game.js) passa um adaptador A (ver InvasionCore).
+//  A.botDiff (string ou função) escolhe o jeito da horda em shared/bot-difficulty.js.
+//  Vida, dano e quantidade de zumbis continuam no waveSpec — a dificuldade não multiplica isso.
 // ============================================================
+import { zombieTune } from './bot-difficulty.js';
 export const INV = {
   mode: 'inv', WAVES: 20, PREP: 12, BREAK: 15, LIVES: 2, INV_MAX: 3,
   DROP_LIFE: 35, PICK_R: 1.5, BOSS_EVERY: 5, RES_PER_BLOCK: 4, BLOCK: 5,
@@ -253,30 +256,33 @@ export class InvasionCore {
     return best;
   }
   stepZombie(z, dt, T) {
-    const st = ZOMBIES[z.zt], P = this.A.P;
-    if (T >= z.retarget) { z.target = this.pickTarget(z); z.retarget = T + 0.4 + this.rnd() * 0.3; }
+    const st = ZOMBIES[z.zt], P = this.A.P, tune = zombieTune(this.A.botDiff);
+    if (T >= z.retarget) { z.target = this.pickTarget(z); z.retarget = T + tune.retarget[0] + this.rnd() * (tune.retarget[1] - tune.retarget[0]); }
     let t = z.target; if (t && !this.visible(t)) { t = z.target = null; }
     let mx = 0, mz = 0; const stunned = z.stunUntil > T;
     if (t && !stunned) {
       const dx = t.pos.x - z.pos.x, dz = t.pos.z - z.pos.z, dh = hyp(dx, dz) || 1, dy = t.pos.y - z.pos.y;
-      if (T - z.losAt > 0.3) { z.losAt = T; z.lastLos = dh < 40 && P.losClear({ x: z.pos.x, y: z.pos.y + 1.5 * z.size, z: z.pos.z }, { x: t.pos.x, y: t.pos.y + 1.2, z: t.pos.z }); }
+      if (T - z.losAt > tune.losEvery) { z.losAt = T; z.lastLos = dh < tune.aggro && P.losClear({ x: z.pos.x, y: z.pos.y + 1.5 * z.size, z: z.pos.z }, { x: t.pos.x, y: t.pos.y + 1.2, z: t.pos.z }); }
       const spit = st.spit && z.lastLos && dh < st.spit.range;
-      if (spit && T >= z.nextSpit && dh > 3) { z.nextSpit = T + st.spit.every * (0.85 + this.rnd() * 0.3); this.spit(z, t); }
+      if (spit && T >= z.nextSpit && dh > 3) { z.nextSpit = T + st.spit.every * tune.spitRate * (0.85 + this.rnd() * 0.3); this.spit(z, t); }
+      const keep = st.spit && st.spit.keep ? st.spit.keep * tune.keep : 0;
       let goDirect = z.lastLos && dh < 9 && Math.abs(dy) < 1.3;
-      if (spit && st.spit.keep && dh < st.spit.keep + 2) { goDirect = true; if (dh < st.spit.keep - 2) { mx = -dx / dh; mz = -dz / dh; } }
+      if (spit && keep && dh < keep + 2) { goDirect = true; if (dh < keep - 2) { mx = -dx / dh; mz = -dz / dh; } }
       else if (goDirect) { if (dh > st.reach * 0.6) { mx = dx / dh; mz = dz / dh; } }
       else { const s = this.flowDir(z, T); if (s) { mx = s.x; mz = s.z; } else { mx = dx / dh; mz = dz / dh; } }
-      const yawT = Math.atan2(dx, dz); let dd = yawT - z.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); z.yaw += dd * Math.min(1, dt * 8);
+      // cerco: cada zumbi puxa um pouco pro lado (par/ímpar) pra não empilhar na mesma porta. 0 no Leitão e na Ceva.
+      if (tune.flank > 0 && dh > st.reach * 2) { const side = (z.id % 2 ? 1 : -1) * (z.zt === 'runner' ? 1.35 : 1); mx += (-dz / dh) * tune.flank * 0.08 * side; mz += (dx / dh) * tune.flank * 0.08 * side; }
+      const yawT = Math.atan2(dx, dz); let dd = yawT - z.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); z.yaw += dd * Math.min(1, dt * tune.turn);
       if (dh < st.reach * Math.max(1, z.size * 0.85) && Math.abs(dy) < 1.7 && T >= z.nextAtk) {
-        z.nextAtk = T + st.rate; this.A.emit(['za', z.id]); this.A.hurtPlayer(t, st.dmg * z.dmgMul, z);
+        z.nextAtk = T + st.rate * tune.atkRate; this.A.emit(['za', z.id]); this.A.hurtPlayer(t, st.dmg * z.dmgMul, z);
       }
     } else if (!stunned) { // sem alvo (todo mundo fantasma ou morto): anda devagar pro centro da névoa
       const dx = this.fog.cx - z.pos.x, dz = this.fog.cz - z.pos.z, dh = hyp(dx, dz);
       if (dh > 4) { const s = this.flowDir(z, T); mx = (s ? s.x : dx / dh) * 0.4; mz = (s ? s.z : dz / dh) * 0.4; }
     }
-    const ml = hyp(mx, mz), sp = z.spd * (stunned ? 0 : 1);
+    const ml = hyp(mx, mz), sp = z.spd * tune.spd * (stunned ? 0 : 1);
     if (ml > 0) { mx = mx / Math.max(1, ml) * sp; mz = mz / Math.max(1, ml) * sp; }
-    if (mx || mz) { const yawM = Math.atan2(mx, mz); if (!t || stunned) { let dd = yawM - z.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); z.yaw += dd * Math.min(1, dt * 6); } }
+    if (mx || mz) { const yawM = Math.atan2(mx, mz); if (!t || stunned) { let dd = yawM - z.yaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); z.yaw += dd * Math.min(1, dt * (6 * tune.turn / 8)); } }
     const acc = z.onGround ? 9 : 2.5; z.vel.x += (mx - z.vel.x) * Math.min(1, acc * dt); z.vel.z += (mz - z.vel.z) * Math.min(1, acc * dt);
     const blocked = P.moveEntity(z, dt);
     if (blocked && ml > 0) { z.stuck += dt; if (z.onGround && z.stuck > 0.25) z.vel.y = 8.5; if (z.stuck > 6) this.unstick(z); }
@@ -358,7 +364,8 @@ export class InvasionCore {
   // ---------- projéteis (cuspe, abóbora do chefão, abóbora do poder) ----------
   spit(z, t) {
     const S = ZOMBIES[z.zt].spit, o = { x: z.pos.x + Math.sin(z.yaw) * 0.5 * z.size, y: z.pos.y + 1.45 * z.size, z: z.pos.z + Math.cos(z.yaw) * 0.5 * z.size };
-    const lead = 0.35, to = { x: t.pos.x + (t.vel ? t.vel.x : 0) * lead, y: t.pos.y + 0.9, z: t.pos.z + (t.vel ? t.vel.z : 0) * lead };
+    const tune = zombieTune(this.A.botDiff), lead = tune.spitLead, err = tune.spitErr;
+    const to = { x: t.pos.x + (t.vel ? t.vel.x : 0) * lead + (this.rnd() - 0.5) * 2 * err, y: t.pos.y + 0.9, z: t.pos.z + (t.vel ? t.vel.z : 0) * lead + (this.rnd() - 0.5) * 2 * err };
     const dx = to.x - o.x, dz = to.z - o.z, dh = hyp(dx, dz), T = Math.max(0.35, dh / S.speed);
     const v = { x: dx / T, y: (to.y - o.y + 0.5 * SPIT_GRAV * T * T) / T, z: dz / T };
     const pr = { id: this.nid++, kind: S.big ? 'boss' : 'spit', owner: z, pos: o, vel: v, born: this.T, S };

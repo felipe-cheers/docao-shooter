@@ -54,20 +54,21 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 4. Escolha o **mapa** (ou **Aleatório**, que sorteia um mapa a cada partida) e o **modo**.
 5. Clique em **JOGAR OFFLINE** ou em **JOGAR ONLINE**.
 
-O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no navegador.
+O nome, a skin, as armas, o mapa, o modo, a dificuldade dos bots e a sensibilidade ficam salvos no navegador.
 
 ### 🤖 Offline (contra bots)
 
 - De **4 a 6 bots**, cada um com nome de comida: Farofa, Pipoca, Trufa, Bolota, Torresmo, Paçoca, Linguiça, Quindim, Coxinha e Pururuca.
 - Os bots ganham uma primária aleatória, escolhem a arma pela distância, pegam vida e Copo Bomba, arremessam granadas e sobem e descem andares pelas rampas.
+- A **Dificuldade** (Leitão, Ceva, Javali ou Cachaço) muda como eles miram, reagem e se movem. A Ceva é o jeito antigo. A vida e o dano das armas não mudam. Na Invasão a mesma escolha mexe no cuspe e no cerco da horda, sem aumentar a vida das waves. A preferência fica salva no navegador.
 - No menu também dá pra escolher o **Tempo** da partida e a **Sensibilidade** do mouse (normal e mirando).
 
 ### 🌐 Online (com a galera)
 
-- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots** e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
+- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots**, a **dificuldade** deles (Leitão, Ceva, Javali ou Cachaço) e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
 - **Entrar na sala:** digite o código ou abra o link de convite `https://docao.mvalentim.dev/?sala=ABCD`, que já cai direto no lobby.
 - **Convite:** no lobby e na pausa tem Copiar link, Copiar código, WhatsApp, Telegram, Slack e Compartilhar.
-- **Anfitrião (★):** troca mapa, máximo, bots, modo, tempo e **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
+- **Anfitrião (★):** troca mapa, máximo, bots, dificuldade, modo, tempo e **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
 - **Nomes repetidos:** o servidor ajusta sozinho, então o segundo "Matheus" vira "Matheus (2)".
 - **Caiu a conexão?** O jogo reconecta sozinho e você volta com o mesmo jogador e o mesmo placar.
 
