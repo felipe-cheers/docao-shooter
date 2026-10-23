@@ -1,8 +1,7 @@
-// Granadas táticas: fumaça (tampa a visão) e atordoamento.
+// Granadas táticas: fumaça (tampa a visão) e o Pau de choque (estaca elétrica; regras em shared/shock.js).
 import * as THREE from 'three';
 
 export const SMOKE = { fuse: 1.15, life: 12, radius: 5.6, speed: 15 };
-export const STUN = { fuse: 1.0, life: 3.4, radius: 7.2, speed: 15 };
 
 // corpo baixo (~0.28 de altura no total), faixa e ponta
 const bodyGeo = new THREE.CylinderGeometry(0.055, 0.06, 0.2, 8);
@@ -35,26 +34,55 @@ function flat(geo, color, extra) {
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, ...extra }));
 }
 
-export function makeTacticalMesh(kind) {
+export function makeTacticalMesh() { // fumaça
   const g = new THREE.Group();
-  const stun = kind === 'stun';
-  const body = flat(bodyGeo, stun ? 0xf2c230 : 0x8d939b);
+  const body = flat(bodyGeo, 0x8d939b);
   body.position.y = 0.1; // cilindro de 0.2, base no chão do grupo
   g.add(body);
-  const band = flat(bandGeo, stun ? 0x161616 : 0xf7f7f7);
+  const band = flat(bandGeo, 0xf7f7f7);
   band.position.y = 0.12;
   g.add(band);
-  if (stun) {
-    const tip = flat(tipGeo, 0xffe14a); // luz na ponta
-    tip.position.y = 0.238;
-    g.add(tip);
-  } else {
-    const puff = flat(puffGeo, 0xc5ccd2, { transparent: true, opacity: 0.45, depthWrite: false });
-    puff.scale.setScalar(0.05);
-    puff.position.y = 0.23;
-    g.add(puff);
-  }
+  const puff = flat(puffGeo, 0xc5ccd2, { transparent: true, opacity: 0.45, depthWrite: false });
+  puff.scale.setScalar(0.05);
+  puff.position.y = 0.23;
+  g.add(puff);
   return g;
+}
+
+// Pau de choque: eixo +y = para fora da superfície onde finca; ponta pra -y, luz azul no topo (userData.light)
+const stakeSeg = new THREE.CylinderGeometry(0.032, 0.032, 0.1, 8);
+const stakeTip = new THREE.ConeGeometry(0.034, 0.14, 8);
+const stakeCap = new THREE.CylinderGeometry(0.045, 0.045, 0.04, 8);
+const stakePin = new THREE.BoxGeometry(0.012, 0.08, 0.012);
+const stakeLight = new THREE.SphereGeometry(0.028, 8, 6);
+export function makeShockStake() {
+  const g = new THREE.Group();
+  for (let i = 0; i < 5; i++) { const s = flat(stakeSeg, i % 2 ? 0x161616 : 0xf2c230); s.position.y = 0.05 + i * 0.1; g.add(s); } // haste listrada amarelo/preto
+  const tip = flat(stakeTip, 0xb8c0c8); tip.rotation.x = Math.PI; tip.position.y = -0.07; g.add(tip);
+  const cap = flat(stakeCap, 0x9aa3ab); cap.position.y = 0.52; g.add(cap);
+  for (const x of [-0.025, 0.025]) { const p = flat(stakePin, 0xc8d0d8); p.position.set(x, 0.58, 0); g.add(p); }
+  const light = flat(stakeLight, 0x66ccff); light.position.y = 0.6; g.add(light);
+  g.userData.light = light;
+  return g;
+}
+// arco elétrico: Line de 9 pontos com zigue-zague novo a cada set(a, b)
+export function makeShockArc() {
+  const N = 9, pos = new Float32Array(N * 3), geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x9fe3ff, transparent: true, opacity: 0.95, depthWrite: false }));
+  line.frustumCulled = false;
+  return {
+    line,
+    set(a, b) {
+      for (let i = 0; i < N; i++) {
+        const k = i / (N - 1), j = i > 0 && i < N - 1 ? 0.12 : 0;
+        pos[i * 3] = a.x + (b.x - a.x) * k + (Math.random() * 2 - 1) * j;
+        pos[i * 3 + 1] = a.y + (b.y - a.y) * k + (Math.random() * 2 - 1) * j;
+        pos[i * 3 + 2] = a.z + (b.z - a.z) * k + (Math.random() * 2 - 1) * j;
+      }
+      geo.attributes.position.needsUpdate = true;
+    },
+  };
 }
 
 function dist2(a, b) {

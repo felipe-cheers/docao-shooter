@@ -27,8 +27,9 @@ export const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, 
 export const WEAPONS = [
   { key: 'rifle', name: 'Fuzil Pururuca', short: 'Fuzil Pururuca', chip: 'Fuzil', mag: 30, reserve: 120, dmg: 20, headMul: 2, rate: 0.1, auto: true, pellets: 1, spread: 0.01, reload: 1.6, range: 140, recoil: 0.018, adsFov: 40, adsSpread: 0.12, flashZ: -0.76,
     desc: 'Automático · 30/120 · 20 dano' },
-  { key: 'shotgun', name: 'Escopeta Chiqueiro · Calibre 12', short: 'Calibre 12', chip: 'Calibre 12', mag: 8, reserve: 32, dmg: 18, headMul: 1.5, rate: 0.8, auto: false, pellets: 8, spread: 0.06, reload: 0.45, shellReload: true, reloadStart: 0.25, range: 45, recoil: 0.07, adsFov: 55, adsSpread: 0.6, flashZ: -0.86,
-    falloff: [7, 30, 0.3], pump: true, desc: 'Calibre 12 · pump · 8/32 · bem forte de perto' },
+  // 1 · Calibre 12 (SPAS-12 pump): 9 chumbos × 17 = 153 no corpo; mata de 1 tiro até ~8 m andando (moveSpread 1,35 no lugar do 2,2 geral); cai forte depois de 8 m; empurra quem leva (knock, ver shotKnock em combat.js)
+  { key: 'shotgun', name: 'Escopeta Chiqueiro · Calibre 12', short: 'Calibre 12', chip: 'Calibre 12', mag: 8, reserve: 32, dmg: 17, headMul: 1.5, rate: 0.62, auto: false, pellets: 9, spread: 0.05, moveSpread: 1.35, reload: 0.38, shellReload: true, reloadStart: 0.2, range: 45, recoil: 0.085, adsFov: 55, adsSpread: 0.7, flashZ: -0.86,
+    falloff: [8, 20, 0.2], knock: { push: 7, lift: 2.6 }, pump: true, desc: 'Calibre 12 · pump · 8/32 · 1 tiro mata até ~8 m · empurra' },
   // Intermediária: ferrolho clássico, 1 tiro no corpo (ref. Intervention).
   { key: 'sniper', name: 'Sniper Torresmo', short: 'Sniper Torresmo', chip: 'Torresmo', mag: 5, reserve: 20, dmg: 100, headMul: 1.5, rate: 1.15, auto: false, pellets: 1, spread: 0.07, reload: 2.3, range: 220, recoil: 0.055, adsFov: 13, adsSpread: 0, flashZ: -1.1,
     scope: true, bolt: true, beam: true, scopeStyle: 'torresmo', desc: 'Ferrolho médio · 5/20 · 1 tiro no corpo · botão direito = luneta' },

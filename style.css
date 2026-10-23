@@ -1210,7 +1210,7 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 #hud .tico{display:block}
 #hud .tico circle,#hud .tico path{fill:currentColor}
 #hud .tico.smoke{width:28px;height:22px;color:#e7e2da}
-#hud .tico.stun{width:18px;height:26px;color:#f2c230}
+#hud .tico.stun{width:18px;height:26px;color:#7cc8ff}
 #hud #slots{display:flex;align-items:center;gap:8px;margin:0}
 #hud .slot{
   display:inline-flex;align-items:center;gap:3px;margin:0;padding:0 0 2px;background:transparent;color:var(--cream);opacity:.72;
