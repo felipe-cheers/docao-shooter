@@ -15,7 +15,8 @@ import { INSPECT_DUR, INSPECT_HOLD, INSPECT_FADE, INSPECT_PROFILES, inspectKind,
 import { createSaberSfx } from './saber-sfx.js';
 import { HIT_DIR_LIFE, addHit } from './damage-dir.js';
 import { resetFeedback, feedbackPoints, feedbackHit, feedbackKill, feedbackAward, feedbackMedal, tickFeedback } from './feedback.js';
-import { SMOKE, STUN, makeTacticalMesh, makeSmokeCloud, inRadius } from './tactical-nades.js';
+import { SMOKE, makeTacticalMesh, makeSmokeCloud, inRadius, makeShockStake, makeShockArc } from './tactical-nades.js';
+import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from './shared/shock.js';
 import { mountUav, showUav, drawUav, tickUav, hideUav } from './uav.js';
 import { mountStreakUi, setStreakCount, setStreakCycle, setStreakReady, openStrikeMap, closeStrikeMap, showNukeCount, hideNuke, showNukeReady, hideNukeReady } from './killstreak-ui.js';
 import { makeTablet, poseTablet, makeLaptop, poseLaptop, makeRadio, poseRadio } from './fp-gear.js';
@@ -36,7 +37,7 @@ import { SEND_HZ, INTERP_DELAY } from './config.js';
 import { cleanName, NAME_MAX } from './shared/names.js';
 import { createPhysics, rayHitboxes } from './shared/physics.js';
 import { CROUCH, crouchAmount, stanceScale, eyeHeight, stepCrouch } from './shared/stance.js';
-import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread } from './shared/combat.js';
+import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread, shotKnock } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
 import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
@@ -168,7 +169,9 @@ function tone(type, f0, f1, dur, vol, delay = 0) {
 const sfx = {
   rifle: (v = 1) => { noise(0.11, 3000, 0.5 * v); tone('square', 220, 60, 0.07, 0.15 * v); },
   lmg: (v = 1) => { noise(0.1, 2400, 0.48 * v); tone('square', 160, 45, 0.09, 0.14 * v); }, // mais grave que o fuzil, cadência contínua
-  shotgun: (v = 1) => { noise(0.45, 1300, 1.0 * v); tone('sawtooth', 100, 30, 0.3, 0.35 * v); noise(0.12, 5000, 0.25 * v, 'highpass'); },
+  shotgun: (v = 1) => { noise(0.5, 1200, 1.0 * v); tone('sine', 85, 38, 0.28, 0.55 * v); tone('sawtooth', 100, 30, 0.3, 0.35 * v); noise(0.7, 500, 0.5 * v, 'lowpass', 0.03); noise(0.12, 5000, 0.25 * v, 'highpass'); }, // Calibre 12: estouro + tump grave + cauda
+  zap: (v = 1) => { if (v < 0.02) return; noise(0.18, 3200, 0.3 * v, 'bandpass'); tone('sawtooth', 120, 95, 0.4, 0.12 * v); tone('square', 60, 58, 0.45, 0.06 * v); tone('square', 1800, 900, 0.05, 0.05 * v, 0.03); }, // bzzzt do pau de choque
+  stake: (v = 1) => { if (v < 0.02) return; tone('square', 900, 300, 0.05, 0.1 * v); noise(0.06, 1500, 0.3 * v, 'bandpass'); }, // tchac da estaca fincando
   pump: (v = 1, d = 0) => { noise(0.05, 1800, 0.35 * v, 'bandpass', d); tone('square', 240, 180, 0.04, 0.08 * v, d); noise(0.05, 2600, 0.4 * v, 'bandpass', d + 0.17); tone('square', 320, 260, 0.04, 0.1 * v, d + 0.17); },
   shell: () => { tone('square', 620, 520, 0.03, 0.08); noise(0.04, 3000, 0.15, 'bandpass', 0.02); },
   sniper: (v = 1) => { noise(0.9, 1800, 1.3 * v); tone('sine', 140, 28, 0.7, 0.6 * v); noise(0.18, 7000, 0.5 * v, 'highpass'); noise(1.4, 500, 0.35 * v, 'lowpass', 0.15); },
@@ -301,7 +304,7 @@ function respawn(e) {
   if (!e.isPlayer && (Math.random() < 0.3 || !weaponAllowed(e.nextPrimary))) e.nextPrimary = pickBotPrimary(); // bots às vezes trocam de primária, e nunca ficam com arma banida na sala
   e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE;
   e.slots = [e.primary, e.secondary, e.melee]; e.knifeMode = false; e.prevWeapon = e.primary;
-  e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.actionEnd = 0; e.burstLeft = 0; e.nades = NADE.spawnWith; e.smokeNades = clientPower('smoke') ? 1 : 0; e.stunNades = clientPower('stun') ? 1 : 0; e.stunUntil = 0; e.charging = false;
+  e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.actionEnd = 0; e.burstLeft = 0; e.nades = NADE.spawnWith; e.smokeNades = clientPower('smoke') ? 1 : 0; e.stunNades = clientPower('stun') ? SHOCK.spawnWith : 0; e.lastShockT = -99; e.stunUntil = 0; e.charging = false;
   e.mgSpin = 0; e.mgHeat = 0; e.mgHot = false; e.mgWant = false; e.mgFiring = false; // minigun: renasce fria e parada
   const hand = !e.isPlayer ? e.primary : spawnHold === 'melee' ? e.melee : spawnHold === 'secondary' ? e.secondary : e.primary;
   setWeapon(e, e.slots.includes(hand) ? hand : e.primary);
@@ -328,7 +331,7 @@ function refillAmmo(e) {
   }
   return got;
 }
-// Exploração: a reserva, os copos e as granadas táticas não acabam, pra dar pra testar sem caçar caixa.
+// Exploração: a reserva, os copos e a fumaça não acabam, pra dar pra testar sem caçar caixa; o pau de choque volta em 10 s.
 // O pente continua finito: a recarga acontece do mesmo jeito.
 function refillExplore(e) {
   for (const i of e.slots) {
@@ -337,8 +340,9 @@ function refillExplore(e) {
   }
   if (e.nades < NADE.max) e.nades = NADE.max;
   if (clientPower('smoke') && (e.smokeNades || 0) < 1) e.smokeNades = 1; else if (!clientPower('smoke')) e.smokeNades = 0;
-  if (clientPower('stun') && (e.stunNades || 0) < 1) e.stunNades = 1; else if (!clientPower('stun')) e.stunNades = 0;
+  shockRefill(e); // pau de choque: volta 1 depois de SHOCK.trainRefill s (não é infinito)
 }
+function shockRefill(e) { if (!clientPower('stun')) { e.stunNades = 0; return; } if (!(e.stunNades > 0) && gameTime - (e.lastShockT ?? -99) > SHOCK.trainRefill) e.stunNades = 1; }
 const pickups = [];
 function makePickup(type, x, z, yHint = 0) {
   const g = new THREE.Group();
@@ -373,10 +377,10 @@ function updatePickups(dt) {
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z;
       if (dx * dx + dz * dz > 1.5 || Math.abs(e.pos.y - p.pos.y) > 1.5) continue;
       if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
-      else if (p.type === 'grenade') { if (e.nades >= NADE.max) continue; e.nades++; }
+      else if (p.type === 'grenade') { const sk = clientPower('stun') && (e.stunNades || 0) < SHOCK.max; if (e.nades >= NADE.max && !sk) continue; if (e.nades < NADE.max) e.nades++; if (sk) e.stunNades = (e.stunNades || 0) + 1; } // Copo Bomba também dá +1 pau de choque
       else if (!refillAmmo(e)) continue;
       p.active = false; p.mesh.visible = false; p.respawnAt = gameTime + (p.type === 'grenade' ? NADE.pickupRespawn : invMode() && p.type === 'ammo' ? INV_AMMO.respawn : 15);
-      if (e.isPlayer) { sfx.pickup(); flashMsg(p.type === 'health' ? '+50 de vida' : p.type === 'grenade' ? `+1 Copo Bomba (${e.nades}/${NADE.max})` : e.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${e.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!'); }
+      if (e.isPlayer) { sfx.pickup(); flashMsg(p.type === 'health' ? '+50 de vida' : p.type === 'grenade' ? `+1 Copo Bomba (${e.nades}/${NADE.max})${clientPower('stun') ? ` · Pau de choque ${e.stunNades || 0}/${SHOCK.max}` : ''}` : e.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${e.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!'); }
       break;
     }
   }
@@ -711,37 +715,25 @@ function explode(n) { blast(n.pos.clone(), n.owner, { radius: NADE.radius, maxDm
 
 const tacticals = [], smokes = [];
 function smoked(a, b) { for (const s of smokes) if (s.blocks(a, b)) return true; return false; }
-function throwTactical(kind) {
+function throwTactical() { // fumaça (tecla 4)
   if (!player || !player.alive) return;
-  if (!clientPower(kind)) { flashMsg(kind === 'stun' ? 'Atordoamento desligado nesta sala' : 'Fumaça desligada nesta sala'); return; }
-  if (online) { flashMsg('Fumaça e atordoamento só na partida com bots'); return; }
-  const stun = kind === 'stun';
-  const spec = stun ? STUN : SMOKE;
-  const bag = stun ? 'stunNades' : 'smokeNades';
-  if (player[bag] <= 0) { flashMsg(stun ? 'Sem atordoamento' : 'Sem fumaça'); return; }
-  player[bag]--;
+  if (!clientPower('smoke')) { flashMsg('Fumaça desligada nesta sala'); return; }
+  if (online) { flashMsg('Fumaça só na partida com bots'); return; }
+  if (player.smokeNades <= 0) { flashMsg('Sem fumaça'); return; }
+  player.smokeNades--;
   const origin = throwOrigin();
   const dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion);
   dir.y += 0.22; dir.normalize();
-  const vel = dir.multiplyScalar(spec.speed).add(new V3(player.vel.x * 0.4, 0, player.vel.z * 0.4));
-  const mesh = makeTacticalMesh(kind);
+  const vel = dir.multiplyScalar(SMOKE.speed).add(new V3(player.vel.x * 0.4, 0, player.vel.z * 0.4));
+  const mesh = makeTacticalMesh();
   scene.add(mesh);
-  tacticals.push({ kind, pos: origin.clone(), vel, mesh, explodeAt: gameTime + spec.fuse, spin: new V3(rand(-6, 6), rand(-3, 3), rand(-6, 6)), lastBounce: 0 });
+  tacticals.push({ kind: 'smoke', pos: origin.clone(), vel, mesh, explodeAt: gameTime + SMOKE.fuse, spin: new V3(rand(-6, 6), rand(-3, 3), rand(-6, 6)), lastBounce: 0 });
   sfx.toss(1);
 }
 function popTactical(n) {
   scene.remove(n.mesh);
-  if (n.kind === 'smoke') {
-    const cloud = makeSmokeCloud(n.pos);
-    scene.add(cloud.group); smokes.push(cloud); sfx.pop(distVol(n.pos));
-    return;
-  }
-  sfx.boom(player ? clamp(1 - n.pos.distanceTo(player.pos) / 40, 0.25, 0.7) : 0.5);
-  for (const e of entities) {
-    if (!e.alive || !inRadius(n.pos, e.pos, STUN.radius)) continue;
-    e.stunUntil = gameTime + STUN.life;
-    if (!e.isPlayer) { e.target = null; e.aim = 0; }
-  }
+  const cloud = makeSmokeCloud(n.pos);
+  scene.add(cloud.group); smokes.push(cloud); sfx.pop(distVol(n.pos));
 }
 function updateSmokeSight() {
   const veil = $('smokeVeil'), flash = $('stunFlash');
@@ -749,7 +741,7 @@ function updateSmokeSight() {
   let thick = false;
   if (eye) for (const s of smokes) if (inRadius(s.pos, eye, s.radius * 0.7)) thick = true;
   if (veil) veil.style.opacity = thick ? '0.8' : '0';
-  if (flash && player) flash.style.opacity = player.alive && player.stunUntil > gameTime ? '0.75' : '0';
+  if (flash && player) flash.style.opacity = player.alive && player.stunUntil > gameTime ? (0.25 + Math.random() * 0.35).toFixed(2) : '0'; // levou choque: tela azul piscando
   if (!eye) return;
   for (const e of entities) {
     if (!e.model || e.isPlayer || !e.alive) continue;
@@ -771,8 +763,53 @@ function updateTacticals(dt) {
 function clearTacticals() {
   for (const n of tacticals) scene.remove(n.mesh); tacticals.length = 0;
   for (const s of smokes) scene.remove(s.group); smokes.length = 0;
+  clearShocks();
   updateSmokeSight();
 }
+// ---------------- Pau de choque (tecla 5; regras em shared/shock.js; online o servidor manda sk/sx/sz/se) ----------------
+const shocks = [];
+function throwShock() {
+  if (!player || !player.alive) return;
+  if (!clientPower('stun')) { flashMsg('Pau de choque desligado nesta sala'); return; }
+  if (!(player.stunNades > 0)) { flashMsg('Sem pau de choque · pegue a caixa de Copo Bomba'); return; }
+  if (player.stunUntil > gameTime) { flashMsg('Levou choque · espere passar'); return; } // atordoado não arremessa (o servidor também recusa)
+  player.stunNades--; player.lastShockT = gameTime;
+  const o = throwOrigin(), dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion); dir.y += 0.12; dir.normalize();
+  const vel = dir.multiplyScalar(SHOCK.speed).add(new V3(player.vel.x * 0.4, 0, player.vel.z * 0.4));
+  sfx.toss(1);
+  if (online) { netEv(['sk', v3a(o), v3a(vel)]); return; } // aparece quando o servidor confirmar
+  spawnShock({ owner: player, pos: o.clone(), vel });
+}
+function spawnShock(s) { s.t = 0; s.mesh = makeShockStake(); s.arcs = []; scene.add(s.mesh); shocks.push(s); placeShock(s); return s; }
+const UP = new V3(0, 1, 0), DOWN = new V3(0, -1, 0);
+function placeShock(s) { const m = s.mesh; if (s.stuck) { m.position.copy(s.pos).addScaledVector(s.n, -SHOCK.sink); m.quaternion.setFromUnitVectors(UP, s.n); } else { m.position.copy(s.pos); if (s.vel.lengthSq() > 1e-4) m.quaternion.setFromUnitVectors(DOWN, s.vel.clone().normalize()); } } // no ar: ponta pra frente
+function stickShock(s, pos, n) { s.pos.set(pos.x, pos.y, pos.z); s.n = new V3(n.x, n.y, n.z).normalize(); s.stuck = true; s.until = gameTime + SHOCK.life; s.nextPulse = gameTime; placeShock(s); sfx.stake(distVol(s.pos)); puff(s.pos.clone(), 0x9fe3ff); }
+function shockPulseFx(s, victims) { // arcos estaca→vítima, faíscas e zumbido; quem leva fica atordoado (visual; offline é a regra)
+  for (const t of victims) { for (let k = 0; k < 2; k++) { const a = makeShockArc(); a.set(shockTop(s), center(t, 1)); scene.add(a.line); s.arcs.push({ a, t, life: 0.35 }); } puff(center(t, 1), 0x9fe3ff); t.stunUntil = Math.max(t.stunUntil || 0, gameTime + shockStun(t)); if (!t.isPlayer) { t.target = null; t.aim = 0; } } // 2 arcos por vítima: a linha do WebGL é fina
+  s.lastPulse = gameTime; window.__shockPulses = (window.__shockPulses || 0) + 1;
+  sfx.zap(distVol(s.pos) * (victims.length ? 1 : 0.5));
+}
+function removeShock(i) { const s = shocks[i]; scene.remove(s.mesh); for (const r of s.arcs) scene.remove(r.a.line); shocks.splice(i, 1); }
+function updateShocks(dt) {
+  for (let i = shocks.length - 1; i >= 0; i--) {
+    const s = shocks[i];
+    if (!s.stuck) {
+      if (s.net && s.wait) { s.t += dt; if (s.t > SHOCK.flight + 1.5) removeShock(i); continue; } // bateu aqui; espera o 'sx' do servidor
+      const hit = stepShock(PHYS, s, dt);
+      if (hit && !s.net) stickShock(s, hit.pos, hit.n); else if (hit) { s.stuck = false; s.wait = true; } else if (s.dead && !s.net) { removeShock(i); continue; }
+      placeShock(s); continue;
+    }
+    s.mesh.userData.light.visible = Math.floor(gameTime * 8) % 2 === 0; // luz piscando
+    if (!s.net && gameTime >= s.nextPulse && gameTime < s.until) {
+      s.nextPulse += SHOCK.tick; const v = shockReach(s, entities, gameTime, friends, losClear, center);
+      for (const t of v) { const d = shockDmg(t.hp); if (d > 0) damage(t, d, s.owner, W_NADE, false); }
+      shockPulseFx(s, v.filter((t) => t.alive));
+    }
+    for (let k = s.arcs.length - 1; k >= 0; k--) { const r = s.arcs[k]; r.life -= dt; if (r.life <= 0 || !r.t.alive) { scene.remove(r.a.line); s.arcs.splice(k, 1); } else r.a.set(shockTop(s), center(r.t, 1)); }
+    if (!s.net && gameTime >= s.until) removeShock(i);
+  }
+}
+function clearShocks() { for (let i = shocks.length - 1; i >= 0; i--) removeShock(i); }
 // explosão genérica (Copo Bomba e foguete da bazuca)
 function blastFx(c, radius) {
   explosions++;
@@ -850,11 +887,13 @@ function updateArc(power) {
   pts.needsUpdate = true; arcLine.computeLineDistances(); arcGeo.computeBoundingSphere();
   arcMark.position.set(pos.x, pos.y - NADE.r + 0.04, pos.z); arcMark.visible = true; arcLine.visible = true;
 }
-function startCharge() { const p = player; if (emote.on || !p || !p.alive || (p.nades <= 0 && !(p.pokeballs > 0)) || p.charging) { if (!emote.on && p && p.alive && p.nades <= 0 && !p.charging) flashMsg('Sem Copo Bomba! Pegue um copo vermelho'); return; } p.charging = true; p.chargeStart = gameTime; }
+function startCharge() { const p = player; if (p && p.alive && !emote.on && p.stunUntil > gameTime) { flashMsg('Levou choque · espere passar'); return; } // atordoado não arremessa (o servidor também recusa)
+  if (emote.on || !p || !p.alive || (p.nades <= 0 && !(p.pokeballs > 0)) || p.charging) { if (!emote.on && p && p.alive && p.nades <= 0 && !p.charging) flashMsg('Sem Copo Bomba! Pegue um copo vermelho'); return; } p.charging = true; p.chargeStart = gameTime; }
 function chargePower() { return clamp((gameTime - player.chargeStart) / NADE.charge, 0, 1); }
 function releaseCharge() {
   const p = player; if (!p || !p.charging) return; p.charging = false; arcLine.visible = arcMark.visible = false;
   if (!p.alive || emote.on) return;
+  if (p.stunUntil > gameTime) { flashMsg('Levou choque · espere passar'); return; } // levou choque segurando o copo: não joga nem gasta
   const power = 0.15 + 0.85 * chargePower(); if (p.pokeballs > 0) throwPokeball(p, throwOrigin(), throwVelocity(power)); else throwGrenade(p, throwOrigin(), throwVelocity(power)); fp.cupThrowT = 0.25;
 }
 function botThrow(b, t) {
@@ -1069,7 +1108,8 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
   }
   for (const [sh, dmg] of heliDmg) { hurtHeli(dmg, sh); res.hit = true; if (shooter && shooter.isPlayer) sfx.hit(); }
   if (online && shooter.isPlayer) { const ev = ['f', v3a(origin), dirs.map(v3a), wIdx, +(performance.now() / 1000).toFixed(3), +renderServerT().toFixed(3)]; if (wIdx === BOW) ev.push(+scale.toFixed(3)); netEv(ev); return res; } // dano: servidor. O arco manda a força da puxada.
-  for (const [e, h] of hitsBy) { res.hit = true; res.wall = res.wall || !!(h.fx & 1); if (damage(e, h.dmg, shooter, wIdx, h.head, false, h.fx)) { res.kill = true; res.kills++; } }
+  const hurt = new Set(); for (const [e, h] of hitsBy) { res.hit = true; res.wall = res.wall || !!(h.fx & 1); const hp0 = e.hp; if (damage(e, h.dmg, shooter, wIdx, h.head, false, h.fx)) { res.kill = true; res.kills++; } if (e.hp < hp0) hurt.add(e); }
+  if (w.knock) for (const [e, h] of hitsBy) { if (!e.alive || e.dummy || !hurt.has(e)) continue; const v = shotKnock(w, origin, e.pos, h.dmg, e.zt); if (!v) continue; e.vel.x += v.x; e.vel.z += v.z; e.vel.y = Math.max(e.vel.y, v.y); e.onGround = false; if (e.isPlayer) lastKnock = gameTime; } // Calibre 12: empurrão (mesma conta do servidor)
   if (shooter.isPlayer && res.kills >= 2) feedbackMedal('Collateral', `${res.kills} de uma bala só`);
   return res;
 }
@@ -1995,21 +2035,33 @@ const fp = (() => {
   add(new THREE.BoxGeometry(0.1, 0.15, 0.24), toon(COLORS.red), 0, -0.03, 0.3, r);
   add(new THREE.BoxGeometry(0.04, 0.04, 0.1), toon(COLORS.cyan), 0, 0.09, -0.02, r);
   const rCh = add(new THREE.BoxGeometry(0.03, 0.025, 0.04), toon(0x22252c), 0.07, 0.035, 0.08, r, 0.004); // alavanca de manejo
-  // Calibre 12 (pump): cano único + tubo de cartuchos + telha (pump) de madeira que corre
+  // Calibre 12 (pump) no estilo SPAS-12: corpo preto, cano com protetor de calor furado, tubo de cartuchos, telha de polímero com sulcos, coronha de metal dobrada por cima
   const s = new THREE.Group(); root.add(s);
-  add(new THREE.BoxGeometry(0.12, 0.13, 0.3), toon(0x4a4f5a), 0, 0, 0.02, s);
-  add(new THREE.BoxGeometry(0.105, 0.15, 0.32), toon(0x8b5a2b), 0, -0.035, 0.32, s).rotation.x = -0.12;
-  add(new THREE.CylinderGeometry(0.03, 0.03, 0.72, 14), toon(0x55555f), 0, 0.035, -0.48, s).rotation.x = Math.PI / 2;
-  add(new THREE.CylinderGeometry(0.025, 0.025, 0.6, 12), toon(0x3f434c), 0, -0.03, -0.42, s).rotation.x = Math.PI / 2;
-  add(new THREE.TorusGeometry(0.032, 0.008, 6, 16), toon(0xf5e6d0), 0, 0.035, -0.8, s, 0.003);
-  add(new THREE.SphereGeometry(0.014, 8, 6), toon(COLORS.cyan), 0, 0.07, -0.8, s, 0.003);
-  add(new THREE.BoxGeometry(0.125, 0.05, 0.12), toon(COLORS.red), 0, 0.02, 0.02, s, 0.004); // faixa "12"
+  const spasM = toon(0x2a2d33), spasD = toon(0x1b1d22), spasP = toon(0x202227), holeM = toon(0x08090b);
+  add(new THREE.BoxGeometry(0.11, 0.13, 0.32), spasM, 0, 0, 0, s); // caixa da culatra
+  add(new THREE.BoxGeometry(0.03, 0.014, 0.28), spasD, 0, 0.072, 0, s, 0.003); // trilho de cima
+  add(new THREE.BoxGeometry(0.004, 0.04, 0.1), holeM, 0.056, 0.02, -0.03, s, 0); // janela de ejeção (direita)
+  add(new THREE.BoxGeometry(0.004, 0.022, 0.07), toon(COLORS.red), 0.056, -0.035, 0.07, s, 0); // faixinha vermelha "12"
+  add(new THREE.BoxGeometry(0.1, 0.11, 0.05), spasD, 0, -0.005, 0.185, s); // tampa de trás
+  add(new THREE.BoxGeometry(0.065, 0.17, 0.075), spasP, 0, -0.14, 0.15, s).rotation.x = -0.35; // empunhadura de pistola
+  add(new THREE.BoxGeometry(0.014, 0.01, 0.09), spasD, 0, -0.095, 0.07, s, 0.003); add(new THREE.BoxGeometry(0.014, 0.03, 0.01), spasD, 0, -0.08, 0.025, s, 0.003); // guarda-mato
+  add(new THREE.CylinderGeometry(0.026, 0.026, 0.7, 14), toon(0x3a3d44), 0, 0.04, -0.5, s).rotation.x = Math.PI / 2; // cano
+  add(new THREE.CylinderGeometry(0.037, 0.037, 0.42, 16), spasD, 0, 0.045, -0.48, s).rotation.x = Math.PI / 2; // protetor de calor
+  for (const z of [-0.64, -0.56, -0.48, -0.4, -0.32]) for (const k of [-1, 0, 1]) add(new THREE.CylinderGeometry(0.007, 0.007, 0.006, 8), holeM, k * 0.021, k ? 0.0754 : 0.082, z, s, 0).rotation.z = -k * 0.62; // furos do protetor
+  add(new THREE.CylinderGeometry(0.024, 0.024, 0.62, 12), spasM, 0, -0.035, -0.46, s).rotation.x = Math.PI / 2; // tubo de cartuchos
+  add(new THREE.CylinderGeometry(0.029, 0.029, 0.045, 12), spasD, 0, -0.035, -0.78, s, 0.004).rotation.x = Math.PI / 2; // tampa do tubo
+  add(new THREE.BoxGeometry(0.06, 0.1, 0.028), spasD, 0, 0.003, -0.74, s, 0.004); // braçadeira cano/tubo
+  add(new THREE.TorusGeometry(0.028, 0.006, 6, 16), toon(0x14161a), 0, 0.04, -0.85, s, 0.003); // boca
+  add(new THREE.BoxGeometry(0.012, 0.03, 0.014), spasD, 0, 0.09, -0.81, s, 0.003); add(new THREE.SphereGeometry(0.01, 8, 6), toon(COLORS.cyan), 0, 0.108, -0.81, s, 0.002); // massa de mira
+  for (const x of [-0.042, 0.042]) { add(new THREE.BoxGeometry(0.01, 0.014, 0.44), spasD, x, 0.098, -0.05, s, 0.003); add(new THREE.BoxGeometry(0.012, 0.055, 0.02), spasD, x, 0.075, -0.27, s, 0.003); } // coronha dobrada: trilhos (o meio fica livre pra mira)
+  add(new THREE.BoxGeometry(0.096, 0.014, 0.022), spasD, 0, 0.104, -0.27, s, 0.003); add(new THREE.BoxGeometry(0.1, 0.035, 0.035), spasD, 0, 0.085, 0.17, s, 0.003); // gancho da coronha + pivô
   const pumpPart = new THREE.Group(); pumpPart.position.set(0, -0.035, -0.36); s.add(pumpPart);
   const sShell = new THREE.Group(); s.add(sShell); sShell.visible = false; // cartucho entrando pela janela de baixo
   add(new THREE.CylinderGeometry(0.022, 0.022, 0.07, 10), toon(COLORS.red), 0, 0, 0, sShell, 0.004).rotation.x = Math.PI / 2;
   add(new THREE.CylinderGeometry(0.024, 0.024, 0.018, 10), toon(0xd9a441), 0, 0, 0.04, sShell, 0.003).rotation.x = Math.PI / 2;
-  add(new THREE.BoxGeometry(0.1, 0.085, 0.22), toon(0x9a6532), 0, 0, 0, pumpPart);
-  for (const z of [-0.07, 0, 0.07]) add(new THREE.BoxGeometry(0.104, 0.012, 0.012), toon(0x5a3a1c), 0, 0.01, z, pumpPart, 0);
+  add(new THREE.BoxGeometry(0.1, 0.085, 0.24), spasP, 0, 0, 0, pumpPart); // telha de polímero
+  for (const z of [-0.09, -0.054, -0.018, 0.018, 0.054, 0.09]) add(new THREE.BoxGeometry(0.106, 0.091, 0.012), holeM, 0, 0, z, pumpPart, 0); // sulcos
+  add(new THREE.BoxGeometry(0.108, 0.095, 0.02), spasD, 0, 0, -0.125, pumpPart, 0.004); // lábio da frente
   const pumpShoulder = new THREE.Vector3(-0.42, -0.5, 0.28);
   let pumpHand = makeFPForearm(getSkin()); s.add(pumpHand);
   // Três snipers: a mão do ferrolho fica dentro de cada modelo (sniper-view.js)
@@ -2097,7 +2149,7 @@ const fp = (() => {
   const semiMag = add(new THREE.BoxGeometry(0.07, 0.16, 0.09), toon(0xc45a3a), 0, -0.12, 0.04, semi, 0.004); semiMag.rotation.x = 0.1;
   const semiCh = add(new THREE.BoxGeometry(0.02, 0.03, 0.06), toon(0x111318), 0.07, 0.07, 0.12, semi, 0.003);
   semi.visible = false; guns.push(semi); // 12 = semi
-  const cross = makeFPCrossbow(); cross.position.set(0.22, -0.14, 0.06); cross.rotation.set(0.18, 0.55, 0.08); cross.scale.setScalar(2.05); cross.visible = false; root.add(cross);
+  const cross = makeFPCrossbow(); cross.position.set(0, 0.04, 0.02); cross.scale.setScalar(1.15); cross.visible = false; root.add(cross); // reta pra frente como o fuzil: trilho no eixo da mira, coronha no ombro (sai pelo canto de baixo)
   const bow = makeFPBow(); bow.position.set(0.08, -0.06, 0.16); bow.rotation.set(0.08, 0.28, 0); bow.scale.setScalar(1.7); bow.visible = false; root.add(bow);
   guns.push(cross, bow); // 13 besta, 14 arco
   // FAMAS da Pocilga (bullpup): alça de transporte com a alavanca embaixo, pente atrás do cabo, bipé dobrado sob a telha
@@ -2247,7 +2299,8 @@ function resetMatchCamos() { for (const g of fp.guns) resetWeaponCamo(g); }
 const _saberPt = new V3(), _saberInv = new THREE.Matrix4();
 const SABER_SHOULDERS = [new V3(0.46, -0.62, 0.58), new V3(-0.28, -0.58, 0.52)];
 const BOW_SHOULDERS = { grip: new V3(0.05, -0.62, 0.12), draw: new V3(0.46, -0.58, 0.22) };
-const CROSS_SHOULDERS = { grip: new V3(0.5, -0.68, 0.32), draw: new V3(-0.02, -0.6, 0.12) };
+const CROSS_SHOULDERS = { grip: new V3(0.16, -0.52, 0.48), draw: new V3(-0.46, -0.6, 0.24) }; // ombros como os do fuzil
+const _crossFore = new V3(), CROSS_PINCH = new V3(-0.05, 0.05, 0); // besta: mão esquerda na telha; na recarga pinça a corda (em cima/à esquerda do nó)
 const EGG_SHOULDERS = { grip: new V3(0.08, -0.62, 0.14), draw: new V3(0.42, -0.58, 0.24) };
 const SABER_GRIPS = [new V3(0, 0, 0.05), new V3(0, 0, -0.035)]; // as duas mãos no cabo, uma acima da outra
 const DUAL_GRIP = new V3(0, 0, 0.01);
@@ -2266,19 +2319,21 @@ function poseSaberHands() {
     poseFPForearm(hand, SABER_SHOULDERS[i]);
   });
 }
-function poseBowHands() {
+function poseBowHands(rk = 0) { // rk = fração da recarga (só a besta usa)
   const g = fp.guns[player.weapon];
   const hands = [fp.fpRef.bowGrip, fp.fpRef.bowDraw];
   if (!g || !g.userData.grip || !hands[0]) return;
   const shoulders = player.weapon === BOW ? BOW_SHOULDERS : player.weapon === EGG_W ? EGG_SHOULDERS : CROSS_SHOULDERS;
+  const cross = player.weapon === CROSS, armK = cross ? sstep(0.04, 0.16, rk) * (1 - sstep(0.74, 0.9, rk)) : 1; // besta: a mão só vai na corda pra armar
   g.updateWorldMatrix(true, false);
   fp.root.updateWorldMatrix(true, false);
   _saberInv.copy(fp.root.matrixWorld).invert();
+  if (cross) _crossFore.copy(g.userData.fore).applyMatrix4(g.matrixWorld).applyMatrix4(_saberInv);
   [[g.userData.grip, hands[0], shoulders.grip], [g.userData.draw, hands[1], shoulders.draw]].forEach(([pt, hand, shoulder]) => {
     _saberPt.copy(pt);
     g.localToWorld(_saberPt);
     hand.position.copy(_saberPt).applyMatrix4(_saberInv);
-    if (hand === hands[1]) hand.position.x += player.weapon === BOW ? 0.14 : player.weapon === EGG_W ? 0.04 : 0.08;
+    if (hand === hands[1]) { if (cross) hand.position.add(CROSS_PINCH).lerp(_crossFore, 1 - armK); else hand.position.x += player.weapon === BOW ? 0.14 : 0.04; }
     poseFPForearm(hand, shoulder);
   });
 }
@@ -2381,7 +2436,7 @@ function updateFP(dt) {
       else if (p.weapon === BOW && p.bowDraw) poseDraw(g, 0.28 + 0.72 * clamp((gameTime - p.bowDraw) / (w.draw || 0.7), 0, 1));
       else if (p.weapon === BOW) poseDraw(g, p.mag[p.weapon] > 0 ? 0.28 : 0);
       else poseDraw(g, p.mag[p.weapon] > 0 ? 1 : 0);
-      poseBowHands();
+      poseBowHands(reloading ? k : 0);
     }
   }
   fp.slide.position.z = p.weapon === PISTOL ? fp.kick * 0.9 : 0;
@@ -2408,7 +2463,8 @@ function updateFP(dt) {
   if (fp.mini) { const M = fp.mini, on = p.weapon === MINIGUN, h = p.mgHeat || 0; if (on) M.barrels.rotation.z += (p.mgSpin || 0) * dt * 42; M.glow.visible = on && h > 0.25; M.glowMat.opacity = sstep(0.25, 1, h) * 0.85; M.glowMat.color.setRGB(1, 0.18 + 0.3 * (1 - h), 0.06); if (on) vib = (p.mgSpin || 0) * 0.0025 + (p.mgFiring ? 0.006 : 0); }
   const bobA = 1 - ads * 0.8; // mirando: arma no centro, levantada, quase sem balanço
   const adsX = w.rocket ? 0.12 : w.corn ? 0.1 : 0, adsY = w.rocket ? 0.0 : w.corn ? -0.05 : 0.065; // Lança-Milho: a espiga em cima não pode tapar a mira
-  fp.root.position.set(0.2 + (adsX - 0.2) * ads + Math.cos(fp.bob) * 0.012 * bobA + fp.swayX * 0.45 * swA, -0.2 + ads * adsY + Math.abs(Math.sin(fp.bob)) * 0.015 * bobA - dip * 0.25 - fp.shellT * 0.1 + fp.swayY * 0.45 * swA, -0.62 + ads * 0.06 + fp.kick * (0.5 - ads * 0.25));
+  const hipX = p.weapon === CROSS ? 0.03 : 0, hipY = p.weapon === CROSS ? -0.04 : 0; // besta no quadril: um tico mais baixa/à direita pra os braços do arco não taparem a mira (no ADS some)
+  fp.root.position.set(0.2 + hipX + (adsX - 0.2 - hipX) * ads + Math.cos(fp.bob) * 0.012 * bobA + fp.swayX * 0.45 * swA, -0.2 + hipY * (1 - ads) + ads * adsY + Math.abs(Math.sin(fp.bob)) * 0.015 * bobA - dip * 0.25 - fp.shellT * 0.1 + fp.swayY * 0.45 * swA, -0.62 + ads * 0.06 + fp.kick * (0.5 - ads * 0.25));
   fp.root.rotation.set(fp.kick * 1.2 - dip * 0.6 + rl.pitch + fp.climb * (1 - ads * 0.6) + fp.swayY * 0.6 * swA, rl.yaw - fp.swayX * 0.8 * swA + drawYaw, dip * 0.3 + tilt + fp.strafe * swA + drawRoll * 0.7);
   if (w.spin) { fp.root.position.y -= 0.03; fp.root.rotation.y += 0.04; } // minigun pesada: mais baixa
   if (vib) { fp.root.position.x += rand(-1, 1) * vib; fp.root.position.y += rand(-1, 1) * vib; fp.root.rotation.z += rand(-1, 1) * vib * 2; }
@@ -2567,7 +2623,7 @@ function fpReload(p, w, dt) {
     out.dip = env * 0.22; out.pitch = env * -0.12; out.tilt = env * 0.2;
     const g = fp.guns[i]; if (g && g.userData.reloadEgg) g.userData.reloadEgg(sstep(0.3, 0.78, k));
   } else if (i === CROSS || i === BOW) {
-    out.dip = env * 0.2; out.pitch = env * (i === BOW ? -0.18 : 0.12);
+    out.dip = env * (i === BOW ? 0.2 : 0.12); out.pitch = env * (i === BOW ? -0.18 : -0.04); if (i === CROSS) out.tilt = env * 0.2; // besta: ponta desce de leve e inclina; a mão puxa a corda à vista
   }
   return out;
 }
@@ -2729,13 +2785,14 @@ function updatePlayer(dt) {
   const wish = new V3();
   if (!guiding && (keys.KeyW || keys.ArrowUp)) wish.add(fwd); if (!guiding && (keys.KeyS || keys.ArrowDown)) wish.sub(fwd);
   if (!guiding && (keys.KeyD || keys.ArrowRight)) wish.add(right); if (!guiding && (keys.KeyA || keys.ArrowLeft)) wish.sub(right);
-  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? 0.35 : 1) * (p.ghostOn ? 1.3 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
+  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (WEAPONS[p.weapon].move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? SHOCK.slow : 1) * (p.ghostOn ? 1.3 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
   const acc = p.onGround ? 14 : 4;
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
   if (!guiding && jumpPressed && p.onGround) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
   moveEntity(p, dt);
   const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 * stanceScale(p.crouch) : 0;
   camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
+  if (p.alive && p.stunUntil > gameTime) { camera.rotation.x += rand(-1, 1) * 0.012; camera.rotation.y += rand(-1, 1) * 0.012; } // levou choque: mira tremendo
   if (shake > 0) {
     if (!guiding) { camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.25)); camera.rotation.z += rand(-1, 1) * shake * 0.05; }
     shake = Math.max(0, shake - dt * 1.8);
@@ -2791,8 +2848,8 @@ function updatePlayer(dt) {
       const moving = Math.hypot(p.vel.x, p.vel.z) > 1 || !p.onGround;
       let spread;
       if (w.scope) spread = sniperSpread(scoped(), Math.hypot(p.vel.x, p.vel.z), !p.onGround, w.scopeStyle === 'torresmo'); // luneta + parado = zero; Torresmo sem luneta abre bem mais
-      else spread = w.spread * (moving ? 2.2 - ads * 0.8 : 1) * (1 - (1 - w.adsSpread) * ads);
-      const muzzle = scoped() ? camera.localToWorld(new V3(0, -0.12, -0.6)) : camera.localToWorld(new V3(0.2 * (1 - ads), -0.18 + ads * 0.06, -0.9));
+      else { const mv = w.moveSpread ?? 2.2; spread = w.spread * (moving ? mv - ads * (mv - 1) * 0.67 : 1) * (1 - (1 - w.adsSpread) * ads); } // moveSpread: quanto o cone abre andando (Calibre 12 abre pouco)
+      const muzzle = scoped() ? camera.localToWorld(new V3(0, -0.12, -0.6)) : p.weapon === CROSS ? camera.localToWorld(new V3(0.25 * (1 - ads), -0.19 + ads * 0.15, -1.0)) : camera.localToWorld(new V3(0.2 * (1 - ads), -0.18 + ads * 0.06, -0.9));
       if (w.rocket) {
         const d = dir.clone(); if (spread) { d.x += rand(-1, 1) * spread; d.y += rand(-1, 1) * spread; d.normalize(); }
         launchRocket(p, camera.localToWorld(new V3(0.08 * (1 - ads), -0.05, 0)), d);
@@ -2801,7 +2858,7 @@ function updatePlayer(dt) {
       else fire(p, camera.position.clone(), dir, p.weapon, spread, muzzle);
       sfx[w.key](); fp.kick = Math.min(0.14, fp.kick + w.recoil * 2.5); fp.flashT = w.rocket ? 0.08 : 0.04;
       if (p.weapon === CROSS || p.weapon === BOW) { fp.stringT = 0.14; launchShaft(muzzle, dir, p.weapon === CROSS ? 42 : 28); }
-      if (w.pump) { sfx.pump(0.9, 0.3); fp.actionT = fp.actionLen = w.rate; }
+      if (w.pump) { sfx.pump(0.9, 0.3); fp.actionT = fp.actionLen = w.rate; fp.kick = 0.2; shake = Math.max(shake, 0.2); } // Calibre 12: coice e tranco de câmera mais pesados
       if (w.bolt) { sfx.bolt(0.9, 0.3); fp.actionT = fp.actionLen = w.rate; }
       if (w.burst) { fp.cycT = 0.06; fp.climb = Math.min(0.12, fp.climb + 0.04); ejectCase(fp.famasCase); } // alavanca corre, arma sobe na rajada, cápsula sai pela direita
       if (w.scope) shake = Math.max(shake, 0.15);
@@ -2881,7 +2938,7 @@ function updateBot(b, dt) {
     else { const st = steer(b, goal) || to.normalize(); move.copy(st); desiredYaw = Math.atan2(st.x, st.z); }
     if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5) startReload(b);
   }
-  if (move.lengthSq()) move.normalize().multiplyScalar(BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > gameTime ? 0.35 : 1));
+  if (move.lengthSq()) move.normalize().multiplyScalar(BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > gameTime ? SHOCK.slow : 1));
   const acc = b.onGround ? 10 : 3;
   b.vel.x += (move.x - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (move.z - b.vel.z) * Math.min(1, acc * dt);
   const blocked = moveEntity(b, dt);
@@ -3377,12 +3434,12 @@ function equipLiveLoadout(w) {
   p.reloadEnd = 0; p.knifeMode = false; switchWeapon(p, w); if (p.weapon !== w) setWeapon(p, w);
   flashMsg(`${WEAPONS[w].name} · ${WEAPONS[w].desc}`);
 }
-// munição de reserva infinita e Copo Bomba/fumaça/atordoamento voltam sozinhos (offline e online; online o servidor confere)
+// munição de reserva infinita e Copo Bomba/fumaça voltam sozinhos; pau de choque em 10 s (offline e online; online o servidor confere)
 function trainRefill() {
   const p = player; if (!p || !p.alive) return;
   for (const i of p.slots) p.reserve[i] = WEAPONS[i].reserve;
   if (p.nades < NADE.max && gameTime - (p.lastNadeT ?? -9) > TRAIN.nadeRefill + 0.25 && !p.charging) p.nades = NADE.max;
-  if (!online) { p.smokeNades = clientPower('smoke') ? Math.max(p.smokeNades || 0, 1) : 0; p.stunNades = clientPower('stun') ? Math.max(p.stunNades || 0, 1) : 0; }
+  if (!online) { p.smokeNades = clientPower('smoke') ? Math.max(p.smokeNades || 0, 1) : 0; shockRefill(p); } // pau de choque: volta em 10 s (online o servidor manda 'skn')
 }
 // número de dano subindo em cima do alvo (amarelo = cabeça) + painel "último acerto"
 const dmgPops = [];
@@ -3909,8 +3966,8 @@ document.addEventListener('keydown', (e) => {
       if (!emote.on && e.code === 'Digit3') switchWeapon(player, player.slots[2]);
       if (!emote.on && e.code === 'KeyV' && !e.repeat) quickKnife(player);
       if (!emote.on && e.code === 'KeyI' && player.alive && !e.repeat) startInspect(player);
-      if (!emote.on && e.code === 'Digit4' && player.alive && !e.repeat) throwTactical('smoke');
-      if (!emote.on && e.code === 'Digit5' && player.alive && !e.repeat) throwTactical('stun');
+      if (!emote.on && e.code === 'Digit4' && player.alive && !e.repeat) throwTactical();
+      if (!emote.on && e.code === 'Digit5' && player.alive && !e.repeat) throwShock();
       if (!emote.on && e.code === 'KeyF' && player.alive && !e.repeat && !invMode()) useStreak();
       if (training() && player.alive && !emote.on && !e.repeat && (e.code === 'KeyB' || e.code === 'KeyN' || e.code === 'KeyM')) trainSwap(e.code);
       else if (e.code === 'KeyB' && !e.repeat && player.alive && !invMode() && !invPick) startEmote(); // Invasão: B é só o painel de armas (invKey), nunca dança
@@ -3937,7 +3994,7 @@ function loop() {
     if (emote.on && state === 'playing') stepEmote(dt);
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateRockets(dt); updateDiscs(dt); updateCorn(dt); updateEggs(dt); updatePokeFx(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) if (!e.zt) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
+    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateShocks(dt); updateRockets(dt); updateDiscs(dt); updateCorn(dt); updateEggs(dt); updatePokeFx(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) if (!e.zt) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt); invTick(dt);
     if (!online && !exploreMode() && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
@@ -4025,7 +4082,7 @@ if (!$('smokeVeil')) {
 if (!$('stunFlash')) {
   const flash = document.createElement('div');
   flash.id = 'stunFlash';
-  flash.style.cssText = 'position:fixed;inset:0;z-index:6;pointer-events:none;background:rgba(255,244,160,.92);opacity:0';
+  flash.style.cssText = 'position:fixed;inset:0;z-index:6;pointer-events:none;background:radial-gradient(circle,rgba(160,220,255,.18),rgba(70,150,255,.62));opacity:0';
   document.body.appendChild(flash);
 }
 loop();
@@ -4621,7 +4678,7 @@ function applySnapshot(s) {
 }
 const entOf = (id) => (online ? online.ents.get(id) : null);
 function remoteMuzzle(e) { return center(e, 1.3).add(new V3(Math.sin(e.yaw) * 1.0, -0.25, Math.cos(e.yaw) * 1.0)); }
-const NET_SHOOTER = { sh: 1, ml: 1, dl: 2, el: 2, cl: 1, rk: 2 }; // índice do id de quem disparou em cada evento
+const NET_SHOOTER = { sh: 1, ml: 1, dl: 2, el: 2, cl: 1, rk: 2, sk: 2 }; // índice do id de quem disparou em cada evento
 function netEvent(ev) {
   const o = online, k = ev[0];
   { const si = NET_SHOOTER[k]; const se = si && entOf(ev[si]); if (se && se.model) setExpression(se.model, 'angry', 0.5); } // cara de brava de quem atirou/golpeou
@@ -4664,10 +4721,14 @@ function netEvent(ev) {
   } else if (k === 'sp') {
     const [, id, pos, yaw, prim, sq] = ev; const e = entOf(id); if (!e) return;
     e.pos.set(pos[0], pos[1], pos[2]); e.vel.set(0, 0, 0); e.crouch = 0; e.hp = 100; e.alive = true; e.invulnUntil = gameTime + INVULN; resetRegen(e);
-    e.primary = prim; e.secondary = e.secondary ?? PISTOL; e.melee = e.melee ?? KNIFE; e.slots = [prim, e.secondary, e.melee]; e.mag = WEAPONS.map((x) => x.mag); e.reserve = WEAPONS.map((x) => x.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.nades = NADE.spawnWith; e.smokeNades = clientPower('smoke') ? 1 : 0; e.stunNades = clientPower('stun') ? 1 : 0; e.mgSpin = 0; e.mgHeat = 0; e.mgHot = false; e.mgWant = false; e.mgFiring = false; e.mgSpinOn = false; setWeapon(e, prim);
+    e.primary = prim; e.secondary = e.secondary ?? PISTOL; e.melee = e.melee ?? KNIFE; e.slots = [prim, e.secondary, e.melee]; e.mag = WEAPONS.map((x) => x.mag); e.reserve = WEAPONS.map((x) => x.reserve); e.reloadEnd = 0; e.switchEnd = 0; e.nades = NADE.spawnWith; e.smokeNades = clientPower('smoke') ? 1 : 0; e.stunNades = clientPower('stun') ? SHOCK.spawnWith : 0; e.stunUntil = 0; e.mgSpin = 0; e.mgHeat = 0; e.mgHot = false; e.mgWant = false; e.mgFiring = false; e.mgSpinOn = false; setWeapon(e, prim);
     if (e === player) { keys.Space = false; eggSplatUntil = 0; player.sq = sq; player.yaw = yaw + Math.PI; player.pitch = 0; player.respawnAt = Infinity; player.nextPrimary = prim; const handLoad = clampLoadout(prim, selectedSecondary, selectedMelee, activeWeapons()); player.secondary = handLoad.secondary; player.melee = handLoad.melee; player.slots = [prim, player.secondary, player.melee]; player.onGround = true; $('stamp').classList.remove('show'); const hand = pauseSwapWeapon >= 0 && player.slots.includes(pauseSwapWeapon) ? pauseSwapWeapon : spawnHold === 'melee' ? player.melee : spawnHold === 'secondary' ? player.secondary : prim; if (player.slots.includes(hand)) setWeapon(player, hand); $('teamPick').classList.add('hidden'); onPlayerRespawn(); if (pauseSwapQuiet()) { flashMsg('Nasceu de novo com o equipamento novo'); pauseSwapWeapon = -1; pauseSwapUntil = performance.now() + 800; if (state === 'paused') resume(); } }
     else { e.yaw = yaw; e.model.group.visible = true; e.model.group.scale.set(1, 1, 1); e.buf = [{ t: performance.now() / 1000 - INTERP_DELAY, x: pos[0], y: pos[1], z: pos[2], yaw }]; }
   } else if (k === 'pk') { const p = pickups[ev[1]]; if (p) { p.active = !!ev[2]; p.mesh.visible = p.active; } }
+  else if (k === 'sk') { const [, pid, oid, op, vel] = ev; const owner = entOf(oid); spawnShock({ net: true, pid, owner, pos: a3v(op), vel: a3v(vel) }); if (oid !== o.myId && owner) sfx.toss(distVol(owner.pos)); } // pau de choque lançado
+  else if (k === 'sx') { const s = shocks.find((x) => x.pid === ev[1]); if (s) { s.wait = false; stickShock(s, { x: ev[2][0], y: ev[2][1], z: ev[2][2] }, { x: ev[3][0], y: ev[3][1], z: ev[3][2] }); } } // fincou (posição do servidor)
+  else if (k === 'sz') { const s = shocks.find((x) => x.pid === ev[1]); const v = (ev[2] || []).map(entOf).filter(Boolean); if (s && s.stuck) shockPulseFx(s, v); else for (const t of v) t.stunUntil = Math.max(t.stunUntil || 0, gameTime + shockStun(t)); } // pulso (o dano vem nos 'h')
+  else if (k === 'se') { const i = shocks.findIndex((x) => x.pid === ev[1]); if (i >= 0) removeShock(i); }
   else if (k === 'nd') {
     const [, pid, oid, op, vel, pk] = ev; const mesh = pk ? makePokeball() : makeCup(1.15); scene.add(mesh); const owner = entOf(oid);
     grenades.push({ net: true, poke: !!pk, pid, owner, pos: a3v(op), vel: a3v(vel), explodeAt: gameTime + (pk ? POKE.fuse : NADE.fuse), mesh, spin: new V3(rand(-8, 8), rand(-4, 4), rand(-8, 8)), lastBounce: 0 });
@@ -4730,9 +4791,11 @@ function personalEvent(ev) {
   else if (ev[0] === 'mgn') grantMinigun(p); // servidor deu a minigun (código no chat)
   else if (ev[0] === 'kn') { const [x, y, z] = ev[1]; p.vel.x += x; p.vel.z += z; p.vel.y = Math.max(p.vel.y, y); p.onGround = false; lastKnock = gameTime; }
   else if (ev[0] === 'egg') { if (p.alive) eggSplat(Number(ev[1]) || EGG.splat); } // levou ovada: tela suja (evento pessoal do servidor)
+  else if (ev[0] === 'skn') p.stunNades = ev[1] | 0; // servidor confirma as cargas do pau de choque
+  else if (ev[0] === 'ndn') p.nades = ev[1] | 0; // servidor recusou o copo (choque): devolve a contagem
   else if (ev[0] === 'got') {
-    const [, type, hp, nades] = ev; sfx.pickup(); p.hp = hp; p.nades = nades; if (type === 'ammo') refillAmmo(p);
-    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})` : p.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${p.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!');
+    const [, type, hp, nades] = ev; sfx.pickup(); p.hp = hp; p.nades = nades; if (type === 'ammo') refillAmmo(p); if (ev[4] != null) p.stunNades = ev[4];
+    flashMsg(type === 'health' ? '+50 de vida' : type === 'grenade' ? `+1 Copo Bomba (${p.nades}/${NADE.max})${clientPower('stun') ? ` · Pau de choque ${p.stunNades || 0}/${SHOCK.max}` : ''}` : p.primary === 3 ? `Munição! +${invMode() ? INV_AMMO.rockets : 1} foguete${invMode() ? 's' : ''} (${p.reserve[3]}/${invMode() ? Math.ceil(WEAPONS[3].reserve * INV_AMMO.reserveMul) : WEAPONS[3].reserve})` : 'Munição cheia!');
   }
 }
 function onlineEnd(m) {
@@ -5041,7 +5104,9 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   get online() { return online; }, joinRoom, leaveOnline, netEv,
   get mode() { return mode; }, get zone() { return zone; }, set zone(v) { zone = v; }, get teamScore() { return teamScore; }, get spawnHold() { return spawnHold; }, get selectedPrimary() { return selectedPrimary; },
   DOM, applyTeam, damage, respawn: (e) => respawn(e), get discs() { return discs; }, fire, get lastTrace() { return window.__lastTrace; }, get holeCount() { return holes.length; }, get PHYS() { return PHYS; }, bulletHole, get eggs() { return eggs; }, get eggStains() { return eggStains.length; }, get eggSplat() { return Math.max(0, eggSplatUntil - gameTime); }, launchEgg: (e, o, d, k) => launchEgg(e, new V3(...o), new V3(...d).normalize(), k), fpGunNames: () => fp.guns.map((g) => g.name || ''), EGG_W, get effects() { return effects; }, fpGunEgg: () => { const e = fp.sling.userData.egg; return { vis: e.visible, y: +e.position.y.toFixed(3), z: +e.position.z.toFixed(3), pouchZ: +fp.sling.userData.pouch.position.z.toFixed(3) }; }, grantPokeball, get pokeFx() { return pokeFx; }, grantMinigun: () => grantMinigun(), MINIGUN, get mini() { const p = player; return p ? { spin: p.mgSpin || 0, heat: p.mgHeat || 0, hot: !!p.mgHot, firing: !!p.mgFiring, rot: fp.mini ? fp.mini.barrels.rotation.z : 0, glow: fp.mini ? fp.mini.glowMat.opacity : 0, glowOn: !!(fp.mini && fp.mini.glow.visible), shots: window.__mgShots || 0, steam: window.__mgSteam || 0, fov: camera.fov, guns: fp.guns.length, drops: fp.drops.length, hud: !document.getElementById('mgHud')?.hidden } : null; }, setMgHeat: (h) => { if (player) player.mgHeat = h; }, get fpSaberSide() { return fp.saberSide || 0; }, inspect: () => startInspect(player), stopInspect: () => stopInspect(true), get inspecting() { const s = fp.ins; return s ? { t: s.t, wpn: s.wpn, kind: s.kind, out: s.out, fade: s.fade, hold: s.hold } : null; },
+  fpPumpZ: () => +fp.pumpPart.position.z.toFixed(3), get shake() { return shake; },
   fpHands: () => ({ arms: fp.fpRef.arms.visible, armsP: fp.fpRef.armsP.visible, pump: fp.pumpHand.visible, saberR: !!fp.fpRef.saberR && fp.fpRef.saberR.visible, saberL: !!fp.fpRef.saberL && fp.fpRef.saberL.visible, bowGrip: !!fp.fpRef.bowGrip && fp.fpRef.bowGrip.visible, bowDraw: !!fp.fpRef.bowDraw && fp.fpRef.bowDraw.visible, kr: fp.kr.visible, knifeFlip: fp.kpiv.rotation.x }),
+  fpCross: () => { const g = fp.guns[CROSS]; fp.root.updateMatrixWorld(true); const w = (v) => g.localToWorld(v.clone()), h = fp.fpRef.bowDraw.getWorldPosition(new V3()); const tip = w(new V3(0, 0.05, -0.44)).project(fpCam), lt = w(new V3(-0.24, 0.14, -0.46)).project(fpCam), butt = w(new V3(0, -0.01, 0.33)); return { tip: [tip.x, tip.y], limbL: [lt.x, lt.y], butt: butt.toArray(), fore: h.distanceTo(w(g.userData.fore)), knot: h.distanceTo(w(g.userData.draw)) }; },
   fpHandErr: () => { const p = player, g = fp.guns[p.weapon]; if (!g) return 0; fp.root.updateWorldMatrix(true, true); const d = (h, o, pt) => h.getWorldPosition(new V3()).distanceTo(o.localToWorld(pt.clone()));
     if ((p.weapon === BOW || p.weapon === CROSS || p.weapon === EGG_W) && g.userData.grip) return d(fp.fpRef.bowGrip, g, g.userData.grip);
     if (isSaber(p.weapon)) { const tw = g.userData.twin; return Math.max(d(fp.fpRef.saberR, g.userData.saber, tw ? DUAL_GRIP : SABER_GRIPS[0]), d(fp.fpRef.saberL, tw ? tw.userData.saber : g.userData.saber, tw ? DUAL_GRIP : SABER_GRIPS[1])); }
@@ -5049,7 +5114,7 @@ window.__docao = { get state() { return state; }, get entities() { return entiti
   blastAt: (x, y, z, kind = 'r', owner) => blast(new V3(x, y, z), owner || player, kind === 'n' ? { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE } : { ...WEAPONS[3].rocket, wIdx: 3 }),
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()),
   cornAt: (o, d, owner) => launchCorn(owner || player, new V3(...o), new V3(...d).normalize()), get corns() { return corns; }, get cornPopsQ() { return cornPops; }, fpCorn: () => ({ vis: fp.guns[CORN_W].visible, cobY: fp.cornCob.position.y, cobVis: fp.cornCob.visible, crank: fp.cornCrank.rotation.x, kernels: fp.cornKernels.filter((g) => g.visible).length, cobScr: (() => { fp.root.updateMatrixWorld(true); const v = fp.cornCob.localToWorld(new V3(0, 0.1, 0)).project(fpCam); return [v.x, v.y]; })() }), setWeaponOf: (e, i) => setWeapon(e, i),
-  rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, get netHelis() { return [...netHelis.values()].map((h) => ({ id: h.id, owner: h.owner ? h.owner.name : '', hp: h.hp, alive: h.alive, pos: h.pos.toArray() })); }, get netNukeAt() { return netNukeAt; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical('smoke'), throwStun: () => throwTactical('stun'), get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
+  rewardKill: () => onRewardKill(), get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, get netHelis() { return [...netHelis.values()].map((h) => ({ id: h.id, owner: h.owner ? h.owner.name : '', hp: h.hp, alive: h.alive, pos: h.pos.toArray() })); }, get netNukeAt() { return netNukeAt; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical(), throwStun: () => throwShock(), throwShock: () => throwShock(), spawnShock: (owner, pos, vel) => spawnShock({ owner, pos: new V3(...pos), vel: new V3(...vel) }), get shocks() { return shocks; }, SHOCK, get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
   swingSaber: () => swingSaber(player),
   // Invasão 🎃
   get inv() { return inv; }, get invView() { return invView(); }, get invInv() { return invGfx.inv.slice(); }, get invSel() { return invGfx.sel; }, get invDrops() { return [...invGfx.drops.keys()]; }, get invPick() { return invPick; },

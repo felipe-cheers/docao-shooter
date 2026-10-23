@@ -46,6 +46,14 @@ export function explosionHits(c, o, ents, losClear, owner, teamMode, direct = nu
   }
   return out;
 }
+// empurrão de tiro (Calibre 12): W.knock = { push, lift }; k = parte do tiro cheio que acertou (cabeça conta mais, teto 1). Direção = atirador → alvo no plano.
+// zt = tipo do zumbi (Invasão): Barrigão e chefe quase não se mexem, senão um jogador sozinho segura os dois longe
+const ZT_KNOCK = { tank: 0.2, boss: 0.08 };
+export function shotKnock(W, from, to, dmg, zt) {
+  if (!W || !W.knock || !(dmg > 0)) return null;
+  const k = Math.min(1, dmg / (W.dmg * Math.max(1, W.pellets))) * (ZT_KNOCK[zt] ?? 1); let dx = to.x - from.x, dz = to.z - from.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+  return { x: dx * W.knock.push * k, y: W.knock.lift * k, z: dz * W.knock.push * k };
+}
 // raio × cápsula vertical em pos (com folga pad). Devolve t ≥ 0 do primeiro contato ou null.
 export function rayCapsule(o, d, maxT, pos, pad = 0, crouch = 0) {
   const scale = stanceScale(crouch), R = BODY.r + pad, ry = BODY.r * scale + pad;

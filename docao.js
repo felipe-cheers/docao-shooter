@@ -405,9 +405,19 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.11, 0.13, 0.62), toon('#3b3f4a'), r, 0.01);
     mesh(new THREE.BoxGeometry(0.07, 0.2, 0.1), toon('#e63946'), r, 0.01).position.set(0, -0.13, 0.02);
     const br = mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8), toon('#222'), r, 0); br.position.set(0, 0.01, 0.42); br.rotation.x = Math.PI / 2;
+    // Calibre 12 em 3ª pessoa: SPAS-12 (preta, protetor de calor furado, tubo, telha com sulcos, coronha dobrada por cima)
     const sg = new THREE.Group(); sg.position.copy(r.position); g.add(sg);
-    mesh(new THREE.BoxGeometry(0.14, 0.12, 0.5), toon('#8b5a2b'), sg, 0.01).position.z = -0.05;
-    for (const s of [-1, 1]) { const b = mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 10), toon('#55555f'), sg, 0.01); b.position.set(s * 0.035, 0.03, 0.35); b.rotation.x = Math.PI / 2; }
+    const spM = toon('#2a2d33'), spD = toon('#1b1d22'), spP = toon('#202227'), spH = toon('#08090b');
+    mesh(new THREE.BoxGeometry(0.11, 0.13, 0.32), spM, sg, 0.01).position.z = -0.04;
+    const spG = mesh(new THREE.BoxGeometry(0.06, 0.15, 0.07), spP, sg, 0.008); spG.position.set(0, -0.12, -0.14); spG.rotation.x = 0.35;
+    const spB = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.55, 10), toon('#3a3d44'), sg, 0.008); spB.rotation.x = Math.PI / 2; spB.position.set(0, 0.035, 0.38);
+    const spS = mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.3, 12), spD, sg, 0.008); spS.rotation.x = Math.PI / 2; spS.position.set(0, 0.04, 0.3);
+    for (const z of [0.2, 0.28, 0.36]) mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 8), spH, sg, 0).position.set(0, 0.077, z); // furos
+    const spT = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.48, 10), spM, sg, 0.008); spT.rotation.x = Math.PI / 2; spT.position.set(0, -0.035, 0.36);
+    mesh(new THREE.BoxGeometry(0.1, 0.085, 0.2), spP, sg, 0.008).position.set(0, -0.035, 0.32); // telha
+    for (const z of [0.25, 0.3, 0.35, 0.4]) mesh(new THREE.BoxGeometry(0.104, 0.089, 0.012), spH, sg, 0).position.set(0, -0.035, z);
+    for (const x of [-0.04, 0.04]) mesh(new THREE.BoxGeometry(0.01, 0.014, 0.4), spD, sg, 0.004).position.set(x, 0.09, 0); // coronha dobrada
+    mesh(new THREE.BoxGeometry(0.09, 0.05, 0.02), spD, sg, 0.004).position.set(0, 0.075, 0.2);
     // sniper (cano longo + luneta)
     const sn = new THREE.Group(); sn.position.copy(r.position); g.add(sn);
     mesh(new THREE.BoxGeometry(0.1, 0.12, 0.75), toon('#5c7a3a'), sn, 0.01).position.z = 0.02;

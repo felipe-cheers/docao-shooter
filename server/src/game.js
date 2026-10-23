@@ -21,7 +21,8 @@ import { traceShot } from '../../shared/penetration.js';
 import { DISC, stepDisc } from '../../shared/disc.js';
 import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from '../../shared/corn.js';
 import { EGG, eggSpeed, eggDmg, stepEgg } from '../../shared/egg.js';
-import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
+import { explosionHits, rayCapsule, ROCKET_PAD, shotKnock } from '../../shared/combat.js';
+import { SHOCK, stepShock, shockReach, shockDmg, shockStun } from '../../shared/shock.js';
 import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
@@ -50,7 +51,7 @@ export class Game {
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
-    this.events = []; this.personal = new Map(); this.nades = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.nukes = []; this.projId = 1;
+    this.events = []; this.personal = new Map(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.nukes = []; this.projId = 1;
   }
   now() { return Date.now() / 1000; }
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
@@ -195,7 +196,7 @@ export class Game {
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
     this.nav = buildNav({ hx: map.size[0], hz: map.size[1], spacing: map.navSpacing || 2, collides: this.P.collides, groundAt: this.P.groundAt, solids, topAt: this.P.topAt, seeds: this.spawns.map((s) => [s.x, s.y, s.z]), extra: map.waypoints || [] });
     this.pickups = map.pickups.map(([type, x, z, y]) => { const on = powerOn(type, this.cfg.powers); return { type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: on, respawnAt: on ? 0 : 1e9 }; });
-    this.nades = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.nukes = []; this.events = []; this.personal.clear();
+    this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.nukes = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     this.curLimit = this.cfgLimit;
     for (const e of this.ents.values()) {
@@ -229,7 +230,7 @@ export class Game {
   zoneArr() { const z = this.zone; return z ? [r2(z.x), r2(z.y), r2(z.z), +z.progress.toFixed(3), z.team, z.contested ? 1 : 0, z.counts[0], z.counts[1], this.teamScore[0], this.teamScore[1]] : null; }
   startMsg() { return { t: 'start', mode: this.cfg.mode, iv: this.inv ? this.inv.stateArr() : undefined, drops: this.inv ? this.inv.drops.map((d) => [d.id, DROP_KEYS.indexOf(d.kind), [r2(d.x), r2(d.y), r2(d.z)]]) : undefined, zone: this.zoneArr(), win: DOM.WIN_CAPS, map: this.mapId, T: r2(this.T), limit: Number.isFinite(this.timeLimit) ? this.timeLimit : 0, kills: KILL_LIMIT, hostId: this.hostId, ents: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => this.entInfo(e)), pk: this.pickups.map((p) => (p.active ? 1 : 0)) }; }
   endMatch() {
-    this.state = 'over'; this.io.stopLoop(); this.nades = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.nukes = [];
+    this.state = 'over'; this.io.stopLoop(); this.nades = []; this.shocks = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.helis = []; this.nukes = [];
     this.io.broadcast(this.endMsg()); this.sendLobby();
   }
   endMsg() {
@@ -395,7 +396,8 @@ export class Game {
       return;
     }
     if (!e.alive) return;
-    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'rl')) return;
+    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'rl' || k === 'sk')) return;
+    if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
     if (k === 'mgs') return this.mgSpin(e, ev[1], ev[2]);
@@ -403,6 +405,7 @@ export class Game {
     if (k === 'dk') return this.clockOk(e, ev[3], DISC_W) && this.humanDisc(e, ev[1], ev[2]);
     if (k === 'cn') return this.clockOk(e, ev[3], CORN_W) && this.humanCorn(e, ev[1], ev[2]);
     if (k === 'eg') return this.clockOk(e, ev[4], EGG_W) && this.humanEgg(e, ev[1], ev[2], ev[3]);
+    if (k === 'sk') return this.humanShock(e, ev[1], ev[2]);
     if (k === 'n') return this.humanNade(e, ev[1], ev[2], ev[3]);
     if (k === 'm') return this.humanMelee(e, ev[1], ev[2], ev[3], ev[4], ev[5]);
     if (k === 'sw') return this.clockOk(e, ev[3], isSaber(e.weapon) ? e.weapon : SABER) && this.humanSwing(e, ev[1], ev[2]);
@@ -604,6 +607,24 @@ export class Game {
     if (e.nades <= 0) return;
     e.nades--; e.lastNadeT = this.T; this.throwNade(e, o, v);
   }
+  // Pau de choque (tecla 5): servidor confere carga/poder/origem, simula a estaca (shared/shock.js), dá dano que não mata e atordoa
+  humanShock(e, oA, vA) {
+    const o = obj3(oA), v = obj3(vA); if (!powerOn('stun', this.cfg.powers) || !(e.shocks > 0) || !this.eyeOk(e, o) || !v || vlen(v) > SHOCK.speed + 9) { this.toMe(e, ['skn', e.shocks | 0]); return; }
+    e.shocks--; e.lastShockT = this.T; this.toMe(e, ['skn', e.shocks]);
+    const s = { id: this.projId++, owner: e, pos: { ...o }, vel: { ...v }, t: 0, stuck: false };
+    this.shocks.push(s); this.events.push(['sk', s.id, e.id, arr3(o), arr3(v)]);
+  }
+  stepShocks(dt) {
+    for (let i = this.shocks.length - 1; i >= 0; i--) {
+      const s = this.shocks[i];
+      if (!s.stuck) { const hit = stepShock(this.P, s, dt); if (hit) { s.until = this.T + SHOCK.life; s.nextPulse = this.T; this.events.push(['sx', s.id, arr3(hit.pos), arr3(hit.n)]); } else if (s.dead) { this.shocks.splice(i, 1); this.events.push(['se', s.id]); } continue; }
+      if (this.T >= s.until) { this.shocks.splice(i, 1); this.events.push(['se', s.id]); continue; }
+      if (this.T < s.nextPulse) continue; s.nextPulse += SHOCK.tick;
+      const v = shockReach(s, this.live(), this.T, (a, b) => this.friends(a, b), (a, b) => this.P.losClear(a, b), center);
+      for (const t of v) { if (!(t.stunUntil > this.T)) t.stunAt = this.T; t.stunUntil = Math.max(t.stunUntil || 0, this.T + shockStun(t)); const d = shockDmg(t.hp); if (d > 0) this.damage(t, d, s.owner, W_NADE, false); if (t.bot) { t.target = null; t.aim = 0; } } // damage() faz o bot mirar em quem bateu: zera depois
+      this.events.push(['sz', s.id, v.map((t) => t.id), r2(SHOCK.stun)]);
+    }
+  }
   // Pokébola abriu: engole todo inimigo no raio com linha livre (morre na hora, sem bacon); 'pke' leva quem foi engolido pro efeito
   pokeOpen(n) {
     const eaten = [], c = { x: n.pos.x, y: n.pos.y + 0.3, z: n.pos.z };
@@ -663,7 +684,11 @@ export class Game {
     }
     this.events.push(holes.length ? ['sh', shooter.id, w, arr3(o), ends, holes] : ['sh', shooter.id, w, arr3(o), ends]); // [5] = furos [x,y,z,nx,ny,nz,saída]
     for (const [hl, dmg] of heliDmg) this.hurtHeli(hl, dmg, shooter);
-    let kills = 0; for (const [t, h] of hits) if (this.damage(t, h.dmg, shooter, w, h.head, false, null, h.fx)) kills++;
+    let kills = 0; const hurt = new Set(); for (const [t, h] of hits) { const hp0 = t.hp; if (this.damage(t, h.dmg, shooter, w, h.head, false, null, h.fx)) kills++; if (t.hp < hp0) hurt.add(t); }
+    if (W.knock) for (const [t, h] of hits) { // Calibre 12: empurra quem sobreviveu e levou dano de fato (proteção de nascimento não é empurrada; bot no servidor, humano pelo 'kn' igual ao rocket jump)
+      if (!t.alive || t.dummy || !hurt.has(t)) continue; const v = shotKnock(W, o, t.pos, h.dmg, t.zt); if (!v) continue; t.lastKnock = this.T;
+      if (t.bot) { t.vel.x += v.x; t.vel.z += v.z; t.vel.y = Math.max(t.vel.y, v.y); t.onGround = false; } else this.toMe(t, ['kn', arr3(v)]);
+    }
     if (kills >= 2) this.events.push(['mk', shooter.id, kills]); // collateral: várias mortes num tiro só
     return hits;
   }
@@ -784,7 +809,7 @@ export class Game {
     if (ok && t.alive) { t.eggUntil = this.T + EGG.splat; this.toMe(t, ['egg', EGG.splat]); } // tela suja só pra quem levou e continua vivo
   }
   stepProjectiles(dt) {
-    this.stepDiscs(dt); this.stepEggs(dt); this.stepCorns(dt);
+    this.stepDiscs(dt); this.stepEggs(dt); this.stepCorns(dt); this.stepShocks(dt);
     for (let i = this.nades.length - 1; i >= 0; i--) {
       const n = this.nades[i]; for (let s = 0; s < 2; s++) this.P.stepNade(n.pos, n.vel, dt / 2);
       if (this.T >= n.explodeAt && n.poke) { this.nades.splice(i, 1); this.pokeOpen(n); continue; }
@@ -823,7 +848,7 @@ export class Game {
     const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.crouch = 0; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
     if (e.bot && (Math.random() < 0.3 || !weaponOn(e.nextPrimary, this.cfg.weapons))) e.nextPrimary = pick(botPool(this.cfg.weapons));
     const c = clampLoadout(e.nextPrimary, e.nextSecondary ?? PISTOL, e.nextMelee ?? KNIFE, this.cfg.weapons);
-    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith;
+    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith; e.shocks = powerOn('stun', this.cfg.powers) ? SHOCK.spawnWith : 0; e.stunUntil = 0; e.lastShockT = -99; this.toMe(e, ['skn', e.shocks]);
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
     if (e.dummy) { this.placeDummy(e); e.invulnUntil = this.T; e.slots = [0, PISTOL, KNIFE]; }
     e.hist = []; this.pushHist(e); e.lastUpd = this.now();
@@ -844,10 +869,10 @@ export class Game {
         if (!e.alive || e.zt || (!e.bot && !e.connected)) continue;
         const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z; if (dx * dx + dz * dz > 1.5 || Math.abs(e.pos.y - p.pos.y) > 1.5) continue;
         if (p.type === 'health') { if (e.hp >= 100) continue; e.hp = Math.min(100, e.hp + 50); }
-        else if (p.type === 'grenade') { if (e.nades >= NADE.max) continue; e.nades++; }
+        else if (p.type === 'grenade') { const sk = !e.bot && powerOn('stun', this.cfg.powers) && (e.shocks | 0) < SHOCK.max; if (e.nades >= NADE.max && !sk) continue; if (e.nades < NADE.max) e.nades++; if (sk) e.shocks = (e.shocks | 0) + 1; } // Copo Bomba também dá +1 pau de choque
         else if (!this.refillAmmo(e)) continue;
         p.active = false; p.respawnAt = this.T + (p.type === 'grenade' ? NADE.pickupRespawn : this.invasion && p.type === 'ammo' ? INV_AMMO.respawn : 15);
-        this.events.push(['pk', i, 0]); if (!e.bot) this.toMe(e, ['got', p.type, Math.round(e.hp), e.nades]);
+        this.events.push(['pk', i, 0]); if (!e.bot) this.toMe(e, ['got', p.type, Math.round(e.hp), e.nades, e.shocks | 0]);
         break;
       }
     });
@@ -881,6 +906,7 @@ export class Game {
       if (this.training && !e.bot && e.alive) { // munição de reserva infinita e Copo Bomba volta sozinho
         for (const w of e.slots) e.reserve[w] = WEAPONS[w].reserve;
         if (e.nades < NADE.max && this.T - (e.lastNadeT ?? -9) > TRAIN.nadeRefill) e.nades = NADE.max;
+        if (powerOn('stun', this.cfg.powers) && !(e.shocks > 0) && this.T - (e.lastShockT ?? -99) > SHOCK.trainRefill) { e.shocks = 1; this.toMe(e, ['skn', 1]); } // pau de choque volta em 10 s
       }
     }
     this.updatePickups(); this.updateBacons();
@@ -993,6 +1019,7 @@ export class Game {
         const score = d * (o.id === b.lastAttacker ? 0.5 : 1) * (!o.bot ? 0.85 : 1);
         if (score < bs && this.P.losClear(eye, center(o, 1.2))) { best = o; bs = score; }
       }
+      if (b.stunUntil > this.T) best = null; // levou choque: não trava alvo
       if (best !== b.target) { b.target = best; b.aim = 0; }
       if (best) { b.lastSeen = { ...best.pos }; b.lastSeenAt = this.T; }
     }
@@ -1029,7 +1056,7 @@ export class Game {
       else { const st = this.steer(b, goal) || { x: gx / Math.hypot(gx, gz), z: gz / Math.hypot(gx, gz) }; mx = st.x; mz = st.z; desiredYaw = face(st.x, st.z); }
       if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5 && !b.reloadEnd) b.reloadEnd = this.T + WEAPONS[b.weapon].reload;
     }
-    const sp = BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
+    const sp = BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > this.T ? SHOCK.slow : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
     const acc = b.onGround ? 10 : 3; b.vel.x += (mx - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (mz - b.vel.z) * Math.min(1, acc * dt);
     const blocked = this.P.moveEntity(b, dt);
     if (blocked) { b.stuck += dt; if (b.onGround) b.vel.y = JUMP; if (b.stuck > 1.2) { b.wp = this.randomWaypoint(); b.path = null; b.lastSeenAt = -99; b.strafeDir *= -1; b.stuck = 0; b.stuckCount = (b.stuckCount || 0) + 1; } }
@@ -1039,6 +1066,7 @@ export class Game {
   }
   botShoot(b, t, d) {
     const w = WEAPONS[b.weapon];
+    if (b.stunUntil > this.T) return; // atordoado não atira
     if (isSaber(b.weapon)) {
       if (this.T < b.nextFire || d > w.reach) return;
       b.nextFire = this.T + w.rate;
