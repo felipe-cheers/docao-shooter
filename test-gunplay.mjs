@@ -98,6 +98,31 @@ test('spray acumula recoil/dispersão com limite e volta na pausa; FPS não muda
   assert.equal(results[0].shots, 0);
 });
 
+test('retorno começa devagar, termina sem salto e mantém a mesma curva em diferentes FPS', () => {
+  const initial = { ...still(), pitch: 0.16, yaw: -0.03, lastShot: 0 };
+  const s = { ...initial };
+  stepGunplay(s, rifle, 0, false, false, 0.13, 0.13);
+  close(s.pitch, initial.pitch);
+  stepGunplay(s, rifle, 0, false, false, 1 / 60, 0.13 + 1 / 60);
+  assert.ok(s.pitch < initial.pitch && s.pitch > initial.pitch * 0.999, 'primeiro frame recupera menos de 0,1%, sem puxão');
+  const sample = (fps, duration) => {
+    const r = { ...initial }; let now = 0;
+    while (now < duration) {
+      const dt = Math.min(1 / fps, duration - now), previous = r.pitch; now += dt;
+      stepGunplay(r, rifle, 0, false, false, dt, now);
+      assert.ok(r.pitch >= 0 && r.pitch <= previous, 'retorno contínuo, sem oscilar ou passar do centro');
+      assert.ok(r.yaw <= 0);
+    }
+    return r;
+  };
+  const middle = [30, 60, 144].map((fps) => sample(fps, 0.455));
+  for (const r of middle) { close(r.pitch, initial.pitch / 2); close(r.yaw, initial.yaw / 2); }
+  const end = sample(60, 0.77);
+  assert.ok(end.pitch > 0 && end.pitch < 0.00001, 'já chega quase parado ao final');
+  const finished = sample(60, 0.79);
+  close(finished.pitch, 0); close(finished.yaw, 0);
+});
+
 test('SMGs toleram mais movimento; bots também perdem precisão ao correr e pular', () => {
   assert.ok(shotSpread(WEAPONS[10], stateAt(WEAPONS[10], SPEED), 1) < shotSpread(rifle, stateAt(rifle, SPEED), 1));
   const b = { vel: { x: 0, y: 0, z: 0 }, onGround: true };

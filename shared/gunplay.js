@@ -3,16 +3,16 @@
 import { SPEED } from './rules.js';
 
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
-const RIFLE = { move: 0.045, air: 0.14, bloom: 0.018, kick: 0.75, cap: 0.16, side: 0.25, delay: 0.13, recover: 10 };
+const RIFLE = { move: 0.045, air: 0.14, bloom: 0.018, kick: 0.75, cap: 0.16, side: 0.25, delay: 0.13, returnTime: 0.65 };
 const SMG = { ...RIFLE, move: 0.028, air: 0.11, bloom: 0.022, kick: 0.48, cap: 0.14 };
-const SHOTGUN = { ...RIFLE, move: 0.02, air: 0.09, bloom: 0, cap: 0.12, recover: 9 };
+const SHOTGUN = { ...RIFLE, move: 0.02, air: 0.09, bloom: 0, cap: 0.12, returnTime: 0.7 };
 const SNIPER = { ...RIFLE, move: 0.055, air: 0.22, bloom: 0, kick: 0.4, cap: 0.1, side: 0.08, hip: 0.13, settle: 0.05 };
 export const GUNPLAY = {
   rifle: RIFLE,
   famas: { ...RIFLE, bloom: 0.014, side: 0.12 },
   lmg: { ...RIFLE, move: 0.055, air: 0.16, bloom: 0.026, cap: 0.18 },
   uzi: SMG, p90: { ...SMG, bloom: 0.016, kick: 0.6 },
-  pistol: { ...RIFLE, move: 0.035, air: 0.12, bloom: 0.012, cap: 0.12, recover: 12 },
+  pistol: { ...RIFLE, move: 0.035, air: 0.12, bloom: 0.012, cap: 0.12, returnTime: 0.55 },
   prego: { ...SMG, bloom: 0.014 }, shotgun: SHOTGUN, semi: SHOTGUN,
   sniper: SNIPER,
   canhao: { ...SNIPER, hip: 0.15, move: 0.065, settle: 0.06 },
@@ -23,6 +23,10 @@ const profile = (w) => GUNPLAY[w.key] || RIFLE;
 export const movementError = (speed) => clamp((speed - 0.15) / (SPEED - 0.15)) ** 1.5;
 export const createGunplay = () => ({ pitch: 0, yaw: 0, heat: 0, shots: 0, lastShot: -Infinity, move: 0, air: 0, scopeTime: 0 });
 
+// Smootherstep invertido: velocidade e aceleração zeram nas duas pontas.
+// Forma fatorada para manter precisão perto do fim, sem um corte perceptível.
+const recoilRemaining = (t) => (1 - t) ** 3 * (1 + 3 * t + 6 * t * t);
+
 export function stepGunplay(s, w, speed, air, fullyScoped, dt, now) {
   const p = profile(w);
   s.move = Math.max(movementError(speed), s.move - dt / 0.16);
@@ -30,10 +34,12 @@ export function stepGunplay(s, w, speed, air, fullyScoped, dt, now) {
   s.scopeTime = fullyScoped ? s.scopeTime + dt : 0;
   // Só recupera na pausa; integra apenas o trecho do frame posterior ao atraso.
   const idleDt = Math.min(dt, Math.max(0, now - s.lastShot - p.delay));
-  const decay = Math.exp(-idleDt * p.recover);
+  // Acelera e desacelera gradualmente, sem ultrapassar o centro.
+  const before = clamp((now - dt - s.lastShot - p.delay) / p.returnTime);
+  const after = clamp((now - s.lastShot - p.delay) / p.returnTime);
+  const remaining = recoilRemaining(before);
+  const decay = remaining > 0 ? recoilRemaining(after) / remaining : 0;
   s.pitch *= decay; s.yaw *= decay;
-  if (Math.abs(s.pitch) < 0.0001) s.pitch = 0;
-  if (Math.abs(s.yaw) < 0.0001) s.yaw = 0;
   s.heat = Math.max(0, s.heat - idleDt * 32);
   if (!s.heat) s.shots = 0;
 }
