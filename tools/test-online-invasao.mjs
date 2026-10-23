@@ -75,8 +75,8 @@ ok(hpA1 >= hpA0 && hp1 >= hp0, `sem fogo amigo online (Ana ${hpA0}→${hpA1}, Be
 ok(await until(A, () => window.__docao.invView.phase === 'break', 15000), 'wave limpa → pausa (online)');
 await T(A, { hold: true, fog: NOFOG }); // a pausa não acaba no meio do teste
 ok(await until(A, () => window.__docao.invPick, 3000), 'painel de troca de arma abre na pausa (online)');
+const nd0 = await G(B, () => Math.max(0, ...window.__docao.invDrops)); // lê antes de pedir o drop (senão o servidor pode ganhar a corrida)
 await T(A, { drop: true });
-const nd0 = await G(B, () => Math.max(0, ...window.__docao.invDrops));
 ok(await until(B, (n) => window.__docao.invDrops.some((d) => d > n), 5000, nd0), 'Beto vê o poder que caiu');
 const did = await G(B, () => Math.max(...window.__docao.invDrops));
 const dpos = await G(A, () => { const p = window.__docao.player.pos; return [p.x + 2, p.z]; });
