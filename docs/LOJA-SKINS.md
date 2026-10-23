@@ -108,7 +108,7 @@ Referência: o plano Workers Paid inclui D1 com cerca de 25 bilhões de linhas l
 **Ordem importante**: migração 0002 **antes** do deploy do Worker novo (o Worker novo lê as colunas novas).
 
 ## Testar no Mac
-`./tools/rodar-loja-mac.sh` (site 8135, Worker 8795, D1 simulado local) e, para ganhar Torresmos de teste, `./tools/dar-torresmos-mac.sh SeuApelido 500`. Detalhes no fim do relatório da tarefa.
+`./tools/rodar-loja-mac.sh` (site 8136, Worker 8796, D1 simulado local) e, para ganhar Torresmos de teste, `./tools/dar-torresmos-mac.sh SeuApelido 500`. Detalhes no fim do relatório da tarefa.
 
 ## Testes automatizados
 `test-loja.mjs` (servidor: ganho, teto diário, compra, compra dupla/simultânea, saldo nunca negativo, equipar parte alheia, rede, convidado barrado), `test-loja-regras.mjs` (regras de ganho sem navegador), `test-loja-ui.mjs` (ateliê, loja, salvar, recarregar, sair da conta, 32 partes montam no modelo).

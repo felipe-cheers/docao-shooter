@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Testa o ATELIÊ (personalizador + loja) LOCAL no Mac. Nada vai pra Cloudflare: D1 simulado em server/.wrangler/state.
-# Uso: ./tools/rodar-loja-mac.sh      (Ctrl+C para parar tudo)   ·   Portas: SITE_PORT (8135) e WORKER_PORT (8795)
+# Uso: ./tools/rodar-loja-mac.sh      (Ctrl+C para parar tudo)   ·   Portas: SITE_PORT (8136) e WORKER_PORT (8796)
 # Para ganhar Torresmos de teste sem jogar horas:  ./tools/dar-torresmos-mac.sh SeuApelido 500   (só no banco LOCAL)
 set -e
 cd "$(dirname "$0")/.."
-SITE_PORT="${SITE_PORT:-8135}"; WORKER_PORT="${WORKER_PORT:-8795}"
+SITE_PORT="${SITE_PORT:-8136}"; WORKER_PORT="${WORKER_PORT:-8796}"
 for p in "$SITE_PORT" "$WORKER_PORT"; do
-  if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then echo "Porta $p ocupada. Rode assim: SITE_PORT=8140 WORKER_PORT=8800 $0"; exit 1; fi
+  if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then echo "Porta $p ocupada. Rode assim: SITE_PORT=8141 WORKER_PORT=8801 $0"; exit 1; fi
 done
 cd server
 [ -d node_modules/wrangler ] || npm install --no-audit --no-fund
