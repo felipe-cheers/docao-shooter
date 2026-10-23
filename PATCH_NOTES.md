@@ -4,6 +4,14 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.11.2 — Cara de Morto 💀📹 (23/10/2026)
+🚑 **FIX RÁPIDO!** Até hoje, quando o Docão virava bacon, ele ficava ali olhando pro nada, sem nem saber quem foi o desgraçado. Agora ele tem **direito à vingança visual**:
+📹 **Câmera do assassino:** morreu? A câmera passa a **seguir quem te matou** (jogador, bot ou até zumbi na Invasão), pra você encarar o culpado com a cara que ele merece. Se o assassino sumir ou morrer, a câmera fica no lugar da sua morte, de luto. Renasceu, volta tudo ao normal.
+🩶 **Tela de morto:** enquanto você está morto, o mundo fica **cinza e sem graça**, tipo segunda-feira. Renasceu, as cores voltam.
+🗂️ **Painel de armas tímido:** a escolha de arma na morte e o painel **B** da Invasão agora ficam **pequenininhos, no cantinho e meio transparentes** (passa o mouse e eles acordam). Dá pra ver quem te matou e a dança da vitória sem um cardápio gigante na cara. 💃
+🚫 Na Invasão o B continua só abrindo o painel de armas. Dançar lá? Nem pensar, tem zumbi no meio!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.11.1 — Hotfix da Munição 📦🧟 (23/10/2026)
 🚨 **HOTFIX URGENTE!** Os zumbis comeram TODA a munição do chiqueiro. 🧟🍽️ O Docão abriu a gaveta, só achou uma bala mofada e saiu correndo pro mercado. 🐷🛒 Voltou com o carrinho lotado:
 📦 **Caixas de munição pra todo lado na Invasão:** **Rodízio 6 → 28** e **Fazenda Mal-Assombrada 4 → 18**, espalhadas pelos spawns, pelo meio e pelas pontas.
@@ -144,6 +152,7 @@ Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.10.1 · Metralhadora do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #13): arma nova de 100 balas, HUD da fazenda, míssil que acelera segurando o tiro e troca de arma na pausa
 - **v1.11 · Salão de Festa** ([@paulo-cheers](https://github.com/paulo-cheers), PR #14): o dono da sala escolhe as armas e os power-ups, o menu lembra sua arma padrão, dança da vitória no B (moonwalk, mewing e sixseven; fora da Invasão) e o Docão do menu gira ao arrastar
 - **v1.11.1 · Hotfix da Munição:** Invasão com bem mais caixas de munição (Rodízio 6 → 28, Fazenda 4 → 18), caixa nova em 6 s, mais munição e +2 foguetes por caixa, zumbi solta caixa e facho amarelo pra achar
+- **v1.11.2 · Cara de Morto:** câmera segue quem te matou, tela cinza enquanto está morto e painel de armas discreto no canto
 
 ---
 

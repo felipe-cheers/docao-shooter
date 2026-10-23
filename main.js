@@ -479,9 +479,25 @@ function deathFx(e) { // dispara uma vez por morte (offline: kill(); online: eve
   }
 }
 const camTmp = new V3(), camTgt = new V3();
-function deathCam(p, dt) { // 3ª pessoa: parada, olhando para quem matou (encurta se tiver parede)
+const KILLERCAM_AFTER = 0.9; // s vendo o próprio bacon antes de passar a seguir quem matou
+function killerCamTarget(p) { // quem matou, se ainda está vivo e na partida (jogador, bot ou zumbi); senão null → fica onde morreu
+  const k = p.lastAttacker; if (!k || k === p || !k.alive || k.fog || !k.pos || !entities.includes(k)) return null; return k;
+}
+function deathCam(p, dt) { // 3ª pessoa: primeiro olhando para quem matou; depois segue o assassino (killer cam); se ele sumir, fica na posição da morte
   const t = gameTime - p.deathAt;
   if (ghost && ghost.model.group.visible) popModel(ghost.model.group, t, p.yaw + Math.PI);
+  const kc = t > KILLERCAM_AFTER ? killerCamTarget(p) : null;
+  if (kc) {
+    const kp = kc.pos, sz = kc.size || 1; camTgt.set(kp.x, kp.y + 1.25 * sz, kp.z);
+    let hx = p.pos.x - kp.x, hz = p.pos.z - kp.z; const hl = Math.hypot(hx, hz);
+    if (hl < 0.2) { hx = -Math.sin(kc.yaw || 0); hz = -Math.cos(kc.yaw || 0); } else { hx /= hl; hz /= hl; } // câmera do lado de onde você caiu, olhando a cara do assassino
+    let d = 4 * sz; for (; d > 1.2; d -= 0.4) { camTmp.set(camTgt.x + hx * d, camTgt.y + 0.5 + d * 0.2, camTgt.z + hz * d); if (losClear(camTgt, camTmp)) break; }
+    camTmp.set(camTgt.x + hx * d, camTgt.y + 0.5 + d * 0.2, camTgt.z + hz * d);
+    if (!deathCamState.dist) camera.position.copy(camTmp); else camera.position.lerp(camTmp, Math.min(1, dt * 4));
+    deathCamState.dist = d; deathCamState.target = camTgt.toArray(); deathCamState.killer = kc;
+    camera.lookAt(camTgt); return;
+  }
+  deathCamState.killer = null;
   const b = p.bacon && p.bacon.on ? p.bacon : null;
   camTgt.set(b ? b.pos.x : p.pos.x, (b ? b.pos.y : p.pos.y) + 0.25, b ? b.pos.z : p.pos.z);
   const a = deathCamState.ang;
@@ -1922,7 +1938,7 @@ function updateHud(dt) {
   const smokeN = $('smokeN'), stunN = $('stunN');
   if (smokeN) { smokeN.textContent = p.smokeNades || 0; smokeN.parentElement.classList.toggle('out', !(p.smokeNades > 0)); }
   if (stunN) { stunN.textContent = p.stunNades || 0; stunN.parentElement.classList.toggle('out', !(p.stunNades > 0)); }
-  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
+  { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; document.body.classList.toggle('deadgray', !p.alive); const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
   $('reloadmsg').textContent = w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'Treino ∞';
   $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
@@ -3776,7 +3792,7 @@ function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown 
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
   if (online) leaveOnline();
-  endVictory(); stopEmote();
+  endVictory(); stopEmote(); document.body.classList.remove('deadgray');
   zone = null; mode = 'dm'; $('domhud').classList.add('hidden'); $('zoneMark').classList.add('hidden'); $('teamPick').classList.add('hidden');
   state = 'menu'; rulesLive = false; clearBots(); inv = null; invNet = null; if (selectedMap !== 'random') loadMap(selectedMap); invApplyLook(false); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
   ['pause', 'gameover', 'hud'].forEach((id) => $(id).classList.add('hidden')); $('menu').classList.remove('hidden');
@@ -4307,7 +4323,7 @@ function requestRespawn() {
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
 function onPlayerDeath(opts) { if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
-function onPlayerRespawn() { rsSent = false; deathCamState.on = false; if (ghost) ghost.model.group.visible = false;
+function onPlayerRespawn() { rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 

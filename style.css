@@ -1437,3 +1437,10 @@ body #streakBar .streak-pips i.on{background:#e7b15a;box-shadow:none}
 @media(max-width:520px){
   #pauseGuns .wgrid,#pauseGuns .wgrid.small{grid-template-columns:1fr}
 }
+
+/* v1.11.2: tela de morte discreta (canto, transparente) pra ver quem matou, e tela cinza enquanto está morto */
+body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transition:filter .5s}
+#game{transition:filter .35s}
+#iLoad{left:auto;right:10px;bottom:10px;transform:none;width:min(380px,34vw);opacity:.55;transition:opacity .2s}
+#iLoad:hover{opacity:1}
+#iLoad .bltile{height:34px}
