@@ -5,7 +5,8 @@ Escopo: login opcional com **apelido fixo** (um apelido = uma conta), **ranking*
 ## Teste local (Mac)
 `./tools/rodar-login-mac.sh` — usa o D1 simulado (`server/.wrangler/state`), site na porta 8135 e Worker na 8795 (mude com `SITE_PORT`/`WORKER_PORT`). Nada vai pra Cloudflare. `ALLOW_TEST` não é ligado.
 
-## Produção (NÃO feito ainda)
+## Produção (feito na v1.17: D1 docao-contas id 992d49c8-9c5f-48e9-80d0-d79c595ae896, migração 0001 aplicada, Worker com bindings ROOMS + DB)
+Passos, caso precise refazer:
 1. Criar o D1: `cd server && npx wrangler d1 create docao-contas` (copiar o `database_id` que aparece).
 2. Trocar o `database_id` de mentira (`0000…`) no `server/wrangler.jsonc` pelo id real.
 3. Migração: `npx wrangler d1 migrations apply docao-contas --remote` (cria accounts, sessions, stats, rate_limits).
