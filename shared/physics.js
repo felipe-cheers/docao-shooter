@@ -4,7 +4,7 @@
 //  (o teste test-online.mjs confere que são idênticas). createPhysics() traz colisão AABB com teto,
 //  chão/rampas, movimento, raio contra o mundo (caixas + rampas) e o passo físico do Copo Bomba.
 // ============================================================
-import { GRAV, STEP, RADIUS, HEIGHT, NADE } from './rules.js';
+import { GRAV, STEP, RADIUS, HEIGHT, NADE, POKE } from './rules.js';
 import { stanceHeight, stanceScale } from './stance.js';
 
 export const WALL_COLLIDE_H = 40;
@@ -215,16 +215,27 @@ export function createPhysics(solids, size) {
     }
     return false;
   }
-  function stepNade(pos, vel, dt) { // igual ao cliente
+  function stepNade(pos, vel, dt, onBounce) {
     vel.y += NADE.grav * dt;
-    const nx = pos.x + vel.x * dt; if (nadeBlocked(nx, pos.y, pos.z)) vel.x *= -0.45; else pos.x = nx;
-    const nz = pos.z + vel.z * dt; if (nadeBlocked(pos.x, pos.y, nz)) vel.z *= -0.45; else pos.z = nz;
-    if (vel.y > 0 && nadeBlocked(pos.x, pos.y + vel.y * dt + NADE.r, pos.z)) vel.y = -vel.y * 0.35;
+    const nx = pos.x + vel.x * dt; if (nadeBlocked(nx, pos.y, pos.z)) { vel.x *= -0.45; onBounce?.(); } else pos.x = nx;
+    const nz = pos.z + vel.z * dt; if (nadeBlocked(pos.x, pos.y, nz)) { vel.z *= -0.45; onBounce?.(); } else pos.z = nz;
+    if (vel.y > 0 && nadeBlocked(pos.x, pos.y + vel.y * dt + NADE.r, pos.z)) { vel.y = -vel.y * 0.35; onBounce?.(); }
     const ny = pos.y + vel.y * dt; const g = groundAt(pos.x, pos.z, pos.y - NADE.r + 0.3) + NADE.r;
-    if (ny <= g) { pos.y = g; vel.y = Math.abs(vel.y) > 1.2 ? -vel.y * 0.42 : 0; vel.x *= 0.72; vel.z *= 0.72; return true; }
+    if (ny <= g) { pos.y = g; if (Math.abs(vel.y) > 1.5) onBounce?.(); vel.y = Math.abs(vel.y) > 1.2 ? -vel.y * 0.42 : 0; vel.x *= 0.72; vel.z *= 0.72; return true; }
     pos.y = ny; return false;
   }
-  return { solids, solidsAt, topAt, collides, overlapping, depenetrate, groundAt, ceilingAt, moveEntity, rayWorld, rayWorldN, rayWorldS, losClear, nadeBlocked, stepNade };
+  // Mesmo passo na preview, no cliente (qualquer FPS) e no servidor (20 Hz).
+  function advanceNade(n, dt, onBounce) {
+    const age = n.physicsTime || 0;
+    dt = Math.min(dt, Math.max(0, (n.poke ? POKE.fuse : NADE.fuse) - age));
+    n.physicsTime = age + dt;
+    n.physicsLeft = (n.physicsLeft || 0) + dt;
+    while (n.physicsLeft + 1e-9 >= NADE.step) {
+      stepNade(n.pos, n.vel, NADE.step, onBounce);
+      n.physicsLeft = Math.max(0, n.physicsLeft - NADE.step);
+    }
+  }
+  return { solids, solidsAt, topAt, collides, overlapping, depenetrate, groundAt, ceilingAt, moveEntity, rayWorld, rayWorldN, rayWorldS, losClear, nadeBlocked, stepNade, advanceNade };
 }
 
 export function raySphere(o, d, c, r) {
