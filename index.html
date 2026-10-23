@@ -6,6 +6,7 @@
 <title>Docão Shooter</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="hud-death.css">
+<link rel="stylesheet" href="acessorios.css">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
@@ -33,10 +34,9 @@
   <div id="bombhud" class="hidden"><div id="bScore"><span class="ba">ATAQUE <b id="bs0">0</b></span><span class="vs">×</span><span class="bd"><b id="bs1">0</b> DEFESA</span></div>
     <div id="bCarrier"></div><div id="bSide"></div></div>
   <div id="bProg" class="hidden"><div id="bProgFill"></div><span id="bProgText"></span></div>
-  <div id="bLoad" class="hidden"><div class="blt"><b>Troca de arma</b> <span id="bLoadT"></span></div>
-    <div class="blrow"><span class="bll">Primária</span><div id="bLoadPri" class="bltiles"></div></div>
-    <div class="blrow"><span class="bll">Secundária</span><div id="bLoadSec" class="bltiles"></div><span class="bll">Corpo a corpo</span><div id="bLoadMel" class="bltiles"></div></div>
-    <div class="blhint"><kbd>1–9</kbd> ou rodinha: primária · <kbd>N</kbd> secundária · <kbd>M</kbd> faca/sabre · <kbd>G</kbd> solta o mouse pra clicar · <kbd>B</kbd> fecha/abre · chat continua no <kbd>T</kbd>/<kbd>Y</kbd></div>
+  <div id="bLoad" class="hidden"><div class="blt"><b>Classes</b> <span id="bLoadT"></span></div>
+    <div class="cls-sheet"><div id="bLoadList" class="cls-list"></div><div id="bLoadGun" class="cls-gun"></div></div>
+    <div class="blhint"><kbd>1–5</kbd> classe · <kbd>W</kbd>/<kbd>S</kbd> ou setas · <kbd>U</kbd> última · <kbd>G</kbd> solta o mouse · <kbd>B</kbd> fecha/abre</div>
     <div class="blbar"><div id="bLoadFill"></div></div></div>
   <div id="bPrompt" class="hidden"><div class="bp1"></div><div class="bp2"></div></div>
   <div id="bombBanner" class="hidden"><div class="b1"></div><div class="b2"></div></div>
@@ -55,10 +55,9 @@
   <div id="invPowers" class="hidden"><div id="invSlots"></div><div class="ikeys"><kbd>G</kbd> usa · <kbd>X</kbd> troca</div></div>
   <div id="invFogArrow" class="hidden"><i>⬆</i><span>Fora da área segura! <b id="invFogDist"></b></span></div>
   <div id="invOut" class="hidden"><b>SEM VIDAS 💀</b><span id="invOutTxt"></span></div>
-  <div id="iLoad" class="hidden"><div class="blt"><b>Troca de arma · pausa entre waves</b> <span id="iLoadT"></span></div>
-    <div class="blrow"><span class="bll">Primária</span><div id="iLoadPri" class="bltiles"></div></div>
-    <div class="blrow"><span class="bll">Secundária</span><div id="iLoadSec" class="bltiles"></div><span class="bll">Corpo a corpo</span><div id="iLoadMel" class="bltiles"></div></div>
-    <div class="blhint"><kbd>1–9</kbd> primária · <kbd>N</kbd> secundária · <kbd>M</kbd> faca/sabre · <kbd>B</kbd> abre (solta o mouse) / fecha</div>
+  <div id="iLoad" class="hidden"><div class="blt"><b>Classes · pausa entre waves</b> <span id="iLoadT"></span></div>
+    <div class="cls-sheet"><div id="iLoadList" class="cls-list"></div><div id="iLoadGun" class="cls-gun"></div></div>
+    <div class="blhint"><kbd>1–5</kbd> classe · <kbd>W</kbd>/<kbd>S</kbd> ou setas · <kbd>U</kbd> última · <kbd>B</kbd> abre (solta o mouse) / fecha</div>
     <div class="blbar"><div id="iLoadFill"></div></div></div>
   <div id="inspect" class="hidden"><div id="inspName"></div><div id="inspCamo"></div><div id="inspKills"></div><div id="inspBar"><div id="inspFill"></div></div></div>
   <div id="stamp">PURURUCADO!</div>
@@ -84,10 +83,11 @@
     <div id="reloadmsg"></div>
   </div>
   <div id="powermeter" class="hidden"><div id="powertext">Força do arremesso</div><div id="powerbar"><div id="powerfill"></div></div></div>
-    <div id="deathpick" class="hidden"><div class="dl">Arma primária no próximo renascimento <small>(clique ou 1–9)</small>:</div><div id="deathList"></div>
-    <div class="drow"><div class="dcol"><div class="dl">Secundária:</div><div id="deathSec"></div></div>
-    <div class="dcol"><div class="dl">Corpo a corpo:</div><div id="deathMelee"></div></div></div>
-    <button id="respawnBtn" disabled>Renascer em 5.0s</button></div>
+    <div id="deathpick" class="hidden">
+      <div id="classClock" class="cls-clock" aria-hidden="true"><span id="classClockTxt">Renasce em 5,0s</span><i id="classClockBar"></i></div>
+      <div class="cls-sheet"><div id="deathList" class="cls-list" role="listbox" aria-label="Classes"></div><div id="classGun" class="cls-gun"></div></div>
+      <button id="respawnBtn" disabled>Nascer em 5,0s</button>
+    </div>
   <div id="tabboard" class="board hidden"></div>
   <div id="socialHud" class="hidden">
     <div id="chat" class="chathud">
@@ -149,7 +149,17 @@
     <div id="menuTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="menuTeamBtns"></div></div>
       </section>
       <section id="menu-arsenal" aria-label="Arsenal" tabindex="0" hidden>
-        <div class="section-heading"><span>EQUIPAMENTO DA CASA</span><h2>Arsenal do chiqueiro</h2><p>Escolha uma primária, uma secundária e uma arma corpo a corpo.</p></div>
+        <div class="section-heading"><span>EQUIPAMENTO DA CASA</span><h2>Arsenal do chiqueiro</h2><p>Escolha uma primária, uma secundária e uma arma corpo a corpo. Temperar grava a peça na classe aberta.</p></div>
+        <button type="button" id="temperBtn">Temperar esta arma</button>
+        <div id="bench" class="bench" hidden>
+          <div class="bench-top">
+            <button type="button" id="benchBack">← Arsenal</button>
+            <div id="benchChips"></div>
+            <label class="bench-name">Nome <input id="benchName" maxlength="16" autocomplete="off" spellcheck="false" aria-label="Nome da classe"></label>
+          </div>
+          <div id="benchBody"></div>
+          <p id="benchLive" class="bench-live" aria-live="polite"></p>
+        </div>
     <div class="primpick">
       <div class="label2">Armas <span>escolha uma de cada categoria</span></div>
       <div id="primList"></div>
@@ -182,6 +192,7 @@
       <b>Controles</b>
       <div>WASD mover · Mouse mirar · Espaço pular · Segurar Shift: agachar · Botão direito: mirar/zoom (com a faca: estocada)</div>
       <div>Clique atirar · R recarregar · 1 primária / 2 pistola / 3 faca (ou rodinha) · V faca rápida · I inspecionar · B dança (sem atirar até acabar)</div>
+      <div>Na morte, na pausa, na Bomba e entre waves: 1–5 escolhe a classe, W/S ou setas andam na lista, U volta pra última, Espaço nasce</div>
       <div>Segure Q: Copo Bomba · solte para arremessar · H liga/desliga as vozes da granada</div>
       <div>4: fumaça · 5: atordoamento · F: usa o killstreak que estiver pronto (o de 5 abre o laptop do míssil)</div>
       <label class="checkline"><input type="checkbox" data-nade-voice checked> Vozes da granada (&quot;granada!&quot; e &quot;banana!&quot;) · tecla H na partida</label>
@@ -322,6 +333,7 @@
     <div class="namerow"><label>Seu nome<input id="lobbyName" class="nameField" maxlength="16" autocomplete="nickname" spellcheck="false"></label><button id="lobbyNameBtn" class="small">Trocar</button></div><div id="lobbyNameMsg" class="sub"></div>
     <div id="lobbyLoadout" class="loadout-box">
       <div class="label2">Sua arma <span>vale nesta sala e nas próximas</span></div>
+      <div id="lobbyClasses" aria-label="Classes"></div>
       <div class="row loadout-row" id="lobbyLoadoutRow"></div>
     </div>
     <div id="lobbyTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="lobbyTeamBtns"></div><div class="tpe" id="lobbyTeamErr"></div></div>
@@ -383,7 +395,7 @@
       <span class="voicehint">J troca a voz · segure K para falar</span>
     </div>
     <section id="pauseLoadout" aria-label="Trocar equipamento">
-      <p class="pause-note">Trocar uma arma te derruba. Você nasce de novo com o equipamento novo.</p>
+      <p class="pause-note" id="pauseClassNote">A classe escolhida entra na próxima vida. Não derruba.</p>
       <div id="pauseGuns"></div>
     </section>
     <section id="pauseDance" aria-label="Dança da vitória">

@@ -1,0 +1,158 @@
+/* Bancada e classes. Madeira da caixa, creme e dourado. Carrega depois do hud-death. */
+
+#temperBtn{
+  margin:8px 0 0;padding:8px 14px;min-height:44px;cursor:pointer;
+  background:#e8bc67;color:#3e281a;border:2px solid #3e281a;border-radius:4px;
+  font:800 14px/1 "Trebuchet MS",Arial,sans-serif
+}
+#temperBtn:focus-visible,#bench button:focus-visible,.clsrow:focus-visible,.classchip:focus-visible{
+  outline:3px solid #edc982;outline-offset:2px
+}
+
+#bench{color:#fff0d1;font-family:"Trebuchet MS",Arial,sans-serif}
+.bench-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+#benchBack{min-height:44px;padding:8px 12px;cursor:pointer;background:#3e281a;color:#fff0d1;border:1px solid #e8bc67;border-radius:4px;font:800 14px/1 "Trebuchet MS",Arial,sans-serif}
+.bench-name{display:flex;gap:6px;align-items:center;color:#ffe3a5;font-weight:700}
+.bench-name input{min-height:44px;padding:6px 8px;background:#3e281a;color:#fff0d1;border:1px solid #e8bc67;border-radius:4px;font:700 16px/1.2 Georgia,serif;width:9em}
+.classchip{
+  min-height:44px;padding:6px 10px;cursor:pointer;background:#3e281a;color:#fff0d1;
+  border:1px solid #6d5033;border-radius:4px;font:800 13px/1 "Trebuchet MS",Arial,sans-serif
+}
+.classchip.on{border-color:#e8bc67;box-shadow:inset 0 0 0 2px #e8bc67}
+.classchip kbd{color:#e8bc67;margin-right:4px}
+#benchBody{display:grid;grid-template-columns:220px 1fr;gap:14px}
+.bench-tray,.bench-work{background:#3e281a;border:2px solid #6d5033;border-radius:6px;padding:10px}
+.bench-gun{
+  display:flex;gap:8px;align-items:center;width:100%;min-height:44px;margin:4px 0;padding:4px 6px;
+  cursor:pointer;background:#58371f;color:#fff0d1;border:1px solid transparent;border-radius:4px;text-align:left;
+  font:800 13px/1.2 "Trebuchet MS",Arial,sans-serif
+}
+.bench-gun.on{border-color:#e8bc67}
+.bench-omit,.bench-empty,.bench-honest,.bench-blurb{color:#ffe3a5;font-size:13px;line-height:1.35}
+.bench-slots{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.bench-slot{
+  min-height:44px;padding:8px 12px;cursor:pointer;background:#58371f;color:#fff0d1;
+  border:1px solid #6d5033;border-radius:4px;font:800 14px/1 "Trebuchet MS",Arial,sans-serif
+}
+.bench-slot.on{border-color:#e8bc67;color:#e8bc67}
+.bench-piece{
+  display:flex;justify-content:space-between;gap:8px;width:100%;min-height:44px;margin:4px 0;padding:8px 10px;
+  cursor:pointer;background:#58371f;color:#fff0d1;border:1px solid #6d5033;border-radius:4px;text-align:left;
+  font:800 15px/1.2 "Trebuchet MS",Arial,sans-serif
+}
+.bench-piece.look{outline:3px solid #edc982;outline-offset:0}
+.bench-piece.stamped{border-color:#e8bc67}
+.bench-piece small{color:#e8bc67;font-weight:700}
+.bench-cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.bench-cmp div{display:flex;flex-direction:column;gap:3px;background:#58371f;padding:8px;border-radius:4px}
+.bench-cmp small{color:#e8bc67;font-weight:800}
+.bench-cmp span{display:flex;justify-content:space-between;gap:8px}
+.bench-stamp{
+  min-height:48px;margin-top:8px;padding:10px 16px;cursor:pointer;background:#e8bc67;color:#3e281a;
+  border:2px solid #3e281a;border-radius:4px;font:800 16px/1 "Trebuchet MS",Arial,sans-serif
+}
+.bench-stamp:disabled{cursor:default;opacity:.7}
+.bench-live{min-height:1.3em;color:#ffe3a5}
+
+/* Cronômetro fora do painel, no topo. */
+#classClock{
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:40;
+  width:min(920px,94vw);height:28px;border-radius:4px;overflow:hidden;
+  background:#3e281a;border:2px solid #e8bc67;box-shadow:0 2px 0 #291e18
+}
+#classClock span{
+  position:relative;z-index:1;display:flex;align-items:center;justify-content:center;height:100%;
+  color:#fff0d1;text-shadow:0 1px 2px #291e18;font:800 14px/1 "Trebuchet MS",Arial,sans-serif
+}
+#classClock i{position:absolute;left:0;top:0;bottom:0;width:0;background:#e8bc67}
+
+#hud #deathpick{
+  top:108px;bottom:12px;width:min(980px,96vw);max-height:none;
+  background:transparent;border:0;box-shadow:none;padding:0;text-align:left;color:#fff0d1
+}
+.cls-sheet{
+  display:grid;grid-template-columns:minmax(240px,340px) 1fr;gap:10px;
+  background:#58371f;border:3px solid #6d5033;border-radius:8px;padding:10px;
+  box-shadow:3px 4px 0 #291e18;max-height:calc(100vh - 180px);overflow:auto
+}
+.cls-list{display:flex;flex-direction:column;gap:6px}
+.clsrow{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:6px 8px;
+  cursor:pointer;background:#3e281a;color:#fff0d1;border:2px solid transparent;border-radius:6px;
+  text-align:left;font:800 15px/1.15 "Trebuchet MS",Arial,sans-serif
+}
+.clsrow.on{border-color:#e8bc67;box-shadow:inset 0 0 0 1px #e8bc67}
+.clsrow kbd{
+  flex:none;width:28px;color:#e8bc67;font:800 18px/1 Georgia,serif;text-align:center
+}
+.clsmeta{display:flex;flex-direction:column;min-width:0;flex:1}
+.clsmeta small{color:#ffe3a5;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clslast{
+  flex:none;color:#3e281a;background:#e8bc67;border-radius:3px;padding:2px 6px;
+  font:800 10px/1.2 "Trebuchet MS",Arial,sans-serif;font-style:normal
+}
+.cls-gun{min-width:0}
+.gs-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.gs-head b{font:800 22px/1.1 Georgia,serif;color:#fff0d1}
+.gs-head small{color:#ffe3a5;font-weight:700}
+.gs-stage{position:relative;min-height:180px;margin:8px 0;background:#3e281a;border-radius:6px}
+.gs-stage .wthumb.is-big{
+  display:block;width:min(100%,520px);height:168px;margin:28px auto 8px;
+  background-color:#1a2238;background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:4px
+}
+.gs-slot{
+  position:absolute;max-width:42%;padding:4px 8px;background:#3e281a;border:1px solid #e8bc67;border-radius:4px;
+  color:#fff0d1;font:800 12px/1.15 "Trebuchet MS",Arial,sans-serif
+}
+.gs-slot small{display:block;color:#e8bc67;font-size:10px}
+.gs-optic{top:6px;left:50%;transform:translateX(-50%)}
+.gs-barrel{right:6px;top:42%}
+.gs-mag{bottom:6px;left:50%;transform:translateX(-50%)}
+.gs-stock{left:6px;top:42%}
+.gs-empty{margin:0;padding:8px;color:#ffe3a5}
+.gbars{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.gbar{display:grid;grid-template-columns:92px 1fr 64px;gap:6px;align-items:center;font:700 12px/1 "Trebuchet MS",Arial,sans-serif;color:#fff0d1}
+.gtrack{position:relative;height:8px;background:#3e281a;border-radius:4px;overflow:visible}
+.gtrack i{display:block;height:100%;background:#e8bc67;border-radius:4px}
+.gtrack em{position:absolute;top:-2px;width:2px;height:12px;background:#fff}
+.gbar b{text-align:right;color:#ffe3a5}
+.gs-side{display:flex;gap:8px}
+.gs-side-card{display:flex;gap:6px;align-items:center;min-height:44px;background:#3e281a;border-radius:4px;padding:4px 8px;flex:1}
+.gs-side-card span{display:flex;flex-direction:column}
+.gs-side-card small{color:#e8bc67}
+.gs-hint{margin:6px 0 0;color:#ffe3a5;font-size:12px}
+#hud #deathpick #respawnBtn{
+  position:sticky;bottom:0;width:100%;min-height:48px;margin-top:8px;
+  background:#e8bc67;color:#3e281a;border:2px solid #3e281a;border-radius:4px;
+  font:800 16px/1 "Trebuchet MS",Arial,sans-serif
+}
+
+#pause .panel.small{max-width:min(980px,96vw)}
+#pauseGuns .cls-sheet,#bLoad .cls-sheet,#iLoad .cls-sheet{max-height:52vh}
+#bLoad,#iLoad{
+  top:64px;bottom:auto;width:min(980px,96vw);max-width:min(980px,96vw);
+  max-height:calc(100vh - 80px);overflow:auto;
+  background:transparent;border:0;box-shadow:none;text-shadow:none
+}
+#bLoad .blt,#iLoad .blt{color:#ffe3a5;font:800 16px/1.2 Georgia,serif;margin-bottom:6px}
+#bLoad .blhint,#iLoad .blhint{color:#ffe3a5;margin-top:6px}
+#bLoad .blbar,#iLoad .blbar{height:8px;background:#3e281a;border:2px solid #e8bc67;border-radius:4px}
+#bLoadFill,#iLoadFill{background:#e8bc67}
+#lobbyClasses{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+
+.wthumb{display:inline-block;width:64px;height:40px;flex:none;background:#1a2238 center/cover no-repeat;border-radius:3px}
+
+@media (max-width:720px){
+  #benchBody{grid-template-columns:1fr}
+  .bench-stamp{position:sticky;bottom:0}
+  .cls-sheet{grid-template-columns:1fr;max-height:calc(100vh - 150px)}
+  .cls-list{flex-direction:row;overflow-x:auto}
+  .clsrow{min-width:148px;flex-direction:column;align-items:flex-start;padding:6px}
+  .clsrow .wthumb{width:100%;height:52px}
+  .clslast{align-self:flex-end}
+  .gs-stage{min-height:210px}
+  .gs-stage .wthumb.is-big{height:120px}
+  .gbar{grid-template-columns:72px 1fr 52px}
+  #hud #deathpick{top:46px}
+  #hud #deathpick #respawnBtn{position:sticky}
+}

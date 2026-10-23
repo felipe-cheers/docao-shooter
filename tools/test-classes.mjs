@@ -1,0 +1,126 @@
+// Bancada e classes: monta no Arsenal, morre, troca no respawn e confere o stat.
+// Uso: SITE=http://127.0.0.1:8124/ node tools/test-classes.mjs
+import { chromium } from 'playwright';
+import fs from 'fs';
+
+const SITE = process.env.SITE || 'http://127.0.0.1:8124/';
+const SHOTS = process.env.SHOTS || '/opt/cursor/artifacts/screenshots';
+const VIDEOS = process.env.VIDEOS || '/opt/cursor/artifacts/videos';
+fs.mkdirSync(SHOTS, { recursive: true });
+fs.mkdirSync(VIDEOS, { recursive: true });
+const errors = [], fails = [];
+const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
+const browser = await chromium.launch({
+  executablePath: process.env.CHROME || undefined,
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'],
+});
+const context = await browser.newContext({
+  viewport: { width: 1280, height: 720 },
+  reducedMotion: 'reduce',
+  recordVideo: { dir: VIDEOS, size: { width: 1280, height: 720 } },
+});
+const page = await context.newPage();
+page.on('console', (m) => { if (m.type() === 'error' && !/favicon\.ico/.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
+page.on('pageerror', (e) => errors.push(e.message));
+await page.addInitScript(() => {
+  localStorage.setItem('docao.primary', '0');
+  localStorage.setItem('docao.secondary', '4');
+  localStorage.setItem('docao.melee', '7');
+  localStorage.setItem('docao.hand', 'primary');
+  localStorage.setItem('docao.map', 'arena');
+  localStorage.setItem('docao.name', 'Matheus');
+  localStorage.removeItem('docao.classes');
+  localStorage.removeItem('docao.classe');
+});
+await page.goto(SITE, { waitUntil: 'load' });
+const G = (fn, a) => page.evaluate(fn, a);
+const wait = (ms) => page.waitForTimeout(ms);
+const until = async (fn, ms = 20000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { if (await page.evaluate(fn)) return true; await wait(100); }
+  return false;
+};
+ok(await until(() => window.__gunThumbs >= 23, 20000), 'fotos das armas saíram do modelo');
+ok(!(await G(() => document.querySelector('#deathList .clsrow') == null)), 'a lista de classes existe no menu de morte');
+
+await page.click('[data-menu-view="arsenal"]');
+ok(await until(() => !document.getElementById('menu-arsenal').hidden && !document.getElementById('temperBtn').classList.contains('hidden'), 15000), 'a caixa do Arsenal abre');
+await page.click('#temperBtn');
+ok(await until(() => !document.getElementById('bench').hidden && document.querySelectorAll('.bench-piece').length >= 3, 5000), 'a bancada abre no fuzil');
+await page.locator('.bench-piece', { hasText: 'Alça de arame' }).click();
+await page.locator('.bench-stamp').click();
+await page.fill('#benchName', 'Arame');
+ok(await G(() => { const c = window.__docao.classes[0]; return c.name === 'Arame' && c.kits.rifle && c.kits.rifle.optic === 'arame'; }), 'Alça de arame carimbada na classe 1');
+await page.screenshot({ path: `${SHOTS}/bancada-desktop.png` });
+
+await page.locator('#benchChips .classchip').nth(1).click();
+await page.fill('#benchName', 'Bolso');
+await page.locator('.bench-slot', { hasText: 'Pente' }).click();
+await page.locator('.bench-piece', { hasText: 'Pente de bolso' }).click();
+await page.locator('.bench-stamp').click();
+ok(await G(() => { const c = window.__docao.classes[1]; return c.name === 'Bolso' && c.kits.rifle && c.kits.rifle.mag === 'bolso' && window.__docao.classIndex === 1; }), 'Pente de bolso carimbado na classe 2');
+await page.locator('#benchChips .classchip').nth(0).click();
+ok(await G(() => window.__docao.classIndex === 0 && window.__docao.classes[0].kits.rifle.optic === 'arame'), 'volta pra classe do Arame antes de jogar');
+await page.click('#benchBack');
+await page.click('#menuBack');
+ok(await until(() => document.getElementById('menu-arsenal').hidden, 8000), 'fecha a caixa e volta pra partida');
+
+await page.click('#playBtn');
+ok(await until(() => window.__docao.state === 'playing' && window.__docao.player && window.__docao.player.alive, 15000), 'a partida começa');
+const vivo = await G(() => { const g = window.__docao, h = g.held; return { fov: h && h.adsFov, mag: g.player.mag[0], spread: h && h.spread }; });
+ok(vivo.fov === 34 && vivo.mag === 30 && Math.abs(vivo.spread - 0.0115) < 1e-6, `nasceu com a Alça de arame (zoom ${vivo.fov}, pente ${vivo.mag}, cone ${vivo.spread})`);
+await G(() => document.getElementById('game').dispatchEvent(new MouseEvent('mousedown', { button: 2, buttons: 2, bubbles: true, cancelable: true })));
+ok(await until(() => Math.abs(window.__docao.fov - 34) < 1.5, 4000), 'a mira da câmera fecha no zoom da Alça de arame');
+const mirando = await G(() => window.__docao.fov);
+await G(() => document.getElementById('game').dispatchEvent(new MouseEvent('mouseup', { button: 2, bubbles: true })));
+ok(Math.abs(mirando - 34) < 1.5, `zoom da câmera ${mirando.toFixed(1)}`);
+
+await G(() => { const g = window.__docao; g.player.invulnUntil = 0; g.kill(g.player); });
+ok(await until(() => !document.getElementById('deathpick').classList.contains('hidden') && document.querySelector('#deathList .clsrow.on'), 20000), 'na morte abre a lista de classes');
+const morte = await G(() => ({
+  rows: document.querySelectorAll('#deathList .clsrow').length,
+  foto: /url\(/.test((document.querySelector('#classGun .wthumb.is-big') || {}).style?.backgroundImage || ''),
+  clock: document.getElementById('classClockTxt').textContent,
+  nome: document.querySelector('#deathList .clsrow.on .clsmeta b').textContent,
+}));
+ok(morte.rows === 5 && morte.foto && /Renasce em/.test(morte.clock) && morte.nome === 'Arame', `ficha da morte: ${morte.rows} classes, foto ${morte.foto}, "${morte.clock}", ${morte.nome}`);
+await page.screenshot({ path: `${SHOTS}/morte-desktop.png` });
+await page.keyboard.press('Digit2');
+await wait(200);
+ok(await G(() => window.__docao.classIndex === 1 && document.querySelector('#deathList .clsrow.on').dataset.i === '1'), 'tecla 2 escolhe a classe Bolso');
+ok(await until(() => !document.getElementById('respawnBtn').disabled, 30000), 'o botão de nascer libera');
+await page.click('#respawnBtn');
+ok(await until(() => window.__docao.player.alive, 8000), 'nasceu de novo');
+const troca = await G(() => { const g = window.__docao, h = g.held; return { fov: h.adsFov, mag: g.player.mag[0], nome: g.classes[g.classIndex].name }; });
+ok(troca.fov === 40 && troca.mag === 18 && troca.nome === 'Bolso', `a classe nova vale: zoom ${troca.fov} (fábrica) e pente ${troca.mag}`);
+await page.keyboard.press('Escape');
+await wait(300);
+ok(await G(() => window.__docao.state === 'paused' && window.__docao.player.alive && document.querySelectorAll('#pauseGuns .clsrow').length === 5), 'na pausa a lista de classes aparece e não derruba');
+await page.screenshot({ path: `${SHOTS}/pausa-desktop.png` });
+await page.keyboard.press('Escape');
+await wait(200);
+
+await page.click('#quitBtn');
+await until(() => window.__docao.state === 'menu', 8000);
+await page.setViewportSize({ width: 390, height: 844 });
+await wait(300);
+await page.click('[data-menu-view="arsenal"]');
+ok(await until(() => !document.getElementById('menu-arsenal').hidden, 15000), 'Arsenal na tela estreita');
+await page.click('#temperBtn');
+await until(() => !document.getElementById('bench').hidden, 5000);
+await page.screenshot({ path: `${SHOTS}/bancada-estreita.png` });
+await page.click('#benchBack');
+await page.click('#menuBack');
+await until(() => document.getElementById('menu-arsenal').hidden, 8000);
+await G(() => document.getElementById('playBtn').click());
+ok(await until(() => window.__docao.state === 'playing' && window.__docao.player && window.__docao.player.alive, 15000), 'partida na tela estreita');
+await G(() => { const g = window.__docao; g.player.invulnUntil = 0; g.kill(g.player); });
+ok(await until(() => !document.getElementById('deathpick').classList.contains('hidden'), 20000), 'morte na tela estreita');
+await page.screenshot({ path: `${SHOTS}/morte-estreita.png` });
+
+console.log('\nERROS:', errors.length ? errors.slice(0, 8) : 'nenhum');
+if (errors.length) fails.push('erros de console');
+await context.close();
+await browser.close();
+console.log(fails.length ? `\n${fails.length} FALHA(S)` : '\nTUDO OK');
+process.exit(fails.length ? 1 : 0);
