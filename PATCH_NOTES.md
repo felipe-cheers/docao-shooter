@@ -4,6 +4,15 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.12 — Ai, de Onde Veio Isso? 🎯🩸 (23/10/2026)
+🚨 **NOVIDADE QUENTINHA!** O Docão apanhava calado e sem saber de quem: "ai! quem foi? foi você? foi o vento?" 😵🐷 Chega de levar bala misteriosa. Agora o jogo aponta o dedo pro culpado:
+🔴 **Indicador de dano estilo Fortnite:** quando você leva dano, aparece um **arco vermelho na borda da tela apontando de onde veio o golpe**. Vira a câmera e o arco gira junto, então é só olhar pra onde ele aponta e devolver o carinho. 💥
+🌀 **Vários inimigos, vários arcos:** levou tiro de três lados? Três arcos, um pra cada vizinho mal-educado. Cada um some sozinho em **1,5 segundo**.
+🧟 **Funciona em tudo:** jogador, bot e **zumbi na Invasão** (o Barrigão agora é pego em flagrante).
+🌫️ **Dano sem dono** (névoa, queda, você mesmo): só um flash vermelho leve nas bordas, porque aí o culpado é você.
+💀 Morreu? Os arcos somem. Não adianta apontar o dedo pro cadáver.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.11.3 — Mouse Fujão 🖱️💀 (23/10/2026)
 🚑 **FIX RELÂMPAGO!** Tinha um bug cruel: você morria, ia clicar na arma nova... e o jogo **sequestrava o seu mouse** de volta, o cursor sumia e o painel fugia da sua mão. O Docão morto não tinha nem direito de escolher o armamento em paz. 😭
 🖱️ **Morreu? O cursor é seu.** Clicar na tela não prende mais o mouse enquanto você está morto: o cursor fica **livre e visível** pra você clicar na arma que quiser.
@@ -161,6 +170,7 @@ Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.11.1 · Hotfix da Munição:** Invasão com bem mais caixas de munição (Rodízio 6 → 28, Fazenda 4 → 18), caixa nova em 6 s, mais munição e +2 foguetes por caixa, zumbi solta caixa e facho amarelo pra achar
 - **v1.11.2 · Cara de Morto:** câmera segue quem te matou, tela cinza enquanto está morto e painel de armas discreto no canto
 - **v1.11.3 · Mouse Fujão:** morto (ou com o painel B aberto) o clique no jogo não prende mais o mouse, então dá pra clicar nas armas
+- **v1.12 · Ai, de Onde Veio Isso?:** arco vermelho na borda da tela mostra de onde veio o dano (jogador, bot e zumbi), gira com a câmera e some em 1,5 s
 
 ---
 

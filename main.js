@@ -1077,7 +1077,7 @@ function damage(t, amount, attacker, wIdx, head, back = false, fx = 0) {
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker)) return false; // sem fogo amigo
   if (invMode() && !t.zt && attacker && !attacker.zt && !attacker.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
-  if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
+  if (t.isPlayer) { hurtFlash(); noteHit(attacker); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
   if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head, wall: !!(fx & 1) }); sfx.hit(); if (training()) dmgPopup(t, amount, head); }
   if (t.hp <= 0) { kill(t, attacker, wIdx, head, back, false, null, fx); return true; }
@@ -1163,6 +1163,30 @@ function notePlayerKill(victim, head, fx = 0) {
   onRewardKill();
 }
 function hurtFlash() { hurtLevel = 1; }
+// Indicador de direção do dano (estilo Fortnite): arco vermelho na borda da tela apontando de onde veio o golpe, relativo à câmera.
+// Sem origem conhecida (névoa, queda, dano próprio) vale só o flash vermelho nas bordas (hurtFlash). Não aparece morto.
+const HIT_DIR_LIFE = 1.5, hitMarks = []; let hitDirsEl = null;
+function noteHit(att) {
+  if (!player || !player.alive || player.hp <= 0 || !att || att === player || att.fog || !att.pos) return;
+  hitMarks.push({ x: att.pos.x, z: att.pos.z, t: gameTime, el: null });
+  if (hitMarks.length > 8) { const o = hitMarks.shift(); if (o.el) o.el.remove(); }
+}
+function clearHitMarks() { for (const m of hitMarks) if (m.el) m.el.remove(); hitMarks.length = 0; }
+const hitDirDir = new V3();
+function updateHitDirs() {
+  if (!hitMarks.length) return;
+  if (!player || !player.alive || state !== 'playing') { clearHitMarks(); return; }
+  if (!hitDirsEl) { hitDirsEl = document.createElement('div'); hitDirsEl.id = 'hitDirs'; $('hud').appendChild(hitDirsEl); }
+  camera.getWorldDirection(hitDirDir); const fx = hitDirDir.x, fz = hitDirDir.z, fl = Math.hypot(fx, fz) || 1, rx = -fz / fl, rz = fx / fl; // direção da câmera e "direita" no chão
+  for (let i = hitMarks.length - 1; i >= 0; i--) {
+    const m = hitMarks[i], age = gameTime - m.t;
+    if (age >= HIT_DIR_LIFE) { if (m.el) m.el.remove(); hitMarks.splice(i, 1); continue; }
+    if (!m.el) { m.el = document.createElement('div'); m.el.className = 'hitmark'; m.el.innerHTML = '<i></i>'; hitDirsEl.appendChild(m.el); }
+    const dx = m.x - player.pos.x, dz = m.z - player.pos.z;
+    const ang = Math.atan2(dx * rx + dz * rz, (dx * fx + dz * fz) / fl); // 0 = na frente (topo da tela), + = pra direita
+    m.el.style.transform = `rotate(${ang}rad)`; m.el.style.opacity = age < 0.35 ? 1 : Math.max(0, 1 - (age - 0.35) / (HIT_DIR_LIFE - 0.35));
+  }
+}
 function flashMsg(t) { $('centermsg').textContent = t; msgTimer = 1.5; }
 
 // Abates sem morrer. O ciclo mostra 3, 5, 7 e 10 (Chopper) e volta depois do 15. O 15 é o nuke secreto, fora da barra.
@@ -1947,6 +1971,7 @@ function updateHud(dt) {
   updateLeaderboard(dt); tickFeedback(dt);
   hurtLevel = Math.max(0, hurtLevel - dt * 2.5);
   { const left = p.alive ? eggSplatUntil - gameTime : 0, el = $('eggsplat'); if (el) { el.style.opacity = left > 0 ? Math.min(1, left / 0.5).toFixed(2) : '0'; if (left > 0) drawEggSplat(); } } // sujeira de ovo na tela: 2 s escorrendo, some no último meio segundo
+  updateHitDirs();
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
   if (!p.alive) cm.textContent = `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''} · ${respawnReady(p) ? (rsSent ? 'renascendo...' : 'clique em RENASCER (ou Espaço)') : Number.isFinite(p.respawnAt) ? `renasce em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'aguarde...'}`;
@@ -4323,8 +4348,8 @@ function requestRespawn() {
   return true;
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
-function onPlayerDeath(opts) { if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
-function onPlayerRespawn() { rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
+function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
+function onPlayerRespawn() { clearHitMarks(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; document.body.classList.remove('deadgray'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 
@@ -4610,7 +4635,7 @@ function netEvent(ev) {
   } else if (k === 'h') {
     const [, tid, aid, hp, head] = ev; const t = entOf(tid), a = entOf(aid); if (!t) return;
     const prevHp = t.hp; t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
-    if (t === player) { hurtFlash(); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
+    if (t === player) { hurtFlash(); if (hp > 0) noteHit(a); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
     if (aid === o.myId && t !== player) { if (hp > 0) feedbackHit({ head: !!head, wall: !!((ev[6] || 0) & 1) }); sfx.hit(); if (training()) dmgPopup(t, ev[5] ?? Math.max(0, prevHp - hp), !!head); }
   } else if (k === 'ml') { // golpe de faca de alguém: animação + som (o dano vem nos eventos 'h'/'k')
     const [, id, kind, hit] = ev; const e = entOf(id); if (!e) return; const kn = MELEE_KINDS[kind] || 'slash';
