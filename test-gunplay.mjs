@@ -40,11 +40,11 @@ test('todas as snipers exigem luneta estabilizada; reabrir reinicia a estabiliza
     const s = still();
     assert.ok(shotSpread(w, s, 0, false) >= 0.1);
     assert.ok(shotSpread(w, s, 1, true) >= 0.1);
-    stepGunplay(s, w, 0, false, true, 0.1, 0.1);
+    stepGunplay(s, w, 0, false, true, 0.02, 0.02);
     assert.ok(shotSpread(w, s, 1, true) > 0);
-    stepGunplay(s, w, 0, false, true, 0.11, 0.21);
+    stepGunplay(s, w, 0, false, true, 0.05, 0.07);
     close(shotSpread(w, s, 1, true), 0);
-    stepGunplay(s, w, 0, false, false, 0.01, 0.22);
+    stepGunplay(s, w, 0, false, false, 0.01, 0.08);
     assert.ok(shotSpread(w, s, 1, true) >= 0.1);
   }
 });

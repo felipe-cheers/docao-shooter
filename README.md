@@ -206,7 +206,7 @@ Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto.
 | **Canhão do Barril** | 3 / 6 | 180 (mata em qualquer lugar) | ×1 | 1,85 s | 3,1 s | 260 m | 8° |
 | **Carabina da Granja** | 10 / 40 | 55 (2 no corpo, 1 na cabeça) | ×2,2 | 0,58 s | 1,9 s | 180 m | 24° |
 
-- Com a **luneta totalmente aberta, estabilizada e parado**, o tiro vai exatamente no centro. A estabilização leva mais 150 ms na Carabina, 180 ms na Torresmo e 200 ms no Canhão depois de terminar o zoom.
+- Com a **luneta totalmente aberta, estabilizada e parado**, o tiro vai exatamente no centro. Para permitir quickscopes, a estabilização é curta: mais 40 ms na Carabina, 50 ms na Torresmo e 60 ms no Canhão depois de terminar o zoom.
 - **Sem luneta**, as três snipers têm dispersão forte: o no scope é uma saída de emergência de muito perto. O Canhão é o mais difícil e a Carabina é um pouco mais permissiva. Andar perde precisão mesmo com luneta; pular aumenta bastante a dispersão.
 - Cada uma tem a sua luneta, e o ferrolho fecha a luneta depois de cada tiro.
 

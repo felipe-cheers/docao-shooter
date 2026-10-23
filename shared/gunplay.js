@@ -6,7 +6,7 @@ const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const RIFLE = { move: 0.045, air: 0.14, bloom: 0.018, kick: 0.75, cap: 0.16, side: 0.25, delay: 0.13, recover: 10 };
 const SMG = { ...RIFLE, move: 0.028, air: 0.11, bloom: 0.022, kick: 0.48, cap: 0.14 };
 const SHOTGUN = { ...RIFLE, move: 0.02, air: 0.09, bloom: 0, cap: 0.12, recover: 9 };
-const SNIPER = { ...RIFLE, move: 0.055, air: 0.22, bloom: 0, kick: 0.4, cap: 0.1, side: 0.08, hip: 0.13, settle: 0.18 };
+const SNIPER = { ...RIFLE, move: 0.055, air: 0.22, bloom: 0, kick: 0.4, cap: 0.1, side: 0.08, hip: 0.13, settle: 0.05 };
 export const GUNPLAY = {
   rifle: RIFLE,
   famas: { ...RIFLE, bloom: 0.014, side: 0.12 },
@@ -15,8 +15,8 @@ export const GUNPLAY = {
   pistol: { ...RIFLE, move: 0.035, air: 0.12, bloom: 0.012, cap: 0.12, recover: 12 },
   prego: { ...SMG, bloom: 0.014 }, shotgun: SHOTGUN, semi: SHOTGUN,
   sniper: SNIPER,
-  canhao: { ...SNIPER, hip: 0.15, move: 0.065, settle: 0.2 },
-  carabina: { ...SNIPER, hip: 0.105, move: 0.045, settle: 0.15 },
+  canhao: { ...SNIPER, hip: 0.15, move: 0.065, settle: 0.06 },
+  carabina: { ...SNIPER, hip: 0.105, move: 0.045, settle: 0.04 },
   minigun: { ...RIFLE, move: 0.05, air: 0.18, bloom: 0.02, kick: 0.7, cap: 0.1 },
 };
 const profile = (w) => GUNPLAY[w.key] || RIFLE;
