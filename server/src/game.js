@@ -11,7 +11,8 @@ import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName, NAME_MAX } from '../../shared/names.js';
-import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS, TAMPA } from '../../shared/rules.js';
+import { SHIELD, isShieldW, shieldRaised, resetShield, bulletOnShield, splashOnShield, meleeOnShield, hurtShield, noteBlocked, shieldBashHit, classifyRay, raisedAt, shieldAim, aimOffset, botWantsShield } from '../../shared/shield.js';
 import { normWeapons, normPowers, clampLoadout, botPool, weaponOn, powerOn } from '../../shared/loadout.js';
 import { DANCE_TIME, danceId } from '../../shared/emote.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
@@ -149,7 +150,7 @@ export class Game {
       primary: prim, nextPrimary: prim, secondary: sec, nextSecondary: sec, melee: mel, nextMelee: mel, slots: [prim, sec, mel], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
-      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off' };
+      connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off', shieldHp: 0, shieldBroken: false, shieldBlocked: 0, shieldMedal: false, shieldDashAt: -99 };
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
     this.ents.set(id, e); return e;
   }
@@ -401,7 +402,7 @@ export class Game {
       if (Number.isFinite(m.y)) e.yaw = m.y + Math.PI; // câmera → modelo
       if (Number.isFinite(m.pi)) e.pitch = clamp(m.pi, -1.6, 1.6);
       e.onGround = !!m.g;
-      if (e.slots.includes(m.w) && m.w !== e.weapon) { e.weapon = m.w; e.reload = null; if (m.w === EGG_W) e.eggAt = this.T; if (e.mg && e.mg.on) this.events.push(['mgs', e.id, 0]); e.mg = e.mg && { ...e.mg, on: false, v: 0, at: -1e9 }; } // trocou de arma: canos param (cliente zera mgSpin igual)
+      if (e.slots.includes(m.w) && m.w !== e.weapon && !(isShieldW(m.w) && e.shieldBroken)) { e.weapon = m.w; e.reload = null; if (m.w === EGG_W) e.eggAt = this.T; if (e.mg && e.mg.on) this.events.push(['mgs', e.id, 0]); e.mg = e.mg && { ...e.mg, on: false, v: 0, at: -1e9 }; } // tampa quebrada não volta pra mão até nascer de novo
       this.pushHist(e);
     }
     e.useHold = !!m.bk; // Modo Bomba: segurando E (plantar/desarmar)
@@ -436,8 +437,8 @@ export class Game {
       return;
     }
     if (!e.alive) return;
-    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'gf' || k === 'af' || k === 'rl' || k === 'sk')) return;
-    if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
+    if (this.emoting(e) && (k === 'f' || k === 'mgs' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'tb' || k === 'gf' || k === 'af' || k === 'rl' || k === 'sk')) return;
+    if (e.stunUntil > this.T && this.T - (e.stunAt ?? -9) > 0.3 && (k === 'f' || k === 'r' || k === 'dk' || k === 'cn' || k === 'eg' || k === 'n' || k === 'm' || k === 'sw' || k === 'tb' || k === 'sk')) { if (k === 'sk') this.toMe(e, ['skn', e.shocks | 0]); else if (k === 'n') this.toMe(e, ev[3] === 'p' ? ['pkb', e.pokeballs | 0] : ['ndn', e.nades | 0]); return; } // levou choque: não atira (0,3 s de folga pra rede)
     if (k === 'rl') { const w = ev[1]; if (e.slots.includes(w) && e.mag[w] < WEAPONS[w].mag && e.reserve[w] > 0) e.reload = { w, start: this.T, done: 0 }; return; }
     if (k === 'f') return this.clockOk(e, ev[4], ev[3]) && this.mgOk(e, ev[3], ev[4]) && this.humanFire(e, ev[1], ev[2], ev[3], ev[5], ev[6]);
     if (k === 'mgs') return this.mgSpin(e, ev[1], ev[2]);
@@ -448,6 +449,7 @@ export class Game {
     if (k === 'sk') return this.humanShock(e, ev[1], ev[2]);
     if (k === 'n') return this.humanNade(e, ev[1], ev[2], ev[3]);
     if (k === 'm') return this.humanMelee(e, ev[1], ev[2], ev[3], ev[4], ev[5]);
+    if (k === 'tb') return ev[1] === 1 ? (this.T < (e.shieldDashAt || 0) ? undefined : this.humanBash(e, 1, ev[2], ev[3])) : this.clockOk(e, ev[4], TAMPA) && this.humanBash(e, 0, ev[2], ev[3]);
     if (k === 'sw') return this.clockOk(e, ev[3], isSaber(e.weapon) ? e.weapon : SABER) && this.humanSwing(e, ev[1], ev[2]);
     if (k === 'ks') return this.useStreak(e, ev[1], ev[2]);
     if (k === 'ms') return this.missileImpact(e, ev[1]);
@@ -602,9 +604,21 @@ export class Game {
   giveMinigun(e) { e.slots[0] = MINIGUN; e.mag[MINIGUN] = WEAPONS[MINIGUN].mag; e.reserve[MINIGUN] = WEAPONS[MINIGUN].reserve; e.weapon = MINIGUN; e.reload = null; e.mg = null; this.toMe(e, ['mgn', 1]); }
   // Treino: troca de arma na hora (teclas B/N/M), com pente cheio
   equipNow(e) {
+    const prev = e.slots[0];
     e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; const old = e.slots; e.slots = [e.primary, e.secondary, e.melee];
     for (const w of e.slots) if (!old.includes(w)) { e.mag[w] = WEAPONS[w].mag; e.reserve[w] = WEAPONS[w].reserve; if (w === EGG_W) e.eggAt = this.T; }
-    if (!e.slots.includes(e.weapon)) e.weapon = e.primary; e.reload = null;
+    if (isShieldW(e.slots[0]) && e.slots[0] !== prev) resetShield(e);
+    if (!e.slots.includes(e.weapon) || (isShieldW(e.weapon) && e.shieldBroken)) e.weapon = e.shieldBroken && isShieldW(e.primary) ? e.secondary : e.primary; e.reload = null;
+  }
+  // Tampa levou dano. Um evento 'td' por vez: [id, hp, quebrada, dano segurado na partida].
+  payShield(e, shield, blocked) {
+    if (!e || (!(shield > 0) && !(blocked > 0))) return;
+    if (blocked > 0) noteBlocked(e, blocked);
+    if (shield > 0) {
+      const r = hurtShield(e, shield);
+      if (r.broke && isShieldW(e.weapon)) { e.weapon = e.slots[1] ?? PISTOL; e.reload = null; }
+    }
+    this.events.push(['td', e.id, Math.round(e.shieldHp || 0), e.shieldBroken ? 1 : 0, Math.round(e.shieldBlocked || 0)]);
   }
   // cadência: usa o relógio do cliente (tiros chegam agrupados pela rede), mas o relógio do cliente não pode
   // andar mais rápido que o do servidor (speed hack): (tServidor - tCliente) não pode cair mais que 0,75 s abaixo do máximo visto
@@ -686,7 +700,11 @@ export class Game {
       .map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, yaw: rewindT < this.T ? this.yawAt(t, rewindT) : t.yaw, crouch: this.crouchAt(t, rewindT) }));
     const h = meleeHit(o, d, kind, targets, (a, b) => this.P.losClear(a, b));
     this.events.push(['ml', e.id, MELEE_KINDS.indexOf(kind), h ? 1 : 0]);
-    if (h) this.damage(h.e, h.dmg, e, KNIFE, false, h.back);
+    if (h) {
+      const met = meleeOnShield(h.e, h.e.yaw, o, h.dmg, kind);
+      this.payShield(h.e, met.shield, met.blocked);
+      if (met.dmg > 0) this.damage(h.e, met.dmg, e, KNIFE, false, h.back);
+    }
     return h;
   }
   humanNade(e, oA, vA, kind) {
@@ -725,6 +743,23 @@ export class Game {
     for (const t of eaten) this.damage(t, 9999, n.owner, W_NADE, false, false, 'pk');
     this.events.push(['pke', n.id, arr3(n.pos), eaten.map((t) => t.id)]);
   }
+  humanBash(e, kind, oA, dA) {
+    const spec = kind === 1 ? SHIELD.charge : SHIELD.bash;
+    const o = obj3(oA), d0 = obj3(dA);
+    if (!shieldRaised(e) || !this.eyeOk(e, o) || !d0 || vlen(d0) < 0.5) return;
+    if (kind === 1) { e.shieldDashAt = this.T + SHIELD.charge.cd; e.lastKnock = this.T; e.shieldDashUntil = this.T + SHIELD.charge.time; }
+    const d = norm(d0);
+    const targets = [...this.ents.values()].filter((t) => t !== e && t.alive && (t.bot || t.connected) && !this.friends(t, e))
+      .map((t) => ({ e: t, p: t.pos, yaw: t.yaw, crouch: t.crouch }));
+    const h = shieldBashHit(o, d, spec, targets, (a, b) => this.P.losClear(a, b));
+    this.events.push(['tb', e.id, kind === 1 ? 1 : 0, h ? 1 : 0]);
+    if (!h) return;
+    this.damage(h.e, spec.dmg, e, TAMPA, false);
+    h.e.lastKnock = this.T;
+    const v = { x: h.dir.x * spec.push, y: spec.lift, z: h.dir.z * spec.push };
+    if (h.e.bot) { h.e.vel.x += v.x; h.e.vel.z += v.z; h.e.vel.y = Math.max(h.e.vel.y, v.y); h.e.onGround = false; }
+    else this.toMe(h.e, ['kn', arr3(v)]);
+  }
   humanSwing(e, oA, dirA) {
     const W = WEAPONS[e.weapon];
     if (!e.alive || !isSaber(e.weapon)) return;
@@ -737,7 +772,9 @@ export class Game {
       const dx = t.pos.x - o.x, dz = t.pos.z - o.z, dist = Math.hypot(dx, dz);
       if (dist > W.reach || dist < 0.05) continue;
       if ((dx / dist) * fx + (dz / dist) * fz < Math.cos(W.arc)) continue;
-      this.damage(t, W.dmg, e, e.weapon, false);
+      const met = meleeOnShield(t, t.yaw, e.pos, W.dmg, 'saber');
+      this.payShield(t, met.shield, met.blocked);
+      if (met.dmg > 0) this.damage(t, met.dmg, e, e.weapon, false);
     }
   }
   // ---------- histórico de posições (rewind) ----------
@@ -764,16 +801,25 @@ export class Game {
     const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, crouch: this.crouchAt(t, rewindT), size: t.zt ? t.size : 1 })); // agachado achata o corpo (traceShot)
     const helis = []; for (const hl of this.helis) if (hl.alive && this.heliFoe(hl, shooter)) helis.push({ h: hl, c: this.heliAt(hl, heliT), r: this.heliR(hl) }, { h: hl, c: this.heliAt(hl, rewindT), r: this.heliR(hl) }); // o cliente desenha o Gavião sem atraso: vale o ping ou o rewind
     const shotW = this.inv ? { ...W, pierce: 8, pierceMul: 0.82 } : W; // Invasão: a bala segue na fila de zumbis (8 corpos, ×0,82 de dano). Fora dela, o pierce da arma.
+    const lids = new Map();
     for (const d of dirs) {
       const tr = traceShot(this.P, o, d, shotW, targets, helis, scale);
       ends.push([r2(o.x + d.x * tr.end), r2(o.y + d.y * tr.end), r2(o.z + d.z * tr.end), tr.hits.length ? 1 : 0]);
       for (const h of tr.holes) if (holes.length < 12) holes.push([r2(h.p.x), r2(h.p.y), r2(h.p.z), h.n.x, h.n.y, h.n.z, h.out ? 1 : 0]);
       if (tr.heli) heliDmg.set(tr.heli.h, (heliDmg.get(tr.heli.h) || 0) + tr.heli.dmg);
-      for (const h of tr.hits) { const a = hits.get(h.e) || { dmg: 0, head: false, fx: 0 }; a.dmg += h.dmg; a.head = a.head || h.head; a.fx |= (h.walls ? 1 : 0) | (h.bodies ? 2 : 0); hits.set(h.e, a); }
+      let stopped = false;
+      for (const h of tr.hits) {
+        if (stopped) { h.dmg = 0; continue; }
+        const met = bulletOnShield(h.e, h.e.yaw, o, d, h.t, W.key, h.dmg);
+        if (met.shield > 0 || met.blocked > 0) { const a = lids.get(h.e) || { shield: 0, blocked: 0 }; a.shield += met.shield; a.blocked += met.blocked; lids.set(h.e, a); }
+        h.dmg = met.dmg; if (met.stop) stopped = true;
+      }
+      for (const h of tr.hits) { if (!(h.dmg > 0)) continue; const a = hits.get(h.e) || { dmg: 0, head: false, fx: 0 }; a.dmg += h.dmg; a.head = a.head || h.head; a.fx |= (h.walls ? 1 : 0) | (h.bodies ? 2 : 0); hits.set(h.e, a); }
     }
     this.events.push(holes.length ? ['sh', shooter.id, w, arr3(o), ends, holes] : ['sh', shooter.id, w, arr3(o), ends]); // [5] = furos [x,y,z,nx,ny,nz,saída]
     for (const [hl, dmg] of heliDmg) this.hurtHeli(hl, dmg, shooter);
-    let kills = 0; const hurt = new Set(); for (const [t, h] of hits) { const hp0 = t.hp; if (this.damage(t, h.dmg, shooter, w, h.head, false, null, h.fx)) kills++; if (t.hp < hp0) hurt.add(t); }
+    for (const [ent, n] of lids) this.payShield(ent, n.shield, n.blocked);
+    let kills = 0; const hurt = new Set(); for (const [t, h] of hits) { if (!(h.dmg > 0)) continue; const hp0 = t.hp; if (this.damage(t, h.dmg, shooter, w, h.head, false, null, h.fx)) kills++; if (t.hp < hp0) hurt.add(t); }
     if (W.knock) for (const [t, h] of hits) { // Calibre 12: empurra quem sobreviveu e levou dano de fato (proteção de nascimento não é empurrada; bot no servidor, humano pelo 'kn' igual ao rocket jump)
       if (!t.alive || t.dummy || !hurt.has(t)) continue; const v = shotKnock(W, o, t.pos, h.dmg, t.zt); if (!v) continue; t.lastKnock = this.T;
       if (t.bot) { t.vel.x += v.x; t.vel.z += v.z; t.vel.y = Math.max(t.vel.y, v.y); t.onGround = false; } else this.toMe(t, ['kn', arr3(v)]);
@@ -816,9 +862,12 @@ export class Game {
     const hits = explosionHits(c, o, this.invasion ? this.live().filter((x) => x.zt || x === owner) : this.live(), (a, b) => this.P.losClear(a, b), owner, this.teamMode, direct);
     for (const h of hits) {
       const e = h.e; e.lastKnock = this.T;
+      const met = splashOnShield(e, e.yaw, c, h.dmg, e === owner, e === direct);
+      if (met.knockMul !== 1) { h.knock.x *= met.knockMul; h.knock.y *= met.knockMul; h.knock.z *= met.knockMul; }
       if (e.bot) { e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; }
       else this.toMe(e, ['kn', arr3(h.knock)]); // empurrão aplicado pelo próprio cliente (rocket jump)
-      this.damage(e, h.dmg, owner, o.wIdx, false, false, o.ks || null, 0, c);
+      this.payShield(e, met.shield, met.blocked);
+      if (met.dmg > 0) this.damage(e, met.dmg, owner, o.wIdx, false, false, o.ks || null, 0, c);
     }
     return hits;
   }
@@ -864,10 +913,17 @@ export class Game {
         const a = pts[k], b = pts[k + 1], L = dist(a, b); if (L < 1e-5) continue; const dir = { x: (b.x - a.x) / L, y: (b.y - a.y) / L, z: (b.z - a.z) / L };
         for (const t of this.ents.values()) {
           if (t === d.owner || !t.alive || (!t.bot && !t.connected) || this.friends(t, d.owner)) continue;
-          for (const [y, r, head] of HITBOXES) { const tt = raySphere(a, dir, center(t, y), r + DISC.r * 0.5); if (tt > 0 && tt <= L && (!hit || tt < hit.tt)) hit = { t, tt, head, at: { x: a.x + dir.x * tt, y: a.y + dir.y * tt, z: a.z + dir.z * tt } }; }
+          for (const [y, r, head] of HITBOXES) { const tt = raySphere(a, dir, center(t, y), r + DISC.r * 0.5); if (tt > 0 && tt <= L && (!hit || tt < hit.tt)) hit = { t, tt, head, dir, from: a, at: { x: a.x + dir.x * tt, y: a.y + dir.y * tt, z: a.z + dir.z * tt } }; }
         }
       }
-      if (hit) { this.discs.splice(i, 1); this.events.push(['dx', d.id, arr3(hit.at), 1]); this.damage(hit.t, W.dmg * (hit.head ? W.headMul : 1), d.owner, DISC_W, hit.head); continue; }
+      if (hit) {
+        const raw = W.dmg * (hit.head ? W.headMul : 1);
+        const met = bulletOnShield(hit.t, hit.t.yaw, hit.from, hit.dir, hit.tt, 'disco', raw);
+        this.discs.splice(i, 1); this.events.push(['dx', d.id, arr3(hit.at), 1]);
+        this.payShield(hit.t, met.shield, met.blocked);
+        if (met.dmg > 0) this.damage(hit.t, met.dmg, d.owner, DISC_W, hit.head);
+        continue;
+      }
       for (const h of hits) if (!h.dead) this.events.push(['db', d.id, arr3(h.pos), arr3(d.dir), d.bounces]);
       if (d.dead) { this.discs.splice(i, 1); this.events.push(['dx', d.id, arr3(d.pos), 0]); }
     }
@@ -886,15 +942,18 @@ export class Game {
       if (L > 1e-5) { const dir = { x: (g.pos.x - a.x) / L, y: (g.pos.y - a.y) / L, z: (g.pos.z - a.z) / L };
         for (const t of this.ents.values()) {
           if (t === g.owner || !t.alive || (!t.bot && !t.connected) || this.friends(t, g.owner)) continue;
-          for (const [y, r, head] of HITBOXES) { const tt = raySphere(a, dir, center(t, y), r + EGG.pad); if (tt > 0 && tt <= L && (!hit || tt < hit.tt)) hit = { t, tt, head, at: { x: a.x + dir.x * tt, y: a.y + dir.y * tt, z: a.z + dir.z * tt } }; }
+          for (const [y, r, head] of HITBOXES) { const tt = raySphere(a, dir, center(t, y), r + EGG.pad); if (tt > 0 && tt <= L && (!hit || tt < hit.tt)) hit = { t, tt, head, dir, from: a, at: { x: a.x + dir.x * tt, y: a.y + dir.y * tt, z: a.z + dir.z * tt } }; }
         } }
-      if (hit) { this.eggs.splice(i, 1); this.events.push(['ex', g.id, arr3(hit.at), 1, 0]); this.eggHit(hit.t, g, hit.head); continue; }
+      if (hit) { this.eggs.splice(i, 1); this.events.push(['ex', g.id, arr3(hit.at), 1, 0]); this.eggHit(hit.t, g, hit.head, hit.from, hit.dir, hit.tt); continue; }
       if (g.dead) { this.eggs.splice(i, 1); this.events.push(['ex', g.id, arr3(g.pos), 0, st.wall ? arr3(st.wall.n) : 0]); }
     }
   }
-  eggHit(t, g, head) {
-    const ok = t.alive && this.T >= t.invulnUntil && !this.friends(t, g.owner);
-    this.damage(t, eggDmg(WEAPONS[EGG_W], g.k, head), g.owner, EGG_W, head);
+  eggHit(t, g, head, from = null, dir = null, tt = 0) {
+    const raw = eggDmg(WEAPONS[EGG_W], g.k, head);
+    const met = from && dir ? bulletOnShield(t, t.yaw, from, dir, tt, 'estilingue', raw) : { dmg: raw, shield: 0, blocked: 0 };
+    this.payShield(t, met.shield, met.blocked);
+    const ok = t.alive && this.T >= t.invulnUntil && !this.friends(t, g.owner) && met.dmg > 0;
+    if (met.dmg > 0) this.damage(t, met.dmg, g.owner, EGG_W, head);
     if (ok && t.alive) { t.eggUntil = this.T + EGG.splat; this.toMe(t, ['egg', EGG.splat]); } // tela suja só pra quem levou e continua vivo
   }
   stepProjectiles(dt) {
@@ -906,15 +965,21 @@ export class Game {
     }
     const R = WEAPONS[3].rocket;
     for (let i = this.rockets.length - 1; i >= 0; i--) {
-      const r = this.rockets[i], step = R.speed * dt; let hitT = this.P.rayWorld(r.pos, r.dir, step + 0.1), hitE = null;
+      const r = this.rockets[i], step = R.speed * dt; let hitT = this.P.rayWorld(r.pos, r.dir, step + 0.1), hitE = null, hitLid = null;
       for (const e of this.ents.values()) {
         if (!e.alive || (!e.bot && !e.connected) || (e === r.owner && this.T - r.born < 0.3)) continue;
         if (this.friends(e, r.owner)) continue;
-        const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD, e.crouch); if (t !== null && (hitT === null || t < hitT)) { hitT = t; hitE = e; } // casco do Docão
+        const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD, e.crouch);
+        if (t !== null && (hitT === null || t < hitT)) {
+          const blocked = classifyRay(e, e.yaw, r.pos, r.dir, t).block;
+          hitT = t; hitE = blocked ? null : e; hitLid = blocked ? e : null; // face da tampa para o foguete; pé, borda e fresta levam o direto
+        }
       }
       if (hitT !== null || this.T - r.born > 6) {
         const t = Math.max(0, (hitT ?? 0) - 0.05); this.rockets.splice(i, 1);
-        this.blast({ x: r.pos.x + r.dir.x * t, y: r.pos.y + r.dir.y * t, z: r.pos.z + r.dir.z * t }, r.owner, { ...R, wIdx: 3, kind: 'r', pid: r.id }, hitE); continue;
+        this.blast({ x: r.pos.x + r.dir.x * t, y: r.pos.y + r.dir.y * t, z: r.pos.z + r.dir.z * t }, r.owner, { ...R, wIdx: 3, kind: 'r', pid: r.id }, hitE);
+        if (hitLid) this.payShield(hitLid, SHIELD.rocketFace, 0);
+        continue;
       }
       r.pos.x += r.dir.x * step; r.pos.y += r.dir.y * step; r.pos.z += r.dir.z * step;
     }
@@ -937,9 +1002,10 @@ export class Game {
   }
   spawn(e, silent = false) {
     const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.crouch = 0; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
-    if (e.bot && (Math.random() < 0.3 || !weaponOn(e.nextPrimary, this.cfg.weapons))) e.nextPrimary = pick(botPool(this.cfg.weapons));
+    if (e.bot && !e.dummy && botWantsShield(e.id) && weaponOn(TAMPA, this.cfg.weapons)) e.nextPrimary = TAMPA;
+    else if (e.bot && (Math.random() < 0.3 || !weaponOn(e.nextPrimary, this.cfg.weapons))) e.nextPrimary = pick(botPool(this.cfg.weapons));
     const c = clampLoadout(e.nextPrimary, e.nextSecondary ?? PISTOL, e.nextMelee ?? KNIFE, this.cfg.weapons);
-    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith; e.shocks = powerOn('stun', this.cfg.powers) ? SHOCK.spawnWith : 0; e.stunUntil = 0; e.lastShockT = -99; this.toMe(e, ['skn', e.shocks]);
+    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith; e.shocks = powerOn('stun', this.cfg.powers) ? SHOCK.spawnWith : 0; e.stunUntil = 0; e.lastShockT = -99; resetShield(e); this.toMe(e, ['skn', e.shocks]);
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
     if (e.dummy) { this.placeDummy(e); e.invulnUntil = this.T; e.slots = [0, PISTOL, KNIFE]; }
     e.hist = []; this.pushHist(e); e.lastUpd = this.now();
@@ -1005,7 +1071,7 @@ export class Game {
     if (this.zone) this.updateZone(TICK_DT(this));
     if (this.bomb) this.updateBomb(clamp(this.T - (this.lastBombT ?? this.T), 0, 0.25)); this.lastBombT = this.T;
     const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, iv: this.inv ? this.inv.stateArr() : undefined, b: this.bomb ? packBomb(this.bomb) : undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
-      (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping, r2(e.crouch)]), ev: this.events };
+      (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping, r2(e.crouch), isShieldW(e.slots[0]) ? (e.shieldBroken ? 0 : Math.round(e.shieldHp ?? SHIELD.hp)) : -1]), ev: this.events };
     this.events = [];
     this.io.broadcast(snap);
     for (const [id, evs] of this.personal) this.io.send(id, { t: 'p', ev: evs }); this.personal.clear();
@@ -1107,10 +1173,11 @@ export class Game {
     return { x: z.x + b.zoneOff.x, y: z.y, z: z.z + b.zoneOff.zz };
   }
   botWeaponFor(b, d) {
+    const side = b.slots[1] ?? PISTOL, pr = b.primary;
+    if (isShieldW(pr)) { if (b.shieldBroken) return side; b.knifeMode = false; return d < SHIELD.holdRange ? pr : side; } // perto segura a tampa; longe saca a pistola e ela fica nas costas
     if (d < 3 && this.T > (b.knifeRoll || 0)) { b.knifeRoll = this.T + 1.5; b.knifeMode = Math.random() < 0.45; } // às vezes saca a faca colado no alvo
     if (b.knifeMode && d < 7) return b.slots[2] ?? KNIFE; if (d >= 7) b.knifeMode = false;
-    const side = b.slots[1] ?? PISTOL;
-    const pr = b.primary; if (pr === 1) return d < 14 ? pr : side;
+    if (pr === 1) return d < 14 ? pr : side;
     if (WEAPONS[pr] && WEAPONS[pr].scope) { const min = pr === 5 ? 14 : pr === 6 ? 6 : 9; return d >= min ? pr : side; }
     if (pr === 3) return d >= 6 && d <= 28 ? pr : side;
     if (pr === UZI) return d < 24 ? pr : side;
@@ -1148,10 +1215,13 @@ export class Game {
       else if (this.zone || this.bomb) { /* dentro da zona / no objetivo: segura a posição, só strafe */ }
       else if (Math.abs(t.pos.y - b.pos.y) > 1.2 && d > 3) { const st = this.steer(b, t.pos); if (st) { mx += st.x; mz += st.z; } }
       else if (b.weapon === KNIFE) { if (d > 1.1) { mx += tx; mz += tz; } } // faca: cola no alvo
+      else if (isShieldW(b.weapon)) { if (d > 1.8) { mx += tx; mz += tz; } } // tampa: chega na porrada
       else if (d > range + 3) { mx += tx; mz += tz; } else if (d < range - 3) { mx -= tx; mz -= tz; }
+      const faceShield = raisedAt(t, t.yaw, b.pos);
       b.strafeT -= dt; if (b.strafeT <= 0) { b.strafeDir = pick([-1, 1, 1, -1, 0]); b.strafeT = rand(0.6, 1.8); if (Math.random() < 0.15 && b.onGround) b.vel.y = JUMP; }
-      mx += tz * b.strafeDir * 0.8; mz += -tx * b.strafeDir * 0.8;
-      if (b.nades > 0 && d > 8 && d < 24 && this.T > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < 0.35) this.botThrow(b, t); else b.nextNade = this.T + rand(1.5, 3); }
+      const sideStep = faceShield ? 1.6 : 0.8; // tampa levantada: abre o flanco em vez de ficar parado na cara
+      mx += tz * b.strafeDir * sideStep; mz += -tx * b.strafeDir * sideStep;
+      if (b.nades > 0 && d > 8 && d < 24 && this.T > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < (faceShield ? SHIELD.botNade : 0.35)) this.botThrow(b, t); else b.nextNade = this.T + rand(1.5, 3); }
       b.aim += dt;
       let diff = desiredYaw - b.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       const scopeWait = WEAPONS[b.weapon].scope ? (b.weapon === 5 ? 1.15 : b.weapon === 6 ? 0.45 : 0.8) : 0;
@@ -1172,6 +1242,7 @@ export class Game {
     if (b.useHold) { mx = 0; mz = 0; } // plantando/desarmando: fica parado
     const sp = BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > this.T ? SHOCK.slow : 1), ml = Math.hypot(mx, mz); if (ml > 0) { mx = mx / ml * sp; mz = mz / ml * sp; }
     const acc = b.onGround ? 10 : 3; b.vel.x += (mx - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (mz - b.vel.z) * Math.min(1, acc * dt);
+    if (b.shieldDashUntil > this.T) { const spc = SHIELD.charge.speed; b.vel.x = Math.sin(b.yaw) * spc; b.vel.z = Math.cos(b.yaw) * spc; } // investida: 13,5 m/s na frente do modelo, acima do cap da arma
     const blocked = this.P.moveEntity(b, dt);
     if (blocked) { b.stuck += dt; if (b.onGround) b.vel.y = JUMP; if (b.stuck > 1.2) { b.wp = this.randomWaypoint(); b.path = null; b.lastSeenAt = -99; b.strafeDir *= -1; b.stuck = 0; b.stuckCount = (b.stuckCount || 0) + 1; } }
     else b.stuck = Math.max(0, b.stuck - dt);
@@ -1184,7 +1255,21 @@ export class Game {
     if (isSaber(b.weapon)) {
       if (this.T < b.nextFire || d > w.reach) return;
       b.nextFire = this.T + w.rate;
-      this.damage(t, w.dmg, b, b.weapon, false);
+      const met = meleeOnShield(t, t.yaw, b.pos, w.dmg, 'saber');
+      this.payShield(t, met.shield, met.blocked);
+      if (met.dmg > 0) this.damage(t, met.dmg, b, b.weapon, false);
+      return;
+    }
+    if (w.shield) { // porrada; de vez em quando investe pra fechar (não rola o dado todo quadro)
+      if (this.T < b.nextFire || b.shieldBroken) return;
+      if (d > 2.4 && d < 6.5 && this.T >= (b.shieldDashAt || 0) && this.T >= (b.shieldRoll || 0)) {
+        b.shieldRoll = this.T + 1.2;
+        if (Math.random() < 0.35) { const o = center(b, 1.4); this.humanBash(b, 1, o, { x: Math.sin(b.yaw), y: 0, z: Math.cos(b.yaw) }); b.nextFire = this.T + 0.4; return; }
+      }
+      if (d > SHIELD.bash.reach + 0.35) return;
+      const o = center(b, 1.4), at = center(t, 1.1);
+      this.humanBash(b, 0, o, { x: at.x - o.x, y: at.y - o.y, z: at.z - o.z });
+      b.nextFire = this.T + SHIELD.bash.rate;
       return;
     }
     if (this.T < b.nextFire || b.reloadEnd > this.T) return;
@@ -1203,6 +1288,8 @@ export class Game {
     if (w.corn) { const oo = center(b, 1.4); this.launchCorn(b, oo, cornAim(oo, { x: t.pos.x + t.vel.x * 0.35 + rand(-0.6, 0.6), y: t.pos.y + 0.7, z: t.pos.z + t.vel.z * 0.35 + rand(-0.6, 0.6) })); return; }
     if (w.rocket) { const lead = d / w.rocket.speed, at = { x: t.pos.x + t.vel.x * lead + rand(-0.8, 0.8), y: t.pos.y + 0.25, z: t.pos.z + t.vel.z * lead + rand(-0.8, 0.8) }; const oo = center(b, 1.4); this.launchRocket(b, oo, norm({ x: at.x - oo.x, y: at.y - oo.y, z: at.z - oo.z })); return; }
     const aim = w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6)); aim.x += rand(-0.3, 0.3); aim.z += rand(-0.3, 0.3);
+    const sa = !w.scope && shieldAim(b.pos, t, t.yaw, (b.reaction || 0.5) < 0.48); // reaction baixa = mira mais cedo = o proxy de difícil
+    if (sa) { const off = aimOffset(t.yaw, sa.xOff); aim.x = t.pos.x + off.x; aim.y = t.pos.y + sa.y; aim.z = t.pos.z + off.z; }
     const base = norm({ x: aim.x - o.x, y: aim.y - o.y, z: aim.z - o.z });
     const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > this.T ? 2.5 : 1); // ovo na cara: erra mais
     const dirs = []; for (let p = 0; p < Math.max(1, w.pellets); p++) dirs.push(norm({ x: base.x + (Math.random() - 0.5) * 2 * spread, y: base.y + (Math.random() - 0.5) * 2 * spread, z: base.z + (Math.random() - 0.5) * 2 * spread }));
@@ -1214,7 +1301,7 @@ export class Game {
     const eye = center(b, 1.5); let hl = null, hp = null;
     for (const h of this.helis) { if (!h.alive || !this.heliFoe(h, b)) continue; const p = this.heliAt(h), d = dist(eye, p); if (d <= 62 && d >= 4 && this.P.losClear(eye, p)) { hl = h; hp = p; break; } }
     if (!hl) return;
-    const w = WEAPONS[b.weapon]; if (w.melee || w.rocket || isSaber(b.weapon)) return;
+    const w = WEAPONS[b.weapon]; if (w.melee || w.rocket || w.shield || isSaber(b.weapon)) return;
     if (b.mag[b.weapon] <= 0) { b.reloadEnd = this.T + w.reload; return; }
     b.yaw = Math.atan2(hp.x - b.pos.x, hp.z - b.pos.z);
     b.mag[b.weapon]--; b.nextFire = this.T + w.rate * 1.6; b.invulnUntil = Math.min(b.invulnUntil, this.T);

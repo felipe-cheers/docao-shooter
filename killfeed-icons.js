@@ -25,6 +25,7 @@ const P = {
   minigun: 'M4 5h16v7H4zM20 4h3v9h-3zM23 5h21v1H23zM23 7h23v1H23zM23 9h23v1H23zM23 11h21v1H23zM40 4h2v9h-2zM8 2h10v1H8zM8 2h1v3H8zM17 2h1v3h-1zM6 12h8v3H6z', // carcaça, 6 canos (4 linhas), anel, alça e caixa de munição
   lmg: 'M2 6h28v3H2zM8 3h16v2H8zM30 6h14v2H30zM36 4h3v6h-3zM6 9h8v4H6zM18 9h10v5H16z', // corpo longo, cano, quebra-chama, caixa de fita e cabo
   commando: 'M2 7h18v2H2zM20 6h24v3H20zM12 9h4v4H12z', // fuzil reto: corpo fino, cano longo e pente
+  tampa: 'M18 2c7.2 0 13 2.4 13 6s-5.8 6-13 6-13-2.4-13-6 5.8-6 13-6zM14 6.2h8v1.8h-8zM2 6.5h6v3H2z', // tampa oval, fresta e alça
   // granada e killstreaks
   nade: 'M18 3h12l-2 12h-8zM17 2h14v2H17z',
   missile: 'M4 6h30l8 2-8 2H4zM4 4l6 2H4zM4 12l6-2H4z',
