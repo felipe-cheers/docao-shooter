@@ -33,7 +33,22 @@ const seq = await log(P); ok(seq.join() === 'granada,banana', 'ordem: granada �
 await P.evaluate(() => { const p = window.__docao.player; p.nades = 0; p.pokeballs = 1; window.__voiceLog = []; });
 await throwQ(P); await wait(200); await release(P); await wait(4500);
 ok((await log(P)).length === 0, 'Pokébola não toca granada/banana');
+// botão de silenciar as vozes (menu): desligado, nada toca (os sons de sempre continuam); preferência fica salva
+ok(await P.evaluate(() => [...document.querySelectorAll('[data-nade-voice]')].length >= 2 && [...document.querySelectorAll('[data-nade-voice]')].every((c) => c.checked)), 'botão "Vozes da granada" existe (ajustes e pausa) e vem ligado');
+await P.evaluate(() => { const c = document.querySelector('[data-nade-voice]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); });
+ok(await P.evaluate(() => localStorage.getItem('docao.nadeVoice') === '0' && [...document.querySelectorAll('[data-nade-voice]')].every((c) => !c.checked)), 'desligar grava docao.nadeVoice=0 e sincroniza os dois botões');
+await P.evaluate(() => { const p = window.__docao.player; p.nades = 2; p.pokeballs = 0; window.__voiceLog = []; });
+await throwQ(P); await wait(200); await release(P); await wait(1200);
+ok((await log(P)).length === 0, 'com a voz desligada, soltar o copo não toca "granada"');
+ok(await until(P, () => window.__docao.grenades.length === 0, 15000), 'o copo explode normalmente (som de sempre)');
+ok((await log(P)).length === 0, 'com a voz desligada, a explosão não toca "banana"');
+const store = await P.evaluate(() => localStorage.getItem('docao.nadeVoice'));
 await P.close();
+{ const R = await browser.newContext({ viewport: { width: 900, height: 520 } }); await R.addInitScript((v) => { if (!sessionStorage.getItem('nv')) { sessionStorage.setItem('nv', '1'); localStorage.setItem('docao.nadeVoice', v); } }, store);
+  const page = await R.newPage(); await page.goto(`${SITE}?server=${encodeURIComponent(SERVER)}`); await page.waitForFunction(() => !!window.__docao, null, { timeout: 120000 });
+  ok(await page.evaluate(() => [...document.querySelectorAll('[data-nade-voice]')].every((c) => !c.checked)), 'preferência desligada persiste ao reabrir o jogo');
+  await page.evaluate(() => { const c = document.querySelector('[data-nade-voice]'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); });
+  ok(await page.evaluate(() => localStorage.getItem('docao.nadeVoice') === '1'), 'ligar de novo grava 1'); await R.close(); }
 
 // ---------- online ----------
 if (!process.env.SKIP_ONLINE) {

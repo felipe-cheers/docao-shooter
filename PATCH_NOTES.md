@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.16.1 — Granada Silenciosa 🤫💣 (23/10/2026)
+🤫 **CALA A BOCA, GRANADA!** Tem gente que ama o "GRANADA!" e o "BANANA!", e tem gente que quer jogar em paz sem frutas gritando. Agora os dois lados vivem em harmonia:
+🔘 **Novo botão "Vozes da granada"** em **Ajustes** (e também no menu de pausa). Desmarcou? O Copo Bomba volta pro som de sempre: o *toc* do arremesso e o *BUM* da explosão, sem ninguém avisando nada.
+💾 **O Docão lembra da sua escolha** neste navegador. Por padrão a voz continua **ligada**, porque o Matheus é vaidoso.
+🔇 Vale pra tudo: seu copo, o dos outros, bots e online. Silêncio total, só estrondo.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.16 — Grelha na Granja 🔥🐷 (23/10/2026)
 🤝 **O JOÃO VOLTOU, E TROUXE UM AVIÃO!** O **João** (@rramosjoao) mandou o **PR #18** e o céu do Docão nunca mais foi o mesmo:
 ✈️ **NOVO KILLSTREAK: AC-130 «Grelha da granja»!** Chegou nos **13 abates** (entre o Chopper e o nuke). É um avião lá no alto rodando o mapa por **40 segundos**, e você só aponta e manda brasa com três armas: **Espeto** (rajada fina), **Panela** (explosão média) e **Caldeirão** (explosão que dá medo, de recarga lenta). Mas cuidado: o avião tem vida (420) e dá pra derrubar. Funciona online e offline, com tela de mira e tudo. Quem cair pro fogo da Grelha entra no placar como "Grelha da granja".
