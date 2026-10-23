@@ -260,7 +260,7 @@ function invMusicOn(on) { if (on) { if (!actx) initAudio(); if (!actx) return; i
 const friends = (a, b) => (invMode() ? !!(a && b && a !== b && !a.zt === !b.zt) : teamMode() && a && b && a !== b && a.team === b.team && a.team >= 0);
 let online = null; // modo online: { net, code, myId, hostId, ents: Map(id → entidade), evq, ... } (ver seção Online)
 let ads = 0; // 0 = normal, 1 = mirando (zoom)
-const keys = {}; let mouseDown = false, firedThisPress = false;
+const keys = {}; let mouseDown = false, firedThisPress = false, lookInputSeq = 0;
 
 function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
   const skin = getSkin(skinId);
@@ -2422,8 +2422,14 @@ function updateFP(dt) {
   let dyaw = p.yaw - (fp.lastYaw ?? p.yaw); dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
   const dpit = p.pitch - (fp.lastPitch ?? p.pitch); fp.lastYaw = p.yaw; fp.lastPitch = p.pitch;
   const sk = Math.min(1, dt * 10), sideVel = p.vel.x * Math.cos(p.yaw) - p.vel.z * Math.sin(p.yaw);
-  fp.swayX = (fp.swayX || 0) + (clamp(dyaw * 1.6, -0.09, 0.09) - (fp.swayX || 0)) * sk;
-  fp.swayY = (fp.swayY || 0) + (clamp(-dpit * 1.6, -0.07, 0.07) - (fp.swayY || 0)) * sk;
+  // Uma correção manual já moveu a mira. Cancele o balanço pendente para a arma
+  // não voltar sozinha à direção anterior depois que o mouse parar.
+  if (fp.lastLookInputSeq !== lookInputSeq) {
+    fp.swayX = 0; fp.swayY = 0; fp.lastLookInputSeq = lookInputSeq;
+  } else {
+    fp.swayX = (fp.swayX || 0) + (clamp(dyaw * 1.6, -0.09, 0.09) - (fp.swayX || 0)) * sk;
+    fp.swayY = (fp.swayY || 0) + (clamp(-dpit * 1.6, -0.07, 0.07) - (fp.swayY || 0)) * sk;
+  }
   fp.strafe = (fp.strafe || 0) + (clamp(-sideVel * 0.012, -0.09, 0.09) - (fp.strafe || 0)) * Math.min(1, dt * 8);
   const swA = 1 - ads * 0.85;
   if (w.pump || w.bolt) tilt += cyc * 0.12;
@@ -3881,6 +3887,7 @@ document.addEventListener('mousemove', (e) => {
   }
   if (predator) return;
   const s = sens * (ads > 0.2 ? sensAds : 1) * (camera.fov / BASE_FOV); // mirando usa o slider "Mirando"; o zoom ainda deixa o mouse mais lento
+  lookInputSeq++;
   player.yaw -= e.movementX * 0.0015 * s; player.pitch = clamp(player.pitch - e.movementY * 0.0015 * s, -1.5, 1.5);
 });
 canvas.addEventListener('mousedown', (e) => {
