@@ -4,6 +4,21 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.16 — Grelha na Granja 🔥🐷 (23/10/2026)
+🤝 **O JOÃO VOLTOU, E TROUXE UM AVIÃO!** O **João** (@rramosjoao) mandou o **PR #18** e o céu do Docão nunca mais foi o mesmo:
+✈️ **NOVO KILLSTREAK: AC-130 «Grelha da granja»!** Chegou nos **13 abates** (entre o Chopper e o nuke). É um avião lá no alto rodando o mapa por **40 segundos**, e você só aponta e manda brasa com três armas: **Espeto** (rajada fina), **Panela** (explosão média) e **Caldeirão** (explosão que dá medo, de recarga lenta). Mas cuidado: o avião tem vida (420) e dá pra derrubar. Funciona online e offline, com tela de mira e tudo. Quem cair pro fogo da Grelha entra no placar como "Grelha da granja".
+☢️ **O FIM DA CHAPA AGORA ACABA O JOGO!** Estourou o nuke? A partida **fecha na hora** e **vence quem chamou** (ou o time dele), mesmo perdendo no placar. Na Invasão continua sem killstreak, e na Bomba também vale. Quer dizer: se você está perdendo, só falta fazer 15 abates seguidos. Fácil, né? 😅
+🔫 **Arsenal mexido** (o João mexeu na churrasqueira inteira):
+  • 🆕 **Commando da Granja:** recuo quase zero, dano baixo e rajada reta como régua. Já está no menu de armas.
+  • 🔫 **MP5K da Granja** entrou no lugar da Mini Uzi (mesmo botão): 30/90, mais dano e mais alcance.
+  • 🎯 **Carabina da Granja:** agora 7 balas no pente e recarrega mais devagar (2,9 s). Pensa antes de atirar.
+  • 💥 **Canhão do Barril:** de 6 para **12** balas de reserva. Mais barril pra todo mundo.
+  • 🌀 **Minigun do Galpão:** 600 tiros de uma vez, sem reserva, e agora anda na velocidade normal.
+🧟 **Invasão:** a bala do **Fuzil agora atravessa os zumbis**, com dano menor a cada um (e nunca machuca você). Fila de zumbi virou espetinho.
+🧪 Tem teste novo pra tudo isso (e o de killstreaks ganhou o AC-130).
+🙏 Valeu, João! (PR #18)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.15 — Câmera Lenta no Torresmo 🎬🥓 (23/10/2026)
 🤝 **O JOÃO VOLTOU COM CINEMA!** O **João** (@rramosjoao) mandou o **PR #17** e o fim de partida deixou de ser um "pimba, acabou" pra virar **cena de filme**:
 📋 **A tela de fim agora parece a comanda do churrasco:** prancheta de madeira, papel creme, prendedor de metal e o título em tinta com pincelada vermelha. Cada time tem a sua cor, e a Invasão tem verde-oliva (venceu) ou roxo (perdeu). Placar igualzinho ao do Tab, botão de **Jogar de novo** em tijolo, **Próximo mapa** em oliva e **Menu** no papel. Até o chat do online foi pro papel.
