@@ -9,6 +9,7 @@ Jogue em **https://docao.mvalentim.dev**
 - **Parou, acertou:** correr espalha mais os tiros; pular atrapalha bastante, mesmo mirando. Agachar continua reduzindo a velocidade e ajuda a acertar enquanto anda.
 - **No scope é no susto:** Torresmo, Canhão e Carabina agora têm dispersão forte sem luneta. De pertinho ainda dá para salvar a pele; de longe, abra a luneta e espere estabilizar.
 - **A mira volta:** o recoil sobe durante a sequência e recupera suavemente na pausa, sem travar seus movimentos do mouse. Rajadas curtas ficam mais controláveis; sprays longos espalham mais.
+- **Retorno mais tranquilo:** a mira agora volta um pouco mais devagar depois dos tiros, suavizando a sensação de ser puxada de volta ao centro.
 - **Cada arma com seu tempero:** SMGs toleram mais movimento que fuzis. Bots também perdem precisão ao correr e pular, offline e online. Dano e cadência continuam iguais.
 
 ## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
