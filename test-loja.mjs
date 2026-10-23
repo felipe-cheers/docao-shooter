@@ -1,4 +1,4 @@
-// Teste do servidor da loja/ateliê: ganho de Docoins, tetos, compra, compra dupla, equipar item que não é seu, skins na rede.
+// Teste do servidor da loja (Brechó da Porca Véia): ganho de Docoins, tetos, compra, compra dupla, equipar item que não é seu, skins na rede.
 // Precisa: cd server && npx wrangler d1 migrations apply docao-contas --local && npx wrangler dev --var ALLOW_TEST:1 --var RATE_REG_MAX:500   (SÓ LOCAL)
 // Uso: node test-loja.mjs [http://127.0.0.1:8787]
 import { execSync } from 'node:child_process';

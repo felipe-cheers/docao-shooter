@@ -1,12 +1,12 @@
 // ============================================================
-//  ATELIÊ DO DOCÃO: partes de skin à venda (moeda do jogo: Docoins 🪙) e "visual personalizado".
+//  BRECHÓ DA PORCA VÉIA 🧺 (loja do Docão): partes de skin à venda (moeda do jogo: Docoins 🪙) e "visual personalizado".
 //  Só dados e funções puras: o cliente (prévia, loja) e o Worker (validação, compra, equipar) usam este mesmo arquivo.
 //  O visual personalizado vira um CÓDIGO curto de texto (ex.: "x1.3.5.h3.f2.s1") que viaja pela rede no lugar do id da skin.
 //  Cores da camiseta e do shorts são grátis (paleta fixa). As PARTES custam Docoins e só podem ser usadas se estiverem na mochila (D1).
 //  As peças 3D são as que já existem em costumes.js/docao.js, só com cores novas: nada de modelo novo, nada de alterar skins atuais.
 // ============================================================
 export const CURRENCY = 'Docoins', CURRENCY_ONE = 'Docoin', COIN_ICON = '🪙'; // moeda do jogo (escolhida pelo Matheus)
-export const SHOP_NAME = 'Ateliê'; // nome da loja PROVISÓRIO: trocar só aqui (botão do menu e título da janela usam esta constante)
+export const SHOP_NAME = 'Brechó da Porca Véia', SHOP_EMOJI = '🧺', SHOP_BUTTON = 'BRECHÓ'; // nome da loja (escolhido pelo Matheus): título da janela e botão do menu usam estas constantes
 export const coinsText = (n) => `${COIN_ICON} ${n | 0} ${(n | 0) === 1 ? CURRENCY_ONE : CURRENCY}`;
 export const COLORS = ['#d8261c', '#e8702a', '#f2c94c', '#6fbf3b', '#17b394', '#2b8fd8', '#1446b8', '#7a3fb5', '#e66fa8', '#f4f4f4', '#8a8a8a', '#2c2c30', '#1d1410', '#7a4a24'];
 export const SLOTS = [['c', 'Fantasia completa'], ['h', 'Cabeça'], ['f', 'Rosto'], ['n', 'Pescoço'], ['b', 'Corpo'], ['w', 'Cintura'], ['g', 'Mãos'], ['s', 'Pés']];

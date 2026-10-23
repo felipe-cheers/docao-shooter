@@ -19,6 +19,6 @@ HP=$!
 trap 'kill $WR $HP 2>/dev/null' EXIT INT TERM
 sleep 6
 URL="http://localhost:$SITE_PORT/?server=ws://localhost:$WORKER_PORT"
-echo; echo "Abrindo: $URL"; echo "1) Crie uma conta  2) ATELIÊ no menu  3) dê Docoins de teste com tools/dar-docoins-mac.sh"
+echo; echo "Abrindo: $URL"; echo "1) Crie uma conta  2) 🧺 BRECHÓ no menu  3) dê Docoins de teste com tools/dar-docoins-mac.sh"
 open "$URL" 2>/dev/null || true
 wait

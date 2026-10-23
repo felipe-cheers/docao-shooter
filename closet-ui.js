@@ -1,5 +1,5 @@
 // ============================================================
-//  Ateliê do Docão (menu): personalizador de visual + loja de partes, com prévia 3D própria (um mini renderizador que só
+//  Brechó da Porca Véia 🧺 (menu): personalizador de visual + loja de partes, com prévia 3D própria (um mini renderizador que só
 //  existe com a janela aberta). Nada aqui decide saldo, preço ou posse: o servidor decide, a tela só pede e mostra.
 //  Convidado não salva nem compra (a janela só convida a entrar na conta).
 // ============================================================
@@ -9,7 +9,7 @@ import { poseVictory, resetVictoryPose, ALL_DANCES, isPaidDance, normDance } fro
 import './costumes.js';
 import { getAccount, getItems, getEarn, getChal, onAccount, refreshStats, equipLook, buyItem } from './account.js';
 import { CHAL_PER_DAY, TIERS } from './shared/challenges.js';
-import { COLORS, SLOTS, ITEMS, CURRENCY, COIN_ICON, SHOP_NAME, DEFAULT_LOOK, COSTUME_SLOT, DANCE_SLOT, encodeLook, parseLook, itemById, itemForDance } from './shared/closet.js';
+import { COLORS, SLOTS, ITEMS, CURRENCY, COIN_ICON, SHOP_NAME, SHOP_EMOJI, SHOP_BUTTON, DEFAULT_LOOK, COSTUME_SLOT, DANCE_SLOT, encodeLook, parseLook, itemById, itemForDance } from './shared/closet.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -161,7 +161,7 @@ async function onClick(e) {
 }
 
 export function initCloset() {
-  $('closetBtn').textContent = SHOP_NAME.toUpperCase(); $('closetTitle').textContent = `${SHOP_NAME} do Docão`; // nome provisório da loja: uma constante só
+  $('closetBtn').textContent = `${SHOP_EMOJI} ${SHOP_BUTTON}`; $('closetTitle').textContent = `${SHOP_NAME} ${SHOP_EMOJI}`; // nome da loja: constantes em shared/closet.js
   $('closetBtn').onclick = () => openCloset(); $('closetClose').onclick = closeCloset;
   document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#chalLink')) openCloset('chal'); }); // atalho da faixa do menu
   $('closetLogin').onclick = () => { closeCloset(); $('acctBtn').click(); };

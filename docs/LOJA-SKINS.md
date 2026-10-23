@@ -1,9 +1,9 @@
-# Ateliê do Docão: personalizador de skin + loja de partes (Docoins)
+# Brechó da Porca Véia 🧺: personalizador de skin + loja de partes (Docoins)
 
 **Status: em teste local (branch `feature/loja-skins`). Nada foi para a produção** (sem migração 0002 remota, sem deploy, sem release).
 
 ## O que é
-- **Personalizador** (menu → ATELIÊ → Personalizar): escolhe cor da camiseta, cor do shorts (grátis, paleta fixa de 14 cores) e **uma parte por espaço** (cabeça, rosto, pescoço, corpo, cintura, mãos, pés), só entre as partes que estão na **mochila**. Prévia 3D ao vivo. **Salvar e usar** grava na conta (D1). Convidado não salva nem compra.
+- **Personalizador** (menu → 🧺 BRECHÓ → Personalizar): escolhe cor da camiseta, cor do shorts (grátis, paleta fixa de 14 cores) e **uma parte por espaço** (cabeça, rosto, pescoço, corpo, cintura, mãos, pés), só entre as partes que estão na **mochila**. Prévia 3D ao vivo. **Salvar e usar** grava na conta (D1). Convidado não salva nem compra.
 - **Loja** (aba Loja): partes à venda por **Docoins 🪙**. Clicar no cartão experimenta na prévia sem comprar.
 - As **skins atuais não mudam**: o visual personalizado é uma skin a mais ("Visual personalizado"), guardada junto da conta. Escolher uma skin da lista continua funcionando e o visual personalizado fica guardado.
 - As peças 3D são as que **já existem** no modelo (`costumes.js`/`docao.js`), só com cores novas: nenhum modelo novo.
@@ -35,7 +35,7 @@ Com o teto diário de 400 e a loja a 40–300, dá para comprar de 2 a 10 partes
 - Contagem: a sala (`server/src/game.js`, `cq()`) soma contadores por jogador com conta (abates, cabeça, armas, streaks, zonas, botijão, zumbis, poderes, danças, chat, voz...). Treino não conta e Exploração é offline (nunca chega ao servidor).
 - Gravação: no fim da partida ou na saída, junto do ranking. `recordStats` lê `accounts.chal` (1 SELECT, só se houve contagem), aplica e grava no **mesmo UPDATE** do crédito da partida. `chal IS antigo` impede pagar duas vezes se duas salas gravarem juntas.
 - Prêmio: entra no saldo na hora em que completa. **Sem teto** (o limite é ser só 3 por dia). Os tetos de partida (80/partida, 400/dia) continuam.
-- Leitura: `GET /api/me` → `chal: { day, resetIn, list: [{ id, text, mode, tier, goal, reward, prog, done }] }`. Tela: aba 🎯 Desafios do Ateliê e atalho "🎯 Desafios x/3" na faixa da conta no menu.
+- Leitura: `GET /api/me` → `chal: { day, resetIn, list: [{ id, text, mode, tier, goal, reward, prog, done }] }`. Tela: aba 🎯 Desafios do Brechó e atalho "🎯 Desafios x/3" na faixa da conta no menu.
 - Migração: coluna `accounts.chal TEXT` na `0003_desafios.sql` (separada; NÃO aplicada em produção, nem a 0002).
 
 ## Segurança (servidor autoritativo)
@@ -49,7 +49,7 @@ Referência: o plano Workers Paid inclui D1 com cerca de 25 bilhões de linhas l
 - **Ganho de Docoins**: **0 requisições novas**. É 1 `UPDATE` a mais dentro do mesmo lote de estatísticas que já roda 1x por jogador no **fim da partida / saída**. ≈ 2–4 linhas escritas por jogador por partida.
 - **Compra**: 1 leitura prévia (2 linhas) + 1 lote (≈ 3 linhas escritas/lidas). Só quando o jogador compra.
 - **Equipar visual**: 1 `UPDATE` condicional (não escreve se nada mudou) + só se mudou, 1 leitura. Trocar skin na lista é agrupado (espera 700 ms parado antes de gravar).
-- **Mochila/saldo**: vêm junto do `/api/me` (1 lote de 2 SELECT pequenos, ≈ até 40 linhas), uma vez ao abrir o jogo/ateliê e **uma vez no fim de cada partida online** (para atualizar o saldo). **Sem polling.** O cliente guarda mochila e saldo em memória.
+- **Mochila/saldo**: vêm junto do `/api/me` (1 lote de 2 SELECT pequenos, ≈ até 40 linhas), uma vez ao abrir o jogo/Brechó e **uma vez no fim de cada partida online** (para atualizar o saldo). **Sem polling.** O cliente guarda mochila e saldo em memória.
 - **Ranking**: continua com cache de 60 s na borda.
 - Exemplo: 1.000 jogadores com conta × 5 partidas/dia ≈ 5.000 partidas → ~20 mil linhas escritas/dia (~600 mil/mês) e uns 200 mil/mês lidas: **bem abaixo** das cotas incluídas.
 
@@ -112,7 +112,7 @@ Referência: o plano Workers Paid inclui D1 com cerca de 25 bilhões de linhas l
 1. Aprovar o catálogo/preços e as regras de ganho.
 2. Aplicar as migrações **0002** e **0003** no D1 de produção (`docao-contas`): `npx wrangler d1 migrations apply docao-contas --remote` (ou pela API, como na 0001; acrescenta colunas em `accounts` e cria `inventory`; contas existentes ficam com 0 Docoins).
 3. Deploy do Worker pela receita (bindings `ROOMS` + `DB`, sem ALLOW_TEST).
-4. Push na main e release (patch notes: rascunho em `docs/RASCUNHO-PATCH-NOTES-ATELIE.md`).
+4. Push na main e release (patch notes: rascunho em `docs/RASCUNHO-PATCH-NOTES-BRECHO.md`).
 5. Conferir em produção: cadastro, `/api/me` com `items`/`coins`, compra com conta de teste (depois apagar), salvar visual, sala online com os dois visuais.
 **Ordem importante**: migração 0002 **antes** do deploy do Worker novo (o Worker novo lê as colunas novas).
 

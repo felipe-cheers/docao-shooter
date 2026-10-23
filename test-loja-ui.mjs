@@ -1,4 +1,4 @@
-// Tela do Ateliê: convidado é convidado a entrar; conta compra parte (servidor decide), personaliza com prévia 3D, salva, e o visual volta depois de recarregar.
+// Tela do Brechó da Porca Véia: convidado é convidado a entrar; conta compra parte (servidor decide), personaliza com prévia 3D, salva, e o visual volta depois de recarregar.
 // Precisa do servidor local (wrangler dev + D1 com 0001 e 0002) e do site: node test-loja-ui.mjs [urlSite] [urlServidor]   (SÓ LOCAL)
 import { chromium } from 'playwright';
 import { execSync } from 'node:child_process';
@@ -6,7 +6,7 @@ import { mkdirSync } from 'node:fs';
 const SITE = process.argv[2] || 'http://localhost:8124/', SERVER = process.argv[3] || 'ws://127.0.0.1:8787', SHOTS = process.env.SHOTS || 'screenshots/loja'; mkdirSync(SHOTS, { recursive: true });
 const errors = [], fails = []; const ok = (c, m) => { console.log((c ? 'OK    ' : 'FALHA ') + m); if (!c) fails.push(m); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const tag = Math.random().toString(36).slice(2, 6), NICK = 'Ateliê' + tag;
+const tag = Math.random().toString(36).slice(2, 6), NICK = 'Brecho' + tag;
 const sql = (q) => JSON.parse(execSync(`cd server && npx wrangler d1 execute docao-contas --local --json --command "${q}"`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }))[0].results;
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }); const page = await ctx.newPage();
@@ -16,17 +16,18 @@ async function until(fn, ms = 10000, arg) { const t0 = Date.now(); while (Date.n
 const vis = (s) => page.isVisible(s);
 await page.goto(url, { waitUntil: 'load' }); await page.waitForFunction(() => !!window.__docao, null, { timeout: 120000 }); await wait(1500);
 // convidado
-ok(await vis('#closetBtn'), 'botão ATELIÊ aparece no menu');
+ok(await vis('#closetBtn') && /BRECHÓ/.test(await page.textContent('#closetBtn')), 'botão 🧺 BRECHÓ aparece no menu');
+ok(/Brechó da Porca Véia/.test(await page.textContent('#closetTitle')), 'título da janela: Brechó da Porca Véia');
 await page.click('#closetBtn');
-ok(await vis('#closetGuest') && !(await vis('#closetMain')), 'convidado: o ateliê só convida a entrar na conta (não salva, não compra)');
+ok(await vis('#closetGuest') && !(await vis('#closetMain')), 'convidado: o Brechó só convida a entrar na conta (não salva, não compra)');
 await page.screenshot({ path: `${SHOTS}/1-guest.png` });
 await page.click('#closetLogin'); ok(await vis('#acctModal'), 'convite abre a janela de conta');
 await page.click('#acctTabReg'); await page.fill('#acctNick', NICK); await page.fill('#acctPass', 'senha-forte-123'); await page.fill('#acctPass2', 'senha-forte-123'); await page.click('#acctSubmit');
 ok(await until(() => document.getElementById('acctModal').classList.contains('hidden')), 'conta criada');
 ok(/0<\/b> Docoins|🪙 0 Docoins/.test(await page.innerHTML('#acctTxt')) || /Docoins/.test(await page.textContent('#acctTxt')), 'faixa do menu mostra o saldo de Docoins');
-// ateliê com conta
+// Brechó com conta
 await page.click('#closetBtn'); await until(() => !document.getElementById('closetMain').classList.contains('hidden'));
-ok(await vis('#closetMain') && await vis('#closetCanvas'), 'conta: ateliê abre com prévia 3D');
+ok(await vis('#closetMain') && await vis('#closetCanvas'), 'conta: o Brechó abre com prévia 3D');
 ok(/🪙\s*0/.test(await page.textContent('#closetWallet')), 'saldo 0 na carteira');
 await page.click('#closetTabShop');
 ok((await page.$$('#closetShop .closet-card')).length >= 30, 'loja lista as partes (30+)');
@@ -65,7 +66,7 @@ ok(await page.evaluate(() => document.getElementById('skinName').textContent) !=
 // sair da conta: visual personalizado é só de conta
 await page.click('#acctBtn'); await page.click('#acctLogout'); await wait(500); await page.click('#acctClose');
 ok(await page.evaluate(() => document.getElementById('skinName').textContent) !== 'Visual personalizado', 'sem conta, nenhum visual personalizado');
-await page.click('#closetBtn'); ok(await vis('#closetGuest'), 'depois de sair, o ateliê volta a ser só convite');
+await page.click('#closetBtn'); ok(await vis('#closetGuest'), 'depois de sair, o Brechó volta a ser só convite');
 // todas as partes da loja montam no modelo sem erro e deixam marca (mais peças que o Docão pelado)
 const parts = await page.evaluate(async () => {
   const c = await import('./shared/closet.js'), d = await import('./docao.js'); await import('./costumes.js');

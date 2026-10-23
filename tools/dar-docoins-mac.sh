@@ -7,4 +7,4 @@ N="${2:-500}"; case "$N" in ''|*[!0-9]*) echo "Quantidade inválida"; exit 1;; e
 NICK="${1//\'/}"
 cd "$(dirname "$0")/../server"
 npx wrangler d1 execute docao-contas --local --command "UPDATE accounts SET coins = coins + $N WHERE nick = '$NICK'; SELECT nick, coins FROM accounts WHERE nick = '$NICK'"
-echo "Pronto. Abra o ATELIÊ de novo (ele confere o saldo no servidor ao abrir)."
+echo "Pronto. Abra o BRECHÓ de novo (ele confere o saldo no servidor ao abrir)."
