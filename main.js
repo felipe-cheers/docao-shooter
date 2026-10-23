@@ -2778,7 +2778,7 @@ function updateFP(dt) {
   if (p.switchEnd > gameTime && p.weapon !== KNIFE) {
     const k = 1 - clamp((p.switchEnd - gameTime) / (p.switchDur || 0.4), 0, 1), c1 = 1.70158, e = 1 + (c1 + 1) * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
     const d = 1 - e; dip = d > 0 ? Math.max(dip, d * 1.2) : dip + d * 0.6; drawRoll = (1 - k) * (1 - k); drawYaw = drawRoll * 0.35;
-    if (w.revolver) { drawRoll *= 0.12; drawYaw *= 0.12; } // o giro no dedo é o saque; o root quase não rola
+    if (w.revolver) { drawRoll *= 0.12; drawYaw *= 0.12; dip *= 0.08; } // o giro no dedo é o saque; o root quase não mergulha nem rola
   }
   // balanço com inércia: a arma atrasa um pouco quando a mira vira e inclina quando anda de lado (mirando quase não mexe)
   let dyaw = p.yaw - (fp.lastYaw ?? p.yaw); dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
@@ -2792,7 +2792,7 @@ function updateFP(dt) {
   let vib = 0; // minigun: canos giram com o embalo, a capa acende com o calor, a arma treme
   if (fp.mini) { const M = fp.mini, on = p.weapon === MINIGUN, h = p.mgHeat || 0; if (on) M.barrels.rotation.z += (p.mgSpin || 0) * dt * 42; M.glow.visible = on && h > 0.25; M.glowMat.opacity = sstep(0.25, 1, h) * 0.85; M.glowMat.color.setRGB(1, 0.18 + 0.3 * (1 - h), 0.06); if (on) vib = (p.mgSpin || 0) * 0.0025 + (p.mgFiring ? 0.006 : 0); }
   const bobA = 1 - ads * 0.8; // mirando: arma no centro, levantada, quase sem balanço
-  const adsX = w.revolver && !w.akimbo ? 0.02 : w.rocket ? 0.12 : w.corn ? 0.1 : 0, adsY = w.revolver && !w.akimbo ? 0.09 : w.rocket ? 0.0 : w.corn ? -0.05 : 0.065; // Lança-Milho: a espiga em cima não pode tapar a mira. Revólver: a alça sobe pro centro.
+  const adsX = w.revolver && !w.akimbo ? -0.008 : w.rocket ? 0.12 : w.corn ? 0.1 : 0, adsY = w.revolver && !w.akimbo ? 0.155 : w.rocket ? 0.0 : w.corn ? -0.05 : 0.065; // Lança-Milho: a espiga em cima não pode tapar a mira. Revólver: a alça sobe pro centro.
   const hipX = p.weapon === CROSS ? 0.03 : w.akimbo ? -0.06 : 0, hipY = p.weapon === CROSS ? -0.04 : 0; // besta no quadril: um tico mais baixa/à direita pra os braços do arco não taparem a mira (no ADS some)
   fp.root.position.set(0.2 + hipX + (adsX - 0.2 - hipX) * ads + Math.cos(fp.bob) * 0.012 * bobA + fp.swayX * 0.45 * swA, -0.2 + hipY * (1 - ads) + ads * adsY + Math.abs(Math.sin(fp.bob)) * 0.015 * bobA - dip * 0.25 - fp.shellT * 0.1 + fp.swayY * 0.45 * swA, -0.62 + ads * 0.06 + fp.kick * (0.5 - ads * 0.25));
   fp.root.rotation.set(fp.kick * 1.2 - dip * 0.6 + rl.pitch + fp.climb * (1 - ads * 0.6) + fp.swayY * 0.6 * swA, rl.yaw - fp.swayX * 0.8 * swA + drawYaw, dip * 0.3 + tilt + fp.strafe * swA + drawRoll * 0.7);
@@ -2803,6 +2803,7 @@ function updateFP(dt) {
     fp.root.rotation.x += ins.rx; fp.root.rotation.y += ins.ry; fp.root.rotation.z += ins.rz;
     const bar = ins.spin && fp.guns[p.weapon] && fp.guns[p.weapon].userData.barrels; if (bar) bar.rotation.z += dt * 10 * (1 - ins.k); // minigun: canos rodam
   }
+  fp.root.visible = !window.__hideFp;
   const revOn = !!w.revolver;
   const revK = p.reloadEnd > gameTime ? clamp(1 - (p.reloadEnd - gameTime) / (w.reload || 1), 0, 1) : -1;
   stepCapataz(dt, { time: gameTime, dual: revOn && !!w.akimbo, on: revOn, reload: revK, reloadKey: p.reloadStartT || 0, ads, inspect: revOn && fp.ins && !fp.ins.out ? Math.min(1, fp.ins.t / INSPECT_DUR) : -1 });
@@ -5869,6 +5870,14 @@ window.__docao = { get state() { return state; }, get ending() { return matchEnd
   holdFire: (button, down) => { if (button === 2) { rightDown = !!down; if (down) { rightFired = false; rightStale = false; } else if (!rightFired) rightLatch = performance.now(); } else { mouseDown = !!down; if (down) firedThisPress = false; else if (!firedThisPress) clickLatch = performance.now(); } },
   forceFumble: () => { if (player) player.forceFumble = true; },
   rev: () => capatazRead(),
+  revFrame: () => {
+    const p = player; if (!p) return null;
+    const g = fp.guns[p.weapon]; if (!g || !g.userData.guns) return null;
+    fp.root.updateMatrixWorld(true);
+    const gun = g.userData.guns[0], left = g.userData.guns[1];
+    const proj = (obj, x, y, z) => { const v = obj.localToWorld(new V3(x, y, z)).project(fpCam); return [+v.x.toFixed(3), +v.y.toFixed(3)]; };
+    return { ads: +ads.toFixed(2), sight: proj(gun.spin, 0, 0.052, -0.3), muzzle: proj(gun.spin, 0, 0.02, -0.36), grip: proj(gun.spin, 0, -0.09, 0.04), leftMuzzle: left ? proj(left.spin, 0, 0.02, -0.36) : null, hud: $('mag') ? $('mag').textContent : '', mode: fireModeLabel(WEAPONS[p.weapon]) };
+  },
   setSecondary, REV: 23, REV2: 24,
   // Invasão 🎃
   get inv() { return inv; }, get invView() { return invView(); }, get invInv() { return invGfx.inv.slice(); }, get invSel() { return invGfx.sel; }, get invDrops() { return [...invGfx.drops.keys()]; }, get invPick() { return invPick; },

@@ -93,7 +93,8 @@ function arm(a, w) {
   ok(bot.mag[REV] === 5, `servidor: bot com o Capataz gasta uma bala (${bot.mag[REV]})`);
   bot.slots[1] = REV2; bot.weapon = REV2; bot.mag[REV2] = 6; bot.reserve[REV2] = 36; resetDrums(bot); bot.handAt = [-9, -9]; bot.handLast = -1; bot.nextFire = 0; bot.reloadEnd = 0;
   g.botShoot(bot, a, 4);
-  step(5, 0.05); bot.nextFire = 0;
+  // avança o relógio sem o tick: o bot vivo troca de arma sozinho se a simulação rodar
+  g.T = bot.nextFire; bot.nextFire = 0; bot.reloadEnd = 0; bot.weapon = REV2;
   g.botShoot(bot, a, 4);
   const left = rounds(bot, REV2, 1);
   ok(bot.mag[REV2] + left === 10, `servidor: bot akimbo alterna as mãos (${bot.mag[REV2]}·${left})`);

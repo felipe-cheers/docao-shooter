@@ -558,6 +558,7 @@ export function makeDocao(skinOrId, opts = {}) {
       barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, 0.16);
       mesh(new THREE.BoxGeometry(0.012, 0.04, 0.016), toon('#14171c'), gun, 0.003).position.set(0, 0.05, -0.02);
       gun.userData.cyl = cyl; gun.userData.hinge = hinge; gun.userData.side = side;
+      gun.scale.setScalar(1.65); // na mão do boneco o tambor precisa ler de longe
       return gun;
     };
     const rv = worldRev(1); rv.position.set(0, -0.52, 0.05); rv.rotation.set(-Math.PI / 2, 0.18, 0.08); arms[0].add(rv); guns.push(rv); // 23

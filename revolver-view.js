@@ -233,11 +233,11 @@ function puff(gun) {
   const origin = new THREE.Vector3(0, 0.02, -0.36);
   gun.spin.localToWorld(origin);
   if (fx.parent) fx.parent.worldToLocal(origin);
-  for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.03 + Math.random() * 0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xd9d3c7, transparent: true, opacity: 0.45, depthWrite: false }));
+  for (let i = 0; i < 8; i++) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.07 + Math.random() * 0.04, 8, 6), new THREE.MeshBasicMaterial({ color: 0xe7e2d6, transparent: true, opacity: 0.72, depthWrite: false }));
     s.position.copy(origin);
-    s.userData.v = new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.05 + Math.random() * 0.06, -0.05 - Math.random() * 0.08);
-    s.userData.life = 0.7;
+    s.userData.v = new THREE.Vector3((Math.random() - 0.5) * 0.1, 0.08 + Math.random() * 0.08, -0.12 - Math.random() * 0.1);
+    s.userData.life = 1.15;
     s.userData.age = 0;
     s.userData.smoke = true;
     fx.add(s);
@@ -257,7 +257,7 @@ function stepBits(dt) {
     c.rotation.x += dt * 6;
     c.rotation.z += dt * 4;
     const fade = 1 - u.age / u.life;
-    if (c.material && c.material.opacity != null && u.smoke) c.material.opacity = 0.4 * fade;
+    if (c.material && c.material.opacity != null && u.smoke) c.material.opacity = 0.72 * fade;
     else if (fade < 0.25 && c.material) { c.material.transparent = true; c.material.opacity = fade / 0.25; }
   }
 }
