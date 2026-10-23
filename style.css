@@ -103,6 +103,8 @@ button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
 #hitmarker.kill i:nth-child(4){transform:translate(12px,12px) rotate(45deg)}
 #hitmarker.head:after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;transform:translate(-50%,-50%);border-radius:50%;background:#ffd24a;box-shadow:0 0 6px #ffb703,0 0 0 1px rgba(0,0,0,.55);pointer-events:none}
 @keyframes hitpop{0%{transform:translate(-50%,-50%) scale(1.6)}100%{transform:translate(-50%,-50%) scale(1)}}
+#damageIndicator{position:fixed;left:50%;top:50%;width:clamp(160px,28vmin,240px);height:clamp(160px,28vmin,240px);transform:translate(-50%,-50%);pointer-events:none;z-index:9;overflow:visible}
+#damageIndicator path{fill:none;stroke:#ff4141;stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 1px 1px #250606) drop-shadow(0 0 3px #ff333380)}
 #points{position:fixed;left:50%;top:calc(50% + 34px);width:0;height:0;pointer-events:none;z-index:8}
 #points .pop{position:absolute;left:0;top:0;font-family:"Arial Black",Impact,sans-serif;font-size:34px;line-height:1;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;text-shadow:0 2px 0 #000;white-space:nowrap;animation:pointfloat .7s ease-out forwards;pointer-events:none}
 #points .pop.kill{color:#ffe14a}
