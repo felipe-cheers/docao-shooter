@@ -360,6 +360,7 @@ Abates com a **mesma arma** na mesma partida mudam a cor dela. Tudo zera na part
 - **Renascimento:** depois de **5 s** o botão vira **RENASCER**, e você volta clicando nele ou apertando Espaço/Enter. Ao nascer, você fica **2 s protegido**.
 - **Kill feed** no canto de baixo à esquerda, com frases de porco: *pururucou*, *fritou*, *transformou em torresmo*, *mandou pra chapa*, *defumou*, *fez virar bacon*, *serviu no café da manhã*, *botou no espeto*, *temperou com chumbo*… O tiro na cabeça aparece como **"direto no focinho!"**, e quem morre leva o carimbo **PURURUCADO!**.
 - **Placar ao vivo** no canto de cima à esquerda, e o placar completo fica no **Tab**.
+- **Fim da partida:** o resultado fecha as regras na hora e aparece uma plaquinha com **VITÓRIA!**, **DERROTA** ou **EMPATE!**. A cena continua por **1,5 s em câmera lenta** na sua visão (mesma posição, direção e zoom), sem comandos, dano, capturas nem renascimento. Aos **0,8 s** o placar entra por cima, e se você venceu a **dança da vitória** começa quando a câmera lenta acaba. Se você já estava na câmera de morte, ela fica parada. Com "movimento reduzido" ligado no sistema, o placar abre direto. Vale offline e online; pacotes que chegam depois do resultado são ignorados até a próxima partida.
 
 ---
 
@@ -492,6 +493,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | `tools/bomb-walk.mjs`: sites e tempo a pé no modo Bomba | `test-bomb.mjs`: modo Bomba (aceita `SITE=`) | `test-online-bomb.mjs`: modo Bomba online (`MAP=` troca o mapa) |
 | | `test-mira.mjs`, `test-reload.mjs`, `test-respawn.mjs` | `test-faca-online.mjs`, `test-treino-online.mjs` |
 | | `test-nextmap.mjs`, `test-skin-start.mjs` | `test-prod.mjs`, `test-prod-dom.mjs` |
+| | `test-match-end.mjs`: fim de partida (câmera lenta, resultado, zoom, online com WebSocket controlado; aceita `SITE=`) | |
 | | | `tools/test-killstreak-online.mjs`: míssil, Gavião e nuke online |
 
 Exemplo do online:

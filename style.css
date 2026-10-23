@@ -1616,3 +1616,30 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
   #gameover #againBtn,#gameover #nextMapBtn{min-height:42px;margin-top:8px}
   #gameover #menuBtn{margin-top:6px;padding:7px}
 }
+
+/* Fim suave: o HUD some e o mundo fica na câmera do jogador; o resultado entra como uma plaquinha da comanda. */
+.match-ended #hud > :not(#scope):not(#adsvig){visibility:hidden;pointer-events:none}
+.match-ended #socialHud,.match-ended #streakBar,.match-ended #streakCount{visibility:hidden}
+#matchResult{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:none}
+#matchResult .result-card{
+  --ink:#34402e;--ink-deep:#203e35;--wood:#674029;--brick:#a52e26;--olive:#536044;--shadow:#291e18;
+  max-width:min(560px,calc(100vw - 48px));padding:16px 28px 14px;text-align:center;color:var(--ink);
+  background:#f6e4bd url('./assets/menu/clipboard-wood.svg') center top/100% auto repeat-y;
+  border:3px solid var(--ink);border-radius:4px;box-shadow:4px 6px 0 var(--shadow);
+  transform:rotate(-2deg);animation:result-in .32s cubic-bezier(.22,1.4,.36,1) both
+}
+#resultTitle{
+  margin:0;font:900 clamp(40px,7vw,68px)/1 "Arial Black",Impact,sans-serif;letter-spacing:1px;
+  color:var(--ink-deep);-webkit-text-stroke:0;text-shadow:none;text-wrap:balance
+}
+#matchResult[data-outcome=win] #resultTitle{color:var(--brick)}
+#matchResult[data-outcome=draw] #resultTitle{color:var(--wood)}
+#resultTitle::after{
+  content:"";display:block;height:8px;margin:8px auto 0;width:86%;
+  background:url('./assets/menu/paint-divider.svg') center/100% 100% no-repeat
+}
+#resultDetail{margin:8px 0 0;font:800 clamp(15px,2vw,19px)/1.3 "Trebuchet MS",Arial,sans-serif;color:var(--wood);text-wrap:balance}
+@keyframes result-in{from{opacity:0;transform:rotate(-2deg) scale(.86)}to{opacity:1;transform:rotate(-2deg) scale(1)}}
+#gameover:not(.hidden){animation:end-menu-in .24s cubic-bezier(.22,1,.36,1) both}
+@keyframes end-menu-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#matchResult .result-card,#gameover:not(.hidden){animation:none}}
