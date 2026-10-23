@@ -4,6 +4,16 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.18 — Cada arma tem trejeito 🎬🐷 (23/10/2026)
+🎬 **CHEGA DE ANIMAÇÃO XOXA!** Cada arma do chiqueiro agora saca, recarrega, corre e descansa do jeito dela. O Fuzil Pururuca gira no dedo, a Sniper Torresmo ganha um sopro no cano, o Canhão do Barril chega rolando, a Besta puxa a corda com os dentes e o Estilingue chacoalha o ovo na orelha.
+🔍 **Tecla I** continua a inspeção, agora com um extra por arma. De vez em quando (~8%) sai a versão ovo: fumaça em forma de porquinho, mordida no Torresmo, ronco na Bazuca.
+💨 **Cápsula pulando** nas armas de fogo que ainda não cuspiam metal, e o cano da Metralhadora do Chiqueiro esquenta de verdade. A Minigun já esquentava; agora o saque também é um içar.
+🏃 **Correr, pular e o coice** têm curva própria. A mira, o zoom e o tempo de tiro/recarga/saque **não mudaram**: a animação se encaixa no relógio do `shared/rules.js`.
+⏱️ Parado uns 8 segundos, a arma faz uma gracinha. Abateu alguém, um gesto curtinho — e some na hora se você atirar, mirar ou recarregar.
+👀 Quem está olhando de fora vê o saque, o coice e a recarga, sem modelo novo.
+♿ **Animações reduzidas** em Ajustes e na pausa (e a preferência de menos movimento do sistema). Desligou, volta o movimento antigo. O tempo de jogo é o mesmo.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.17.1 — Boca Aberta 🎙️🐷 (23/10/2026)
 🎙️ **O JANOR ABRIU O MICROFONE!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #19** e agora a voz do Docão tem dois jeitos de falar, escolha o seu:
 🔘 **Apertar:** o clássico. Só fala quem está **segurando K**. Ideal pra quem tem cachorro latindo, panela no fogo ou tio dando opinião ao fundo.
