@@ -2395,7 +2395,7 @@ function updateHud(dt) {
   if (smokeN) { smokeN.textContent = p.smokeNades || 0; smokeN.parentElement.classList.toggle('out', !(p.smokeNades > 0)); }
   if (stunN) { stunN.textContent = p.stunNades || 0; stunN.parentElement.classList.toggle('out', !(p.stunNades > 0)); }
   { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; document.body.classList.toggle('deadgray', !p.alive); const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
-  $('reloadmsg').textContent = w.shield ? 'Clique: porrada · direito: investida' : w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
+  $('reloadmsg').textContent = w.shield || w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (p.mag[p.weapon] === 0 ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
   const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'Treino ∞';
   $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
   const lead = entities.filter((e) => !e.zt).reduce((a, b) => (b.kills > a.kills ? b : a));
@@ -2649,7 +2649,7 @@ const fp = (() => {
   const cMag = add(new THREE.BoxGeometry(0.055, 0.2, 0.08), toon(0x2a2d35), 0, -0.15, -0.12, cmd, 0.004); cMag.rotation.x = 0.2; // pente (sai/entra na recarga, igual ao fuzil)
   const cCh = add(new THREE.BoxGeometry(0.028, 0.02, 0.04), toon(0x22252c), 0.05, 0.04, 0.08, cmd, 0.003); // alavanca de manejo
   cmd.visible = false; guns.push(cmd); // 22 = Commando da Granja
-  const tampa = makeFPShield(); tampa.position.set(0.0, -0.02, -0.22); tampa.visible = false; root.add(tampa); guns.push(tampa); // 23 = Tampa do Tacho (antes da escala 0,62 do root)
+  const tampa = makeFPShield(); tampa.position.set(0, 0, 0); tampa.visible = false; root.add(tampa); guns.push(tampa); // 23 = Tampa do Tacho. A pose (esquerda e baixa) fica no updateFP.
   // braços (pose de fuzil, de pistola e de faca)
   let arms = makeFPArms(getSkin()), armsP = makeFPArms(getSkin(), 'pistol'), armsK = makeFPArms(getSkin(), 'knife'); root.add(arms, armsP); kr.add(armsK); armsP.visible = false; armsP.position.set(0, 0.07, -0.04);
   const setSkin = (id) => { root.remove(arms, armsP); kr.remove(armsK); arms = makeFPArms(getSkin(id)); armsP = makeFPArms(getSkin(id), 'pistol'); armsK = makeFPArms(getSkin(id), 'knife'); armsP.position.set(0, 0.07, -0.04); root.add(arms, armsP); kr.add(armsK); fpRef.arms = arms; fpRef.armsP = armsP; s.remove(pumpHand); pumpHand = makeFPForearm(getSkin(id)); s.add(pumpHand); root.remove(saberR, saberL); saberR = makeFPForearm(getSkin(id)); saberL = makeFPForearm(getSkin(id)); root.add(saberR, saberL); fpRef.saberR = saberR; fpRef.saberL = saberL; root.remove(bowGrip, bowDraw); bowGrip = makeFPForearm(getSkin(id)); bowDraw = makeFPForearm(getSkin(id)); root.add(bowGrip, bowDraw); fpRef.bowGrip = bowGrip; fpRef.bowDraw = bowDraw; pumpHand.userData.noCamo = true; armsK.userData.noCamo = true; };
@@ -2885,10 +2885,12 @@ function updateFP(dt) {
   fp.root.position.set(0.2 + hipX + (adsX - 0.2 - hipX) * ads + Math.cos(fp.bob) * 0.012 * bobA + fp.swayX * 0.45 * swA, -0.2 + hipY * (1 - ads) + ads * adsY + Math.abs(Math.sin(fp.bob)) * 0.015 * bobA - dip * 0.25 - fp.shellT * 0.1 + fp.swayY * 0.45 * swA, -0.62 + ads * 0.06 + fp.kick * (0.5 - ads * 0.25));
   fp.root.rotation.set(fp.kick * 1.2 - dip * 0.6 + rl.pitch + fp.climb * (1 - ads * 0.6) + fp.swayY * 0.6 * swA, rl.yaw - fp.swayX * 0.8 * swA + drawYaw, dip * 0.3 + tilt + fp.strafe * swA + drawRoll * 0.7);
   if (w.spin) { fp.root.position.y -= 0.03; fp.root.rotation.y += 0.04; } // minigun pesada: mais baixa
-  if (w.shield || shatter) { // tampa na frente da cara. A fresta (local ~0,18 m acima do centro, depois da escala 0,62) cai na mira; sobra mundo embaixo e nas bordas.
+  if (w.shield || shatter) { // estilo riot shield: esquerda e baixa. A mira (centro) fica no mundo. Andar sobe um pouco, sem cruzar o meio.
     const bash = fp.actionT > 0 ? Math.sin((1 - fp.actionT / (fp.actionLen || 0.4)) * Math.PI) : 0;
-    fp.root.position.set(0.0, -0.16, -0.40 - bash * 0.22);
-    fp.root.rotation.set(0.02 - bash * 0.35, 0, 0);
+    fp.shieldLift = (fp.shieldLift || 0) + (((moving && !shatter) ? 1 : 0) - (fp.shieldLift || 0)) * Math.min(1, dt * 5);
+    const lift = shatter ? 0 : fp.shieldLift;
+    fp.root.position.set(-0.30 + lift * 0.02, -0.30 + lift * 0.045, -0.66 - bash * 0.16);
+    fp.root.rotation.set(0.14 - bash * 0.4, 0.22, 0.05);
     const g = fp.guns[TAMPA]; if (g && g.userData.setStage && !(fp.breakT > 0)) g.userData.setStage(shieldStage(p.shieldHp));
   }
   if (vib) { fp.root.position.x += rand(-1, 1) * vib; fp.root.position.y += rand(-1, 1) * vib; fp.root.rotation.z += rand(-1, 1) * vib * 2; }
@@ -5953,7 +5955,19 @@ window.__docao = { get state() { return state; }, get ending() { return matchEnd
   fpHandErr: () => { const p = player, g = fp.guns[p.weapon]; if (!g) return 0; fp.root.updateWorldMatrix(true, true); const d = (h, o, pt) => h.getWorldPosition(new V3()).distanceTo(o.localToWorld(pt.clone()));
     if ((p.weapon === BOW || p.weapon === CROSS || p.weapon === EGG_W) && g.userData.grip) return d(fp.fpRef.bowGrip, g, g.userData.grip);
     if (isSaber(p.weapon)) { const tw = g.userData.twin; return Math.max(d(fp.fpRef.saberR, g.userData.saber, tw ? DUAL_GRIP : SABER_GRIPS[0]), d(fp.fpRef.saberL, tw ? tw.userData.saber : g.userData.saber, tw ? DUAL_GRIP : SABER_GRIPS[1])); }
-    return 0; }, fpPose: () => ({ x: fp.root.position.x, y: fp.root.position.y, rx: fp.root.rotation.x, ry: fp.root.rotation.y, rz: fp.root.rotation.z, sway: fp.swayX || 0, strafe: fp.strafe || 0 }), get gunner() { return gunner; }, camPos: () => camera.position.toArray(), grantGunner, setGunnerMode, endGunner, get gunHeli() { return gunHeli; }, get radioCall() { return radioCall; }, kill: (e) => kill(e, null, 0, false), V3, KNIFE, MELEE, switchWeapon, quickKnife, knifeAttack, meleeHit, modelYaw, get fpBoltHand() { const g = fp.guns[player ? player.weapon : -1]; return !!(g && g.userData.boltHand && g.userData.boltHand.visible && fp.sRound.parent === g); }, get menuPreviewX() { return menuPreviewX; }, get menuSpin() { return { y: +showcase.rotation.y.toFixed(3), spin: +showSpin.toFixed(3), vel: +showSpinVel.toFixed(3), drag: !!showDrag, stage: +menuStage.rotation.y.toFixed(3) }; }, get dance() { return selectedDance; }, setDance, get victoryOn() { return victory.on; }, get emoting() { return emote.on; }, get previewScreen() { if (!preview || !showcase.visible) return null; const v = showcase.position.clone(); v.y += 0.9; v.project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, skin: selectedSkin, kids: preview.group.children.length }; }, get fpKnife() { return { t: fp.knifeT, kind: fp.knifeKind, visible: fp.kr.visible }; }, get bacon() { return baconStats; }, los: (a, b) => losClear(new V3(...a), new V3(...b)), activeBacons, BACON, get deathCam() { return deathCamState; },
+    return 0; }, fpPose: () => ({ x: fp.root.position.x, y: fp.root.position.y, rx: fp.root.rotation.x, ry: fp.root.rotation.y, rz: fp.root.rotation.z, sway: fp.swayX || 0, strafe: fp.strafe || 0 }),
+  fpLidNdc: () => {
+    const g = fp.guns[TAMPA]; const span = g && g.userData.span; if (!span) return null;
+    fp.root.updateMatrixWorld(true);
+    let minX = 1, maxX = -1, minY = 1, maxY = -1;
+    for (let i = 0; i < 28; i++) {
+      const a = i / 28 * Math.PI * 2;
+      const v = g.localToWorld(new V3(Math.cos(a) * span.rx, Math.sin(a) * span.ry, 0)).project(fpCam);
+      minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+    }
+    const w = (Math.min(1, maxX) - Math.max(-1, minX)) / 2, h = (Math.min(1, maxY) - Math.max(-1, minY)) / 2;
+    return { minX: +minX.toFixed(2), maxX: +maxX.toFixed(2), minY: +minY.toFixed(2), maxY: +maxY.toFixed(2), box: +(w * h).toFixed(2), cover: +((Math.PI / 4) * w * h).toFixed(2) };
+  }, get gunner() { return gunner; }, camPos: () => camera.position.toArray(), grantGunner, setGunnerMode, endGunner, get gunHeli() { return gunHeli; }, get radioCall() { return radioCall; }, kill: (e) => kill(e, null, 0, false), V3, KNIFE, MELEE, switchWeapon, quickKnife, knifeAttack, meleeHit, modelYaw, get fpBoltHand() { const g = fp.guns[player ? player.weapon : -1]; return !!(g && g.userData.boltHand && g.userData.boltHand.visible && fp.sRound.parent === g); }, get menuPreviewX() { return menuPreviewX; }, get menuSpin() { return { y: +showcase.rotation.y.toFixed(3), spin: +showSpin.toFixed(3), vel: +showSpinVel.toFixed(3), drag: !!showDrag, stage: +menuStage.rotation.y.toFixed(3) }; }, get dance() { return selectedDance; }, setDance, get victoryOn() { return victory.on; }, get emoting() { return emote.on; }, get previewScreen() { if (!preview || !showcase.visible) return null; const v = showcase.position.clone(); v.y += 0.9; v.project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, skin: selectedSkin, kids: preview.group.children.length }; }, get fpKnife() { return { t: fp.knifeT, kind: fp.knifeKind, visible: fp.kr.visible }; }, get bacon() { return baconStats; }, los: (a, b) => losClear(new V3(...a), new V3(...b)), activeBacons, BACON, get deathCam() { return deathCamState; },
   blastAt: (x, y, z, kind = 'r', owner) => blast(new V3(x, y, z), owner || player, kind === 'n' ? { radius: NADE.radius, maxDmg: NADE.maxDmg, selfMul: NADE.selfMul, knock: NADE.knock, lift: NADE.lift, wIdx: W_NADE } : { ...WEAPONS[3].rocket, wIdx: 3 }),
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()),
   cornAt: (o, d, owner) => launchCorn(owner || player, new V3(...o), new V3(...d).normalize()), get corns() { return corns; }, get cornPopsQ() { return cornPops; }, fpCorn: () => ({ vis: fp.guns[CORN_W].visible, cobY: fp.cornCob.position.y, cobVis: fp.cornCob.visible, crank: fp.cornCrank.rotation.x, kernels: fp.cornKernels.filter((g) => g.visible).length, cobScr: (() => { fp.root.updateMatrixWorld(true); const v = fp.cornCob.localToWorld(new V3(0, 0.1, 0)).project(fpCam); return [v.x, v.y]; })() }), setWeaponOf: (e, i) => setWeapon(e, i),
