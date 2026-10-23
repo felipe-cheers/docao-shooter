@@ -4,6 +4,15 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.11.1 — Hotfix da Munição 📦🧟 (23/10/2026)
+🚨 **HOTFIX URGENTE!** Os zumbis comeram TODA a munição do chiqueiro. 🧟🍽️ O Docão abriu a gaveta, só achou uma bala mofada e saiu correndo pro mercado. 🐷🛒 Voltou com o carrinho lotado:
+📦 **Caixas de munição pra todo lado na Invasão:** **Rodízio 6 → 28** e **Fazenda Mal-Assombrada 4 → 18**, espalhadas pelos spawns, pelo meio e pelas pontas.
+⏱️ **Caixa nova em 6 segundos** (antes eram 15). Nem dá tempo de sentir saudade.
+🔫 **Cada caixa dá mais:** a reserva vai até **1,5×** o normal, o pente já sai cheio e a bazuca ganha **+2 foguetes**.
+🧟 **Zumbi agora solta caixa de munição!** O Barrigão de Gás é o mais generoso (a barriga tá cheia de bala, vai entender), e o chefão larga duas.
+✨ **Facho e anel amarelos** em cada caixa, pra você achar de longe e parar de apanhar com a pistola vazia.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.11 — Salão de Festa 💃 (23/10/2026)
 Feito pelo **[@paulo-cheers](https://github.com/paulo-cheers)** (PR #14).
 
@@ -134,6 +143,7 @@ Tudo o que entrou no jogo nesses dias (detalhes em cada versão abaixo):
 - **v1.10 · Modo Invasão:** co-op contra hordas de Docões zumbis em 20 waves, com chefão a cada 5, poderes, 2 vidas e o mapa Fazenda Mal-Assombrada
 - **v1.10.1 · Metralhadora do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #13): arma nova de 100 balas, HUD da fazenda, míssil que acelera segurando o tiro e troca de arma na pausa
 - **v1.11 · Salão de Festa** ([@paulo-cheers](https://github.com/paulo-cheers), PR #14): o dono da sala escolhe as armas e os power-ups, o menu lembra sua arma padrão, dança da vitória no B (moonwalk, mewing e sixseven; fora da Invasão) e o Docão do menu gira ao arrastar
+- **v1.11.1 · Hotfix da Munição:** Invasão com bem mais caixas de munição (Rodízio 6 → 28, Fazenda 4 → 18), caixa nova em 6 s, mais munição e +2 foguetes por caixa, zumbi solta caixa e facho amarelo pra achar
 
 ---
 
