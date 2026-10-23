@@ -276,3 +276,11 @@ São fantasias *inspiradas*: sem nomes, rostos ou logos de pessoas/personagens r
 A identidade (corpo de porquinho, focinho, orelhas, bochechas, olhos, contorno) não é configurável de propósito.
 
 A skin escolhida fica salva em `localStorage['docao.skin']`; os bots recebem skins aleatórias.
+
+### Encerramento da partida
+
+O resultado encerra as regras imediatamente e mostra Vitória, Derrota ou Empate. A cena continua por 1,5 segundo em câmera lenta, com o movimento que já estava acontecendo, sem novos comandos, dano, capturas ou renascimento. Após 0,8 segundo o placar e os botões atuais entram sobre a mesma câmera; posição relativa, direção e zoom são preservados. Se o jogador já estava na câmera de morte, o enquadramento fica parado. A preferência do sistema por movimento reduzido abre o menu diretamente.
+
+Vale para Mata-mata e Dominação, offline e online. O tempo oficial e o placar ficam congelados; pacotes de jogo recebidos depois do resultado online são ignorados até a próxima partida.
+
+Teste de regressão: com o site servido localmente, execute `node test-match-end.mjs` (ou configure `SITE`). Cobre movimento, câmera, zoom, resultado, reinício, morte, movimento reduzido e o fluxo de mensagens online com WebSocket controlado. Não requer o Worker.

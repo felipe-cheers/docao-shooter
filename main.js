@@ -210,6 +210,8 @@ const sfx = {
 const distVol = (p) => clamp(1 - p.distanceTo(player.pos) / 60, 0.05, 1);
 
 // ---------------- Entidades ----------------
+let matchEnding = null;
+const END_SLOWMO = 1.5, END_MENU_DELAY = 0.8;
 let gameTime = 0, state = 'menu', hadLock = false, entities = [], player = null, sens = 1.4;
 let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação)
 let spawnHold = 'primary'; // arma na mão ao renascer (tela de morte)
@@ -416,7 +418,8 @@ function blastFx(c, radius) {
   burst(c, radius);
 }
 function blast(c, owner, o, direct = null) {
-  blastFx(c, o.radius); // som, tremida, confete (conta a explosão)
+  blastFx(c, o.radius); // som, tremida, confete
+  if (state === 'over') return; // somente efeitos depois do resultado
   const los = (a, b) => losClear(new V3(a.x, a.y, a.z), new V3(b.x, b.y, b.z));
   for (const h of explosionHits(c, o, entities, los, owner, teamMode(), direct)) { // mesma regra do servidor (shared/combat.js)
     const e = h.e; e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; // empurrão (rocket jump)
@@ -576,6 +579,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle) {
 }
 
 function damage(t, amount, attacker, wIdx, head) {
+  if (state === 'over') return false;
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker)) return false; // sem fogo amigo
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12;
   if (t.isPlayer) { hurtFlash(); sfx.oink(0.8, 1.15); }
@@ -586,6 +590,7 @@ function damage(t, amount, attacker, wIdx, head) {
 }
 
 function kill(t, a, wIdx, head) {
+  if (state === 'over') return;
   t.alive = false; t.hp = 0; t.deaths++; t.deathAt = gameTime; t.respawnAt = gameTime + RESPAWN_TIME;
   if (a && a !== t) a.kills++;
   addKillFeed(a, t, wIdx, head);
@@ -1112,6 +1117,7 @@ function clearBots() {
   clearBacon(); if (ghost) ghost.model.group.visible = false;
 }
 function startGame(mapId) {
+  clearMatchEnding();
   resetAds();
   initAudio();
   loadMap(typeof mapId === 'string' ? mapId : pickMapForMatch());
@@ -1136,18 +1142,75 @@ function startGame(mapId) {
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause').classList.add('hidden'); $('hud').classList.remove('hidden');
   camera.clearViewOffset(); state = 'playing'; lockPointer();
 }
-function endGame() {
-  resetAds();
-  if (state === 'over') return;
-  state = 'over'; mouseDown = false;
+// O resultado fecha imediatamente. Só a apresentação continua, sem IA, dano ou respawn.
+function clearMatchEnding() {
+  matchEnding = null;
+  document.body.classList.remove('match-ended');
+  $('matchResult').classList.add('hidden');
+}
+function beginMatchEnding() {
+  state = 'over'; mouseDown = false; clickLatch = 0;
+  matchEnding = { elapsed: 0, visualTime: gameTime,
+    offset: camera.position.clone().sub(player.pos), firstPerson: !deathCamState.on,
+    duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : END_SLOWMO };
+  for (const k of Object.keys(keys)) keys[k] = false;
+  player.charging = false; arcLine.visible = arcMark.visible = false;
+  if (online) online.evq = [];
+  ['pause', 'gameover', 'tabboard', 'deathpick', 'teamPick', 'zoneMark', 'centermsg', 'stamp', 'powermeter'].forEach((id) => $(id).classList.add('hidden'));
+  document.body.classList.add('match-ended');
   if (document.pointerLockElement) document.exitPointerLock();
+}
+function presentMatchResult(outcome) {
+  const titles = { win: 'VITÓRIA!', loss: 'DERROTA', draw: 'EMPATE!', end: 'FIM DE PARTIDA' };
+  $('resultTitle').textContent = titles[outcome];
+  $('resultDetail').textContent = $('winner').textContent;
+  $('matchResult').classList.remove('hidden');
+  if (!matchEnding.duration) revealEndMenu();
+}
+function revealEndMenu() {
+  $('matchResult').classList.add('hidden');
+  $('gameover').classList.remove('hidden');
+}
+function updateMatchEnding(realDt) {
+  const end = matchEnding;
+  const remaining = Math.max(0, end.duration - end.elapsed);
+  const k = end.duration ? Math.min(1, end.elapsed / end.duration) : 1;
+  const dt = Math.min(realDt, remaining, 0.05) * (0.22 * (1 - k) ** 2 + 0.025);
+  end.elapsed += realDt;
+  if (dt > 0) {
+    // Relógio visual separado: placar e tempo oficial permanecem fechados.
+    const finalTime = gameTime; end.visualTime += dt; gameTime = end.visualTime;
+    if (player.alive && end.firstPerson) {
+      moveEntity(player, dt);
+      camera.position.copy(player.pos).add(end.offset);
+      updateFP(dt);
+    }
+    for (const e of entities) if (!e.isPlayer) {
+      if (e.alive) { moveEntity(e, dt); animateBot(e, dt); }
+      else { deathFx(e); if (e.baconOk) popModel(e.model.group, gameTime - e.deathAt, e.yaw); }
+    }
+    updateGrenades(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateEffects(dt);
+    gameTime = finalTime;
+  }
+  if (end.elapsed >= Math.min(END_MENU_DELAY, end.duration)) revealEndMenu();
+}
+function endGame() {
+  if (state === 'over' || !player) return;
+  beginMatchEnding();
   const rows = [...entities].sort((a, b) => scoreOf(b) - scoreOf(a) || a.deaths - b.deaths);
-  if (teamMode()) { const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1; setTeamWinner(w); }
-  else $('winner').textContent = rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0].name} venceu!`;
+  let outcome;
+  if (teamMode()) {
+    const w = teamScore[0] > teamScore[1] ? 0 : teamScore[1] > teamScore[0] ? 1 : -1;
+    setTeamWinner(w); outcome = w < 0 ? 'draw' : player.team === w ? 'win' : 'loss';
+  } else {
+    const tied = rows.filter((e) => e.kills === rows[0].kills && e.deaths === rows[0].deaths).length > 1;
+    $('winner').textContent = tied ? 'Empate!' : rows[0].isPlayer ? 'Você venceu! 🏆' : `${rows[0].name} venceu!`;
+    outcome = tied ? 'draw' : rows[0].isPlayer ? 'win' : 'loss';
+  }
   $('finalboard').innerHTML = boardHtml();
   const nm = MAPS[(MAPS.indexOf(currentMap) + 1) % MAPS.length]; $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
   ['againBtn', 'nextMapBtn'].forEach((id) => $(id).classList.remove('hidden')); $('overWait').classList.add('hidden');
-  $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden');
+  presentMatchResult(outcome);
 }
 function setTeamWinner(w) {
   const el = $('winner'); el.style.color = w >= 0 ? TEAM_COLORS[w] : '';
@@ -1161,6 +1224,7 @@ function refreshModeHud() {
 function pause() { if (state !== 'playing') return; state = 'paused'; mouseDown = false; keys.ShiftLeft = keys.ShiftRight = false; resetAds(); if (player) { player.charging = false; arcLine.visible = arcMark.visible = false; } $('pause').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resume() { $('pause').classList.add('hidden'); state = 'playing'; lockPointer(); }
 function toMenu() {
+  clearMatchEnding(); resetAds();
   if (online) leaveOnline();
   zone = null; mode = 'dm'; $('domhud').classList.add('hidden'); $('zoneMark').classList.add('hidden'); $('teamPick').classList.add('hidden');
   state = 'menu'; clearBots(); if (selectedMap !== 'random') loadMap(selectedMap); showcase.visible = true; pickups.forEach((p) => (p.mesh.visible = false)); camera.clearViewOffset();
@@ -1214,16 +1278,24 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseDow
 const clock = new THREE.Clock(); let menuT = 0;
 function loop() {
   requestAnimationFrame(loop);
-  let dt = Math.min(clock.getDelta(), 0.05);
+  const realDt = clock.getDelta();
+  let dt = Math.min(realDt, 0.05);
   if (window.__stopAt != null) dt = Math.max(0, Math.min(dt, window.__stopAt - gameTime)); // testes/screenshots: congela o tempo de jogo num instante exato
   if (state === 'playing' || (online && state === 'paused' && player)) { // online o jogo não pausa
     gameTime += dt;
     if (state === 'playing') updatePlayer(dt); else if (player.alive) { player.vel.x = player.vel.z = 0; moveEntity(player, dt); }
-    if (online) netTick(dt);
-    for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateRockets(dt); updateParticles(dt); updateBacon(dt); updateFP(dt); updateEffects(dt); updateHud(dt);
-    updateDomOffline(dt); updateZoneGfx(dt);
-    if (!online && gameTime >= (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT)) endGame();
+    if (state !== 'over' && online) netTick(dt);
+    for (const e of entities) if (state !== 'over' && !e.isPlayer) updateBot(e, dt);
+    if (state !== 'over') updatePickups(dt);
+    if (state !== 'over') updateGrenades(dt);
+    if (state !== 'over') updateRockets(dt);
+    if (state !== 'over') {
+      updateParticles(dt); updateBacon(dt); updateFP(dt); updateEffects(dt); updateHud(dt);
+      updateDomOffline(dt); updateZoneGfx(dt);
+      if (!online && gameTime >= (teamMode() ? DOM.TIME_LIMIT_DOM : TIME_LIMIT)) endGame();
+    }
+  } else if (state === 'over' && matchEnding) {
+    updateMatchEnding(realDt);
   } else if (state === 'menu') {
     menuT += dt * 0.25;
     const sp = showcase.position; camera.position.set(sp.x, showBaseY + 1.25, sp.z + 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
@@ -1235,7 +1307,7 @@ function loop() {
   const camO = window.__cam; // testes/screenshots: câmera livre { p: [x, y, z], t: [x, y, z], fov }
   if (camO) { camera.position.set(...camO.p); camera.lookAt(...camO.t); if (camO.fov && camera.fov !== camO.fov) { camera.fov = camO.fov; camera.updateProjectionMatrix(); } }
   renderer.render(scene, camera);
-  if (state !== 'menu' && player && player.alive && !camO) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
+  if (state !== 'menu' && player && (player.alive || (matchEnding && matchEnding.firstPerson)) && !camO) { renderer.clearDepth(); renderer.render(fpScene, fpCam); }
 }
 loop();
 
@@ -1425,8 +1497,8 @@ function onNetMessage(m) {
     case 'welcome': o.myId = m.id; o.hostId = m.hostId; o.cfg = m.cfg; break;
     case 'lobby': o.lobby = m; o.hostId = m.hostId; o.cfg = m.cfg; renderLobby(); break;
     case 'start': startOnlineMatch(m); break;
-    case 's': if (o.inMatch) applySnapshot(m); break;
-    case 'p': if (o.inMatch) for (const ev of m.ev) personalEvent(ev); break;
+    case 's': if (o.inMatch && state !== 'over') applySnapshot(m); break;
+    case 'p': if (o.inMatch && state !== 'over') for (const ev of m.ev) personalEvent(ev); break;
     case 'end': if (o.inMatch) onlineEnd(m); break;
     case 'teamOk': {
       o.myPref = m.pref; const msg = m.blocked ? 'Esse time ficaria com 2 jogadores a mais — você foi pro Automático (equilibrado).' : '';
@@ -1502,7 +1574,7 @@ function startOnlineMatch(m) {
     for (const info of m.ents) if (!o.ents.has(info.id) && info.id !== o.myId) remoteEnt(info);
     return;
   }
-  resetAds(); loadMap(m.map); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
+  clearMatchEnding(); resetAds(); loadMap(m.map); clearBots(); gameTime = m.T; o.mapId = m.map; o.inMatch = true; o.ents.clear(); o.tmap = [];
   mode = m.mode === 'dom' ? 'dom' : 'dm'; window.__capLog = [];
   zone = m.zone ? newZoneState({ x: m.zone[0], y: m.zone[1], z: m.zone[2] }) : null; teamScore = m.zone ? [m.zone[8], m.zone[9]] : [0, 0];
   const me = m.ents.find((x) => x.id === o.myId) || { name: profile().name, skin: selectedSkin };
@@ -1615,8 +1687,8 @@ function personalEvent(ev) {
   }
 }
 function onlineEnd(m) {
-  const o = online; resetAds(); state = 'over'; mouseDown = false; o.endMsg = m;
-  if (document.pointerLockElement) document.exitPointerLock();
+  if (state === 'over' || !player) return;
+  const o = online; o.endMsg = m; beginMatchEnding();
   for (const [id, , k, d] of m.board) { const e = entOf(id); if (e) { e.kills = k; e.deaths = d; } }
   for (const r of m.board) { const e = entOf(r[0]); if (e && r[6] != null) e.caps = r[6]; }
   const w = m.board[0];
@@ -1624,7 +1696,10 @@ function onlineEnd(m) {
   else $('winner').textContent = w && w[0] === o.myId ? 'Você venceu! 🏆' : `${w ? w[1] : '???'} venceu!`;
   $('finalboard').innerHTML = boardHtml();
   $('overMap').innerHTML = `Mapa: <b>${escapeHtml(getMap(m.map).name)}</b> · próximo: <b>${escapeHtml(getMap(m.next).name)}</b>`;
-  $('gameover').classList.remove('hidden'); $('tabboard').classList.add('hidden'); renderLobby();
+  renderLobby();
+  const tied = m.mode !== 'dom' && m.board.length > 1 && m.board[0][2] === m.board[1][2] && m.board[0][3] === m.board[1][3];
+  if (tied) $('winner').textContent = 'Empate!';
+  presentMatchResult(m.mode === 'dom' ? (m.winTeam < 0 ? 'draw' : player.team === m.winTeam ? 'win' : 'loss') : tied ? 'draw' : w && w[0] === o.myId ? 'win' : 'loss');
   const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h);
 }
 // entrou no meio de uma partida de Dominação: escolhe o time antes de nascer
@@ -1641,7 +1716,7 @@ $('nextMapBtn').onclick = () => (online ? online.net.send({ t: 'start', map: onl
 { const sala = new URLSearchParams(location.search).get('sala'); if (sala) joinRoom(sala); }
 
 // ganchos para testes automatizados
-window.__docao = { get state() { return state; }, get entities() { return entities; }, get player() { return player; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
+window.__docao = { get state() { return state; }, get ending() { return matchEnding; }, get camera() { return camera; }, get entities() { return entities; }, get player() { return player; }, startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,

@@ -180,3 +180,12 @@ button.teambtn small{display:block;font-size:11px;font-family:"Trebuchet MS",Ari
 #deathBack{margin:10px auto 0;display:block}
 #deathpick{top:calc(50% + 30px)}
 .namerow{display:flex;gap:8px;align-items:flex-end;margin:6px 0}.namerow label{flex:1;margin:0}.namerow button{margin:0 0 2px}#lobbyNameMsg{min-height:0;font-size:12px;color:#ffd27a}
+
+/* Fim da partida: o mundo permanece na câmera atual, atrás do resultado. */
+.match-ended #hud > :not(#scope):not(#adsvig){visibility:hidden;pointer-events:none}
+#matchResult{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:24px;text-shadow:0 2px 4px #2a1410}
+#resultTitle{font-size:clamp(36px,6vw,60px);line-height:1;margin:0 0 16px;text-wrap:balance}
+#resultDetail{font-size:20px;line-height:28px;margin:0;text-wrap:balance;color:#fff8ec}
+#gameover:not(.hidden){animation:end-menu-in .24s cubic-bezier(.22,1,.36,1) both}
+@keyframes end-menu-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#gameover:not(.hidden){animation:none}}
