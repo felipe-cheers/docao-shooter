@@ -23,7 +23,7 @@ export function regenStep(e, now, dt) {
 export const BACON_ITEM = { heal: 10, radius: 1.2, dy: 1.0, from: 0.3, life: 3.45 };
 export const GRAV = -24, JUMP = 8.5, SPEED = 6.8, BOT_SPEED = 5.4, STEP = 0.45, RADIUS = 0.42, HEIGHT = 2.0, EYE = 1.6;
 
-// Armas. Primárias (menu): 0 Fuzil, 21 Metralhadora do Chiqueiro, 1 Calibre 12 (pump), 12 Semi, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Faca 7, sabre 8. Secundária: 4 pistola, 11 furadeira, 13 besta, 14 arco, 19 estilingue. 18 lança-milho, 20 minigun (só código). A besta e o arco são fracas de propósito: um tiro no corpo não mata.
+// Armas. Primárias (menu): 0 Fuzil, 22 Commando, 21 Metralhadora do Chiqueiro, 1 Calibre 12 (pump), 12 Semi, 2 Sniper Torresmo, 5 Canhão, 6 Carabina, 3 Bazuca. Faca 7, sabre 8. Secundária: 4 pistola, 11 furadeira, 13 besta, 14 arco, 19 estilingue. 18 lança-milho, 20 minigun (só código). A besta e o arco são fracas de propósito: um tiro no corpo não mata.
 export const WEAPONS = [
   { key: 'rifle', name: 'Fuzil Pururuca', short: 'Fuzil Pururuca', chip: 'Fuzil', mag: 30, reserve: 120, dmg: 20, headMul: 2, rate: 0.1, auto: true, pellets: 1, spread: 0.01, reload: 1.6, range: 140, recoil: 0.018, adsFov: 40, adsSpread: 0.12, flashZ: -0.76,
     desc: 'Automático · 30/120 · 20 dano' },
@@ -38,11 +38,11 @@ export const WEAPONS = [
   { key: 'pistol', name: 'Pistolinha Leitão', short: 'Pistolinha', chip: 'Pistola', mag: 12, reserve: 60, dmg: 25, headMul: 2, rate: 0.16, auto: false, pellets: 1, spread: 0.007, reload: 1.1, range: 110, recoil: 0.03, adsFov: 50, adsSpread: 0.4, flashZ: -0.42,
     desc: 'Semiautomática · 12/60 · 25 dano' },
   // Pesada: pouca bala, dano alto, luneta forte (ref. Barrett).
-  { key: 'canhao', name: 'Canhão do Barril', short: 'Canhão do Barril', chip: 'Canhão', mag: 3, reserve: 6, dmg: 180, headMul: 1, rate: 1.85, auto: false, pellets: 1, spread: 0.045, reload: 3.1, range: 260, recoil: 0.1, adsFov: 8, adsSpread: 0, flashZ: -1.25,
-    scope: true, bolt: true, beam: true, scopeStyle: 'canhao', desc: 'Ferrolho lento · 3/6 · mata em qualquer lugar · luneta pesada' },
-  // Leve: ferrolho rápido, fraca no corpo (ref. M21).
-  { key: 'carabina', name: 'Carabina da Granja', short: 'Carabina da Granja', chip: 'Carabina', mag: 10, reserve: 40, dmg: 55, headMul: 2.2, rate: 0.58, auto: false, pellets: 1, spread: 0.09, reload: 1.9, range: 180, recoil: 0.04, adsFov: 24, adsSpread: 0, flashZ: -0.95,
-    scope: true, bolt: true, beam: true, scopeStyle: 'carabina', desc: 'Ferrolho rápido · 10/40 · fraca no corpo · luneta aberta' },
+  { key: 'canhao', name: 'Canhão do Barril', short: 'Canhão do Barril', chip: 'Canhão', mag: 3, reserve: 12, dmg: 180, headMul: 1, rate: 1.85, auto: false, pellets: 1, spread: 0.045, reload: 3.1, range: 260, recoil: 0.1, adsFov: 8, adsSpread: 0, flashZ: -1.25,
+    scope: true, bolt: true, beam: true, scopeStyle: 'canhao', desc: 'Ferrolho lento · 3/12 · mata em qualquer lugar · luneta pesada' },
+  // Leve: ferrolho rápido, 7/40, recarrega mais lento, fraca no corpo (ref. M21).
+  { key: 'carabina', name: 'Carabina da Granja', short: 'Carabina da Granja', chip: 'Carabina', mag: 7, reserve: 40, dmg: 55, headMul: 2.2, rate: 0.58, auto: false, pellets: 1, spread: 0.09, reload: 2.9, range: 180, recoil: 0.04, adsFov: 24, adsSpread: 0, flashZ: -0.95,
+    scope: true, bolt: true, beam: true, scopeStyle: 'carabina', desc: 'Ferrolho rápido · 7/40 · recarrega mais lento · fraca no corpo · luneta aberta' },
   // 7 · Faca de churrasqueiro: corpo a corpo, sempre no slot 3 (sem munição). Regras de acerto em shared/melee.js
   { key: 'knife', name: 'Faca de churrasqueiro', short: 'Faca', chip: 'Faca', mag: 0, reserve: 0, dmg: 40, headMul: 1, rate: 0.42, auto: true, pellets: 0, spread: 0, reload: 0, range: 1.6, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
     melee: true, desc: 'Golpe 40 · estocada no botão direito · pelas costas mata' },
@@ -50,9 +50,9 @@ export const WEAPONS = [
   { key: 'sabre', name: 'Sabre de Luz', short: 'Sabre de Luz', chip: 'Sabre', mag: 0, reserve: 0, dmg: 100, headMul: 1, rate: 0.48, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.5, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
     melee: true, saber: true, reach: 2.5, arc: 0.95,
     move: 0.85, desc: 'Corte na frente · 1 golpe · troca a faca · anda 15% mais devagar' },
-  // 9 · Mini uzi: rajada muito rápida, curta, abre de perto.
-  { key: 'uzi', name: 'Mini Uzi do Leitão', short: 'Mini Uzi', chip: 'Uzi', mag: 25, reserve: 100, dmg: 11, headMul: 1.6, rate: 0.055, auto: true, pellets: 1, spread: 0.03, reload: 1.35, range: 70, recoil: 0.036, adsFov: 55, adsSpread: 0.5, flashZ: -0.52,
-    falloff: [8, 28, 0.35], desc: 'Rajada rápida · 25/100 · forte de perto' },
+  // 9 · MP5K no lugar da Mini Uzi, mesmo índice.
+  { key: 'uzi', name: 'MP5K da Granja', short: 'MP5K', chip: 'MP5K', mag: 30, reserve: 90, dmg: 16, headMul: 1.5, rate: 0.088, auto: true, pellets: 1, spread: 0.02, reload: 1.5, range: 90, recoil: 0.02, adsFov: 52, adsSpread: 0.5, flashZ: -0.52,
+    falloff: [8, 28, 0.35], desc: 'Da granja · 30/90 · rajada um pouco mais lenta que a P90 · dano de SMG' },
   // 10 · Compacta no estilo P90: carregador grande em cima, rajada mais estável.
   { key: 'p90', name: 'P90 da Granja', short: 'P90', chip: 'P90', mag: 50, reserve: 150, dmg: 14, headMul: 1.5, rate: 0.07, auto: true, pellets: 1, spread: 0.016, reload: 1.7, range: 110, recoil: 0.024, adsFov: 48, adsSpread: 0.28, flashZ: -0.55,
     falloff: [16, 48, 0.45], desc: 'Compacta · 50/150 · rajada estável' },
@@ -84,16 +84,19 @@ export const WEAPONS = [
   // 19 · Estilingue de Ovo: secundária silenciosa. Segura o clique pra esticar; o ovo voa em arco (shared/egg.js) e suja a tela de quem leva.
   { key: 'estilingue', name: 'Estilingue de Ovo', short: 'Estilingue', chip: 'Ovo', mag: 1, reserve: 14, dmg: 34, headMul: 1.5, rate: 0.3, auto: false, pellets: 0, spread: 0, reload: 0.7, range: 0, recoil: 0.025, adsFov: 62, adsSpread: 0.5, flashZ: -0.5,
     draw: 0.55, egg: true, silent: true, pen: 0, desc: 'Secundária · segura o clique pra esticar · ovo em arco suja a tela · quase sem barulho' },
-  // 20 · Minigun do Galpão: fora do Arsenal (código "minigun" no chat). Embala 0,6 s, ~22 tiros/s, esquenta e trava; anda a 60%, sem zoom.
-  { key: 'minigun', name: 'Minigun do Galpão', short: 'Minigun', chip: 'Minigun', mag: 150, reserve: 300, dmg: 12, headMul: 1.4, rate: 0.045, auto: true, pellets: 1, spread: 0.03, reload: 4.2, range: 120, recoil: 0.006, adsFov: 75, adsSpread: 1, flashZ: -0.86,
-    falloff: [14, 45, 0.55], spin: { up: 0.6, down: 0.9, heat: 0.0115, cool: 0.5 }, heavy: true, noAds: true, move: 0.6, desc: 'Embala 0,6 s · ~22 tiros/s · esquenta e trava · anda 40% mais devagar' },
+  // 20 · Minigun do Galpão: fora do Arsenal (código "minigun" no chat). Embala 0,6 s, ~22 tiros/s, esquenta e trava; 600 tiros sem reserva, sem zoom.
+  { key: 'minigun', name: 'Minigun do Galpão', short: 'Minigun', chip: 'Minigun', mag: 600, reserve: 0, dmg: 12, headMul: 1.4, rate: 0.045, auto: true, pellets: 1, spread: 0.03, reload: 4.2, range: 120, recoil: 0.006, adsFov: 75, adsSpread: 1, flashZ: -0.86,
+    falloff: [14, 45, 0.55], spin: { up: 0.6, down: 0.9, heat: 0.005, cool: 0.5 }, heavy: true, noAds: true, move: 1, desc: 'Embala 0,6 s · ~22 tiros/s · esquenta e trava · 600 tiros, sem reserva' },
   // 21 · Metralhadora do Chiqueiro: fita grande, automática. DPS abaixo do fuzil (15 / 0,08 s = 187 contra 200). Anda 5% mais devagar. Sem heavy/spin (cairia na inspeção da minigun); perfil próprio lmg.
   { key: 'lmg', name: 'Metralhadora do Chiqueiro', short: 'Metralhadora', chip: 'LMG', mag: 100, reserve: 300, dmg: 15, headMul: 1.6, rate: 0.08, auto: true, pellets: 1, spread: 0.024, reload: 3.1, range: 130, recoil: 0.012, adsFov: 48, adsSpread: 0.22, flashZ: -0.95,
     falloff: [18, 55, 0.5], move: 0.95, inspect: 'lmg', desc: 'Fita · 100/300 · anda 5% mais devagar · menos dano por segundo que o fuzil' },
+  // 22 · Commando da Granja: recuo quase zero, dano baixo, preciso. Rajada reta (ref. Commando do Black Ops).
+  { key: 'commando', name: 'Commando da Granja', short: 'Commando', chip: 'Commando', mag: 30, reserve: 120, dmg: 12, headMul: 1.4, rate: 0.09, auto: true, pellets: 1, spread: 0.003, reload: 1.8, range: 150, recoil: 0.002, adsFov: 36, adsSpread: 0.04, flashZ: -0.8,
+    move: 1, desc: 'Recuo quase zero · dano baixo · 30/120 · rajada reta' },
 ];
 // Penetração e collateral (regra em shared/penetration.js). pen = metros de parede fina por bala (caixote conta 45%);
 // pierce = corpos extras que a bala atravessa; pierceMul = dano que sobra a cada corpo. Sem entrada = não atravessa nada.
-const PEN_STATS = { rifle: [0.35], lmg: [0.4], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4] };
+const PEN_STATS = { rifle: [0.35], lmg: [0.4], commando: [0.3], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4] };
 for (const w of WEAPONS) { const s = PEN_STATS[w.key]; w.pen = s ? s[0] : 0; w.pierce = s ? s[1] || 0 : 0; w.pierceMul = s ? s[2] ?? 1 : 1; }
 export const UZI = 9, P90 = 10, NAIL = 11, SEMI = 12;
 export const CROSS = 13, BOW = 14, FAMAS = 15, DISC_W = 16, SABER2 = 17;
@@ -101,14 +104,15 @@ export const CORN_W = 18;
 export const EGG_W = 19; // Estilingue de Ovo
 export const MINIGUN = 20; // fora do Arsenal: só pelo código "minigun" no chat
 export const LMG = 21; // Metralhadora do Chiqueiro
+export const COMMANDO = 22; // Commando da Granja
 export const isSaber = (i) => !!(WEAPONS[i] && WEAPONS[i].saber); // Sabre (8) ou Sabre Duplo (17)
-export const PRIMARIES = [0, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
+export const PRIMARIES = [0, COMMANDO, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
 export const SECONDARIES = [PISTOL, NAIL, CROSS, BOW, EGG_W];
 export const MELEES = [KNIFE, SABER, SABER2];
-export const BOT_PRIMARIES = [0, LMG, UZI, P90, FAMAS, 1, SEMI, 2, 5, 6, 3, CORN_W];
+export const BOT_PRIMARIES = [0, COMMANDO, LMG, UZI, P90, FAMAS, 1, SEMI, 2, 5, 6, 3, CORN_W];
 // Menu: cada grupo é uma escolha. primary = uma primária. melee = faca ou sabre. secondary = pistola, furadeira, besta, arco ou estilingue.
 export const CATEGORIES = [
-  { id: 'rajada', title: 'Rajada', pick: 'primary', weapons: [0, LMG, UZI, P90, FAMAS] },
+  { id: 'rajada', title: 'Rajada', pick: 'primary', weapons: [0, COMMANDO, LMG, UZI, P90, FAMAS] },
   { id: 'escopeta', title: 'Escopeta', pick: 'primary', weapons: [1, SEMI] },
   { id: 'precisao', title: 'Precisão', pick: 'primary', weapons: [2, 5, 6] },
   { id: 'explosivo', title: 'Explosivo', pick: 'primary', weapons: [3, CORN_W] },
@@ -144,5 +148,5 @@ export const BOT_DEFS = [
   { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' }, { name: 'Linguiça' }, { name: 'Quindim' }, { name: 'Coxinha' }, { name: 'Pururuca' },
 ];
 
-export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16]; // 9 mini uzi perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam), 21 metralhadora no meio
+export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16, 18]; // 9 MP5K perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam), 21 metralhadora no meio, 22 commando no meio
 export const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b', '#9fd0ff', '#ffa3d8', '#b8f2e6', '#ffe9a8'];

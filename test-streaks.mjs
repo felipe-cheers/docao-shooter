@@ -200,7 +200,14 @@ await callRadio();
 const gunOn = await G(() => ({ on: !!window.__docao.gunner, hud: !document.getElementById('gunnerHud').hidden, hp: window.__docao.gunHeli && window.__docao.gunHeli.hp }));
 ok(gunOn.on && gunOn.hud && gunOn.hp === 560, `F chama o Chopper e a câmera vai pra ele (${JSON.stringify(gunOn)})`);
 await G(() => window.__docao.endGunner(true));
-await G(() => { for (let i = 0; i < 5; i++) window.__docao.rewardKill(); });
+await G(() => { for (let i = 0; i < 3; i++) window.__docao.rewardKill(); });
+await page.waitForTimeout(200);
+const acReady = await G(() => ({ ready: [...document.querySelectorAll('#streakBar .streak-card.ready')].map((c) => c.dataset.need), bank: window.__docao.streakReady, kills: window.__docao.rewardKills }));
+ok(acReady.kills === 13 && acReady.ready.join() === '13' && acReady.bank.join() === 'ac130', `13 abates armam o AC-130 Grelha (${JSON.stringify(acReady)})`);
+await callRadio();
+ok(await G(() => window.__docao.ac130On), 'F chama o AC-130 e a câmera vai pra ele');
+await G(() => window.__docao.endAc130(true));
+await G(() => { for (let i = 0; i < 2; i++) window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
 const nukeOn = await G(() => {
   const b = document.getElementById('nukeBanner');
@@ -224,6 +231,13 @@ const after = await G(() => ({
 }));
 ok(after.bots === 0 && after.kills === 0, `nuke mata os inimigos e não soma abate secreto (${JSON.stringify(after)})`);
 
+// o nuke agora encerra a partida (v1.16): começa uma nova pra seguir testando os cards
+await G(() => {
+  const g = window.__docao;
+  g.startGame('arena');
+  for (const e of g.entities) { e.invulnUntil = g.time + 9999; if (!e.isPlayer) e.frozen = true; }
+});
+await page.waitForTimeout(400);
 await G(() => { window.__docao.player.alive = true; window.__docao.player.hp = 100; window.__docao.rewardKill(); });
 const mid = await G(() => {
   const card = document.querySelector('#streakBar .streak-card[data-need="3"]');

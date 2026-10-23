@@ -128,6 +128,41 @@ ok(WALL && LINE, `arena: parede fina com os dois lados livres (${WALL && JSON.st
   ok(three.every((b) => !b.alive) && g.events.some((e) => e[0] === 'mk' && e[2] === 3), `servidor: evento 'f' do Canhão faz o mesmo collateral (rejeitados ${A.rejectedShots || 0})`);
 }
 
+// Invasão: fuzil (pierce 0 na arma) atravessa 3 zumbis. Mata-mata: a mesma bala para no primeiro.
+if (LINE) {
+  const io = { send() {}, broadcast() {}, startLoop() {}, stopLoop() {} };
+  const boot = (mode) => {
+    const g = new Game({ code: 'TEST', map: 'arena', max: 4, fillBots: false, mode }, io);
+    let fake = 1000; g.now = () => fake;
+    const A = g.join({ name: 'A' }).ent; g.welcome(A); g.onMessage(A.id, { t: 'start' }); A.connected = true;
+    for (let i = 0; i < 5; i++) { fake += 0.05; g.tick(); }
+    A.alive = true; A.hp = 100; A.invulnUntil = 1e9; A.pos = { x: LINE.p.x, y: LINE.p.y, z: LINE.p.z }; A.hist = [];
+    return g;
+  };
+  const at = (k) => ({ x: LINE.p.x + LINE.d.x * k, y: LINE.p.y, z: LINE.p.z + LINE.d.z * k });
+  const o = { x: LINE.p.x, y: 0.8, z: LINE.p.z };
+  const place = (e, p, hp) => { e.alive = true; e.hp = hp; e.invulnUntil = 0; e.pos = { x: p.x, y: p.y, z: p.z }; e.vel = { x: 0, y: 0, z: 0 }; e.hist = []; e.crouch = 0; };
+  {
+    const g = boot('dm'); const A = [...g.ents.values()].find((e) => e.name === 'A');
+    const bots = [4, 7, 10].map((k) => { const b = g.makeEnt({ name: 'B', skin: A.skin, primary: 0, bot: true }); place(b, at(k), 100); return b; });
+    g.events.length = 0; g.hitscan(A, o, [LINE.d], RIFLE);
+    ok(WEAPONS[RIFLE].pierce === 0 && bots[0].hp < 100 && bots[1].hp === 100 && bots[2].hp === 100, `mata-mata: Fuzil (pierce 0) para no 1º (${bots.map((b) => b.hp).join('/')})`);
+  }
+  {
+    const g = boot('inv'); const A = [...g.ents.values()].find((e) => e.name === 'A');
+    ok(!!g.inv, 'servidor de Invasão tem this.inv');
+    for (const z of [...g.ents.values()]) if (z.zt) z.alive = false;
+    const zs = [4, 7, 10].map((k) => { const z = g.makeEnt({ name: 'Z', skin: A.skin, primary: 0, bot: true }); z.zt = 'walker'; z.size = 1; place(z, at(k), 110); return z; });
+    const H = g.join({ name: 'H' }).ent; H.connected = true; place(H, at(5.5), 100);
+    const pierce = WEAPONS[RIFLE].pierce, mul = WEAPONS[RIFLE].pierceMul;
+    g.events.length = 0; g.hitscan(A, o, [LINE.d], RIFLE);
+    const hurt = zs.map((z) => +(110 - z.hp).toFixed(2));
+    const want = [20, +(20 * 0.82).toFixed(2), +(20 * 0.82 * 0.82).toFixed(2)];
+    ok(pierce === 0 && WEAPONS[RIFLE].pierce === pierce && WEAPONS[RIFLE].pierceMul === mul && hurt.every((d, i) => near(d, want[i], 0.05)) && H.hp === 100,
+      `invasão: Fuzil pierce 0 acerta 3 zumbis (${hurt.join('/')}, esperado ${want.join('/')}) e não fere o jogador (hp ${H.hp})`);
+  }
+}
+
 if (!process.env.NO_BROWSER) {
   // ---------------- cliente ----------------
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });

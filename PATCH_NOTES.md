@@ -4,6 +4,54 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.16.2 — Granada de Bolso 🎛️💣 (23/10/2026)
+🎛️ **A GRANADA AGORA TEM CONTROLE REMOTO!** Antes você tinha que abrir o menu pra calar o "GRANADA!" e o "BANANA!". Agora dá pra decidir no meio do tiroteio:
+⌨️ **Aperte H em partida** e as vozes da granada ligam ou desligam na hora, com aviso na tela: "🔊 Vozes da granada: ligadas" ou "🔇 ... desligadas". Funciona em todos os modos (inclusive Invasão, Bomba e online) e não atrapalha chat, painel B, nem nada que você esteja digitando.
+⏸️ **Apertou ESC?** O botão **"Vozes da granada"** agora é a primeira coisa da pausa, grandão e destacado, pra clicar sem procurar. Tudo continua sincronizado com o botão dos Ajustes, e o Docão lembra da sua escolha.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.16.1 — Granada Silenciosa 🤫💣 (23/10/2026)
+🤫 **CALA A BOCA, GRANADA!** Tem gente que ama o "GRANADA!" e o "BANANA!", e tem gente que quer jogar em paz sem frutas gritando. Agora os dois lados vivem em harmonia:
+🔘 **Novo botão "Vozes da granada"** em **Ajustes** (e também no menu de pausa). Desmarcou? O Copo Bomba volta pro som de sempre: o *toc* do arremesso e o *BUM* da explosão, sem ninguém avisando nada.
+💾 **O Docão lembra da sua escolha** neste navegador. Por padrão a voz continua **ligada**, porque o Matheus é vaidoso.
+🔇 Vale pra tudo: seu copo, o dos outros, bots e online. Silêncio total, só estrondo.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.16 — Grelha na Granja 🔥🐷 (23/10/2026)
+🤝 **O JOÃO VOLTOU, E TROUXE UM AVIÃO!** O **João** (@rramosjoao) mandou o **PR #18** e o céu do Docão nunca mais foi o mesmo:
+✈️ **NOVO KILLSTREAK: AC-130 «Grelha da granja»!** Chegou nos **13 abates** (entre o Chopper e o nuke). É um avião lá no alto rodando o mapa por **40 segundos**, e você só aponta e manda brasa com três armas: **Espeto** (rajada fina), **Panela** (explosão média) e **Caldeirão** (explosão que dá medo, de recarga lenta). Mas cuidado: o avião tem vida (420) e dá pra derrubar. Funciona online e offline, com tela de mira e tudo. Quem cair pro fogo da Grelha entra no placar como "Grelha da granja".
+☢️ **O FIM DA CHAPA AGORA ACABA O JOGO!** Estourou o nuke? A partida **fecha na hora** e **vence quem chamou** (ou o time dele), mesmo perdendo no placar. Na Invasão continua sem killstreak, e na Bomba também vale. Quer dizer: se você está perdendo, só falta fazer 15 abates seguidos. Fácil, né? 😅
+🔫 **Arsenal mexido** (o João mexeu na churrasqueira inteira):
+  • 🆕 **Commando da Granja:** recuo quase zero, dano baixo e rajada reta como régua. Já está no menu de armas.
+  • 🔫 **MP5K da Granja** entrou no lugar da Mini Uzi (mesmo botão): 30/90, mais dano e mais alcance.
+  • 🎯 **Carabina da Granja:** agora 7 balas no pente e recarrega mais devagar (2,9 s). Pensa antes de atirar.
+  • 💥 **Canhão do Barril:** de 6 para **12** balas de reserva. Mais barril pra todo mundo.
+  • 🌀 **Minigun do Galpão:** 600 tiros de uma vez, sem reserva, e agora anda na velocidade normal.
+🧟 **Invasão:** a bala do **Fuzil agora atravessa os zumbis**, com dano menor a cada um (e nunca machuca você). Fila de zumbi virou espetinho.
+🧪 Tem teste novo pra tudo isso (e o de killstreaks ganhou o AC-130).
+🙏 Valeu, João! (PR #18)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.15 — Câmera Lenta no Torresmo 🎬🥓 (23/10/2026)
+🤝 **O JOÃO VOLTOU COM CINEMA!** O **João** (@rramosjoao) mandou o **PR #17** e o fim de partida deixou de ser um "pimba, acabou" pra virar **cena de filme**:
+📋 **A tela de fim agora parece a comanda do churrasco:** prancheta de madeira, papel creme, prendedor de metal e o título em tinta com pincelada vermelha. Cada time tem a sua cor, e a Invasão tem verde-oliva (venceu) ou roxo (perdeu). Placar igualzinho ao do Tab, botão de **Jogar de novo** em tijolo, **Próximo mapa** em oliva e **Menu** no papel. Até o chat do online foi pro papel.
+🎬 **Câmera lenta de 1,5 segundo:** acabou a partida? Tudo desacelera na sua visão, com a mesma posição, direção e zoom, e a arma continua na mão. Dá pra ver a última granada rolando, o último torresmo voando e o último bot com cara de quem não entendeu nada.
+🛑 **Placar fechado na hora:** depois do resultado ninguém mais atira, morre, captura nem renasce. Fim é fim, e não adianta reclamar com o juiz.
+🏆 **Plaquinha de VITÓRIA!, DERROTA ou EMPATE!** na hora, com o placar entrando uns 0,8 segundo depois. E a **dança da vitória** só começa quando a câmera lenta acaba, pra ninguém dançar no meio da cena.
+🤝 **Empate de verdade:** no mata-mata, empatou, é **EMPATE!**. Chega de "vence quem aparecer primeiro na lista".
+📶 **Online sem fantasma:** pacotes atrasados que chegam depois do resultado são ignorados até a próxima partida.
+🧘 Tem **movimento reduzido** ligado no seu aparelho? O placar abre direto, sem câmera lenta.
+🙏 Valeu, João! (PR #17)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.14.1 — Granada, Banana! 🍌💣 (23/10/2026)
+📣 **O Copo Bomba agora fala!** E fala com a voz do próprio Matheus, gravada com todo o carinho (e nenhum ensaio):
+🗣️ **"GRANADA!"** no exato instante em que o copo sai da sua mão. Não é quando você começa a segurar o botão, é quando solta. Avisar o inimigo faz parte do estilo.
+🍌 **"BANANA!"** quando o copo explode. Ninguém sabe por quê. O Docão também não pergunta.
+🔊 **Todo mundo ouve:** a granada dos outros jogadores (e dos bots) também grita, com **volume que cai com a distância**. Quem está perto ouve alto; quem está do outro lado do mapa fica em paz (a "granada" some a uns 60 metros e a "banana" a uns 50).
+🙅 **Só o Copo Bomba:** a Pokébola, o míssil e o foguete continuam na dieta de sempre, sem frutas.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.14 — Operação Bacon 🥓💣 (23/10/2026)
 🚨 **NOVO MODO: BOMBA!** Dois times, um botijão de churrasco e muita pressão. O **Ataque** (Vermelho) leva o **Botijão do Churrasco** até o site **A** ou **B**. A **Defesa** (Azul) tem que impedir, ou desarmar antes de virar torresmo. Estilo "plante e defenda", mas com cheiro de bacon. 🥓
 🧯 **Plantar:** segure **E** por **4 segundos** dentro do site. Quanto mais nervoso o time, mais o dedo escorrega.
