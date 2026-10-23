@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
+🤝 **PARCERIA DO CHIQUEIRO!** O **Felipe Gomes** (@felipe-cheers) mandou o **PR #15** com um indicador de dano parecido com o nosso... e, em vez de brigar, o Docão **roubou as melhores ideias dele** (com crédito, claro 🫡🐷):
+💥 **Explosão e helicóptero agora apontam pro lugar certo:** antes, se o foguete (ou o Gavião) te acertava, o arco apontava pro *dono* do tiro, que podia estar do outro lado do mapa. Agora o servidor manda **de onde a explosão realmente veio**, e o arco aponta pra ela. Tomou foguete na cara? O arco olha pra fumaça, não pro fofoqueiro.
+🧲 **Golpes parecidos viram um arco só:** levou rajada de dois caras do mesmo lado (até 30° de diferença)? Em vez de uma fila de arcos empilhados, o jogo **junta tudo num arco só** e renova o tempo dele. Tela menos poluída, mais tempo pra olhar pro encrenqueiro. (Máximo de 4 arcos ao mesmo tempo.)
+🙏 Valeu, Felipe! O resto continua igual: flash leve quando o dano não tem dono, e morreu/renasceu/pausou os arcos somem.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.12 — Ai, de Onde Veio Isso? 🎯🩸 (23/10/2026)
 🚨 **NOVIDADE QUENTINHA!** O Docão apanhava calado e sem saber de quem: "ai! quem foi? foi você? foi o vento?" 😵🐷 Chega de levar bala misteriosa. Agora o jogo aponta o dedo pro culpado:
 🔴 **Indicador de dano estilo Fortnite:** quando você leva dano, aparece um **arco vermelho na borda da tela apontando de onde veio o golpe**. Vira a câmera e o arco gira junto, então é só olhar pra onde ele aponta e devolver o carinho. 💥

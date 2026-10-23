@@ -19,6 +19,7 @@ await hit(0, 8); await wait(250);   // +z: pra direita de quem olha pra +x? righ
 r = await rot(); ok(r.length === 2 && Math.abs(r[1] - Math.PI / 2) < 0.2, `atacante à direita → marcador a 90° (${JSON.stringify(r)})`);
 await hit(-8, 0); await wait(250);
 r = await rot(); ok(r.length === 3 && Math.abs(Math.abs(r[2]) - Math.PI) < 0.2, `atacante atrás → marcador embaixo; 3 marcadores ao mesmo tempo (${JSON.stringify(r)})`);
+await hit(8, 2); await wait(250); ok((await rot()).length === 3, 'golpe de direção parecida (≤30°) funde no mesmo arco (fusão, PR #15)');
 await G(() => { const g = window.__docao, p = g.player; p.yaw = 0; }); await wait(300);
 const r2 = await rot(); ok(r2[0] !== r[0], `o arco gira quando o jogador vira (${r[0]} → ${r2[0]})`);
 await G(() => { window.__docao.player.yaw = -Math.PI / 2; }); await wait(200);

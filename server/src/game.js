@@ -469,7 +469,7 @@ export class Game {
     }
     const L = best ? best.tt : wallD;
     this.events.push(['gs', h.id, [r2(o.x + d.x * L), r2(o.y + d.y * L), r2(o.z + d.z * L)], mode === 'sniper' ? 1 : 0, best ? 1 : 0]);
-    if (best) this.damage(best.t, M.dmg * (best.head ? M.headMul : 1), e, 0, best.head, false, 'g');
+    if (best) this.damage(best.t, M.dmg * (best.head ? M.headMul : 1), e, 0, best.head, false, 'g', 0, o);
   }
   hurtHeli(h, amount, by) {
     if (!h.alive || !(amount > 0)) return;
@@ -494,7 +494,7 @@ export class Game {
       const to = center(best, 1.0), miss = Math.random() < HELI.miss; // erra de vez em quando: o tiro passa do lado
       if (miss) { const a = Math.random() * Math.PI * 2, r = rand(0.9, 1.6); to.x += Math.cos(a) * r; to.z += Math.sin(a) * r; to.y += rand(-0.6, 0.3); }
       this.events.push(['hs', h.id, arr3(to)]);
-      if (!miss) this.damage(best, HELI.dmg, h.owner, 0, false, false, 'h');
+      if (!miss) this.damage(best, HELI.dmg, h.owner, 0, false, false, 'h', 0, hp);
     }
     this.helis = this.helis.filter((h) => h.alive);
   }
@@ -668,12 +668,12 @@ export class Game {
     return hits;
   }
   friends(a, b) { if (this.invasion) return !!(a && b && a !== b && !a.zt === !b.zt); return this.teamMode && a && b && a !== b && a.team === b.team && a.team >= 0; }
-  damage(t, amount, a, w, head, back = false, ks = null, fx = 0) {
+  damage(t, amount, a, w, head, back = false, ks = null, fx = 0, origin = a && a !== t && !a.fog ? a.pos : null) {
     if (!t.alive || this.T < t.invulnUntil || this.friends(t, a)) return false; // sem fogo amigo
     if (this.invasion && !t.zt && a && !a.zt && !a.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
     t.hp -= amount; t.lastAttacker = a ? a.id : 0; noteHurt(t, a, this.T); // regen só com dano de outro
     if (t.bot && a && a !== t && !t.target) { t.target = a; t.aim = t.reaction * 0.5; }
-    this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0, Math.round(amount), fx]); // [5] = dano (números no Treino), [6] = 1 pela parede, 2 collateral
+    this.events.push(['h', t.id, a ? a.id : 0, Math.max(0, Math.round(t.hp)), head ? 1 : 0, Math.round(amount), fx, origin ? arr3(origin) : null]); // [5] = dano, [6] = parede/collateral, [7] = origem no instante do golpe
     if (t.hp <= 0) { this.kill(t, a, w, head, back, ks, fx); return true; }
     return false;
   }
@@ -704,7 +704,7 @@ export class Game {
       const e = h.e; e.lastKnock = this.T;
       if (e.bot) { e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; }
       else this.toMe(e, ['kn', arr3(h.knock)]); // empurrão aplicado pelo próprio cliente (rocket jump)
-      this.damage(e, h.dmg, owner, o.wIdx, false, false, o.ks || null);
+      this.damage(e, h.dmg, owner, o.wIdx, false, false, o.ks || null, 0, c);
     }
     return hits;
   }

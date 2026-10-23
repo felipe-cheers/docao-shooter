@@ -13,6 +13,7 @@ import { renderWeaponThumb } from './weapon-thumbs.js';
 import { camoLevel, camoInfo, nextCamo, applyWeaponCamo, resetWeaponCamo } from './weapon-camo.js';
 import { INSPECT_DUR, INSPECT_HOLD, INSPECT_FADE, INSPECT_PROFILES, inspectKind, inspectPose } from './inspect.js';
 import { createSaberSfx } from './saber-sfx.js';
+import { HIT_DIR_LIFE, addHit } from './damage-dir.js';
 import { resetFeedback, feedbackPoints, feedbackHit, feedbackKill, feedbackAward, feedbackMedal, tickFeedback } from './feedback.js';
 import { SMOKE, STUN, makeTacticalMesh, makeSmokeCloud, inRadius } from './tactical-nades.js';
 import { mountUav, showUav, drawUav, tickUav, hideUav } from './uav.js';
@@ -790,7 +791,7 @@ function blast(c, owner, o, direct = null) {
   for (const h of explosionHits(c, o, invMode() ? entities.filter((x) => x.zt || x === owner) : entities, los, owner, teamMode(), direct)) { // Invasão: explosão só fere zumbi (o dono ainda leva o empurrão do rocket jump) // mesma regra do servidor (shared/combat.js)
     const e = h.e; e.vel.x += h.knock.x; e.vel.z += h.knock.z; e.vel.y = Math.max(e.vel.y, h.knock.y); e.onGround = false; // empurrão (rocket jump)
     if (e.isPlayer) lastKnock = gameTime;
-    damage(e, h.dmg, owner, o.wIdx, false);
+    damage(e, h.dmg, owner, o.wIdx, false, false, 0, c);
   }
 }
 // partículas: confete vermelho/ciano + espuma + gotas âmbar + clarão + onda
@@ -1073,11 +1074,11 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
   return res;
 }
 
-function damage(t, amount, attacker, wIdx, head, back = false, fx = 0) {
+function damage(t, amount, attacker, wIdx, head, back = false, fx = 0, origin = attacker && attacker !== t && !attacker.fog ? attacker.pos : null) { // origin: de onde veio o golpe (explosão: o centro dela)
   if (!t.alive || gameTime < t.invulnUntil || friends(t, attacker)) return false; // sem fogo amigo
   if (invMode() && !t.zt && attacker && !attacker.zt && !attacker.fog) return false; // Invasão: jogador nunca machuca jogador (nem a si mesmo)
   t.hp -= amount; t.lastAttacker = attacker; t.flashUntil = gameTime + 0.12; noteHurt(t, attacker, gameTime); // regen só com dano de outro
-  if (t.isPlayer) { hurtFlash(); noteHit(attacker); sfx.oink(0.8, 1.15); }
+  if (t.isPlayer) { hurtFlash(); noteHit(origin); sfx.oink(0.8, 1.15); }
   else { if (attacker && attacker !== t && !t.target) { t.target = attacker; t.aim = t.reaction * 0.5; } if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3); }
   if (attacker && attacker.isPlayer && attacker !== t) { if (t.hp > 0) feedbackHit({ head, wall: !!(fx & 1) }); sfx.hit(); if (training()) dmgPopup(t, amount, head); }
   if (t.hp <= 0) { kill(t, attacker, wIdx, head, back, false, null, fx); return true; }
@@ -1165,11 +1166,11 @@ function notePlayerKill(victim, head, fx = 0) {
 function hurtFlash() { hurtLevel = 1; }
 // Indicador de direção do dano (estilo Fortnite): arco vermelho na borda da tela apontando de onde veio o golpe, relativo à câmera.
 // Sem origem conhecida (névoa, queda, dano próprio) vale só o flash vermelho nas bordas (hurtFlash). Não aparece morto.
-const HIT_DIR_LIFE = 1.5, hitMarks = []; let hitDirsEl = null;
-function noteHit(att) {
-  if (!player || !player.alive || player.hp <= 0 || !att || att === player || att.fog || !att.pos) return;
-  hitMarks.push({ x: att.pos.x, z: att.pos.z, t: gameTime, el: null });
-  if (hitMarks.length > 8) { const o = hitMarks.shift(); if (o.el) o.el.remove(); }
+// origem = posição de onde veio o dano (explosão/helicóptero quando o servidor manda; senão a do atacante); golpes de direção parecida (≤30°) renovam o mesmo arco (ideia do @felipe-cheers, PR #15)
+const hitMarks = []; let hitDirsEl = null;
+function noteHit(origin) {
+  if (!player || !player.alive || player.hp <= 0 || !origin) return;
+  const r = addHit(hitMarks, origin, player.pos, gameTime); if (r && r.dropped && r.dropped.el) r.dropped.el.remove();
 }
 function clearHitMarks() { for (const m of hitMarks) if (m.el) m.el.remove(); hitMarks.length = 0; }
 const hitDirDir = new V3();
@@ -4635,7 +4636,7 @@ function netEvent(ev) {
   } else if (k === 'h') {
     const [, tid, aid, hp, head] = ev; const t = entOf(tid), a = entOf(aid); if (!t) return;
     const prevHp = t.hp; t.hp = hp; t.flashUntil = gameTime + 0.12; t.lastAttacker = a || null;
-    if (t === player) { hurtFlash(); if (hp > 0) noteHit(a); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
+    if (t === player) { hurtFlash(); if (hp > 0 && (ev[5] ?? prevHp - hp) > 0) noteHit(ev.length > 7 ? ev[7] : a && a !== player && !a.fog ? a.pos : null); sfx.oink(0.8, 1.15); } else if (Math.random() < 0.3) sfx.oink(distVol(t.pos) * 0.6, 1.3);
     if (aid === o.myId && t !== player) { if (hp > 0) feedbackHit({ head: !!head, wall: !!((ev[6] || 0) & 1) }); sfx.hit(); if (training()) dmgPopup(t, ev[5] ?? Math.max(0, prevHp - hp), !!head); }
   } else if (k === 'ml') { // golpe de faca de alguém: animação + som (o dano vem nos eventos 'h'/'k')
     const [, id, kind, hit] = ev; const e = entOf(id); if (!e) return; const kn = MELEE_KINDS[kind] || 'slash';
