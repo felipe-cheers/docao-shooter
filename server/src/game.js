@@ -11,7 +11,8 @@ import { TRAIN, isTraining, dummyX } from '../../shared/training.js';
 import { buildNav } from '../../nav.js';
 import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
-import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, SABER2, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, UZI, P90, DISC_W, CORN_W, EGG_W, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
+import { normWeapons, normPowers, clampLoadout, botPool, weaponOn, powerOn } from '../../shared/loadout.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
 import { mapSolids, createPhysics, raySphere, HITBOXES, rayHitboxes } from '../../shared/physics.js';
 import { stanceScale, stanceHeight, stepCrouch } from '../../shared/stance.js';
@@ -43,7 +44,7 @@ const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y * stanceScale(e.
 export class Game {
   constructor(cfg, io) {
     this.test = !!cfg.test; // só no `wrangler dev` com ALLOW_TEST=1: aceita teleporte (testes automatizados)
-    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' || isTraining(cfg.mode) || isInvasion(cfg.mode) ? cfg.mode : 'dm', time: normTime(cfg.time), chat: cfg.chat !== false };
+    this.cfg = { code: cfg.code, map: cfg.map || 'arena', max: clamp(cfg.max | 0 || 6, 2, MAX_PLAYERS), fillBots: cfg.fillBots !== false, mode: cfg.mode === 'dom' || isTraining(cfg.mode) || isInvasion(cfg.mode) ? cfg.mode : 'dm', time: normTime(cfg.time), chat: cfg.chat !== false, weapons: normWeapons(cfg.weapons), powers: normPowers(cfg.powers) };
     this.chatLog = Array.isArray(cfg.chatLog) ? cfg.chatLog.filter((x) => x && typeof x.text === 'string').slice(-30) : [];
     this.io = io; // { send(id, obj), broadcast(obj), startLoop(), stopLoop() }
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
@@ -74,12 +75,13 @@ export class Game {
     if (e) { e.cameBack = !e.connected; e.connected = true; e.dcAt = 0; e.voice = 'off'; } // reconexão: mesmo id e placar; o microfone volta mudo
     else {
       if (this.humans().length >= this.cfg.max) return { error: 'Sala cheia' };
-      if (this.state !== 'lobby' && !this.teamMode && !this.invasion) this.removeOneBot(); // abre vaga (Dominação: ao escolher o time)
       e = this.makeEnt({ name: this.freeName(name), skin, primary, secondary, melee, bot: false });
       if (this.teamMode) { this.chooseTeam(e, -1); if (this.state === 'playing') { e.pendingTeam = true; e.pendingSince = this.now(); } }
       e.token = token && /^[a-z0-9]{8,32}$/i.test(token) ? token : Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 8);
       e.arrived = true;
     }
+    // Partida no ar: o humano ocupa a vaga de um bot (mata-mata e dominação). Reconectar também, porque a saída tinha preenchido o lugar.
+    if (this.state === 'playing' && this.P && !this.training && !this.invasion) this.syncBots();
     if (!this.hostId || !this.ents.get(this.hostId)?.connected) this.hostId = e.id;
     return { ent: e };
   }
@@ -117,11 +119,18 @@ export class Game {
   }
   // nome limpo e sem repetir ("Matheus (2)") entre quem está na sala (humanos conectados e bots)
   freeName(raw, self = null) { return uniqueName(cleanName(raw), [...this.ents.values()].filter((x) => x !== self).map((x) => x.name)); }
+  // Arma fora da lista da sala volta para a primeira liberada daquele slot. live = já vale na mão (lobby); na partida vale no próximo nascimento.
+  applyLoadout(e, primary, secondary, melee, live) {
+    const c = clampLoadout(PRIMARIES.includes(primary) ? primary : e.nextPrimary, SECONDARIES.includes(secondary) ? secondary : e.nextSecondary, MELEES.includes(melee) ? melee : e.nextMelee, this.cfg.weapons);
+    e.nextPrimary = c.primary; e.nextSecondary = c.secondary; e.nextMelee = c.melee;
+    if (live) { e.primary = c.primary; e.secondary = c.secondary; e.melee = c.melee; e.slots = [c.primary, c.secondary, c.melee]; if (!e.slots.includes(e.weapon)) e.weapon = c.primary; }
+    return c;
+  }
   makeEnt({ name, skin, primary, secondary, melee, bot }) {
     const id = this.nextId++;
-    const prim = PRIMARIES.includes(primary) ? primary : 0;
-    const sec = SECONDARIES.includes(secondary) ? secondary : PISTOL;
-    const mel = MELEES.includes(melee) ? melee : KNIFE;
+    const rawP = bot ? (botPool(this.cfg.weapons).includes(primary) ? primary : pick(botPool(this.cfg.weapons))) : primary;
+    const c = clampLoadout(rawP, secondary, melee, this.cfg.weapons);
+    const prim = c.primary, sec = c.secondary, mel = c.melee;
     const e = { id, bot, name: cleanName(name), skin: SKINS.some((s) => s.id === skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
       primary: prim, nextPrimary: prim, secondary: sec, nextSecondary: sec, melee: mel, nextMelee: mel, slots: [prim, sec, mel], weapon: 0,
       pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
@@ -154,7 +163,7 @@ export class Game {
     const used = new Set(this.live().map((b) => b.name)); // bot não pega nome de humano
     while (bots.length < want) {
       const name = BOT_DEFS.map((d) => d.name).find((n) => !used.has(n)) || 'Bot ' + this.nextId; used.add(name);
-      const b = this.makeEnt({ name, skin: pick(SKINS).id, primary: pick(BOT_PRIMARIES), bot: true }); bots.push(b);
+      const b = this.makeEnt({ name, skin: pick(SKINS).id, primary: pick(botPool(this.cfg.weapons)), bot: true }); bots.push(b);
       if (this.teamMode) b.team = smallerTeam(tc());
       if (this.state === 'playing') { this.events.push(['j', this.entInfo(b)]); this.spawn(b); }
     }
@@ -184,7 +193,7 @@ export class Game {
     const solids = mapSolids(map); this.P = createPhysics(solids, map.size);
     this.spawns = map.spawns.map(([x, z, y = 0]) => ({ x, y: this.P.groundAt(x, z, y + 0.3), z }));
     this.nav = buildNav({ hx: map.size[0], hz: map.size[1], spacing: map.navSpacing || 2, collides: this.P.collides, groundAt: this.P.groundAt, solids, topAt: this.P.topAt, seeds: this.spawns.map((s) => [s.x, s.y, s.z]), extra: map.waypoints || [] });
-    this.pickups = map.pickups.map(([type, x, z, y]) => ({ type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: true, respawnAt: 0 }));
+    this.pickups = map.pickups.map(([type, x, z, y]) => { const on = powerOn(type, this.cfg.powers); return { type, pos: { x, y: this.P.groundAt(x, z, (y || 0) + 0.3), z }, active: on, respawnAt: on ? 0 : 1e9 }; });
     this.nades = []; this.rockets = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.bacons = []; this.helis = []; this.nukes = []; this.events = []; this.personal.clear();
     this.state = 'playing'; this.t0 = this.now(); this.T = 0; this.lastTick = this.now();
     this.curLimit = this.cfgLimit;
@@ -238,7 +247,7 @@ export class Game {
       case 'u': this.onUpdate(e, m); break;
       case 'rs': if (this.state === 'playing' && !e.alive) e.rsReq = true; break; // botão Renascer
       case 'prof': if (typeof m.name === 'string' && this.state !== 'playing') e.name = this.freeName(m.name, e); // nome só muda fora da partida (as plaquinhas são criadas no início)
-         if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; if (PRIMARIES.includes(m.primary)) e.nextPrimary = m.primary; if (SECONDARIES.includes(m.secondary)) e.nextSecondary = m.secondary; if (MELEES.includes(m.melee)) e.nextMelee = m.melee; if (this.state === 'lobby') { e.primary = e.nextPrimary; e.secondary = e.nextSecondary; e.melee = e.nextMelee; } this.sendLobby(); break;
+         if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; this.applyLoadout(e, m.primary, m.secondary, m.melee, this.state === 'lobby'); this.sendLobby(); break;
       case 'cfg': if (!isHost) return;
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
         if (isInvasion(m.mode) && m.max) m.max = Math.min(m.max | 0, INV.MAX_PLAYERS);
@@ -247,6 +256,12 @@ export class Game {
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
         if ((m.mode === 'dm' || m.mode === 'dom' || isTraining(m.mode) || isInvasion(m.mode)) && this.state !== 'playing') { this.cfg.mode = m.mode; for (const h of this.humans()) { if (m.mode === 'dom') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
         if (typeof m.chat === 'boolean') this.cfg.chat = m.chat;
+        if (m.weapons !== undefined || m.powers !== undefined) {
+          if (m.weapons !== undefined) this.cfg.weapons = normWeapons(m.weapons);
+          if (m.powers !== undefined) this.cfg.powers = normPowers(m.powers);
+          const live = this.state !== 'playing';
+          for (const h of this.humans(false)) this.applyLoadout(h, h.nextPrimary, h.nextSecondary, h.nextMelee, live);
+        }
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); this.sendVoices(); break;
       case 'testKs': if (this.test && this.state === 'playing' && e.alive) { const n = clamp(m.n | 0, 0, 30); for (let i = 0; i < n; i++) this.streakKill(e); } break; // só testes (ALLOW_TEST=1)
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
@@ -354,13 +369,12 @@ export class Game {
   onEvent(e, ev) {
     if (!Array.isArray(ev)) return;
     const [k] = ev;
-    if (k === 'pr') { if (PRIMARIES.includes(ev[1])) e.nextPrimary = ev[1]; if (SECONDARIES.includes(ev[2])) e.nextSecondary = ev[2]; if (MELEES.includes(ev[3])) e.nextMelee = ev[3]; if ((this.training || (this.inv && (this.inv.phase === 'break' || this.inv.phase === 'prep'))) && e.alive) this.equipNow(e); return; }
+    if (k === 'pr') { this.applyLoadout(e, ev[1], ev[2], ev[3], false); if ((this.training || (this.inv && (this.inv.phase === 'break' || this.inv.phase === 'prep'))) && e.alive) this.equipNow(e); return; }
     // pausa: troca o loadout. Treino equipa na hora. Invasão: só como o 'pr' do main (preparação/pausa entre waves, sem matar nem gastar vida).
     // Nos outros modos morre (sem abate) e nasce neste tick, no máximo 1 vez a cada PX_COOLDOWN s (senão vira fuga de tiroteio).
     if (k === 'px') {
-      const okP = PRIMARIES.includes(ev[1]), okS = SECONDARIES.includes(ev[2]), okM = MELEES.includes(ev[3]);
-      if (okP) e.nextPrimary = ev[1]; if (okS) e.nextSecondary = ev[2]; if (okM) e.nextMelee = ev[3];
-      if (!e.alive || !okP || !okS || !okM) return;
+      this.applyLoadout(e, ev[1], ev[2], ev[3], false);
+      if (!e.alive) return;
       if (this.training || (this.inv && (this.inv.phase === 'break' || this.inv.phase === 'prep'))) { this.equipNow(e); return; }
       if (this.inv) return; // Invasão no meio da wave: vale só no próximo renascimento, nunca mata
       if (e.slots[0] === e.nextPrimary && e.slots[1] === e.nextSecondary && e.slots[2] === e.nextMelee) return;
@@ -393,11 +407,13 @@ export class Game {
     if (!a.ksBank) this.resetStreak(a);
     if (this.inv) return; // Invasão: sem killstreaks (só os poderes de Halloween)
     a.ksKills++;
-    for (const r of streakRewards(a.ksKills)) if (r in a.ksBank) a.ksBank[r]++;
+    for (const r of streakRewards(a.ksKills)) if (powerOn(r, this.cfg.powers) && r in a.ksBank) a.ksBank[r]++;
   }
   // F: 'p' = Míssil (abre o laptop; o cliente pilota e manda o impacto em 'ms'), 'h' = Gavião, 'x' = nuke
   useStreak(e, kind, startA) {
     const B = e.ksBank; if (!B || e.bot || this.inv) return; // Invasão: servidor recusa killstreaks
+    const streakId = kind === 'p' ? 'missile' : kind === 'h' ? 'heli' : kind === 'g' ? 'gunner' : kind === 'x' ? 'nuke' : null;
+    if (streakId && !powerOn(streakId, this.cfg.powers)) return;
     if (kind === 'p') {
       const st = obj3(startA); if (!B.missile || e.ksMissile || !st || Math.hypot(st.x - e.pos.x, st.z - e.pos.z) > PREDATOR.back + 2.5) return;
       B.missile--; e.ksMissile = { T0: this.T, start: { x: st.x, y: this.P.groundAt(st.x, st.z, e.pos.y + 4) + PREDATOR.height, z: st.z } };
@@ -794,8 +810,9 @@ export class Game {
   }
   spawn(e, silent = false) {
     const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.crouch = 0; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
-    if (e.bot && Math.random() < 0.3) e.nextPrimary = pick(BOT_PRIMARIES);
-    e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith;
+    if (e.bot && (Math.random() < 0.3 || !weaponOn(e.nextPrimary, this.cfg.weapons))) e.nextPrimary = pick(botPool(this.cfg.weapons));
+    const c = clampLoadout(e.nextPrimary, e.nextSecondary ?? PISTOL, e.nextMelee ?? KNIFE, this.cfg.weapons);
+    e.primary = e.nextPrimary = c.primary; e.secondary = e.nextSecondary = c.secondary; e.melee = e.nextMelee = c.melee; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mg = null; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.eggAt = this.T; e.nades = NADE.spawnWith;
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
     if (e.dummy) { this.placeDummy(e); e.invulnUntil = this.T; e.slots = [0, PISTOL, KNIFE]; }
     e.hist = []; this.pushHist(e); e.lastUpd = this.now();
@@ -809,6 +826,7 @@ export class Game {
   }
   updatePickups() {
     this.pickups.forEach((p, i) => {
+      if (!powerOn(p.type, this.cfg.powers)) return;
       if (!p.active) { if (this.T >= p.respawnAt) { p.active = true; this.events.push(['pk', i, 1]); } return; }
       for (const e of this.ents.values()) {
         if (!e.alive || e.zt || (!e.bot && !e.connected)) continue;
