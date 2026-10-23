@@ -44,7 +44,7 @@ try {
   assert.ok(spray.cameraPitch > base.pitch);
   // Mudar a direção durante o retorno simula a entrada livre do mouse.
   await page.evaluate(() => { const p = window.__docao.player; p.pitch = 0.23; p.yaw = 0.37; });
-  await wait(1);
+  await wait(1.4);
   const recovered = await page.evaluate(() => ({ p: window.__docao.camera.rotation.x, y: window.__docao.camera.rotation.y, recoil: window.__docao.player.gunplay.pitch }));
   assert.ok(Math.abs(recovered.p - 0.23) < 0.001 && Math.abs(recovered.y - 0.37) < 0.001);
   assert.equal(recovered.recoil, 0);

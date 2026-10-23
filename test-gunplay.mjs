@@ -91,7 +91,7 @@ test('spray acumula recoil/dispersão com limite e volta na pausa; FPS não muda
   const initial = { ...s };
   const results = [30, 60, 144].map((fps) => {
     const r = { ...initial };
-    for (let i = 1; i <= fps; i++) stepGunplay(r, rifle, 0, false, false, 1 / fps, initial.lastShot + i / fps);
+    for (let i = 1; i <= fps * 1.5; i++) stepGunplay(r, rifle, 0, false, false, 1 / fps, initial.lastShot + i / fps);
     close(r.pitch, 0); close(r.yaw, 0); close(shotSpread(rifle, r, 1), first);
     return r;
   });
@@ -115,11 +115,11 @@ test('retorno começa devagar, termina sem salto e mantém a mesma curva em dife
     }
     return r;
   };
-  const middle = [30, 60, 144].map((fps) => sample(fps, 0.455));
+  const middle = [30, 60, 144].map((fps) => sample(fps, 0.63));
   for (const r of middle) { close(r.pitch, initial.pitch / 2); close(r.yaw, initial.yaw / 2); }
-  const end = sample(60, 0.77);
+  const end = sample(60, 1.12);
   assert.ok(end.pitch > 0 && end.pitch < 0.00001, 'já chega quase parado ao final');
-  const finished = sample(60, 0.79);
+  const finished = sample(60, 1.14);
   close(finished.pitch, 0); close(finished.yaw, 0);
 });
 
