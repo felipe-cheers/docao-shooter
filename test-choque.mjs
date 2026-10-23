@@ -1,3 +1,4 @@
+import { tmpdir } from 'os'; import { join } from 'path';
 // Pau de choque (tecla 5): estaca finca no 1º contato e dá choque por 3 s (6 pulsos de 7, nunca mata), atordoa e não é infinito.
 // Uso: SITE=http://localhost:8125/ node test-choque.mjs   (SKIP_CLIENT=1 roda só shared + servidor)
 import { chromium } from 'playwright';
@@ -9,7 +10,7 @@ import { SHOCK, stepShock, shockDmg, shockStun } from './shared/shock.js';
 import { createPhysics, mapSolids } from './shared/physics.js';
 import { getMap } from './maps.js';
 const SITE = process.env.SITE || 'http://localhost:8125/';
-const SHOTS = process.env.SHOTS || '/private/tmp/claude-501/-Users-rramosjoao-Developer-Shooter/1bb874dd-7c30-4681-9dc0-628112b6a81d/scratchpad/23out/choque/depois'; mkdirSync(SHOTS, { recursive: true });
+const SHOTS = process.env.SHOTS || join(tmpdir(), 'docao-shots', 'choque'); mkdirSync(SHOTS, { recursive: true });
 const fails = [], errors = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 
 // ---- shared ----

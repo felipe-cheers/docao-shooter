@@ -1,3 +1,4 @@
+import { tmpdir } from 'os'; import { join } from 'path';
 // Calibre 12 (SPAS-12 pump) mais forte: números (9×17, moveSpread, queda 8→20 m), empurrão shotKnock (servidor e offline),
 // cadência 0,62 s, recarga 0,2 + 0,38 por cartucho, coice/tremor e modelo novo (prints em SHOTS).
 // Uso: SITE=http://localhost:8125/ node test-spas.mjs   (SKIP_BROWSER=1 roda só a parte em Node)
@@ -5,7 +6,7 @@ import { WEAPONS, EYE } from './shared/rules.js';
 import { falloffMul } from './shared/penetration.js';
 import { shotKnock } from './shared/combat.js';
 import { Game } from './server/src/game.js';
-const SITE = process.env.SITE || 'http://localhost:8125/', SHOTS = process.env.SHOTS || '/private/tmp/claude-501/-Users-rramosjoao-Developer-Shooter/1bb874dd-7c30-4681-9dc0-628112b6a81d/scratchpad/23out/spas/depois';
+const SITE = process.env.SITE || 'http://localhost:8125/', SHOTS = process.env.SHOTS || join(tmpdir(), 'docao-shots', 'spas');
 const fails = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 const near = (a, b, e = 0.02) => Math.abs(a - b) <= e;
 

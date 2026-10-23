@@ -22,7 +22,7 @@ import { DISC, stepDisc } from '../../shared/disc.js';
 import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from '../../shared/corn.js';
 import { EGG, eggSpeed, eggDmg, stepEgg } from '../../shared/egg.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, shotKnock } from '../../shared/combat.js';
-import { SHOCK, stepShock, shockReach, shockDmg, shockStun } from '../../shared/shock.js';
+import { SHOCK, stepShock, shockTop, shockReach, shockDmg, shockStun } from '../../shared/shock.js';
 import { streakRewards, PREDATOR, HELI, GUNNER, NUKE, heliOrbit, heliPos } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
 
@@ -621,7 +621,7 @@ export class Game {
       if (this.T >= s.until) { this.shocks.splice(i, 1); this.events.push(['se', s.id]); continue; }
       if (this.T < s.nextPulse) continue; s.nextPulse += SHOCK.tick;
       const v = shockReach(s, this.live(), this.T, (a, b) => this.friends(a, b), (a, b) => this.P.losClear(a, b), center);
-      for (const t of v) { if (!(t.stunUntil > this.T)) t.stunAt = this.T; t.stunUntil = Math.max(t.stunUntil || 0, this.T + shockStun(t)); const d = shockDmg(t.hp); if (d > 0) this.damage(t, d, s.owner, W_NADE, false); if (t.bot) { t.target = null; t.aim = 0; } } // damage() faz o bot mirar em quem bateu: zera depois
+      for (const t of v) { if (!(t.stunUntil > this.T)) t.stunAt = this.T; t.stunUntil = Math.max(t.stunUntil || 0, this.T + shockStun(t)); const d = shockDmg(t.hp); if (d > 0) this.damage(t, d, s.owner, W_NADE, false, false, null, 0, shockTop(s)); if (t.bot) { t.target = null; t.aim = 0; } } // damage() faz o bot mirar em quem bateu: zera depois
       this.events.push(['sz', s.id, v.map((t) => t.id), r2(SHOCK.stun)]);
     }
   }

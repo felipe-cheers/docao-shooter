@@ -802,7 +802,7 @@ function updateShocks(dt) {
     s.mesh.userData.light.visible = Math.floor(gameTime * 8) % 2 === 0; // luz piscando
     if (!s.net && gameTime >= s.nextPulse && gameTime < s.until) {
       s.nextPulse += SHOCK.tick; const v = shockReach(s, entities, gameTime, friends, losClear, center);
-      for (const t of v) { const d = shockDmg(t.hp); if (d > 0) damage(t, d, s.owner, W_NADE, false); }
+      for (const t of v) { const d = shockDmg(t.hp); if (d > 0) damage(t, d, s.owner, W_NADE, false, false, 0, shockTop(s)); } // origem = a estaca: o arco vermelho aponta pra ela, não pro dono
       shockPulseFx(s, v.filter((t) => t.alive));
     }
     for (let k = s.arcs.length - 1; k >= 0; k--) { const r = s.arcs[k]; r.life -= dt; if (r.life <= 0 || !r.t.alive) { scene.remove(r.a.line); s.arcs.splice(k, 1); } else r.a.set(shockTop(s), center(r.t, 1)); }

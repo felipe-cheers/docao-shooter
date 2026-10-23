@@ -4,6 +4,16 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.13 — Calibre 12 Meteoro ⚡🐗 (23/10/2026)
+🤝 **MAIS UMA DO CHIQUEIRO!** O **João** (@rramosjoao) chegou com o **PR #16** e entregou três presentes de uma vez. O Docão agradece, o resto do servidor chora:
+🔫 **Calibre 12 virou SPAS-12 (e agora é de verdade):** 9 chumbos por tiro, cone fechado, **acerta andando**, bombeia mais rápido e recarrega cartucho em velocidade de quem tá atrasado pro churrasco. Modelo novinho (preto, protetor de calor furado, coronha dobrada) em 1ª e 3ª pessoa, coice de ombro, tremida de tela e um **estrondo bem mais grave**. Quem leva tiro de perto **sai voando pra trás** (Barrigão e chefe da Invasão são pesados demais pra isso, sorry). A Semi continua sendo a das 2 rajadinhas.
+🏹 **Besta consertada:** antes ela atravessava a tela na diagonal, gigante, como se fosse uma antena de TV. Agora aponta **reta pra frente**, centraliza quando você mira, e a mão de apoio só vai na corda na hora de recarregar.
+⚡ **Pau de choque (tecla 5), finalmente funciona:** você arremessa uma **estaca elétrica** que finca onde bater (chão, parede, rampa) e dá **choque por 3 segundos** em quem estiver perto. Quem leva fica **lento, sem atirar, com a mira tremendo e a tela azul piscando**. Funciona no online e na Invasão (zumbi também leva um susto!). Você ganha 1 por vida, e a caixa de Copo Bomba dá outro.
+😇 **O pau de choque NUNCA mata:** é só um **susto elétrico**. Quem tá com pouca vida fica com 1 de vida, tremendo, mas vivo. O Docão é bagunceiro, não assassino.
+🎯 Levou choque? O **arco vermelho de dano aponta pra estaca**, não pra quem jogou. Dá pra fugir sabendo de onde vem o zumbido.
+🙏 Valeu, João! (PR #16)
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
 🤝 **PARCERIA DO CHIQUEIRO!** O **Felipe Gomes** (@felipe-cheers) mandou o **PR #15** com um indicador de dano parecido com o nosso... e, em vez de brigar, o Docão **roubou as melhores ideias dele** (com crédito, claro 🫡🐷):
 💥 **Explosão e helicóptero agora apontam pro lugar certo:** antes, se o foguete (ou o Gavião) te acertava, o arco apontava pro *dono* do tiro, que podia estar do outro lado do mapa. Agora o servidor manda **de onde a explosão realmente veio**, e o arco aponta pra ela. Tomou foguete na cara? O arco olha pra fumaça, não pro fofoqueiro.
