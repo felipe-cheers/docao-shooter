@@ -4,6 +4,16 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.13.1 — Mira de Granada 🎯💣 (23/10/2026)
+🤝 **O FELIPE VOLTOU!** O **Felipe Gomes** (@felipe-cheers) estava cansado de jogar copo bomba no escuro, torcendo pra ele cair "mais ou menos ali". Mandou o conserto, e agora o Docão arremessa com a **ficha técnica na mão**:
+🎯 **A linha de mira mostra o caminho inteiro do copo, até a explosão:** quicadas, parede, rampa, tudo. Segurou o botão, viu onde vai explodir, soltou, e **explodiu exatamente ali**. Chega de "foi mal, achei que ia passar".
+🥤 **O copo sai da mão, não da testa:** a granada agora parte de onde o copo está na tela, com a mesma conta da preview. Funciona agachado, colado na parede, com zoom e mirando pro céu. A Pokébola também ganhou mira de professor.
+🧮 **Física igualzinha pra todo mundo:** o arremesso agora anda em passinhos fixos, no seu PC e no servidor. Ping alto, FPS baixo ou computador de cebola não mudam mais onde a granada cai.
+✋ O copo ganhou uma **animação de soltura** (o braço joga de verdade, e não só some).
+⚡ Levou choque segurando o copo? Nada de arremesso: a granada fica com você.
+🙏 Valeu, Felipe!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.13 — Calibre 12 Meteoro ⚡🐗 (23/10/2026)
 🤝 **MAIS UMA DO CHIQUEIRO!** O **João** (@rramosjoao) chegou com o **PR #16** e entregou três presentes de uma vez. O Docão agradece, o resto do servidor chora:
 🔫 **Calibre 12 virou SPAS-12 (e agora é de verdade):** 9 chumbos por tiro, cone fechado, **acerta andando**, bombeia mais rápido e recarrega cartucho em velocidade de quem tá atrasado pro churrasco. Modelo novinho (preto, protetor de calor furado, coronha dobrada) em 1ª e 3ª pessoa, coice de ombro, tremida de tela e um **estrondo bem mais grave**. Quem leva tiro de perto **sai voando pra trás** (Barrigão e chefe da Invasão são pesados demais pra isso, sorry). A Semi continua sendo a das 2 rajadinhas.

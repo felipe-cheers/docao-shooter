@@ -133,7 +133,7 @@ export const SABER_COLORS = [
 ];
 
 // Copo Bomba (granada)
-export const NADE = { max: 3, spawnWith: 1, fuse: 2.5, charge: 1.2, radius: 6, maxDmg: 130, selfMul: 0.4, grav: -20, r: 0.14, pickupRespawn: 20, knock: 14, lift: 7 };
+export const NADE = { max: 3, spawnWith: 1, fuse: 2.5, charge: 1.2, step: 1 / 120, radius: 6, maxDmg: 130, selfMul: 0.4, grav: -20, r: 0.14, pickupRespawn: 20, knock: 14, lift: 7 };
 // Pokébola (código "pokebola" no chat): joga no Q no lugar do copo; ao abrir engole todo inimigo no raio (com linha livre).
 export const POKE = { fuse: 1.4, radius: 5.5, max: 3 };
 export const isPokeCode = (text) => /pok[eé]\s*bola/i.test(String(text || ''));
