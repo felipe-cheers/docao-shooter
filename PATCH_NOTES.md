@@ -4,6 +4,18 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.15 — Câmera Lenta no Torresmo 🎬🥓 (23/10/2026)
+🤝 **O JOÃO VOLTOU COM CINEMA!** O **João** (@rramosjoao) mandou o **PR #17** e o fim de partida deixou de ser um "pimba, acabou" pra virar **cena de filme**:
+📋 **A tela de fim agora parece a comanda do churrasco:** prancheta de madeira, papel creme, prendedor de metal e o título em tinta com pincelada vermelha. Cada time tem a sua cor, e a Invasão tem verde-oliva (venceu) ou roxo (perdeu). Placar igualzinho ao do Tab, botão de **Jogar de novo** em tijolo, **Próximo mapa** em oliva e **Menu** no papel. Até o chat do online foi pro papel.
+🎬 **Câmera lenta de 1,5 segundo:** acabou a partida? Tudo desacelera na sua visão, com a mesma posição, direção e zoom, e a arma continua na mão. Dá pra ver a última granada rolando, o último torresmo voando e o último bot com cara de quem não entendeu nada.
+🛑 **Placar fechado na hora:** depois do resultado ninguém mais atira, morre, captura nem renasce. Fim é fim, e não adianta reclamar com o juiz.
+🏆 **Plaquinha de VITÓRIA!, DERROTA ou EMPATE!** na hora, com o placar entrando uns 0,8 segundo depois. E a **dança da vitória** só começa quando a câmera lenta acaba, pra ninguém dançar no meio da cena.
+🤝 **Empate de verdade:** no mata-mata, empatou, é **EMPATE!**. Chega de "vence quem aparecer primeiro na lista".
+📶 **Online sem fantasma:** pacotes atrasados que chegam depois do resultado são ignorados até a próxima partida.
+🧘 Tem **movimento reduzido** ligado no seu aparelho? O placar abre direto, sem câmera lenta.
+🙏 Valeu, João! (PR #17)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
 ## v1.14.1 — Granada, Banana! 🍌💣 (23/10/2026)
 📣 **O Copo Bomba agora fala!** E fala com a voz do próprio Matheus, gravada com todo o carinho (e nenhum ensaio):
 🗣️ **"GRANADA!"** no exato instante em que o copo sai da sua mão. Não é quando você começa a segurar o botão, é quando solta. Avisar o inimigo faz parte do estilo.
