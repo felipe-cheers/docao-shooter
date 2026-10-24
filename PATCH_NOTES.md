@@ -4,6 +4,18 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.20 — Brechó da Porca Véia 🧺🐷 (24/10/2026)
+🧺 **A PORCA VÉIA ABRIU O BRECHÓ!** Quem tem conta agora tem onde torrar dinheiro. Botão **🧺 BRECHÓ** no menu, e o caixa só aceita a moeda da casa:
+🪙 **Docoin:** só se ganha **jogando** (abate, fim de partida, vitória e wave da Invasão), com teto de 80 por partida e 400 por dia, que porco não é agiota. E não, Docoin não cai no chão igual bacon: vai direto pro cofrinho.
+🎯 **3 desafios diários:** todo dia à **meia-noite de Brasília** chegam 3 desafios novos (um fácil, um médio e um difícil), sorteados de um banco de **60** que passa por todos os modos online. Plantar botijão, segurar zona, derrubar zumbi, chamar killstreak... Completou, a Docoin cai na hora, **sem teto**.
+📋 **Desafios no menu principal:** os 3 do dia aparecem logo na tela inicial, com barra de progresso, prêmio e ✓ quando você completa. Ninguém mais esquece de fazer a lição de casa.
+🎭 **8 fantasias completas**, estilo Fortnite: Super Porco, Ninja do Chiqueiro, Peão de Rodeio, Chef Supremo do Rodízio, Estrela do Rock, Capitão Costelinha, Caipira de Festa Junina e o **Docão Dourado**, que flutua (1500 🪙, pra quem é rico de verdade).
+🧢 **Bonés e chapéus aos montes:** Boné do Churrasqueiro, Chapéu de Palha da Roça, Fone Gamer Neon, Chifrinhos de Boi, Capuz de Coelhinho e outras peças pra cabeça, rosto, pescoço, corpo, mãos e pés. Monta o visual, salva na conta e desfila.
+💃 **6 danças pra comprar**, no mesmo esquema do Moonwalk, do Mewing e do 6 7: Escovinha, Robozão da Granja, Galinha Maluca, Espirro do Porquinho, Rebolado do Leitão e Helicóptero. As três de sempre continuam de graça.
+🧍 **Boneco paradinho:** no provador o Docão fica **parado e de frente**, pra você ver o que está vestindo. Quer ver as costas? Arrasta ou usa ◀ Frente ▶. Ele só se mexe quando você experimenta uma dança.
+🔤 **Fonte nova: Fredoka** no jogo inteiro. Mais redondinha, mais fazendinha, mais fofa. O Trebuchet foi aposentado com honras.
+💸 **E o bolso do Matheus?** O saldo e os desafios são gravados junto com o que o ranking já gravava no fim da partida. O banco nem sentiu.
+
 ## v1.19 — Quermesse do Capataz 🎪🤠🐷 (23/10/2026)
 🎪 **O JOÃO CHEGOU COM O CAMINHÃO DE MUDANÇA!** O **João** (@rramosjoao) mandou o **PR #21**, o "super PR", e trouxe metade da feira agropecuária junto:
 🐷 **Dificuldade dos bots:** **Leitão** (vê pouco e mira mal, ~0,9 s pra reagir), **Ceva** (os bots de sempre), **Javali** e **Cachaço** (~0,19 s, mira no focinho e atira andando). Vale offline, na sala online e na Invasão. Vida e dano **não mudam**: o bot só fica mais esperto, não mais bombado.

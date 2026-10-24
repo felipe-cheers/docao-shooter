@@ -27,6 +27,7 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 
 - [🎮 Como jogar](#-como-jogar)
 - [👤 Conta e ranking](#-conta-e-ranking)
+- [🧺 Brechó da Porca Véia, Docoins e desafios](#-brechó-da-porca-véia-docoins-e-desafios)
 - [⌨️ Controles](#️-controles)
 - [🏆 Modos de jogo](#-modos-de-jogo)
   - [🎃 Invasão · Hordas de Zumbis](#-invasão--hordas-de-zumbis)
@@ -89,6 +90,18 @@ A conta é **opcional**: quem não quiser criar uma joga como **convidado**, exa
 - **Sem D1, sem drama:** se o Worker estiver sem o binding `DB`, as rotas de conta respondem 503 e o jogo segue normal como convidado.
 
 Como subir e testar isso está em [Deploy](#deploy) e em [`docs/LOGIN-DEPLOY.md`](docs/LOGIN-DEPLOY.md).
+
+---
+
+## 🧺 Brechó da Porca Véia, Docoins e desafios
+
+Comprar, ganhar Docoin e fazer desafios é só com **conta**. Convidado continua jogando normal.
+
+- **Docoin 🪙:** a moeda do jogo. Só se ganha **jogando online e logado**: abate (2 em humano, 1 em bot ou zumbi), fim de partida (10), vitória (15) e, na Invasão, 3 por wave e 25 pela vitória. Máximo de **80 por partida** e **400 por dia**. O Treino não rende. Não dá pra comprar Docoin com dinheiro de verdade.
+- **Brechó:** botão **🧺 BRECHÓ** no menu. Tem **8 fantasias completas** (até o Docão Dourado, que flutua), peças pra cabeça, rosto, pescoço, corpo, cintura, mãos e pés, e **6 danças pagas** (Escovinha, Robozão da Granja, Galinha Maluca, Espirro do Porquinho, Rebolado do Leitão e Helicóptero). Moonwalk, Mewing e 6 7 continuam grátis. O servidor confere saldo e preço; o que você compra fica na mochila da conta e o visual montado fica salvo.
+- **Provador:** o boneco fica parado e de frente; arraste ou use ◀ Frente ▶ pra girar. Ele só dança quando você experimenta uma dança.
+- **Desafios diários:** 3 por dia (um fácil, um médio e um difícil), sorteados de um banco de 60 em todos os modos online, e trocados à **meia-noite de Brasília**. Aparecem no **menu principal** e na aba 🎯 Desafios do Brechó. O prêmio cai assim que você completa e **não conta no teto** de 400.
+- **Banco:** saldo, mochila, visual e desafios ficam no mesmo D1 das contas (migrações `0002_loja.sql` e `0003_desafios.sql`) e são gravados junto com as estatísticas, no fim da partida ou ao sair da sala.
 
 ---
 
@@ -640,7 +653,7 @@ docao-shooter/
 │   └── physics.js · names.js · nick.js   # colisão, nomes e regras de apelido de conta
 ├── server/                    # Cloudflare Worker + Durable Object "Room" + D1
 │   ├── src/index.js · src/game.js · src/auth.js   # rotas, partida autoritativa e contas/ranking
-│   ├── migrations/            # esquema do D1 (0001_contas.sql)
+│   ├── migrations/            # esquema do D1 (0001_contas, 0002_loja, 0003_desafios)
 │   └── wrangler.jsonc         # bindings ROOMS (Durable Object) e DB (D1)
 ├── assets/                    # vozes da granada (mp3) e arte do menu (svg)
 ├── docs/                      # guias de arte e o LOGIN-DEPLOY.md (D1 e conta)
