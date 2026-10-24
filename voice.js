@@ -24,10 +24,40 @@ export function voiceToggleMute(id) {
   hooks.onChange();
 }
 export function voiceScope() { return scope; }
+export function voiceSnap() { return { scope, mode }; }
 export function voiceCycle() {
-  const order = hooks.teamMode() ? ['off', 'all', 'team'] : ['off', 'all'];
+  const order = hooks.order ? hooks.order() : hooks.teamMode() ? ['off', 'all', 'team'] : ['off', 'all'];
   const i = order.indexOf(scope);
   setScope(order[(i < 0 ? 0 : i + 1) % order.length]);
+}
+export function voiceUseHooks(next) {
+  const prev = hooks;
+  hooks = { ...hooks, ...next };
+  return () => { hooks = prev; };
+}
+export async function voiceArm(nextScope, nextMode) {
+  const prev = { scope, mode };
+  let scopeTo = nextScope === 'team' || nextScope === 'all' ? nextScope : 'off';
+  if (scopeTo === 'team' && !hooks.teamMode()) scopeTo = 'all';
+  if (scopeTo !== 'off') { const ok = await ensureMic(); if (!ok) return prev; }
+  mode = nextMode === 'open' ? 'open' : 'hold';
+  scope = scopeTo; ptt = false;
+  const mine = roster.get(hooks.myId()); if (mine) mine.scope = scope;
+  applyMic();
+  hooks.send({ t: 'voice', scope });
+  syncPeers(); paint();
+  return prev;
+}
+export function voiceRestore(prev) {
+  if (!prev) return;
+  scope = prev.scope === 'team' || prev.scope === 'all' ? prev.scope : 'off';
+  if (scope === 'team' && !hooks.teamMode()) scope = 'all';
+  mode = prev.mode === 'open' ? 'open' : 'hold';
+  ptt = false;
+  const mine = roster.get(hooks.myId()); if (mine) mine.scope = scope;
+  applyMic();
+  hooks.send({ t: 'voice', scope });
+  syncPeers(); paint();
 }
 
 export function initVoice(h) {
