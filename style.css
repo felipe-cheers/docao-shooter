@@ -1288,6 +1288,18 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 #hud #wmode{flex:none;color:#e7b15a;text-shadow:none;font:800 12px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.22em}
 #hud #wmode:empty{display:none}
 #hud #wmode:not(:empty)::before{content:"|";margin-right:.45em;letter-spacing:0;font-weight:700;color:#e7b15a}
+#hud #saberhud{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:6px 8px 0}
+#hud #saberhud.hidden{display:none}
+#hud #saberstam{width:92px;height:8px;border:2px solid #5c3a22;background:#1c140e;border-radius:2px;overflow:hidden}
+#hud #saberstamfill{height:100%;width:100%;background:linear-gradient(90deg,#7ec8ff,#fff1c2)}
+#hud #saberstam.broke #saberstamfill{background:#c4342c}
+#hud #saberpips{display:flex;gap:3px}
+#hud #saberpips i{width:8px;height:8px;border-radius:50%;background:#3a2416;box-shadow:inset 0 0 0 1px #e7b15a}
+#hud #saberpips i.on{background:#fff1c2}
+#hud #saberc,#hud #saberz{font:800 11px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.04em;color:#d7e7ff;opacity:.45}
+#hud #saberc.ready,#hud #saberz.ready{opacity:1;color:#fff6e4}
+#hud #protmsg{align-self:flex-end;margin:4px 8px 0 0;padding:2px 6px;border-radius:3px;background:rgba(20,14,10,.55);font:800 11px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.04em;color:#d7e7ff;pointer-events:none}
+#hud #protmsg.hidden{display:none}
 #hud #gear{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;
   gap:8px;margin:7px 0 0;padding:0 8px;background:transparent;color:var(--cream)

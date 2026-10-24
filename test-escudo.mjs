@@ -5,6 +5,7 @@ import { Game } from './server/src/game.js';
 import { createPhysics } from './shared/physics.js';
 import { WEAPONS, PRIMARIES, BOT_PRIMARIES, CATEGORIES, BOT_RANGE, TAMPA, PISTOL, KNIFE, SABER, SPEED, NADE } from './shared/rules.js';
 import { SHIELD, classifyRay, classifyBlast, bulletOnShield, splashOnShield, meleeOnShield, shieldBashHit, resetShield, botWantsShield } from './shared/shield.js';
+import { SABER_KIT } from './shared/saber.js';
 import { killIcon } from './killfeed-icons.js';
 
 const fails = [];
@@ -167,11 +168,15 @@ function armShield(e, raised = true) {
 
   armShield(b, true); b.pos = P(0, 0, 0);
   a.weapon = SABER; a.slots = [0, PISTOL, SABER]; a.pos = P(0, 0, 1.6);
-  g.humanSwing(a, [0, 1.6, 1.6], [0, 0, -1]);
-  ok(b.alive && near(b.hp, 100 - 100 * SHIELD.melee.saber.leak) && b.shieldHp < SHIELD.hp, `servidor: sabre na frente lasca (vida ${b.hp}, tampa ${b.shieldHp.toFixed(0)})`);
+  const cut = SABER_KIT.single.combo[0].dmg;
+  let clock = 1000; g.now = () => clock; g.T = 5;
+  const swing = (pos, dir) => g.saberSwing(a, ['sw', pos, dir, clock]);
+  swing([0, 1.6, 1.6], [0, 0, -1]);
+  ok(b.alive && near(b.hp, 100 - cut * SHIELD.melee.saber.leak) && b.shieldHp < SHIELD.hp, `servidor: sabre na frente lasca (vida ${b.hp.toFixed(1)}, tampa ${b.shieldHp.toFixed(0)}, golpe ${cut})`);
   armShield(b, true); a.pos = P(0, 0, -1.4);
-  g.humanSwing(a, [0, 1.6, -1.4], [0, 0, 1]);
-  ok(!b.alive, 'servidor: sabre pelas costas mata');
+  const lidBack = b.shieldHp;
+  for (let i = 0; i < 4 && b.alive; i++) { swing([0, 1.6, -1.4], [0, 0, 1]); clock += 0.55; g.T += 0.55; }
+  ok(!b.alive && b.shieldHp === lidBack, `servidor: sabre pelas costas mata e a tampa não segura (tampa ${b.shieldHp})`);
 
   armShield(b, true); b.pos = P(0, 0, 0); b.alive = true;
   const rifle = WEAPONS[0];

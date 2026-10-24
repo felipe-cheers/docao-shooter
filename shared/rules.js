@@ -48,10 +48,11 @@ export const WEAPONS = [
   // 7 · Faca de churrasqueiro: corpo a corpo, sempre no slot 3 (sem munição). Regras de acerto em shared/melee.js
   { key: 'knife', name: 'Faca de churrasqueiro', short: 'Faca', chip: 'Faca', mag: 0, reserve: 0, dmg: 40, headMul: 1, rate: 0.42, auto: true, pellets: 0, spread: 0, reload: 0, range: 1.6, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
     melee: true, desc: 'Golpe 40 · estocada no botão direito · pelas costas mata' },
-  // 8 · Sabre de Luz: corpo a corpo, no lugar da faca se você escolher. Um corte na frente mata.
-  { key: 'sabre', name: 'Sabre de Luz', short: 'Sabre de Luz', chip: 'Sabre', mag: 0, reserve: 0, dmg: 100, headMul: 1, rate: 0.48, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.5, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
-    melee: true, saber: true, reach: 2.5, arc: 0.95,
-    move: 0.85, desc: 'Corte na frente · 1 golpe · troca a faca · anda 15% mais devagar' },
+  // 8 · Sabre de Luz: duelista. Combo de 3 (o último é o forte), parry, investida e arremesso. Anda na velocidade normal.
+  // Números de verdade (alcance, dano, cooldown) estão em shared/saber.js — daqui só o que o menu e a cadência mínima leem.
+  { key: 'sabre', name: 'Sabre de Luz', short: 'Sabre de Luz', chip: 'Sabre', mag: 0, reserve: 0, dmg: 52, headMul: 1, rate: 0.30, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.55, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
+    melee: true, saber: true, reach: 2.55, arc: 0.78,
+    desc: 'Duelista · combo 36/36/52 · botão direito bloqueia · C investida · Z arremesso · velocidade normal' },
   // 9 · MP5K no lugar da Mini Uzi, mesmo índice.
   { key: 'uzi', name: 'MP5K da Granja', short: 'MP5K', chip: 'MP5K', mag: 30, reserve: 90, dmg: 16, headMul: 1.5, rate: 0.088, auto: true, pellets: 1, spread: 0.02, reload: 1.5, range: 90, recoil: 0.02, adsFov: 52, adsSpread: 0.5, flashZ: -0.52,
     falloff: [8, 28, 0.35], desc: 'Da granja · 30/90 · rajada um pouco mais lenta que a P90 · dano de SMG' },
@@ -76,10 +77,10 @@ export const WEAPONS = [
   // 16 · Disco Voador: dispara um disco-OVNI que quica 3 vezes (regras em shared/disc.js). Dois discos no corpo matam.
   { key: 'disco', name: 'Disco Voador', short: 'Disco Voador', chip: 'Disco', mag: 4, reserve: 16, dmg: 60, headMul: 1.5, rate: 0.6, auto: false, pellets: 0, spread: 0, reload: 1.7, range: 0, recoil: 0.04, adsFov: 55, adsSpread: 0.5, flashZ: -0.62,
     disc: true, desc: 'Disco-OVNI · quica 3 vezes na parede · 4/16' },
-  // 17 · Sabre Duplo: um sabre em cada mão, golpes alternados (mais rápido e mais largo), anda 30% mais devagar.
-  { key: 'sabre2', name: 'Sabre Duplo', short: 'Sabre Duplo', chip: 'Sabre 2x', mag: 0, reserve: 0, dmg: 100, headMul: 1, rate: 0.36, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.5, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
-    melee: true, saber: true, dual: true, reach: 2.5, arc: 1.15,
-    move: 0.7, desc: 'Um sabre em cada mão · golpes alternados · anda 30% mais devagar' },
+  // 17 · Sabre Duplo: um em cada mão, cone largo, giro em área. Anda na velocidade normal (a lentidão antiga saiu).
+  { key: 'sabre2', name: 'Sabre Duplo', short: 'Sabre Duplo', chip: 'Sabre 2x', mag: 0, reserve: 0, dmg: 42, headMul: 1, rate: 0.26, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.45, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
+    melee: true, saber: true, dual: true, reach: 2.45, arc: 1.22,
+    desc: 'Área · combo 28/32/42 · botão direito bloqueia · C investida curta · Z giro · velocidade normal' },
   // 18 · Lança-Milho: 3 grãos com gravidade leve; cada um estoura em 3 pipocas (regras em shared/corn.js). Bom pra limpar canto.
   { key: 'milho', name: 'Lança-Milho da Quermesse', short: 'Lança-Milho', chip: 'Milho', mag: 6, reserve: 24, dmg: 0, headMul: 1, rate: 0.7, auto: false, pellets: 0, spread: 0, reload: 2.3, range: 0, recoil: 0.05, adsFov: 58, adsSpread: 0.5, flashZ: -0.5,
     corn: true, desc: '3 grãos por tiro · estouram em pipoca · 6/24 · limpa canto' },

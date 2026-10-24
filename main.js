@@ -41,6 +41,7 @@ import { createPhysics, rayHitboxes } from './shared/physics.js';
 import { CROUCH, crouchAmount, stanceScale, eyeHeight, stepCrouch } from './shared/stance.js';
 import { explosionHits, rayCapsule, ROCKET_PAD, sniperSpread, shotKnock } from './shared/combat.js';
 import { meleeHit, MELEE_KINDS } from './shared/melee.js';
+import { SABER_KIT, profileOf as saberProfile, moveScale, ensureSaber, stepStamina, guardOpen, inFront, payGuard, payProjectile, bladeTouch, peekSwing, commitSwing, applySwing, tryDash, trySpecial, spinDue, catchBlade, botSkill, botPlan, targetsInArc, aimForward } from './shared/saber.js';
 import { DOM, TEAM_NAMES, TEAM_COLORS, TEAM_HEX, TEAM_DARK, pickZone, newZoneState, zoneCounts, stepZone, inZone, smallerTeam } from './shared/domination.js';
 import { BACON_ITEM, noteHurt, resetRegen, regenStep } from './shared/rules.js';
 import { BOMB, W_BOMB, SIDE_NAMES, SITE_NAMES, attackTeam, sideOf, bombLayout, newBombState, startRound, stepBomb, blastVictims, unpackBomb, spawnList, botObjective, bombFrozen, bombCanUse, plantNow, siteAt } from './shared/bomb.js';
@@ -1010,6 +1011,7 @@ function updateParticles(dt) {
     else if (p.kind === 'wisp') { m.position.addScaledVector(p.vel, dt); m.scale.setScalar(p.s0 * (1 + k)); m.material.opacity = 0.3 * (1 - k); }
     else if (p.kind === 'corn') { const g = groundAt(m.position.x, m.position.z, m.position.y) + 0.04; p.vel.y -= 12 * dt; m.position.addScaledVector(p.vel, dt); if (m.position.y <= g) { m.position.y = g; p.vel.y = Math.abs(p.vel.y) > 1.5 ? -p.vel.y * 0.35 : 0; p.vel.x *= 0.6; p.vel.z *= 0.6; p.spin.multiplyScalar(0.6); } m.rotation.x += p.spin.x * dt; m.rotation.z += p.spin.z * dt; m.material.opacity = k > 0.7 ? (1 - k) / 0.3 : 1; } // pipoca quicando
     else if (p.kind === 'smoke') { p.vel.multiplyScalar(1 - 1.5 * dt); p.vel.y += 0.6 * dt; m.position.addScaledVector(p.vel, dt); m.scale.setScalar(p.s0 * (1 + k * 2.2)); m.material.opacity = 0.7 * (1 - k); }
+    else if (p.kind === 'spark') { p.vel.y -= 6 * dt; m.position.addScaledVector(p.vel, dt); m.material.opacity = 0.55 * (1 - k); m.scale.setScalar(1 - k * 0.35); }
     if (k >= 1) { scene.remove(m); if (m.material) m.material.dispose(); if (p.kind === 'flash' || p.kind === 'ring') m.geometry.dispose(); particles.splice(i, 1); }
   }
 }
@@ -1085,7 +1087,9 @@ function removeDisc(i, at, hit) { const d = discs[i]; (window.__discLog ||= []).
 function updateDiscs(dt) {
   const W = WEAPONS[DISC_W];
   for (let i = discs.length - 1; i >= 0; i--) {
-    const d = discs[i], from = d.pos.clone(), hits = stepDisc(PHYS, d, dt);
+    const d = discs[i];
+    if (!d.net && deflectLocal(d, dt, DISC.speed)) { d.pos.addScaledVector(d.dir, DISC.speed * dt); d.mesh.position.copy(d.pos); continue; }
+    const from = d.pos.clone(), hits = stepDisc(PHYS, d, dt);
     d.mesh.position.copy(d.pos); const ud = d.mesh.userData; ud.body.rotation.y += dt * 14; d.mesh.rotation.z = Math.sin(gameTime * 9 + i) * 0.12; // gira e balança
     ud.lights.forEach((l, k) => { l.visible = Math.floor(gameTime * 10 + k) % 2 === 0; });
     for (const h of hits) if (!h.dead) { discBounceFx(new V3(h.pos.x, h.pos.y, h.pos.z), false); (window.__discLog ||= []).push('b'); } // testes: quiques
@@ -1137,6 +1141,7 @@ function updateEggs(dt) {
   for (let i = eggs.length - 1; i >= 0; i--) {
     const g = eggs[i];
     if (g.gone) { g.t += dt; if (g.t > EGG.life + 1) { scene.remove(g.mesh); eggs.splice(i, 1); } continue; } // online: esperando o 'ex'
+    if (!g.net && deflectLocal(g, dt, g.vel ? g.vel.length() : 12)) continue;
     const st = stepEgg(PHYS, g, dt);
     g.mesh.position.copy(g.pos); g.mesh.rotation.x += g.spin * dt; g.mesh.rotation.z += g.spin * 0.4 * dt; // ovo girando no ar
     if (g.net) { if (g.dead) { g.gone = true; g.mesh.visible = false; } continue; } // online: a quebra vem do servidor ('ex')
@@ -1188,7 +1193,9 @@ function popFx(c) { // estouro de pipoca: poc, pipocas voando, clarãozinho amar
 }
 function updateCorn(dt) {
   for (let i = corns.length - 1; i >= 0; i--) {
-    const g = corns[i], h = stepCorn(PHYS, g, dt, g.net ? [] : entities, (t) => (t === g.owner && g.t < 0.15) || friends(t, g.owner));
+    const g = corns[i];
+    if (!g.net && g.pos && g.pos.clone && deflectLocal(g, dt, CORN.speed)) { g.mesh.position.copy(g.pos); g.mesh.rotation.x += dt * 14; g.mesh.rotation.z += dt * 9; continue; }
+    const h = stepCorn(PHYS, g, dt, g.net ? [] : entities, (t) => (t === g.owner && g.t < 0.15) || friends(t, g.owner));
     g.mesh.position.copy(g.pos); g.mesh.rotation.x += dt * 14; g.mesh.rotation.z += dt * 9;
     const sw = g.t > CORN.fuse - 0.1 ? 1 + (g.t - CORN.fuse + 0.1) * 5 : 1; g.mesh.scale.set(sw, 1.25 * sw, 0.85 * sw); // incha antes de estourar
     if (g.net) { if (h || g.t > 1.5) { scene.remove(g.mesh); corns.splice(i, 1); } continue; } // online: o estouro vem do servidor ('bm' tipo 'c')
@@ -1217,6 +1224,7 @@ function updateRockets(dt) {
       if (gameTime - r.born > 6.5) { scene.remove(r.mesh); rockets.splice(i, 1); continue; }
       r.pos.addScaledVector(r.dir, step); r.mesh.position.copy(r.pos); r.mesh.children[0].rotation.z += dt * 10; rocketSmoke(r, R); continue;
     }
+    if (deflectLocal(r, dt, R.speed)) { r.pos.addScaledVector(r.dir, step); r.mesh.position.copy(r.pos); r.mesh.children[0].rotation.z += dt * 10; continue; }
     const wh = wallDistance(r.pos, r.dir, step + 0.1); if (wh) hitT = wh.distance;
     for (const e of entities) {
       if (!e.alive || (e === r.owner && gameTime - r.born < 0.3)) continue;
@@ -1255,7 +1263,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1, hand = 0) {
   const w = shooter && shooter.isPlayer ? gunOf(shooter, wIdx) : WEAPONS[wIdx]; const res = { hit: false, kill: false, kills: 0, wall: false };
   if (shooter && shooter.model) setExpression(shooter.model, 'angry', 0.5); // cara de brava ao atirar
   const scale = wIdx === BOW ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
-  const hitsBy = new Map(), lids = new Map(), dirs = [], heliDmg = new Map(), skies = shooter === player ? [] : [...skyHelis(), ...gunshipList().filter((h) => h.owner !== shooter)];
+  const hitsBy = new Map(), lids = new Map(), bags = new Map(), dirs = [], heliDmg = new Map(), skies = shooter === player ? [] : [...skyHelis(), ...gunshipList().filter((h) => h.owner !== shooter)];
   const targets = entities.filter((e) => e !== shooter && e.alive && !friends(e, shooter)).map((e) => ({ e, p: e.pos, crouch: e.crouch || 0, size: e.zt ? e.size : 1 })); // zumbi grande: hitbox escalada; // time: bala atravessa o companheiro; agachado achata o corpo
   const helis = skies.map((sh) => ({ h: sh, c: sh.pos, r: heliR(sh) }));
   const shotW = invMode() ? { ...w, pierce: 8, pierceMul: 0.82 } : w; // Invasão: a bala segue na fila de zumbis (8 corpos, ×0,82 de dano). Fora dela, o pierce da arma.
@@ -1272,8 +1280,10 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1, hand = 0) {
       if (met.shield > 0 || met.blocked > 0) { const a = lids.get(h.e) || { shield: 0, blocked: 0 }; a.shield += met.shield; a.blocked += met.blocked; lids.set(h.e, a); }
       h.dmg = met.dmg; if (met.stop) stopped = true;
       if (h.dmg > 0 || met.blocked > 0) puff(origin.clone().addScaledVector(d, h.t), met.blocked > 0 && !(h.dmg > 0) ? 0xc9a36a : 0xff9fb0);
+      if (!(h.dmg > 0)) continue;
+      const a = hitsBy.get(h.e) || { dmg: 0, head: false, fx: 0 }; a.dmg += h.dmg; a.head = a.head || h.head; a.fx |= (h.walls ? 1 : 0) | (h.bodies ? 2 : 0); hitsBy.set(h.e, a);
+      const bag = bags.get(h.e) || []; bag.push(h.dmg); bags.set(h.e, bag);
     }
-    for (const h of tr.hits) { if (!(h.dmg > 0)) continue; const a = hitsBy.get(h.e) || { dmg: 0, head: false, fx: 0 }; a.dmg += h.dmg; a.head = a.head || h.head; a.fx |= (h.walls ? 1 : 0) | (h.bodies ? 2 : 0); hitsBy.set(h.e, a); }
     if (tr.heli) { heliDmg.set(tr.heli.h, (heliDmg.get(tr.heli.h) || 0) + tr.heli.dmg); puff(end, 0xffe08a); } else if (tr.stop === 'wall') puff(end);
     if (shooter.isPlayer) window.__lastTrace = { end: +tr.end.toFixed(3), stop: tr.stop, holes: tr.holes.length, hits: tr.hits.map((h) => ({ name: h.e.name, dmg: +h.dmg.toFixed(2), head: h.head, walls: h.walls, bodies: h.bodies })) };
   }
@@ -1281,7 +1291,20 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1, hand = 0) {
   const mine = !!(online && shooter.isPlayer);
   if (!mine) for (const [ent, n] of lids) applyShieldHurt(ent, n.shield, n.blocked);
   if (mine) { const ev = ['f', v3a(origin), dirs.map(v3a), wIdx, +(performance.now() / 1000).toFixed(3), +renderServerT().toFixed(3)]; if (wIdx === BOW) ev.push(+scale.toFixed(3)); else if (WEAPONS[wIdx] && WEAPONS[wIdx].akimbo) ev.push(hand === 1 ? 1 : 0); netEv(ev); return res; } // dano: servidor. O arco manda a força da puxada. Akimbo manda a mão (0 direita, 1 esquerda).
-  const hurt = new Set(); for (const [e, h] of hitsBy) { res.hit = true; res.wall = res.wall || !!(h.fx & 1); const hp0 = e.hp; if (damage(e, h.dmg, shooter, wIdx, h.head, false, h.fx)) { res.kill = true; res.kills++; } if (e.hp < hp0) hurt.add(e); }
+  if (!online) {
+    for (const [e, list] of bags) {
+      const open = isSaber(e.weapon) ? guardOpen(ensureSaber(e), gameTime) : null;
+      const front = open && inFront(e.yaw, saberSpace(e), e.pos, origin, SABER_KIT.block.half, 120);
+      if (!front) continue;
+      const pay = payGuard(ensureSaber(e), gameTime, { perfect: open.perfect, dmgEach: list });
+      const kept = list.reduce((s, dmg, i) => s + (pay.blocked[i] ? 0 : dmg), 0);
+      const agg = hitsBy.get(e);
+      if (agg) { agg.dmg = kept; if (kept <= 0) hitsBy.delete(e); }
+      if (pay.blocked.some(Boolean)) { saberSfx.parry(open.perfect); saberSparks(center(e, 1.1), open.perfect ? 16 : 8); }
+      if (pay.reflect > 0 && shooter && shooter !== e) damage(shooter, pay.reflect, e, e.weapon, false);
+    }
+  }
+  const hurt = new Set(); for (const [e, h] of hitsBy) { if (h.dmg <= 0) continue; res.hit = true; res.wall = res.wall || !!(h.fx & 1); const hp0 = e.hp; if (damage(e, h.dmg, shooter, wIdx, h.head, false, h.fx)) { res.kill = true; res.kills++; } if (e.hp < hp0) hurt.add(e); }
   if (w.knock) for (const [e, h] of hitsBy) { if (!e.alive || e.dummy || !hurt.has(e)) continue; const v = shotKnock(w, origin, e.pos, h.dmg, e.zt); if (!v) continue; e.vel.x += v.x; e.vel.z += v.z; e.vel.y = Math.max(e.vel.y, v.y); e.onGround = false; if (e.isPlayer) lastKnock = gameTime; } // Calibre 12: empurrão (mesma conta do servidor)
   if (shooter.isPlayer && res.kills >= 2) feedbackMedal('Collateral', `${res.kills} de uma bala só`);
   return res;
@@ -2699,6 +2722,21 @@ function boardHtml() {
   return `<table><tr><th>#</th><th style="text-align:left">Docão</th><th>Abates</th><th>Mortes</th><th>K/D</th>${online ? '<th>Ping</th>' : ''}</tr>${rows.map((e, i) =>
     `<tr class="${e.isPlayer ? 'me' : ''}"><td>${i + 1}</td><td style="text-align:left"><span class="dot" style="background:${teamMode() && e.team >= 0 ? TEAM_COLORS[e.team] : e.shirt}"></span>${escapeHtml(e.name)}${teamMode() ? ` <small style="color:${TEAM_COLORS[e.team] || '#fff'}">${e.caps || 0} ${mode === 'bomb' ? 'obj.' : (e.caps || 0) === 1 ? 'zona' : 'zonas'}</small>` : ''}</td><td>${e.kills}</td><td>${e.deaths}</td><td>${(e.kills / Math.max(1, e.deaths)).toFixed(2)}</td>${pg(e)}</tr>`).join('')}</table>`;
 }
+function paintSaberHud(p, w) {
+  const el = $('saberhud'); if (!el) return;
+  const on = !!(p.alive && w && w.saber);
+  el.classList.toggle('hidden', !on);
+  if (!on) return;
+  const st = ensureSaber(p), prof = saberProfile(w);
+  const fill = $('saberstamfill'), bar = $('saberstam');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, st.stam)) + '%';
+  if (bar) bar.classList.toggle('broke', gameTime < st.lockUntil);
+  const pips = el.querySelectorAll('#saberpips i');
+  pips.forEach((pip, i) => pip.classList.toggle('on', i <= st.combo && gameTime - st.swungAt < (prof ? prof.chain : 0.7) || (i === 0 && st.combo === 0 && gameTime >= st.nextSwing)));
+  const c = $('saberc'), z = $('saberz');
+  if (c) { const left = Math.max(0, st.dashReady - gameTime); c.textContent = left > 0.05 ? `C ${left.toFixed(1)}` : 'C'; c.classList.toggle('ready', left <= 0.05); }
+  if (z) { const left = Math.max(0, st.specialReady - gameTime); z.textContent = left > 0.05 ? `Z ${left.toFixed(1)}` : (w.dual ? 'Z giro' : 'Z'); z.classList.toggle('ready', left <= 0.05 && !st.bladeOut); }
+}
 function updateHud(dt) {
   const p = player, w = gunOf(p, p.weapon);
   $('hpfill').style.width = Math.max(0, p.hp) + '%'; $('hptext').textContent = Math.max(0, Math.ceil(p.hp));
@@ -2725,6 +2763,7 @@ function updateHud(dt) {
   { const dh = p.alive || gameTime - p.deathAt < DEATHCAM_HOLD; document.body.classList.toggle('deadgray', !p.alive); const wasDead = document.body.classList.contains('dead'); $('deathpick').classList.toggle('hidden', dh); document.body.classList.toggle('dead', !dh); if (wasDead === dh) placeSocialHud(); if (!p.alive) updateRespawnBtn(p); } crossEl.style.visibility = p.alive && !(predator && predator.phase === 'fly') ? '' : 'hidden';
   const dry = w.akimbo ? drumsEmpty(p, p.weapon) : p.mag[p.weapon] === 0;
   $('reloadmsg').textContent = w.shield || w.melee ? '' : p.reloadEnd > gameTime ? (w.shellReload ? 'Recarregando... (atire para interromper)' : 'Recarregando...') : (dry ? (p.reserve[p.weapon] ? 'Aperte R' : 'Sem munição! Pegue uma caixa') : '');
+  paintSaberHud(p, w);
   const left = Math.max(0, matchLimit() - gameTime); $('timer').textContent = exploreMode() ? '∞' : Number.isFinite(left) ? `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}` : 'Treino ∞';
   $('score').textContent = exploreMode() ? `Exploração · ${currentMap ? currentMap.name : ''}` : `Abates: ${p.kills} · Mortes: ${p.deaths} · K/D: ${(p.kills / Math.max(1, p.deaths)).toFixed(2)} · Pontos: ${feedbackPoints()}`;
   const lead = entities.filter((e) => !e.zt).reduce((a, b) => (b.kills > a.kills ? b : a));
@@ -2744,8 +2783,10 @@ function updateHud(dt) {
     else if (cm.textContent !== line) cm.textContent = line;
   }
   else if (msgTimer > 0) { msgTimer -= dt; if (cm.textContent.startsWith('Você foi ') || cm.textContent.startsWith('Você se ') || cm.textContent.startsWith('Você explodiu') || cm.textContent.startsWith('Você se amassou')) cm.textContent = ''; } // mensagem (ex.: "Mapa: …") tem prioridade; tira o aviso de morte que sobrou de antes de nascer
-  else if (gameTime < p.invulnUntil) cm.textContent = 'PROTEGIDO';
   else cm.textContent = '';
+  const prot = $('protmsg');
+  const shielded = !!(p.alive && gameTime < p.invulnUntil && msgTimer <= 0);
+  if (prot) { prot.textContent = shielded ? 'PROTEGIDO' : ''; prot.classList.toggle('hidden', !shielded); }
   if (!$('tabboard').classList.contains('hidden')) $('tabboard').innerHTML = boardHtml();
 }
 
@@ -3020,6 +3061,7 @@ function paintSlot(el, n, w) {
   el.title = w.name;
 }
 function fireModeLabel(w) {
+  if (w && w.saber) return w.dual ? 'ÁREA' : 'DUELO';
   if (!w || w.melee) return '';
   if (w.shield) return 'TAMPA';
   if (w.burst) return 'RAJADA';
@@ -3098,12 +3140,25 @@ function poseBowHands(rk = 0) { // rk = fração da recarga (só a besta usa)
 // side -1 = mão esquerda (espelha no X). dual: cabos mais abertos, um de cada lado.
 const _kd = new V3(), _kZ = new V3(0, 0, -1), _kq = new THREE.Quaternion();
 const KNIGHT = { hilt: [0.08, -0.46, -0.32], dir: [-0.16, 0.8, -0.58], cutHilt: [-0.08, -0.26, -0.5], cutDir: [-0.72, -0.28, -0.64] };
-function poseKnight(hold, k, side = 1, dual = false) {
+function poseKnight(hold, k, side = 1, dual = false, mode = '') {
   const t = k <= 0 ? 0 : k <= 0.4 ? sstep(0, 0.4, k) : 1 - sstep(0.4, 1, k); // sobe rápido, volta devagar
   const bx = dual ? (side > 0 ? 0.3 : -0.52) : 0, br = Math.sin(gameTime * 1.7 + (side > 0 ? 0 : 1.3)) * 0.012; // respiração
-  const H = KNIGHT.hilt, C = KNIGHT.cutHilt, D = KNIGHT.dir, X = KNIGHT.cutDir;
-  hold.position.set(bx + side * (H[0] + (C[0] - H[0]) * t), H[1] + (C[1] - H[1]) * t + br, H[2] + (C[2] - H[2]) * t);
-  _kd.set(side * (D[0] + (X[0] - D[0]) * t), D[1] + (X[1] - D[1]) * t, D[2] + (X[2] - D[2]) * t).normalize();
+  if (mode === 'block') { // lâmina quase em pé, na frente do peito
+    hold.position.set(bx * 0.35 + side * 0.02, -0.18 + br, -0.46);
+    _kd.set(side * 0.04, 0.22, -0.97).normalize();
+  } else if (mode === 'spin') { // os dois cabos orbitam
+    const a = gameTime * 16 + (side > 0 ? 0 : Math.PI);
+    hold.position.set(Math.cos(a) * (dual ? 0.42 : 0.22), -0.3 + Math.sin(a * 2) * 0.04, -0.5);
+    _kd.set(Math.cos(a), 0.08, -Math.abs(Math.sin(a)) - 0.15).normalize();
+  } else if (mode === 'dash') { // lâmina apontada pra frente, no impulso
+    hold.position.set(bx * 0.4, -0.26 + br, -0.68);
+    _kd.set(side * 0.06, -0.02, -1).normalize();
+  } else {
+    const fin = mode === 'fin' ? 1.35 : 1; // o terceiro golpe abre mais o corte
+    const H = KNIGHT.hilt, C = KNIGHT.cutHilt, D = KNIGHT.dir, X = KNIGHT.cutDir;
+    hold.position.set(bx + side * (H[0] + (C[0] - H[0]) * t), H[1] + (C[1] - H[1]) * t * fin + br, H[2] + (C[2] - H[2]) * t);
+    _kd.set(side * (D[0] + (X[0] - D[0]) * t * fin), D[1] + (X[1] - D[1]) * t, D[2] + (X[2] - D[2]) * t).normalize();
+  }
   hold.quaternion.copy(_kq.setFromUnitVectors(_kZ, _kd));
 }
 // ---------------- Inspecionar arma (I): gira, mostra os dois lados e volta. Só visual, nada vai pro servidor ----------------
@@ -3177,8 +3232,15 @@ function updateFP(dt) {
   });
   if (isSaber(p.weapon) && fp.guns[p.weapon]) {
     const g = fp.guns[p.weapon], k = fp.actionT > 0 ? 1 - fp.actionT / fp.actionLen : 0;
-    if (g.userData.twin) { poseKnight(g, fp.saberSide === 0 ? k : 0, 1, true); poseKnight(g.userData.twin, fp.saberSide === 1 ? k : 0, -1, true); } // duplo: só a mão da vez corta
-    else poseKnight(g, k, 1, false);
+    const st = p.saber;
+    const mode = (st && st.spinUntil > gameTime) || (fp.saberMode === 'spin' && fp.actionT > 0) ? 'spin' : fp.saberMode === 'dash' && fp.actionT > 0 ? 'dash' : st && st.blocking && fp.actionT <= 0 ? 'block' : fp.saberMode === 'fin' && fp.actionT > 0 ? 'fin' : '';
+    if (g.userData.twin) { poseKnight(g, mode === 'spin' || fp.saberSide === 0 ? k : 0, 1, true, mode); poseKnight(g.userData.twin, mode === 'spin' || fp.saberSide === 1 ? k : 0, -1, true, mode); }
+    else poseKnight(g, k, 1, false, mode);
+    const hot = Math.min(1, Math.hypot(p.vel.x, p.vel.z) / SPEED * 0.2 + (fp.actionT > 0 ? 0.4 : 0) + (st && st.blocking ? 0.18 : 0));
+    for (const hold of g.userData.twin ? [g, g.userData.twin] : [g]) {
+      const glow = hold.userData.glow;
+      if (glow && glow.material) glow.material.opacity = 0.2 + hot * 0.18; // no máximo ~0,38: o brilho não vira uma mancha na mira
+    }
     if (ins.twist) { g.rotateZ(ins.twist); if (g.userData.twin) g.userData.twin.rotateZ(-ins.twist); } // inspecionar: torce o cabo (o poseKnight reescreve o quaternion todo quadro)
   }
   if (fp.fpRef.saberR) { const on = isSaber(p.weapon); fp.fpRef.saberR.visible = on; fp.fpRef.saberL.visible = on; if (on) poseSaberHands(); }
@@ -3248,6 +3310,7 @@ function updateFP(dt) {
   stepCapataz(dt, { time: gameTime, dual: revOn && !!w.akimbo, on: revOn, reload: revK, reloadKey: p.reloadStartT || 0, ads, inspect: revOn && fp.ins && !fp.ins.out ? Math.min(1, fp.ins.t / INSPECT_DUR) : -1 });
   fp.flashT -= dt; fp.flash.visible = fp.flashT > 0 && !w.revolver; fp.flash.position.set(w.rocket ? 0.04 : 0, w.rocket ? 0.056 : 0.01, w.flashZ); fp.flash.scale.setScalar(w.rocket ? 2.2 : w.scope ? 1.6 : w.spin ? 1.4 : 1).z *= 2; fp.flash.rotation.z = Math.random() * 3;
   fp.root.visible = p.alive && !scoped(); // com a luneta a arma some
+  sampleSaberTrail();
   tabletK += (tabletWant - tabletK) * Math.min(1, dt * 7);
   radioK += (radioWant - radioK) * Math.min(1, dt * 7);
   laptopK += (laptopWant - laptopK) * Math.min(1, dt * 8);
@@ -3458,27 +3521,278 @@ function resetAds() { $('scope').classList.add('hidden'); crossEl.classList.remo
 
 // ---------------- Jogador ----------------
 const fwd = new V3(), right = new V3();
+const sparkGeo = new THREE.SphereGeometry(0.015, 5, 4);
+function saberSparks(pos, n = 4) {
+  if (!pos) return;
+  let p0 = pos.clone ? pos.clone() : new V3(pos.x || 0, pos.y || 0, pos.z || 0);
+  const camDist = p0.distanceTo(camera.position);
+  if (camDist < 1.25) {
+    const away = p0.clone().sub(camera.position);
+    if (away.lengthSq() < 1e-6) away.set(-Math.sin(player && player.yaw || 0), 0.15, -Math.cos(player && player.yaw || 0));
+    p0 = camera.position.clone().addScaledVector(away.normalize(), 1.35);
+  }
+  const count = Math.min(n, 5);
+  const nearCam = camDist < 1.6;
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfff1c2 : 0xffc4d0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+    m.position.copy(p0); scene.add(m);
+    const vel = new V3(rand(-1, 1), rand(0.35, 1.1), rand(-1, 1)).normalize().multiplyScalar(rand(1.1, 2.6));
+    if (nearCam) { const away = p0.clone().sub(camera.position); if (away.lengthSq() > 1e-4 && vel.dot(away) < 0) vel.addScaledVector(away.normalize(), 2); }
+    particles.push({ mesh: m, vel, life: rand(0.08, 0.14), t: 0, kind: 'spark' });
+  }
+}
+// Rastro fino na cena da arma (mesmo espaço da lâmina). Some em ~0,15 s. Não vai pro mundo: uma linha na frente da câmera cobria o alvo.
+const SABER_TRAIL_LIFE = 0.15;
+const saberTrailLines = [null, null];
+const saberTrailPts = [[], []];
+const _tip = new V3();
+function saberTrailLine(i) {
+  if (saberTrailLines[i]) return saberTrailLines[i];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(16 * 3), 3));
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffd5e0, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true }));
+  line.frustumCulled = false; line.visible = false; line.renderOrder = 6; fpScene.add(line);
+  saberTrailLines[i] = line; return line;
+}
+function sampleSaberTrail() {
+  const p = player, g = p && fp.guns[p.weapon], st = p && p.saber;
+  const now = gameTime;
+  const hot = !!(p && p.alive && isSaber(p.weapon) && g && g.visible && fp.root.visible && (fp.actionT > 0 || (st && (st.dashUntil > now || st.spinUntil > now))));
+  if (hot) {
+    fp.root.updateWorldMatrix(true, true);
+    const holds = g.userData.twin ? [g, g.userData.twin] : [g];
+    const spin = st && st.spinUntil > now;
+    holds.forEach((h, i) => {
+      if (holds.length > 1 && !spin && fp.saberMode !== 'dash' && fp.saberSide !== i) return;
+      _tip.set(0, 0, -0.83); h.localToWorld(_tip);
+      if (_tip.z > -0.45) return; // ponta encostada na lente: não risca a tela
+      const bag = saberTrailPts[i];
+      const last = bag[bag.length - 1];
+      const dist = last ? last.p.distanceTo(_tip) : 1;
+      if (last && dist > 1.4) bag.length = 0; // a pose pulou: não liga dois pontos distantes
+      if (!last || dist > 0.015) bag.push({ p: _tip.clone(), t: now });
+    });
+  }
+  for (let i = 0; i < 2; i++) {
+    const bag = saberTrailPts[i];
+    while (bag.length && now - bag[0].t > SABER_TRAIL_LIFE) bag.shift();
+    const line = saberTrailLine(i), attr = line.geometry.attributes.position, arr = attr.array;
+    const n = Math.min(bag.length, 16), start = bag.length - n;
+    line.visible = n > 1;
+    for (let k = 0; k < 16; k++) {
+      const q = bag[Math.min(bag.length - 1, start + Math.max(0, k))] ;
+      const v = q ? q.p : _tip;
+      arr[k * 3] = v.x; arr[k * 3 + 1] = v.y; arr[k * 3 + 2] = v.z;
+    }
+    line.geometry.setDrawRange(0, n);
+    attr.needsUpdate = true;
+    if (n > 1) line.geometry.computeBoundingSphere();
+  }
+}
+function saberSpace(e) { return e && e.isPlayer ? 'aim' : 'model'; }
+function saberForward(e) {
+  const f = aimForward(e.yaw, saberSpace(e));
+  return { x: f.x, z: f.z };
+}
 function swingSaber(p) {
-  const w = WEAPONS[p.weapon];
-  p.nextFire = gameTime + w.rate;
-  if (p.isPlayer) { fp.actionT = fp.actionLen = w.rate; fp.saberSide = w.dual ? 1 - (fp.saberSide || 0) : 0; } // duplo: alterna a mão do golpe
-  saberSfx.swing();
+  const prof = saberProfile(WEAPONS[p.weapon]); if (!prof) return null;
+  const st = ensureSaber(p);
+  const sw = commitSwing(st, gameTime, prof); if (!sw) return null;
+  p.nextFire = st.nextSwing;
+  p.saberCombo = sw.idx;
+  if (p.isPlayer) { fp.actionT = fp.actionLen = Math.min(0.42, sw.rate); fp.saberSide = WEAPONS[p.weapon].dual ? sw.idx % 2 : 0; fp.saberMode = sw.idx === 2 ? 'fin' : 'swing'; }
+  if (!p.isPlayer) p.swingT = 0;
+  saberSfx.swing(sw.idx === 2 ? 1.25 : 1);
   const origin = p.isPlayer ? camera.position.clone() : center(p, EYE);
-  const forward = new V3(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
-  if (online && p.isPlayer) { netEv(['sw', v3a(origin), v3a(forward), +(performance.now() / 1000).toFixed(3)]); return; }
-  let hit = false;
+  const forward = saberForward(p);
+  if (online && p.isPlayer) { netEv(['sw', v3a(origin), [forward.x, 0, forward.z], +(performance.now() / 1000).toFixed(3)]); return sw; }
+  const hit = saberArcLocal(p, origin, forward, sw.dmg, sw.reach, sw.arc);
+  if (hit) saberSfx.clash();
+  return sw;
+}
+function saberArcLocal(p, origin, forward, dmg, reach, arc) {
+  const eye = origin.isVector3 ? origin : new V3(origin.x, origin.y, origin.z);
+  const targets = [];
   for (const e of entities) {
     if (e === p || !e.alive || friends(e, p)) continue;
-    const dx = e.pos.x - origin.x, dz = e.pos.z - origin.z;
-    const dist = Math.hypot(dx, dz);
-    if (dist > w.reach || dist < 0.05) continue;
-    if ((dx / dist) * forward.x + (dz / dist) * forward.z < Math.cos(w.arc)) continue;
     if (!losClear(center(p, EYE), center(e, 1))) continue;
-    const met = meleeOnShield(e, modelYaw(e), p.pos, w.dmg, 'saber');
-    applyShieldHurt(e, met.shield, met.blocked);
-    if (met.dmg > 0) { damage(e, met.dmg, p, p.weapon, false); hit = true; }
+    targets.push({ e, x: e.pos.x, z: e.pos.z });
   }
-  if (hit) saberSfx.clash();
+  const hits = targetsInArc({ x: eye.x, z: eye.z }, forward, reach, arc, targets);
+  for (const h of hits) {
+    const met = meleeOnShield(h.e, modelYaw(h.e), p.pos, dmg, 'saber');
+    applyShieldHurt(h.e, met.shield, met.blocked);
+    if (met.dmg > 0) damage(h.e, met.dmg, p, p.weapon, false);
+    if (p.isPlayer && (met.dmg > 0 || met.blocked > 0)) saberSparks(center(h.e, 1.05), 4);
+  }
+  return hits.length > 0;
+}
+function saberRadiusLocal(p, dmg, radius) {
+  const o = center(p, 1); let n = 0;
+  for (const e of entities) {
+    if (e === p || !e.alive || friends(e, p)) continue;
+    if (Math.abs(e.pos.y - p.pos.y) > 1.7) continue;
+    if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) > radius) continue;
+    if (!losClear(o, center(e, 1))) continue;
+    const met = meleeOnShield(e, modelYaw(e), p.pos, dmg, 'saber');
+    applyShieldHurt(e, met.shield, met.blocked);
+    if (!(met.dmg > 0)) continue;
+    damage(e, met.dmg, p, p.weapon, false); n++;
+    saberSparks(center(e, 1), 10);
+  }
+  if (n && p.isPlayer) saberSfx.spinHit();
+  return n;
+}
+function saberDash(p) {
+  const prof = saberProfile(WEAPONS[p.weapon]); if (!prof || !p.alive || p.stunUntil > gameTime) return false;
+  const st = ensureSaber(p);
+  const res = tryDash(st, gameTime, prof, saberForward(p)); if (!res) return false;
+  p.nextFire = Math.max(p.nextFire, st.nextSwing);
+  if (p.isPlayer) { fp.actionT = fp.actionLen = res.dur; fp.saberMode = 'dash'; shake = Math.max(shake, 0.12); }
+  if (!p.isPlayer) p.swingT = 0;
+  saberSfx.dash();
+  if (online && p.isPlayer) netEv(['sd', +res.dx.toFixed(3), +res.dz.toFixed(3), +(performance.now() / 1000).toFixed(3)]);
+  return true;
+}
+function saberSpecial(p) {
+  const prof = saberProfile(WEAPONS[p.weapon]); if (!prof || !p.alive || p.stunUntil > gameTime) return false;
+  const st = ensureSaber(p);
+  const res = trySpecial(st, gameTime, prof); if (!res) return false;
+  const forward = saberForward(p);
+  if (p.isPlayer) { fp.actionT = fp.actionLen = res.kind === 'spin' ? res.dur : 0.28; fp.saberMode = res.kind; shake = Math.max(shake, res.kind === 'spin' ? 0.16 : 0.08); }
+  if (res.kind === 'spin') { saberSfx.spin(); if (!p.isPlayer) p.saberSpinUntil = gameTime + res.dur; if (online && p.isPlayer) netEv(['ss', [forward.x, 0, forward.z], +(performance.now() / 1000).toFixed(3)]); return true; }
+  saberSfx.throw();
+  const origin = p.isPlayer ? camera.position.clone() : center(p, EYE);
+  if (online && p.isPlayer) { netEv(['ss', [forward.x, 0, forward.z], +(performance.now() / 1000).toFixed(3)]); return true; }
+  spawnBladeLocal(p, origin, forward, res);
+  return true;
+}
+function spawnBladeLocal(owner, origin, dir, spec) {
+  const mesh = makeWorldSaber(); mesh.scale.setScalar(1.15); scene.add(mesh);
+  const pos = origin.isVector3 ? origin.clone() : new V3(origin.x, origin.y, origin.z);
+  pos.add(new V3(dir.x, 0, dir.z).multiplyScalar(0.55));
+  blades.push({ owner, pos, dir: new V3(dir.x, 0, dir.z), phase: 'out', traveled: 0, t: 0, spec, mesh, hit: new Set(), backHit: new Set() });
+  mesh.position.copy(pos);
+}
+const blades = [];
+function stepBladesLocal(dt) {
+  for (let i = blades.length - 1; i >= 0; i--) {
+    const b = blades[i], spec = b.spec, owner = b.owner;
+    b.t += dt;
+    if (!owner || !owner.alive || b.t > spec.life + 0.2) { endBladeLocal(i, false); continue; }
+    if (b.phase === 'back') {
+      const eye = center(owner, 1.2);
+      const to = eye.clone().sub(b.pos); const L = to.length() || 1;
+      b.dir.copy(to).divideScalar(L);
+      if (L < 0.85) { endBladeLocal(i, true); saberSfx.catch(); continue; }
+    }
+    const step = spec.speed * (b.phase === 'back' ? 1.15 : 1) * dt;
+    const wall = wallDistance(b.pos, b.dir, step + 0.05);
+    let hit = null;
+    for (const t of entities) {
+      if (t === owner || !t.alive || friends(t, owner)) continue;
+      const bag = b.phase === 'back' ? b.backHit : b.hit;
+      if (bag.has(t)) continue;
+      for (const [y, r] of [[1.5, 0.5], [0.8, 0.58]]) {
+        const tt = raySphere(b.pos, b.dir, center(t, y), r + spec.radius);
+        if (tt > 0 && tt <= step + 0.05 && (!wall || tt < wall.distance) && (!hit || tt < hit.tt)) hit = { t, tt };
+      }
+    }
+    if (hit) {
+      (b.phase === 'back' ? b.backHit : b.hit).add(hit.t);
+      const at = b.pos.clone().addScaledVector(b.dir, hit.tt);
+      saberSparks(at, 12); saberSfx.clash();
+      if (!b.net) damage(hit.t, b.phase === 'back' ? spec.backDmg : spec.outDmg, owner, SABER, false);
+    }
+    if (wall && b.phase === 'out') { b.phase = 'back'; b.dir.multiplyScalar(-1); b.dir.y = 0.05; b.dir.normalize(); saberSparks(b.pos.clone(), 6); continue; }
+    b.pos.addScaledVector(b.dir, step);
+    if (b.phase === 'out') { b.traveled += step; if (b.traveled >= spec.range) b.phase = 'back'; }
+    b.mesh.position.copy(b.pos);
+    b.mesh.lookAt(b.pos.clone().add(b.dir));
+    b.mesh.rotateZ(gameTime * 18);
+  }
+}
+function endBladeLocal(i, caught) {
+  const b = blades[i];
+  if (b.owner && b.owner.saber) catchBlade(b.owner.saber);
+  scene.remove(b.mesh);
+  blades.splice(i, 1);
+  if (caught) saberSparks(b.pos.clone(), 5);
+}
+function deflectLocal(proj, dt, speed) {
+  if (online || (proj.guardSkip && gameTime < proj.guardSkip)) return false;
+  const pos = proj.pos, dir = proj.dir || (proj.vel ? proj.vel.clone().normalize() : null);
+  if (!pos || !dir) return false;
+  const sp = proj.vel ? proj.vel.length() : speed;
+  const to = pos.clone().addScaledVector(dir, sp * dt);
+  for (const e of entities) {
+    if (!e.alive || e === proj.owner) continue;
+    const touch = bladeTouch(e.pos, e.yaw, saberSpace(e), pos, to, dir, gameTime, ensureSaber(e), isSaber(e.weapon));
+    if (!touch) continue;
+    payProjectile(e.saber, gameTime, touch.perfect);
+    const nd = new V3(touch.dir.x, touch.dir.y, touch.dir.z);
+    if (proj.vel) proj.vel.copy(nd).multiplyScalar(Math.max(0.01, sp));
+    if (proj.dir && proj.dir.copy) proj.dir.copy(nd);
+    if (touch.perfect) proj.owner = e;
+    proj.guardSkip = gameTime + 0.3;
+    saberSfx.parry(touch.perfect); saberSparks(pos.clone(), touch.perfect ? 16 : 8);
+    if (proj.mesh && proj.mesh.lookAt) proj.mesh.lookAt(pos.clone().add(nd));
+    return true;
+  }
+  return false;
+}
+function saberPreMove(p, dt) {
+  if (!p || !p.alive || !isSaber(p.weapon)) return;
+  stepOneSaber(p, dt, !!online);
+}
+function stepLocalSabers(dt) {
+  if (!online) for (const e of entities) if (e !== player && e.alive && isSaber(e.weapon)) stepOneSaber(e, dt, false);
+  stepBladesLocal(dt); // online a lâmina é só visual; o dano fica no servidor
+}
+function stepOneSaber(e, dt, netPlayer) {
+  const st = ensureSaber(e), prof = saberProfile(WEAPONS[e.weapon]); if (!prof) return;
+  const holding = e.isPlayer ? rightDown && e.stunUntil <= gameTime && fp.actionT <= 0 && gameTime >= st.lockUntil : !!st.wantBlock;
+  stepStamina(st, gameTime, dt, holding);
+  if (e.isPlayer && netPlayer) {
+    const bit = st.blocking ? 1 : 0;
+    if (bit !== e.saberNetBlock) { e.saberNetBlock = bit; netEv(['sbg', bit, +(performance.now() / 1000).toFixed(3)]); }
+  }
+  if (gameTime < st.dashUntil) {
+    const rate = st.dashDist / Math.max(0.05, st.dashDur || 0.16);
+    e.vel.x = st.dashDir.x * rate; e.vel.z = st.dashDir.z * rate;
+  }
+  if (!netPlayer && !st.dashStruck && gameTime >= st.dashStrikeAt) {
+    st.dashStruck = true;
+    const D = prof.dash;
+    if (saberArcLocal(e, center(e, EYE), st.dashDir, D.dmg, D.reach, D.arc)) saberSfx.clash();
+  }
+  if (!netPlayer) {
+    const tick = spinDue(st, gameTime, prof);
+    if (tick) saberRadiusLocal(e, tick.dmg, tick.radius);
+  }
+}
+function botSaberThink(b, t, dist) {
+  const prof = saberProfile(WEAPONS[b.weapon]); if (!prof || b.stunUntil > gameTime) return;
+  const st = ensureSaber(b);
+  const skill = botSkill(b.reaction, b.accuracy);
+  if (gameTime >= (b.saberPlanUntil || 0)) {
+    let foes = 0;
+    for (const o of entities) if (o !== b && o.alive && !friends(o, b) && Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z) <= (prof.spin ? prof.spin.radius : 3)) foes++;
+    const gun = !!(t && WEAPONS[t.weapon] && !WEAPONS[t.weapon].melee);
+    b.saberPlan = botPlan(skill, {
+      dist, dual: !!WEAPONS[b.weapon].dual, foesNear: foes, gun, hp: b.hp,
+      dashReady: gameTime >= st.dashReady, specialReady: gameTime >= st.specialReady && !st.bladeOut,
+      canBlock: gameTime >= st.lockUntil && st.stam > 22, inReach: dist <= prof.reach + 0.15, roll: Math.random(),
+    });
+    b.saberPlanUntil = gameTime + (b.saberPlan.block ? b.saberPlan.blockSeconds || 0.25 : 0.28);
+  }
+  const plan = b.saberPlan || {};
+  let block = !!plan.block;
+  if (block && plan.blockSeconds <= 0.22 && st.blocking && gameTime - st.blockAt > SABER_KIT.block.parry) block = false;
+  st.wantBlock = block;
+  if (plan.dash && gameTime >= st.dashReady) saberDash(b);
+  else if (plan.special) saberSpecial(b);
+  else if (plan.swing && dist <= prof.reach + 0.2) swingSaber(b);
 }
 // Arco: segura o clique para puxar a corda. Soltar cedo sai fraco; no talo, mais forte. A besta continua no clique.
 // Minigun: qualquer botão embala (0,6 s); só o esquerdo atira, e só embalada. Cada tiro esquenta; no talo trava, solta vapor e só volta fria.
@@ -3587,6 +3901,8 @@ function shootRevolver(p, w, latched) {
 }
 function updatePlayer(dt) {
   const p = player;
+  if (p && p.demoForward) keys.KeyW = true;
+  if (p && p.demoBlock) rightDown = true;
   // Consome o toque mesmo no ar: segurar Espaço não rearma o pulo ao aterrissar.
   const jumpPressed = !!keys.Space; keys.Space = false;
   if (!p.alive) {
@@ -3606,16 +3922,18 @@ function updatePlayer(dt) {
   updateAds(dt, !guiding && !bolting && !emote.on && p.weapon !== KNIFE && !isSaber(p.weapon) && !WEAPONS[p.weapon].noAds && rightDown && p.reloadEnd <= gameTime && p.switchEnd <= gameTime); // minigun sem zoom: o botão direito só embala
   if (p.weapon !== MINIGUN && p.mgHeat) { p.mgHeat = Math.max(0, p.mgHeat - WEAPONS[MINIGUN].spin.cool * dt); if (p.mgHeat <= 0) p.mgHot = false; } // guardada também esfria
   saberSfx.hum(isSaber(p.weapon) && !guiding);
+  if (isSaber(p.weapon) && !guiding) saberSfx.humDrive(Math.min(1, Math.hypot(p.vel.x, p.vel.z) / SPEED + (fp.actionT > 0 ? 0.65 : 0) + (p.saber && p.saber.blocking ? 0.3 : 0)));
   fwd.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); right.set(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
   const wish = new V3();
   if (!guiding && (keys.KeyW || keys.ArrowUp)) wish.add(fwd); if (!guiding && (keys.KeyS || keys.ArrowDown)) wish.sub(fwd);
   if (!guiding && (keys.KeyD || keys.ArrowRight)) wish.add(right); if (!guiding && (keys.KeyA || keys.ArrowLeft)) wish.sub(right);
   p.useHold = !!(keys[BOMB.KEY] && p.alive && !emote.on); if (bombLock(p)) wish.set(0, 0, 0); // Bomba: parado na preparação e enquanto planta/desarma
-  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * (gunOf(p, p.weapon).move || (p.weapon === KNIFE ? MELEE.speedMul : 1)) * (p.stunUntil > gameTime ? SHOCK.slow : 1) * (p.ghostOn ? 1.3 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; agachado anda mais devagar
+  if (wish.lengthSq()) wish.normalize().multiplyScalar(SPEED * moveScale(WEAPONS[p.weapon], p.weapon, KNIFE, MELEE.speedMul) * (p.stunUntil > gameTime ? SHOCK.slow : 1) * (p.ghostOn ? 1.3 : 1) * (1 - (1 - ADS_SPEED) * ads) * (1 - (1 - CROUCH.speed) * p.crouch)); // faca corre; sabre anda normal; agachado anda mais devagar
   if (p.shieldDashUntil > gameTime && !bombLock(p)) wish.copy(fwd).multiplyScalar(SHIELD.charge.speed); // investida curta, na direção da mira
   const acc = p.onGround ? 14 : 4;
   p.vel.x += (wish.x - p.vel.x) * Math.min(1, acc * dt); p.vel.z += (wish.z - p.vel.z) * Math.min(1, acc * dt);
   if (!guiding && jumpPressed && p.onGround && !bombLock(p)) { p.vel.y = JUMP; p.onGround = false; sfx.jump(); }
+  saberPreMove(p, dt);
   moveEntity(p, dt);
   const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 * stanceScale(p.crouch) : 0;
   camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
@@ -3770,6 +4088,7 @@ function updateBot(b, dt) {
     else if (coverOn) { const st = steer(b, new V3(b.coverGoal.x, b.coverGoal.y, b.coverGoal.z)); if (st) move.add(st); } // ferido: some da linha de visão
     else if (flankOn) { const st = steer(b, new V3(b.flankGoal.x, b.flankGoal.y, b.flankGoal.z)); if (st) move.add(st); } // dá a volta em vez de correr reto
     else if (Math.abs(dy) > 1.2 && dist > 3) { const st = steer(b, t.pos); if (st) move.add(st); } // outro andar: vai pelo grafo (rampas)
+    else if (isSaber(b.weapon)) { const reach = (saberProfile(WEAPONS[b.weapon]) || { reach: 2.4 }).reach; if (dist > reach - 0.15) move.add(to); botSaberThink(b, t, dist); }
     else if (b.weapon === KNIFE) { if (dist > 1.1) move.add(to); } // faca: cola no alvo
     else if (WEAPONS[b.weapon].shield) { if (dist > 1.8) move.add(to); } // tampa: chega na porrada
     else if (dist > range + 3) move.add(to); else if (dist < range - 3) move.sub(to);
@@ -3807,10 +4126,11 @@ function updateBot(b, dt) {
     else if (W && W.mag && wantSafeReload(mind, b.mag[b.weapon] / W.mag)) startReload(b);
   }
   if (b.useHold) move.set(0, 0, 0); // plantando/desarmando
-  if (move.lengthSq()) move.normalize().multiplyScalar(BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > gameTime ? SHOCK.slow : 1));
-  const acc = b.onGround ? 10 : 3;
-  b.vel.x += (move.x - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (move.z - b.vel.z) * Math.min(1, acc * dt);
+  if (move.lengthSq()) move.normalize().multiplyScalar(BOT_SPEED * moveScale(WEAPONS[b.weapon], b.weapon, KNIFE, MELEE.speedMul) * (b.stunUntil > gameTime ? SHOCK.slow : 1));
+  const botDash = b.saber && gameTime < b.saber.dashUntil;
   if (b.shieldDashUntil > gameTime) { b.vel.x = Math.sin(b.yaw) * SHIELD.charge.speed; b.vel.z = Math.cos(b.yaw) * SHIELD.charge.speed; }
+  else if (botDash) { const rate = b.saber.dashDist / Math.max(0.05, b.saber.dashDur || 0.16); b.vel.x = b.saber.dashDir.x * rate; b.vel.z = b.saber.dashDir.z * rate; }
+  else { const acc = b.onGround ? 10 : 3; b.vel.x += (move.x - b.vel.x) * Math.min(1, acc * dt); b.vel.z += (move.z - b.vel.z) * Math.min(1, acc * dt); }
   const blocked = moveEntity(b, dt);
   if (blocked) { b.stuck += dt; if (b.onGround) b.vel.y = JUMP; if (b.stuck > 1.2) { b.wp = randomWaypoint(); b.path = null; b.lastSeenAt = -99; b.strafeDir *= -1; b.stuck = 0; b.stuckCount = (b.stuckCount || 0) + 1; } }
   else b.stuck = Math.max(0, b.stuck - dt);
@@ -3908,8 +4228,12 @@ function animateBot(b, dt) { // visual: andar, flutuar, piscar ao levar dano, bo
   }
   if (pose === 'saber') { // as duas mãos no cabo; o corte gira o braço direito e o sabre vai junto
     b.swingT = (b.swingT ?? 9) + dt; const k = b.swingT / 0.48, a = m.arms[0], off = m.arms[1];
+    const spinning = (b.saber && b.saber.spinUntil > gameTime) || b.saberSpinUntil > gameTime;
+    const blocking = !!(b.saber && b.saber.blocking) || !!b.saberBlocking;
     a.rotation.set(-1.15, 0.42, -0.08); off.rotation.set(-1.05, -0.55, 0.28);
-    if (k < 1) { const sn = Math.sin(Math.min(1, k / 0.45) * Math.PI); a.rotation.y = 0.42 - 1.15 * sn; a.rotation.x = -1.15 - 0.2 * sn; off.rotation.y = -0.55 - 0.65 * sn; }
+    if (spinning) { const sn = Math.sin(gameTime * 18); a.rotation.y = sn * 1.4; off.rotation.y = -sn * 1.4; a.rotation.x = -0.4; off.rotation.x = -0.4; }
+    else if (blocking) { a.rotation.set(-0.35, 0.15, -0.2); off.rotation.set(-0.35, -0.2, 0.15); }
+    else if (k < 1) { const sn = Math.sin(Math.min(1, k / 0.45) * Math.PI); a.rotation.y = 0.42 - 1.15 * sn; a.rotation.x = -1.15 - 0.2 * sn; off.rotation.y = -0.55 - 0.65 * sn; }
   }
 }
 
@@ -3971,14 +4295,7 @@ const BOT_RATE = [() => rand(2.2, 3.4), () => 1.4, () => 1.6, () => 1, () => ran
 function botShoot(b, t, dist = 10) {
   if (b.stunUntil > gameTime) return;
   const w = WEAPONS[b.weapon];
-  if (isSaber(b.weapon)) {
-    if (gameTime < b.nextFire || dist > w.reach) return;
-    b.nextFire = gameTime + w.rate; b.swingT = 0;
-    const met = meleeOnShield(t, modelYaw(t), b.pos, w.dmg, 'saber');
-    applyShieldHurt(t, met.shield, met.blocked);
-    if (met.dmg > 0) damage(t, met.dmg, b, b.weapon, false);
-    return;
-  }
+  if (isSaber(b.weapon)) return; // combo, bloqueio, investida e especial ficam em botSaberThink
   if (w.shield) {
     if (gameTime < b.nextFire || b.switchEnd > gameTime || b.shieldBroken) return;
     const eye = center(b, 1.4), dir = new V3(Math.sin(b.yaw), 0, Math.cos(b.yaw));
@@ -5052,6 +5369,8 @@ document.addEventListener('keydown', (e) => {
       if (!emote.on && e.code === 'Digit2') switchWeapon(player, player.slots[1]);
       if (!emote.on && e.code === 'Digit3') switchWeapon(player, player.slots[2]);
       if (!emote.on && e.code === 'KeyV' && !e.repeat) quickKnife(player);
+      if (!emote.on && e.code === 'KeyC' && player.alive && !e.repeat) saberDash(player);
+      if (!emote.on && e.code === 'KeyZ' && player.alive && !e.repeat) saberSpecial(player);
       if (!emote.on && e.code === 'KeyI' && player.alive && !e.repeat) startInspect(player);
       if (!emote.on && e.code === 'Digit4' && player.alive && !e.repeat) throwTactical();
       if (!emote.on && e.code === 'Digit5' && player.alive && !e.repeat) throwShock();
@@ -5084,7 +5403,7 @@ function loop() {
     if (emote.on && state === 'playing') stepEmote(dt);
     if (online) netTick(dt);
     for (const e of entities) if (!e.isPlayer) updateBot(e, dt);
-    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateShocks(dt); updateRockets(dt); updateDiscs(dt); updateCorn(dt); updateEggs(dt); updatePokeFx(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) if (!e.zt) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
+    updatePickups(dt); updateGrenades(dt); updateTacticals(dt); updateShocks(dt); updateRockets(dt); updateDiscs(dt); updateCorn(dt); updateEggs(dt); updatePokeFx(dt); stepLocalSabers(dt); updateStrikes(dt); updateParticles(dt); updateBacon(dt); updateBaconPickups(); if (training()) { trainRefill(); updateDmgPops(dt); } if (!online) for (const e of entities) if (!e.zt) regenStep(e, gameTime, dt); updateFP(dt); updateEffects(dt); updateShafts(dt); updateHud(dt); updateRewards(dt);
     updateDomOffline(dt); updateZoneGfx(dt); invTick(dt); updateBombOffline(dt); updateBombGfx(dt);
     if (!online && !exploreMode() && gameTime >= matchLimit()) endGame();
   } else if (state === 'menu') {
@@ -6149,7 +6468,40 @@ function netEvent(ev) {
   }
   else if (k === 'mgs') { const e = entOf(ev[1]); if (e && e !== player) { const was = e.mgSpinOn; e.mgSpinOn = !!ev[2]; if (e.mgSpinOn && !was) sfx.mgStart(distVol(e.pos) * 0.6); else if (!e.mgSpinOn && was) sfx.mgStop(distVol(e.pos) * 0.5); } } // minigun de outro jogador embalando/parando
   else if (k === 'bb') { if (bombS) onBombEvent(ev.slice(1)); } // Modo Bomba (servidor novo)
-  else if (k === 'j') { remoteEnt(ev[1]); }
+  else if (k === 'swg') {
+    const e = entOf(ev[1]); if (!e || e === player) return;
+    e.swingT = 0; e.invulnUntil = 0; saberSfx.swing(ev[2] === 2 ? 1.25 : 1);
+  } else if (k === 'sdp') {
+    const e = entOf(ev[1]); if (!e || e === player) return;
+    e.swingT = 0; saberSfx.dash();
+  } else if (k === 'ssp') {
+    const e = entOf(ev[1]); if (!e) return;
+    e.saberSpinUntil = gameTime + (Number(ev[2]) || 0.48); if (e !== player) saberSfx.spin();
+  } else if (k === 'sbb') {
+    const e = entOf(ev[1]); if (!e) return;
+    e.saberBlocking = !!ev[2]; if (e.saber) e.saber.blocking = !!ev[2];
+  } else if (k === 'sbl') {
+    const owner = entOf(ev[2]); if (!owner || blades.some((b) => b.pid === ev[1])) return;
+    spawnBladeLocal(owner, a3v(ev[3]), { x: ev[4][0], z: ev[4][2] }, SABER_KIT.single.throw);
+    blades[blades.length - 1].net = true; blades[blades.length - 1].pid = ev[1];
+  } else if (k === 'sbr') {
+    const b = blades.find((x) => x.pid === ev[1]); if (!b) return;
+    b.phase = 'back'; if (ev[2]) b.pos.copy(a3v(ev[2]));
+  } else if (k === 'sbx') {
+    const i = blades.findIndex((x) => x.pid === ev[1]); if (i >= 0) endBladeLocal(i, !!ev[2]);
+  } else if (k === 'srd') {
+    const list = ev[1] === 'r' ? rockets : ev[1] === 'd' ? discs : ev[1] === 'e' ? eggs : corns;
+    const proj = list.find((x) => x.pid === ev[2]); if (!proj) return;
+    if (ev[4]) proj.pos.copy(a3v(ev[4]));
+    const nd = a3v(ev[5]);
+    if (proj.dir && proj.dir.copy) proj.dir.copy(nd);
+    if (proj.vel) proj.vel.copy(nd).multiplyScalar(Math.max(0.01, proj.vel.length() || 16));
+    if (ev[6]) proj.owner = entOf(ev[3]);
+    if (proj.mesh && proj.mesh.lookAt) proj.mesh.lookAt(proj.pos.clone().add(nd));
+  } else if (k === 'spr') {
+    const at = a3v(ev[3]); saberSparks(at, ev[2] === 2 ? 16 : 8);
+    if (ev[2] === 2) saberSfx.parry(true); else if (ev[2] === 3) saberSfx.spinHit(); else saberSfx.clash();
+  } else if (k === 'j') { remoteEnt(ev[1]); }
   else if (k === 'l') { removeEnt(ev[1]); }
 }
 function personalEvent(ev) {
@@ -6712,7 +7064,11 @@ window.__docao = { get state() { return state; }, get ending() { return matchEnd
   rocketAt: (o, d, owner) => launchRocket(owner || player, new V3(...o), new V3(...d).normalize()),
   cornAt: (o, d, owner) => launchCorn(owner || player, new V3(...o), new V3(...d).normalize()), get corns() { return corns; }, get cornPopsQ() { return cornPops; }, fpCorn: () => ({ vis: fp.guns[CORN_W].visible, cobY: fp.cornCob.position.y, cobVis: fp.cornCob.visible, crank: fp.cornCrank.rotation.x, kernels: fp.cornKernels.filter((g) => g.visible).length, cobScr: (() => { fp.root.updateMatrixWorld(true); const v = fp.cornCob.localToWorld(new V3(0, 0.1, 0)).project(fpCam); return [v.x, v.y]; })() }), setWeaponOf: (e, i) => setWeapon(e, i),
   rewardKill: () => onRewardKill(), endAc130, grantAc130, setAc130Mode, aimAc130: (yaw, pitch) => { if (!ac130) return; if (yaw != null) ac130.yaw = yaw; if (pitch != null) ac130.pitch = pitch; }, ac130Fire: () => { if (ac130) ac130Shot(ac130); }, get ac130On() { return !!ac130; }, get ac130State() { return ac130 ? { mode: ac130.mode, fov: camera.fov, yaw: ac130.yaw, pitch: ac130.pitch, hp: ac130.h.hp, until: ac130.h.until, shots: window.__ac130Shots || 0, booms: window.__ac130Booms || 0, jobs: ac130Jobs.length } : null; }, get rewardKills() { return rewardKills; }, useStreak, get streakReady() { return streakReady.slice(); }, callNuke, get nukeReady() { return nukeReady || streakReady.includes('nuke'); }, get nukeAt() { return nukeAt; }, spawnHeli: () => grantHeli(), get heli() { return heli; }, get netHelis() { return [...netHelis.values()].map((h) => ({ id: h.id, owner: h.owner ? h.owner.name : '', hp: h.hp, alive: h.alive, pos: h.pos.toArray() })); }, get netNukeAt() { return netNukeAt; }, hurtHeli, get predator() { return predator; }, throwSmoke: () => throwTactical(), throwStun: () => throwShock(), throwShock: () => throwShock(), spawnShock: (owner, pos, vel) => spawnShock({ owner, pos: new V3(...pos), vel: new V3(...vel) }), get shocks() { return shocks; }, SHOCK, get smokes() { return smokes; }, get tacticals() { return tacticals; }, strikeAt: (x, z) => spawnSkyMissile({ x, z }, player), get strikes() { return strikes; }, STRIKE, PREDATOR, get gunKills() { return player ? player.gunKills : null; }, addWeaponKills: (w, n = 1) => { for (let i = 0; i < n; i++) noteWeaponKill(player, w); }, camoLevel,
-  swingSaber: () => swingSaber(player),
+  swingSaber: () => swingSaber(player), saberDash: () => saberDash(player), saberSpecial: () => saberSpecial(player),
+  holdMove: (on) => { if (player) player.demoForward = !!on; keys.KeyW = !!on; },
+  holdBlock: (on) => { if (player) player.demoBlock = !!on; rightDown = !!on; },
+  saberBlock: (on) => { if (player) { const st = ensureSaber(player); st.wantBlock = !!on; st.blocking = !!on && gameTime >= st.lockUntil; } },
+  get saber() { return player && player.saber; }, get blades() { return blades; }, SABER_KIT,
   sniperAudioReady: () => ['sniper', 'canhao', 'carabina'].every((k) => sniperSfx.ready(k)),
   sniperHeard: (key, dist = 28) => { const vol = clamp(1 - dist / 60, 0.05, 1) * (dist > 0.5 ? 0.7 : 1); const shot = sniperSfx.shot(key, vol, dist, 0); if (shot) sniperSfx.bolt(key, vol * 0.7, dist, 0); return shot; },
   holdFire: (button, down) => { if (button === 2) { rightDown = !!down; if (down) { rightFired = false; rightStale = false; } else if (!rightFired) rightLatch = performance.now(); } else { mouseDown = !!down; if (down) firedThisPress = false; else if (!firedThisPress) clickLatch = performance.now(); } },
