@@ -9,9 +9,9 @@ const SITE = process.env.SITE || 'http://localhost:8123/';
 const fails = [], errors = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 
 // ---- regras ----
-ok(MINIGUN === 20 && WEAPONS[20] && WEAPONS[20].key === 'minigun' && WEAPONS.length === 23 && WEAPONS[21] && WEAPONS[21].key === 'lmg' && WEAPONS[22] && WEAPONS[22].key === 'commando' && WEAPONS.every(Boolean), `WEAPONS[20] = minigun, [21] = lmg, [22] = commando, sem buraco (${WEAPONS.length})`);
+ok(MINIGUN === 20 && WEAPONS[20] && WEAPONS[20].key === 'minigun' && WEAPONS.length === 26 && WEAPONS[21] && WEAPONS[21].key === 'lmg' && WEAPONS[22] && WEAPONS[22].key === 'commando' && WEAPONS[23].key === 'capataz' && WEAPONS[25].key === 'tampa' && WEAPONS.every(Boolean), `WEAPONS[20] = minigun, depois lmg, commando, capataz e tampa, sem buraco (${WEAPONS.length})`);
 ok(!PRIMARIES.includes(20) && !BOT_PRIMARIES.includes(20) && !CATEGORIES.some((c) => (c.weapons || c.list || []).includes(20)), 'minigun fora do Arsenal e dos bots');
-ok(BOT_RANGE.length === 23, `BOT_RANGE contínuo (${BOT_RANGE.length})`);
+ok(BOT_RANGE.length === WEAPONS.length, `BOT_RANGE contínuo (${BOT_RANGE.length})`);
 ok(isMiniCode('minigun') && isMiniCode('MINIGUN!') && isMiniCode('quero a mini gun') && isMiniCode('mini-gun') && !isMiniCode('mini') && !isMiniCode('gun') && !isMiniCode('pokebola') && !isPokeCode('minigun'), 'código: minigun, mini gun, mini-gun');
 ok(killIcon('minigun') !== killIcon('rifle'), 'ícone próprio no killfeed');
 

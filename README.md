@@ -56,20 +56,21 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 4. Escolha o **mapa** (ou **Aleatório**, que sorteia um mapa a cada partida) e o **modo**.
 5. Clique em **JOGAR OFFLINE** ou em **JOGAR ONLINE**.
 
-O nome, a skin, as armas, a dança da vitória, o mapa, o modo e a sensibilidade ficam salvos no navegador. Com uma conta, o apelido e a skin ficam guardados no servidor (veja [Conta e ranking](#-conta-e-ranking)).
+O nome, a skin, as armas, a dança da vitória, o mapa, o modo, a dificuldade dos bots e a sensibilidade ficam salvos no navegador. Com uma conta, o apelido e a skin ficam guardados no servidor (veja [Conta e ranking](#-conta-e-ranking)).
 
 ### 🤖 Offline (contra bots)
 
 - De **4 a 6 bots**, cada um com nome de comida: Farofa, Pipoca, Trufa, Bolota, Torresmo, Paçoca, Linguiça, Quindim, Coxinha e Pururuca.
 - Os bots ganham uma primária aleatória, escolhem a arma pela distância, pegam vida e Copo Bomba, arremessam granadas e sobem e descem andares pelas rampas.
+- A **Dificuldade** (Leitão, Ceva, Javali ou Cachaço) muda como eles miram, reagem e se movem. A Ceva é o jeito antigo. A vida e o dano das armas não mudam. Na Invasão a mesma escolha mexe no cuspe e no cerco da horda, sem aumentar a vida das waves. A preferência fica salva no navegador.
 - No menu também dá pra escolher o **Tempo** da partida e a **Sensibilidade** do mouse (normal e mirando).
 
 ### 🌐 Online (com a galera)
 
-- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino, Invasão ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots**, o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min) e **quais armas e power-ups valem na sala** (o loadout da sala). Sai um **código de 4 letras**.
+- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino, Invasão ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots**, a **dificuldade** deles (Leitão, Ceva, Javali ou Cachaço), o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min) e **quais armas e power-ups valem na sala** (o loadout da sala). Sai um **código de 4 letras**.
 - **Entrar na sala:** digite o código ou abra o link de convite `https://docao.mvalentim.dev/?sala=ABCD`, que já cai direto no lobby.
 - **Convite:** no lobby e na pausa tem Copiar link, Copiar código, WhatsApp, Telegram, Slack e Compartilhar.
-- **Anfitrião (★):** troca mapa, máximo, bots, modo, tempo, as armas e os power-ups liberados e o **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
+- **Anfitrião (★):** troca mapa, máximo, bots, dificuldade, modo, tempo, as armas e os power-ups liberados e o **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
 - **Armas da sala:** o dono libera ou bloqueia categorias de armas e power-ups (killstreaks, vida, munição, Copo Bomba, fumaça e pau de choque). Os bots só sacam armas que a sala permite, o lobby mostra o que ficou liberado e o menu lembra a sua arma padrão de cada categoria. Cada slot (primária, secundária e corpo a corpo) sempre fica com pelo menos uma arma.
 - **Nomes repetidos:** o servidor ajusta sozinho, então o segundo "Matheus" vira "Matheus (2)". Se o apelido for de uma **conta**, quem não é o dono entra como "(conv)".
 - **Caiu a conexão?** O jogo reconecta sozinho e você volta com o mesmo jogador e o mesmo placar.
@@ -629,6 +630,7 @@ docao-shooter/
 ├── chat.js · voice.js · net.js · config.js   # chat, voz (WebRTC, Apertar/Aberto), rede e URL do servidor
 ├── shared/                    # regras usadas pelo cliente e pelo servidor
 │   ├── rules.js               # armas, Copo Bomba, física, tempos, bots
+│   ├── bot-difficulty.js      # Leitão, Ceva, Javali e Cachaço (mira, reação e movimento)
 │   ├── combat.js · melee.js · penetration.js   # explosões, sniper, faca, parede e collateral
 │   ├── domination.js · training.js · bomb.js · invasion.js   # Dominação, Treino, Bomba e Invasão
 │   ├── killstreaks.js         # ciclo de prêmios, Gavião, Chopper, Grelha e nuke

@@ -39,12 +39,14 @@ input[type=range]{padding:0;height:34px;background:none;border:none}
 @keyframes gun-lean-hot{0%,100%{transform:rotate(-2deg) translateY(-3px) scale(1.04)}50%{transform:rotate(.4deg) translateY(-11px) scale(1.04)}}
 @media(prefers-reduced-motion:reduce){#menu .gun-card{animation:none}}
 @media(max-width:720px){
- #menu .loadout-dock{left:8px;right:8px;top:auto;bottom:92px;width:auto;flex-direction:row;justify-content:center;gap:8px}
+ /* a faixa de armas fica acima do Jogar. bottom:92 cobria os botões. */
+ #menu .loadout-dock{left:8px;right:8px;top:auto;bottom:max(188px,26vh);width:auto;flex-direction:row;justify-content:center;gap:6px;z-index:8}
  #menu .dock-title{display:none}
- #menu .gun-card{width:108px;animation:none}
- #menu .loadout-dock .wthumb{height:42px}
- #menu .gun-face{padding:6px}
+ #menu .gun-card{width:104px;animation:none}
+ #menu .loadout-dock .wthumb{height:32px}
+ #menu .gun-face{padding:4px 6px}
  #menu .gun-face b{font-size:11px}
+ #menu .gun-face small{display:none}
 }
 #menu .dance-dock{position:fixed;left:var(--dance-x,auto);right:14px;top:var(--dance-y,96px);z-index:6;width:148px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 #menu .dance-stage{position:relative;height:312px}
@@ -86,6 +88,18 @@ button.secondary{background:#3a4a7a;font-size:18px;padding:10px}
 #crosshair{position:fixed;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%)}
 #crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1.5px #2a1410}
 #crosshair:before{left:10px;top:0;width:2px;height:22px}#crosshair:after{top:10px;left:0;height:2px;width:22px}
+#crosshair.shield{width:36px;height:18px}
+#crosshair.shield:before{left:0;top:2px;width:10px;height:14px;background:transparent;box-shadow:none;border-left:3px solid #fff;border-top:3px solid #fff;border-bottom:3px solid #fff}
+#crosshair.shield:after{left:26px;top:2px;width:10px;height:14px;background:transparent;box-shadow:none;border-right:3px solid #fff;border-top:3px solid #fff;border-bottom:3px solid #fff}
+#shieldbox{position:relative;width:260px;height:auto;margin-top:6px;background:none;border:none;overflow:visible}
+#shieldbox.hidden{display:none}
+#shieldbar{position:relative;height:18px;background:#2a1410;border:3px solid #c9a36a;border-radius:9px;overflow:hidden}
+#shieldfill{height:100%;width:100%;background:linear-gradient(#e7edf4,#7d868f)}
+#shieldbox.dent #shieldfill{background:linear-gradient(#d9c7a2,#8a6a3e)}
+#shieldbox.crack #shieldfill{background:linear-gradient(#e07050,#8a3030)}
+#shieldtext{position:absolute;left:8px;top:0;font:bold 11px/18px "Arial Black",Impact,sans-serif;color:#fff;text-shadow:0 1px 0 #2a1410}
+#shieldcd{display:block;margin-top:4px;text-align:left;font:bold 12px/1.25 "Trebuchet MS",Arial,sans-serif;color:#ffd27a;text-shadow:0 1px 0 #2a1410}
+.shieldend{margin:10px 0 0;font-weight:bold;color:#c9a36a}
 /* hitmarker estilo CoD: quatro tracinhos em X, buraco no meio */
 #hitmarker{position:fixed;left:50%;top:50%;width:48px;height:48px;transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:8}
 #hitmarker i{position:absolute;left:50%;top:50%;width:10px;height:3px;margin:-1.5px 0 0 -5px;background:#fff;border-radius:1px;box-shadow:0 0 1px #000,0 0 2px rgba(0,0,0,.85);pointer-events:none}
@@ -685,6 +699,12 @@ body.bombpick #score,body.bombpick #nades,body.bombpick #tac,body.bombpick #slot
 #menu .match-options .field-caption{display:table;padding:4px 7px 3px;margin-left:5px;color:#f6e7c6;background:var(--ink);transform:rotate(-1.5deg);position:relative;z-index:1;box-shadow:1px 1px #f1dfb6}
 #menu .match-options label:nth-child(2) .field-caption{transform:rotate(1.5deg)}
 #menu .match-options label:nth-child(3) .field-caption{transform:rotate(-2deg)}
+#menu .match-options label:nth-child(4) .field-caption{transform:rotate(1.2deg)}
+#menu .match-options{flex-wrap:wrap}
+#menu #botDiffLabel{flex:1.35 1 168px}
+.diffnote{margin:0 0 8px;font-size:13px;line-height:1.35;font-weight:700}
+#menu .diffnote{color:#593b24}
+.panel .diffnote{color:#ffd7a8;text-transform:none;letter-spacing:0}
 #menu input:not([type=range]):not([type=checkbox]),#menu select{border:2px solid #48513a;border-radius:2px 4px 2px 3px;background-color:#fbf0d4;color:#263d32;box-shadow:2px 3px 0 #93774d55,inset 0 0 0 2px #fbf0d4,inset 0 0 0 3px #b99a6455;transition:border-color .12s,box-shadow .12s;min-height:44px}
 #menu select,#menu .match-options select{appearance:none;-webkit-appearance:none;background-image:url('./assets/menu/select-arrow.svg');background-repeat:no-repeat;background-position:right 6px center;background-size:26px 26px;padding:10px 38px 10px 12px;font:800 14px/1.3 'Trebuchet MS',sans-serif;margin-top:-1px;min-height:46px;cursor:pointer;text-overflow:ellipsis}
 #menu select:hover,#menu input:not([type=range]):not([type=checkbox]):hover{border-color:#8d3b28;box-shadow:2px 3px 0 #93774d66,inset 0 0 0 2px #fbf0d4,inset 0 0 0 3px #a52e2655}
@@ -765,7 +785,7 @@ body.ghostfx #hud::before{content:'';position:fixed;inset:0;pointer-events:none;
 #iLoad .blbar{height:5px;margin-top:4px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
 #iLoadFill{height:100%;width:100%;background:#ff9a3a}
 body.invpick #score,body.invpick #nades,body.invpick #tac,body.invpick #slots,body.invpick #wname{visibility:hidden}
-body.invmode #streakCount,body.invmode #streakBar,body.invmode #nukeReady,body.invmode #strikeMap,body.invmode #nukeBanner,body.invmode #predatorHud,body.invmode #heliHud,body.invmode #gunnerHud{display:none!important} /* Invasão: sem killstreaks */
+body.invmode #streakCount,body.invmode #streakBar,body.invmode #nukeReady,body.invmode #strikeMap,body.invmode #nukeBanner,body.invmode #predatorHud,body.invmode #heliHud,body.invmode #gunnerHud,body.invmode #ac130Hud,body.invmode #ac130Vig,body.invmode #ac130Alert{display:none!important} /* Invasão: sem killstreaks */
 body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!important}
 #invOut{z-index:6;background:rgba(20,8,30,.55);padding:10px 22px;border-radius:12px;border:1px solid rgba(192,112,255,.5)}
 /* Logo escolhida: placa de madeira com recorte transparente. */
@@ -781,6 +801,16 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 @media(max-height:700px) and (min-width:721px){
  #menu .menu-header{padding-bottom:12px}
  #menu .menu-logo img{width:auto;max-width:100%;height:120px;max-height:none}
+}
+#menu .hub-link{display:inline-flex;align-items:center;gap:8px;width:max-content;margin:2px 0 0 4px;padding:7px 12px 6px;position:relative;z-index:4;text-decoration:none;color:#fff0cc;background:#70482d;border:2px solid #3d2b20;border-radius:4px;box-shadow:3px 3px 0 #291e1888;font:900 11px/1 "Trebuchet MS",sans-serif;letter-spacing:.8px;text-transform:uppercase;transform:rotate(-1.5deg)}
+#menu .hub-link:hover{background:#8a5a36;transform:rotate(.6deg) translateY(-1px)}
+#menu .hub-link:active{transform:translateY(1px);box-shadow:1px 1px 0 #291e1888}
+#menu .hub-link:focus-visible{outline:3px solid #c33b28;outline-offset:3px}
+@media(max-width:720px){
+ #menu .hub-link{margin-top:0;padding:6px 9px 5px;font-size:10px;letter-spacing:.4px}
+}
+@media(max-height:700px) and (min-width:721px){
+ #menu .hub-link{margin-top:0;padding:5px 9px;font-size:10px}
 }
 
 /* Lettering da logo nas placas; o nome acessível permanece no botão. */
@@ -1221,6 +1251,10 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 }
 #hud #hpregen{right:6px;line-height:12px;font-size:13px;color:var(--cream);text-shadow:0 1px 0 var(--shadow)}
 #hud #hpbar.regen{box-shadow:2px 2px 0 var(--shadow),0 0 0 2px #7d9a62}
+#hud #shieldbox{width:200px;height:auto;margin-top:4px;background:none;border:none}
+#hud #shieldbar{height:14px;border-width:2px;border-radius:2px}
+#hud #shieldtext{line-height:14px;font-size:10px}
+#hud #shieldcd{margin-top:3px;font:700 12px/1.25 "Trebuchet MS",Arial,sans-serif;color:#ffe7b0}
 
 #hud #bottomright{
   position:fixed;right:18px;bottom:16px;
@@ -1248,6 +1282,7 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
   -webkit-text-stroke:0;text-shadow:none
 }
 #hud #mag{font:900 56px/.9 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;color:#1c3826}
+#hud #ammo.dual #mag{font-size:40px;letter-spacing:.02em}
 #hud #reserve{font:900 22px/1 "Arial Black",Impact,sans-serif;letter-spacing:0;color:#245038}
 #hud #wname{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -1265,6 +1300,18 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 #hud #wmode{flex:none;color:#e7b15a;text-shadow:none;font:800 12px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.22em}
 #hud #wmode:empty{display:none}
 #hud #wmode:not(:empty)::before{content:"|";margin-right:.45em;letter-spacing:0;font-weight:700;color:#e7b15a}
+#hud #saberhud{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:6px 8px 0}
+#hud #saberhud.hidden{display:none}
+#hud #saberstam{width:92px;height:8px;border:2px solid #5c3a22;background:#1c140e;border-radius:2px;overflow:hidden}
+#hud #saberstamfill{height:100%;width:100%;background:linear-gradient(90deg,#7ec8ff,#fff1c2)}
+#hud #saberstam.broke #saberstamfill{background:#c4342c}
+#hud #saberpips{display:flex;gap:3px}
+#hud #saberpips i{width:8px;height:8px;border-radius:50%;background:#3a2416;box-shadow:inset 0 0 0 1px #e7b15a}
+#hud #saberpips i.on{background:#fff1c2}
+#hud #saberc,#hud #saberz{font:800 11px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.04em;color:#d7e7ff;opacity:.45}
+#hud #saberc.ready,#hud #saberz.ready{opacity:1;color:#fff6e4}
+#hud #protmsg{align-self:flex-end;margin:4px 8px 0 0;padding:2px 6px;border-radius:3px;background:rgba(20,14,10,.55);font:800 11px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.04em;color:#d7e7ff;pointer-events:none}
+#hud #protmsg.hidden{display:none}
 #hud #gear{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;
   gap:8px;margin:7px 0 0;padding:0 8px;background:transparent;color:var(--cream)
@@ -1306,6 +1353,20 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
   clip-path:polygon(0 0,100% 0,82% 100%,18% 100%)
 }
 #hud .cupicon.on{opacity:1;background:linear-gradient(#fff 0 16%,#e0232b 16% 100%)}
+@media (max-width:480px){
+  #hud #bottomright{right:8px;bottom:10px;width:calc(100vw - 16px)}
+  #hud #ammo{padding:4px 10px 16px}
+  #hud #mag{font-size:44px}
+  #hud #ammo.dual #mag{font-size:30px}
+  #hud #wname{margin-top:4px;padding:5px 16px 5px 14px}
+  #hud #gear{gap:4px;padding:0 2px}
+  #hud #slots{gap:4px}
+  #hud .slot .wico{width:34px}
+  #hud #tac{gap:6px}
+  #hud .tico.smoke{width:18px}
+  #hud #nades{gap:2px}
+  #hud .cupicon{width:13px;height:18px}
+}
 #hud #reloadmsg{
   margin:2px 2px 0 0;height:auto;min-height:0;text-align:right;color:var(--brick);
   font:700 12px/1.2 "Trebuchet MS",Arial,sans-serif;background:transparent;

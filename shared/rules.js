@@ -1,7 +1,9 @@
 // ============================================================
 //  Regras compartilhadas (cliente + servidor). Sem DOM, sem Three.js.
 //  Armas, Copo Bomba, física do Docão, tempos de partida e nomes dos bots.
+//  Vida, bloqueio e golpe da Tampa do Tacho: shared/shield.js (não duplicar número aqui sem atualizar o teste).
 // ============================================================
+import { SHIELD, noteWeapons } from './shield.js';
 export const KILL_LIMIT = 20, TIME_LIMIT = 300, RESPAWN_TIME = 5, INVULN = 2;
 // duração da partida escolhida pelo anfitrião (minutos); 0 = padrão do modo (5 min Mata-mata, 7 min Dominação)
 export const TIME_OPTIONS = [0, 3, 5, 7, 10, 15, 20];
@@ -46,10 +48,11 @@ export const WEAPONS = [
   // 7 · Faca de churrasqueiro: corpo a corpo, sempre no slot 3 (sem munição). Regras de acerto em shared/melee.js
   { key: 'knife', name: 'Faca de churrasqueiro', short: 'Faca', chip: 'Faca', mag: 0, reserve: 0, dmg: 40, headMul: 1, rate: 0.42, auto: true, pellets: 0, spread: 0, reload: 0, range: 1.6, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
     melee: true, desc: 'Golpe 40 · estocada no botão direito · pelas costas mata' },
-  // 8 · Sabre de Luz: corpo a corpo, no lugar da faca se você escolher. Um corte na frente mata.
-  { key: 'sabre', name: 'Sabre de Luz', short: 'Sabre de Luz', chip: 'Sabre', mag: 0, reserve: 0, dmg: 100, headMul: 1, rate: 0.48, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.5, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
-    melee: true, saber: true, reach: 2.5, arc: 0.95,
-    move: 0.85, desc: 'Corte na frente · 1 golpe · troca a faca · anda 15% mais devagar' },
+  // 8 · Sabre de Luz: duelista. Combo de 3 (o último é o forte), parry, investida e arremesso. Anda na velocidade normal.
+  // Números de verdade (alcance, dano, cooldown) estão em shared/saber.js — daqui só o que o menu e a cadência mínima leem.
+  { key: 'sabre', name: 'Sabre de Luz', short: 'Sabre de Luz', chip: 'Sabre', mag: 0, reserve: 0, dmg: 52, headMul: 1, rate: 0.30, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.55, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
+    melee: true, saber: true, reach: 2.55, arc: 0.78,
+    desc: 'Duelista · combo 36/36/52 · botão direito bloqueia · C investida · Z arremesso · velocidade normal' },
   // 9 · MP5K no lugar da Mini Uzi, mesmo índice.
   { key: 'uzi', name: 'MP5K da Granja', short: 'MP5K', chip: 'MP5K', mag: 30, reserve: 90, dmg: 16, headMul: 1.5, rate: 0.088, auto: true, pellets: 1, spread: 0.02, reload: 1.5, range: 90, recoil: 0.02, adsFov: 52, adsSpread: 0.5, flashZ: -0.52,
     falloff: [8, 28, 0.35], desc: 'Da granja · 30/90 · rajada um pouco mais lenta que a P90 · dano de SMG' },
@@ -74,10 +77,10 @@ export const WEAPONS = [
   // 16 · Disco Voador: dispara um disco-OVNI que quica 3 vezes (regras em shared/disc.js). Dois discos no corpo matam.
   { key: 'disco', name: 'Disco Voador', short: 'Disco Voador', chip: 'Disco', mag: 4, reserve: 16, dmg: 60, headMul: 1.5, rate: 0.6, auto: false, pellets: 0, spread: 0, reload: 1.7, range: 0, recoil: 0.04, adsFov: 55, adsSpread: 0.5, flashZ: -0.62,
     disc: true, desc: 'Disco-OVNI · quica 3 vezes na parede · 4/16' },
-  // 17 · Sabre Duplo: um sabre em cada mão, golpes alternados (mais rápido e mais largo), anda 30% mais devagar.
-  { key: 'sabre2', name: 'Sabre Duplo', short: 'Sabre Duplo', chip: 'Sabre 2x', mag: 0, reserve: 0, dmg: 100, headMul: 1, rate: 0.36, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.5, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
-    melee: true, saber: true, dual: true, reach: 2.5, arc: 1.15,
-    move: 0.7, desc: 'Um sabre em cada mão · golpes alternados · anda 30% mais devagar' },
+  // 17 · Sabre Duplo: um em cada mão, cone largo, giro em área. Anda na velocidade normal (a lentidão antiga saiu).
+  { key: 'sabre2', name: 'Sabre Duplo', short: 'Sabre Duplo', chip: 'Sabre 2x', mag: 0, reserve: 0, dmg: 42, headMul: 1, rate: 0.26, auto: false, pellets: 0, spread: 0, reload: 0, range: 2.45, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: -0.5,
+    melee: true, saber: true, dual: true, reach: 2.45, arc: 1.22,
+    desc: 'Área · combo 28/32/42 · botão direito bloqueia · C investida curta · Z giro · velocidade normal' },
   // 18 · Lança-Milho: 3 grãos com gravidade leve; cada um estoura em 3 pipocas (regras em shared/corn.js). Bom pra limpar canto.
   { key: 'milho', name: 'Lança-Milho da Quermesse', short: 'Lança-Milho', chip: 'Milho', mag: 6, reserve: 24, dmg: 0, headMul: 1, rate: 0.7, auto: false, pellets: 0, spread: 0, reload: 2.3, range: 0, recoil: 0.05, adsFov: 58, adsSpread: 0.5, flashZ: -0.5,
     corn: true, desc: '3 grãos por tiro · estouram em pipoca · 6/24 · limpa canto' },
@@ -93,11 +96,24 @@ export const WEAPONS = [
   // 22 · Commando da Granja: recuo quase zero, dano baixo, preciso. Rajada reta (ref. Commando do Black Ops).
   { key: 'commando', name: 'Commando da Granja', short: 'Commando', chip: 'Commando', mag: 30, reserve: 120, dmg: 12, headMul: 1.4, rate: 0.09, auto: true, pellets: 1, spread: 0.003, reload: 1.8, range: 150, recoil: 0.002, adsFov: 36, adsSpread: 0.04, flashZ: -0.8,
     move: 1, desc: 'Recuo quase zero · dano baixo · 30/120 · rajada reta' },
+  // 23 · Revólver do Capataz: secundária de dupla ação. 58 no corpo (2 tiros) e 116 na cabeça (1) até o começo do falloff.
+  // rate 0,4 s = 150 RPM. O coice sobe forte e volta (recoilBack) antes do próximo tiro. Tambor de 6, recarga lenta.
+  { key: 'capataz', name: 'Revólver do Capataz', short: 'Capataz', chip: 'Revólver', mag: 6, reserve: 30, dmg: 58, headMul: 2, rate: 0.4, auto: false, pellets: 1, spread: 0.011, moveSpread: 1.55, reload: 2.45, range: 85, recoil: 0.074, recoilBack: 0.4, adsFov: 46, adsSpread: 0.1, flashZ: -0.55,
+    falloff: [8, 34, 0.45], equip: 0.74, revolver: true, inspect: 'revolver', desc: 'Dupla ação · 6/30 · 2 no corpo ou 1 na cabeça de perto · recarga do tambor' },
+  // 24 · Dois Capatazes: um em cada mão. Sem mira (o botão direito atira a esquerda). Cada tambor tem o próprio relógio de 0,4 s.
+  { key: 'capataz2', name: 'Dois Capatazes', short: '2 Capatazes', chip: 'Akimbo', mag: 6, reserve: 36, dmg: 58, headMul: 2, rate: 0.4, auto: false, pellets: 1, spread: 0.048, moveSpread: 2.5, reload: 3.6, range: 75, recoil: 0.05, recoilBack: 0.7, adsFov: 75, adsSpread: 1, flashZ: -0.55,
+    falloff: [8, 34, 0.45], equip: 0.9, revolver: true, akimbo: true, noAds: true, move: 0.92, inspect: 'revolver', desc: 'Um em cada mão · sem mira · o esquerdo no botão direito · recarrega os dois' },
+  // 25 · Tampa do Tacho: escudo primário. O índice 23 ficou com o revólver (as duas branches pediram o 23).
+  // Bloqueio, vida e vazamento estão em shared/shield.js. dmg/rate/range/move espelham SHIELD.
+  { key: 'tampa', name: 'Tampa do Tacho', short: 'Tampa do Tacho', chip: 'Tampa', mag: 0, reserve: 0, dmg: SHIELD.bash.dmg, headMul: 1, rate: SHIELD.bash.rate, auto: false, pellets: 0, spread: 0, reload: 0, range: SHIELD.bash.reach, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
+    shield: true, noAds: true, move: SHIELD.move, inspect: 'shield',
+    desc: `Escudo · vida ${SHIELD.hp} · bloqueio frontal · golpe ${SHIELD.bash.dmg} · anda ${Math.round((1 - SHIELD.move) * 100)}% mais devagar` },
 ];
 // Penetração e collateral (regra em shared/penetration.js). pen = metros de parede fina por bala (caixote conta 45%);
 // pierce = corpos extras que a bala atravessa; pierceMul = dano que sobra a cada corpo. Sem entrada = não atravessa nada.
-const PEN_STATS = { rifle: [0.35], lmg: [0.4], commando: [0.3], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4] };
+const PEN_STATS = { rifle: [0.35], lmg: [0.4], commando: [0.3], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4], capataz: [0.22], capataz2: [0.22] };
 for (const w of WEAPONS) { const s = PEN_STATS[w.key]; w.pen = s ? s[0] : 0; w.pierce = s ? s[1] || 0 : 0; w.pierceMul = s ? s[2] ?? 1 : 1; }
+noteWeapons(WEAPONS);
 export const UZI = 9, P90 = 10, NAIL = 11, SEMI = 12;
 export const CROSS = 13, BOW = 14, FAMAS = 15, DISC_W = 16, SABER2 = 17;
 export const CORN_W = 18;
@@ -105,9 +121,12 @@ export const EGG_W = 19; // Estilingue de Ovo
 export const MINIGUN = 20; // fora do Arsenal: só pelo código "minigun" no chat
 export const LMG = 21; // Metralhadora do Chiqueiro
 export const COMMANDO = 22; // Commando da Granja
+export const REV = 23; // Revólver do Capataz
+export const REV2 = 24; // Dois Capatazes (akimbo)
+export const TAMPA = 25; // Tampa do Tacho (escudo). 23 e 24 são os revólveres.
 export const isSaber = (i) => !!(WEAPONS[i] && WEAPONS[i].saber); // Sabre (8) ou Sabre Duplo (17)
-export const PRIMARIES = [0, COMMANDO, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
-export const SECONDARIES = [PISTOL, NAIL, CROSS, BOW, EGG_W];
+export const PRIMARIES = [0, COMMANDO, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG, TAMPA], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
+export const SECONDARIES = [PISTOL, NAIL, CROSS, BOW, EGG_W, REV, REV2];
 export const MELEES = [KNIFE, SABER, SABER2];
 export const BOT_PRIMARIES = [0, COMMANDO, LMG, UZI, P90, FAMAS, 1, SEMI, 2, 5, 6, 3, CORN_W];
 // Menu: cada grupo é uma escolha. primary = uma primária. melee = faca ou sabre. secondary = pistola, furadeira, besta, arco ou estilingue.
@@ -117,8 +136,9 @@ export const CATEGORIES = [
   { id: 'precisao', title: 'Precisão', pick: 'primary', weapons: [2, 5, 6] },
   { id: 'explosivo', title: 'Explosivo', pick: 'primary', weapons: [3, CORN_W] },
   { id: 'especial', title: 'Especial', pick: 'primary', weapons: [DISC_W] },
+  { id: 'escudo', title: 'Escudo', pick: 'primary', weapons: [TAMPA] },
   { id: 'faca', title: 'Faca', pick: 'melee', weapons: [KNIFE, SABER, SABER2] },
-  { id: 'secundaria', title: 'Secundária', pick: 'secondary', weapons: [PISTOL, NAIL, CROSS, BOW, EGG_W] },
+  { id: 'secundaria', title: 'Secundária', pick: 'secondary', weapons: [PISTOL, NAIL, CROSS, BOW, EGG_W, REV, REV2] },
 ];
 // Faca: golpe (clique) e estocada (botão direito). range = alcance até a superfície do corpo; cone = meia-abertura (rad).
 // Pelas costas (atacante atrás da vítima: cos(frente da vítima, vítima→atacante) < backDot) = morte instantânea.
@@ -148,5 +168,5 @@ export const BOT_DEFS = [
   { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' }, { name: 'Linguiça' }, { name: 'Quindim' }, { name: 'Coxinha' }, { name: 'Pururuca' },
 ];
 
-export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16, 18]; // 9 MP5K perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam), 21 metralhadora no meio, 22 commando no meio
+export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16, 18, 10, 6, 4]; // 23 revólver (como a pistola), 24 akimbo (cola), 25 tampa (chega perto pra porrada)
 export const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b', '#9fd0ff', '#ffa3d8', '#b8f2e6', '#ffe9a8'];
