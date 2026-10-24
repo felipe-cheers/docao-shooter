@@ -83,6 +83,8 @@ ITEMS.push(
   { id: 'd4', name: 'Espirro do Porquinho', emoji: '🤧', price: 300, dance: 'dab', line: 'Atchim no cotovelo' },
   { id: 'd5', name: 'Rebolado do Leitão', emoji: '💃', price: 400, dance: 'wiggle', line: 'Quadril solto e mãos pro alto' },
   { id: 'd6', name: 'Helicóptero', emoji: '🚁', price: 500, dance: 'spin', line: 'Gira, gira, gira' },
+  { id: 'd7', name: 'Passinho do Jamal', emoji: '🕺', price: 450, dance: 'jamal', line: 'Pé cruzando e ombro gingando' },
+  { id: 'd8', name: 'Macarena', emoji: '🎶', price: 400, dance: 'macarena', line: 'Braço, braço, ombro, cabeça e rebola' },
 );
 for (const it of ITEMS) it.slot = it.id[0];
 export const COSTUME_SLOT = 'c', DANCE_SLOT = 'd';

@@ -108,6 +108,39 @@ export function poseVictory(model, id, t) {
     model.arms[0].rotation.set(0, 0, -1.55); model.arms[1].rotation.set(0, 0, 1.55);
     model.legs[0].rotation.set(0.5, 0, -0.1); model.legs[1].rotation.set(-0.3, 0, 0.1);
     model.head.rotation.set(0.08, 0, 0); lean = 0.05;
+  } else if (id === 'jamal') {
+    // Passinho do Jamal: passinho de baile, joelho quicando, pé cruzando e voltando, ombro gingando e braço solto
+    const b = t * 4.4, ph = b % 2, side = ph < 1 ? 0 : 1, u = ph % 1, out = side === 0 ? 1 : -1;
+    const kick = Math.sin(u * Math.PI), bounce = Math.abs(Math.sin(b * Math.PI));
+    model.legs[side].rotation.set(-1.1 * kick, 0, out * 0.5 * kick);
+    model.legs[1 - side].rotation.set(0.3 * kick, 0, -out * 0.12);
+    const sh = Math.sin(t * 8.8 * Math.PI / 2);
+    model.arms[0].rotation.set(-0.45 + 0.85 * sh, 0.2, -0.6 - 0.35 * Math.max(0, sh));
+    model.arms[1].rotation.set(-0.45 - 0.85 * sh, -0.2, 0.6 + 0.35 * Math.max(0, -sh));
+    model.head.rotation.set(0.12 * bounce - 0.04, 0.18 * out * kick, -0.1 * sh);
+    hop = 0.04 + 0.1 * bounce; sway = -0.14 * out * kick; spin = 0.3 * out * kick; lean = 0.16;
+    slide = 0.05 * Math.sin(t * 2.2 * Math.PI / 2);
+  } else if (id === 'macarena') {
+    // Macarena: braço, braço, palma pra cima, ombro, ombro, cabeça, cabeça, quadril, quadril, rebolado e meia-volta
+    const P = MACARENA, T = 3.2, u = ((t % T) + T) % T;
+    const step = 0.21, n = P.length, moves = n * step;
+    let R = P[n - 1][0], L = P[n - 1][1];
+    if (u < moves) {
+      const i = Math.floor(u / step), k = smooth(Math.min(1, (u - i * step) / 0.12));
+      const prev = i === 0 ? [REST_R, REST_L] : P[i - 1], cur = P[i];
+      R = mix(prev[0], cur[0], k); L = mix(prev[1], cur[1], k);
+      model.head.rotation.set(0.04, 0.12 * Math.sin(i * Math.PI / 2), 0);
+      hop = 0.02 * Math.abs(Math.sin((u / step) * Math.PI));
+    } else {
+      const w = u - moves, wig = Math.sin(w * 22);
+      const turnAt = T - moves - 0.5, tk = w > turnAt ? smooth(Math.min(1, (w - turnAt) / 0.42)) : 0;
+      sway = 0.16 * wig * (1 - tk); spin = 0.3 * wig * (1 - tk) + tk * Math.PI * 2;
+      hop = tk > 0 ? 0.16 * Math.sin(tk * Math.PI) : 0.02 * Math.abs(wig);
+      model.head.rotation.set(-0.05, 0.15 * wig, 0.08 * wig);
+      model.legs[0].rotation.set(0.12 * wig, 0, -0.1); model.legs[1].rotation.set(-0.12 * wig, 0, 0.1);
+    }
+    model.arms[0].rotation.set(R[0], R[1], R[2]); model.arms[1].rotation.set(L[0], L[1], L[2]);
+    lean = lean || 0.04;
   } else {
     const beat = (t * 0.95) % 2;
     const side = beat < 1 ? 0 : 1;
@@ -133,6 +166,16 @@ export function poseVictory(model, id, t) {
 }
 
 const smooth = (k) => k * k * (3 - 2 * k);
+const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+// Macarena: [braço direito (arms[0]), braço esquerdo (arms[1])] em rotação x/y/z do ombro. Direito abre com z negativo.
+const REST_R = [0.05, 0, -0.22], REST_L = [0.05, 0, 0.22];
+const FWD_R = [-1.5, 0, -0.08], FWD_L = [-1.5, 0, 0.08];
+const UP_R = [-1.5, 1.5, -0.08], UP_L = [-1.5, -1.5, 0.08];
+const SHO_R = [-1.6, 0, 0.55], SHO_L = [-1.6, 0, -0.55];
+const HEAD_R = [-2.7, 0, -0.45], HEAD_L = [-2.7, 0, 0.45];
+const HIP_R = [-0.3, 0, 0.45], HIP_L = [-0.3, 0, -0.45];
+const BACK_R = [0.55, 0, -0.42], BACK_L = [0.55, 0, 0.42];
+const MACARENA = [[FWD_R, REST_L], [FWD_R, FWD_L], [UP_R, FWD_L], [UP_R, UP_L], [SHO_R, UP_L], [SHO_R, SHO_L], [HEAD_R, SHO_L], [HEAD_R, HEAD_L], [HIP_R, HEAD_L], [HIP_R, HIP_L], [BACK_R, HIP_L], [BACK_R, BACK_L]];
 const FINGER_LEN = 0.26;
 const _side = new THREE.Vector3(), _chin = new THREE.Vector3(), _tip = new THREE.Vector3(), _dir = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
