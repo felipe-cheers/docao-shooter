@@ -4829,8 +4829,8 @@ function renderWardrobePreview() {
 let selectedSkin = getSkin(localStorage.getItem('docao.skin') || DEFAULT_SKIN).id, preview = null;
 // Cinco classes no navegador. A última usada é a que nasce. docao.primary continua espelhando a classe armada.
 let classes = [], classIndex = 0, spawnedClass = 0, benchOn = false, benchWeapon = 0, benchSlot = 'optic', benchLook = '', arsenalFocus = -1;
-const DEATH_HINT = 'W S e setas andam na lista · 1–5 escolhe · U volta pra última · Espaço nasce. O tracinho branco é a arma de fábrica.';
-const LIVE_HINT = '1–5 entra agora · W/S ou setas · U última. O pente não enche sozinho. O tracinho branco é a arma de fábrica.';
+const DEATH_HINT = '1–5 escolhe a classe. Clique no arsenal pra gravar qualquer arma nela. U volta pra última · Espaço nasce. O tracinho branco é a arma de fábrica.';
+const LIVE_HINT = '1–5 escolhe a classe. O arsenal troca a arma agora e o pente não enche sozinho. U volta pra última. O tracinho branco é a arma de fábrica.';
 let selectedPrimary = 0, selectedSecondary = PISTOL, selectedMelee = KNIFE;
 function bootClasses() {
   let raw = null, legacy = {};
@@ -5971,11 +5971,71 @@ function paintPair(listId, gunId, hint) {
   const list = $(listId), gun = $(gunId);
   if (list && gun) fillSheet(list, gun, sheetSpec(hint));
 }
+function armChip(i, kind, on, onPick) {
+  const w = WEAPONS[i];
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'primchip armchip' + (on ? ' active' : '');
+  b.dataset.i = String(i);
+  b.dataset.pick = kind;
+  b.title = `${w.name}. ${w.desc}`;
+  b.setAttribute('aria-label', w.name);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const thumb = document.createElement('span');
+  thumb.className = 'wthumb';
+  thumb.dataset.w = String(i);
+  if (weaponThumbs[i]) thumb.style.backgroundImage = `url("${weaponThumbs[i]}")`;
+  b.appendChild(thumb);
+  const txt = document.createElement('span');
+  txt.className = 'wtxt';
+  txt.textContent = w.chip || w.short || w.name;
+  b.appendChild(txt);
+  b.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); onPick(i); };
+  return b;
+}
+function paintArms() {
+  const pack = classes[classIndex] ? classLoad(classes[classIndex], activeWeapons()) : null;
+  for (const id of ['deathArms', 'pauseArms', 'bLoadArms', 'iLoadArms']) {
+    const host = $(id);
+    if (!host) continue;
+    host.innerHTML = '';
+    const title = document.createElement('p');
+    title.className = 'cls-arms-title';
+    title.textContent = 'Arsenal · qualquer arma';
+    host.appendChild(title);
+    let n = 0;
+    for (const cat of CATEGORIES) {
+      const weapons = pool(cat.weapons);
+      if (!weapons.length) continue;
+      n += weapons.length;
+      const box = document.createElement('div');
+      box.className = 'wcat';
+      const head = document.createElement('div');
+      head.className = 'label2';
+      head.textContent = cat.title;
+      box.appendChild(head);
+      const grid = document.createElement('div');
+      grid.className = 'wgrid';
+      const pick = cat.pick === 'secondary' ? setSecondary : cat.pick === 'melee' ? setMelee : setPrimary;
+      const cur = !pack ? -1 : cat.pick === 'secondary' ? pack.secondary : cat.pick === 'melee' ? pack.melee : pack.primary;
+      for (const i of weapons) grid.appendChild(armChip(i, cat.pick, i === cur, pick));
+      box.appendChild(grid);
+      host.appendChild(box);
+    }
+    if (!n) {
+      const empty = document.createElement('p');
+      empty.className = 'cls-arms-empty';
+      empty.textContent = 'Nenhuma arma liberada nesta sala.';
+      host.appendChild(empty);
+    }
+  }
+}
 function paintClassSurfaces() {
   paintPair('deathList', 'classGun', DEATH_HINT);
-  paintPair('pauseGuns', 'pauseGun', '1–5 escolhe · W/S ou setas · U última. Vale na próxima vida.');
+  paintPair('pauseGuns', 'pauseGun', '1–5 escolhe a classe. O arsenal grava a arma nela e vale na próxima vida.');
   paintPair('bLoadList', 'bLoadGun', LIVE_HINT);
   paintPair('iLoadList', 'iLoadGun', LIVE_HINT);
+  paintArms();
   const chips = $('lobbyClasses');
   if (chips) fillChips(chips, { rows: classRows(), onPick: (i) => armClass(i) });
   if (benchOn) paintBench();
