@@ -1,7 +1,9 @@
 // ============================================================
 //  Regras compartilhadas (cliente + servidor). Sem DOM, sem Three.js.
 //  Armas, Copo Bomba, física do Docão, tempos de partida e nomes dos bots.
+//  Vida, bloqueio e golpe da Tampa do Tacho: shared/shield.js (não duplicar número aqui sem atualizar o teste).
 // ============================================================
+import { SHIELD, noteWeapons } from './shield.js';
 export const KILL_LIMIT = 20, TIME_LIMIT = 300, RESPAWN_TIME = 5, INVULN = 2;
 // duração da partida escolhida pelo anfitrião (minutos); 0 = padrão do modo (5 min Mata-mata, 7 min Dominação)
 export const TIME_OPTIONS = [0, 3, 5, 7, 10, 15, 20];
@@ -93,11 +95,17 @@ export const WEAPONS = [
   // 22 · Commando da Granja: recuo quase zero, dano baixo, preciso. Rajada reta (ref. Commando do Black Ops).
   { key: 'commando', name: 'Commando da Granja', short: 'Commando', chip: 'Commando', mag: 30, reserve: 120, dmg: 12, headMul: 1.4, rate: 0.09, auto: true, pellets: 1, spread: 0.003, reload: 1.8, range: 150, recoil: 0.002, adsFov: 36, adsSpread: 0.04, flashZ: -0.8,
     move: 1, desc: 'Recuo quase zero · dano baixo · 30/120 · rajada reta' },
+  // 23 · Tampa do Tacho: escudo primário. Bloqueio, vida e vazamento estão em shared/shield.js.
+  // dmg/rate/range/move espelham SHIELD para o resto do jogo (cadência, bots, HUD) não divergir.
+  { key: 'tampa', name: 'Tampa do Tacho', short: 'Tampa do Tacho', chip: 'Tampa', mag: 0, reserve: 0, dmg: SHIELD.bash.dmg, headMul: 1, rate: SHIELD.bash.rate, auto: false, pellets: 0, spread: 0, reload: 0, range: SHIELD.bash.reach, recoil: 0, adsFov: 75, adsSpread: 1, flashZ: 0,
+    shield: true, noAds: true, move: SHIELD.move, inspect: 'shield',
+    desc: `Escudo · vida ${SHIELD.hp} · bloqueio frontal · golpe ${SHIELD.bash.dmg} · anda ${Math.round((1 - SHIELD.move) * 100)}% mais devagar` },
 ];
 // Penetração e collateral (regra em shared/penetration.js). pen = metros de parede fina por bala (caixote conta 45%);
 // pierce = corpos extras que a bala atravessa; pierceMul = dano que sobra a cada corpo. Sem entrada = não atravessa nada.
 const PEN_STATS = { rifle: [0.35], lmg: [0.4], commando: [0.3], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4] };
 for (const w of WEAPONS) { const s = PEN_STATS[w.key]; w.pen = s ? s[0] : 0; w.pierce = s ? s[1] || 0 : 0; w.pierceMul = s ? s[2] ?? 1 : 1; }
+noteWeapons(WEAPONS);
 export const UZI = 9, P90 = 10, NAIL = 11, SEMI = 12;
 export const CROSS = 13, BOW = 14, FAMAS = 15, DISC_W = 16, SABER2 = 17;
 export const CORN_W = 18;
@@ -105,8 +113,9 @@ export const EGG_W = 19; // Estilingue de Ovo
 export const MINIGUN = 20; // fora do Arsenal: só pelo código "minigun" no chat
 export const LMG = 21; // Metralhadora do Chiqueiro
 export const COMMANDO = 22; // Commando da Granja
+export const TAMPA = 23; // Tampa do Tacho (escudo)
 export const isSaber = (i) => !!(WEAPONS[i] && WEAPONS[i].saber); // Sabre (8) ou Sabre Duplo (17)
-export const PRIMARIES = [0, COMMANDO, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
+export const PRIMARIES = [0, COMMANDO, UZI, P90, FAMAS, 1, 2, 5, 6, 3, SEMI, DISC_W, CORN_W, LMG, TAMPA], PISTOL = 4, KNIFE = 7, SABER = 8, W_NADE = -1;
 export const SECONDARIES = [PISTOL, NAIL, CROSS, BOW, EGG_W];
 export const MELEES = [KNIFE, SABER, SABER2];
 export const BOT_PRIMARIES = [0, COMMANDO, LMG, UZI, P90, FAMAS, 1, SEMI, 2, 5, 6, 3, CORN_W];
@@ -117,6 +126,7 @@ export const CATEGORIES = [
   { id: 'precisao', title: 'Precisão', pick: 'primary', weapons: [2, 5, 6] },
   { id: 'explosivo', title: 'Explosivo', pick: 'primary', weapons: [3, CORN_W] },
   { id: 'especial', title: 'Especial', pick: 'primary', weapons: [DISC_W] },
+  { id: 'escudo', title: 'Escudo', pick: 'primary', weapons: [TAMPA] },
   { id: 'faca', title: 'Faca', pick: 'melee', weapons: [KNIFE, SABER, SABER2] },
   { id: 'secundaria', title: 'Secundária', pick: 'secondary', weapons: [PISTOL, NAIL, CROSS, BOW, EGG_W] },
 ];
@@ -148,5 +158,5 @@ export const BOT_DEFS = [
   { name: 'Farofa' }, { name: 'Pipoca' }, { name: 'Trufa' }, { name: 'Bolota' }, { name: 'Torresmo' }, { name: 'Paçoca' }, { name: 'Linguiça' }, { name: 'Quindim' }, { name: 'Coxinha' }, { name: 'Pururuca' },
 ];
 
-export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16, 18]; // 9 MP5K perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam), 21 metralhadora no meio, 22 commando no meio
+export const BOT_RANGE = [14, 4.5, 26, 14, 10, 34, 18, 1.2, 2.2, 8, 12, 6, 6, 16, 14, 20, 12, 2.2, 9, 14, 16, 16, 18, 4]; // 9 MP5K perto, 10 P90 no meio, 11 furadeira perto, 12 semi perto, 13 besta, 14 arco, 15 FAMAS no meio, 16 disco (bots não usam), 18 Lança-Milho perto/meio (4-13 m), 19 estilingue (bots não usam), 20 minigun (bots não usam), 21 metralhadora no meio, 22 commando no meio, 23 tampa (chega perto pra porrada)
 export const TAG_COLORS = ['#7DF9FF', '#ffd27a', '#ff9fb6', '#9be37a', '#c9a4ff', '#ffb36b', '#9fd0ff', '#ffa3d8', '#b8f2e6', '#ffe9a8'];

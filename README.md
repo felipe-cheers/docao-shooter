@@ -630,6 +630,7 @@ docao-shooter/
 ├── chat.js · voice.js · net.js · config.js   # chat, voz (WebRTC, Apertar/Aberto), rede e URL do servidor
 ├── shared/                    # regras usadas pelo cliente e pelo servidor
 │   ├── rules.js               # armas, Copo Bomba, física, tempos, bots
+│   ├── bot-difficulty.js      # Leitão, Ceva, Javali e Cachaço (mira, reação e movimento)
 │   ├── combat.js · melee.js · penetration.js   # explosões, sniper, faca, parede e collateral
 │   ├── domination.js · training.js · bomb.js · invasion.js   # Dominação, Treino, Bomba e Invasão
 │   ├── killstreaks.js         # ciclo de prêmios, Gavião, Chopper, Grelha e nuke

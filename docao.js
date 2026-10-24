@@ -2,6 +2,7 @@
 // O loop da partida deve chamar makeNukeRider() e pôr o grupo na cena (cai no centro). Ainda não está ligado.
 import * as THREE from 'three';
 import { makeWorldSaber } from './saber-view.js';
+import { makeWorldShield } from './shield-view.js';
 import { getSkin } from './skins.js';
 import { mergeVertices } from './vendor/BufferGeometryUtils.js';
 import { crouchAmount, stanceScale } from './shared/stance.js';
@@ -401,6 +402,7 @@ export function makeDocao(skinOrId, opts = {}) {
   const nail = mesh(new THREE.SphereGeometry(0.026, 8, 6), toon('#fff3dc'), point, 0); nail.scale.set(0.8, 0.45, 1); nail.position.y = 0.175;
   // armas em 3ª pessoa
   const guns = [];
+  let backLid = null;
   if (withGun) {
     const r = new THREE.Group(); r.position.set(0.0, 0.9, 0.62); g.add(r);
     mesh(new THREE.BoxGeometry(0.11, 0.13, 0.62), toon('#3b3f4a'), r, 0.01);
@@ -545,7 +547,9 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.06, 0.08, 0.22), toon('#5c4632'), cd, 0.006).position.set(0, -0.01, -0.32);
     mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), toon('#2a2d35'), cd, 0.005).position.set(0, -0.1, 0.02);
     guns.push(cd); // 22 = Commando da Granja
-    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd]) o.visible = false;
+    const tp = makeWorldShield(); tp.name = 'tampa'; tp.position.set(0, 0.98, 0.62); g.add(tp); guns.push(tp); // 23 = Tampa do Tacho: tampa na frente do peito, face decorada pra +Z
+    backLid = makeWorldShield(); backLid.name = 'tampa-costas'; backLid.position.set(0, 1.15, -0.32); backLid.rotation.y = Math.PI; backLid.visible = false; g.add(backLid);
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd, tp]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -559,7 +563,7 @@ export function makeDocao(skinOrId, opts = {}) {
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
   for (const b of brows) b.userData.base = { p: b.position.clone(), q: b.quaternion.clone() };
   const face = { eyes, brows, faceM, tex: [tone, beard, facePaint], neutralMap: faceM.map, angryMap: null, t: 0, target: 0, hold: 0 };
-  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
+  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, backLid, flashMats: [skinM, faceM, shirtM, snoutM] };
 }
 
 // Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.
@@ -594,6 +598,7 @@ export function setPose(model, pose) {
     else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
     else if (pose === 'saber2') { if (i === 0) a.rotation.set(-1.25, 0.15, -0.4); else a.rotation.set(-1.25, -0.15, 0.4); } // um sabre em cada mão, abertos
     else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
+    else if (pose === 'shield') { if (i === 0) a.rotation.set(-0.9, 0.35, -0.2); else a.rotation.set(-1.45, -0.25, 0.15); } // esquerda segura a tampa na frente
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
   });
