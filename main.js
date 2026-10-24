@@ -50,6 +50,7 @@ import { CORN, cornDirs, cornAim, stepCorn, popChain, popOpts } from './shared/c
 import { EGG, eggSpeed, eggDmg, stepEgg } from './shared/egg.js';
 import { killIcon, weaponSvg } from './killfeed-icons.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, GRAV, JUMP, SPEED, BOT_SPEED, STEP, RADIUS, HEIGHT, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, CATEGORIES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, CROSS, BOW, FAMAS, DISC_W, SABER2, CORN_W, EGG_W, isSaber, POKE, isPokeCode, MINIGUN, isMiniCode, LMG, COMMANDO, MELEE, SABER_COLORS, W_NADE, NADE, WEAPON_SHORT, BOT_DEFS, BOT_RANGE, TAG_COLORS } from './shared/rules.js';
+import { normBotDiff, botDiffMeta, applyBotDiff, profileOf, nextThink, considerTarget, hitscanAim, nadeChoice, nadeWaitFor, nadeCooldown, rollStrafe, wantPanicReload, wantSafeReload, refreshCover, refreshFlank, hearGunshot, scopeDelay } from './shared/bot-difficulty.js';
 import { getAccount, onAccount, loadMe, saveSkin as saveAcctSkin, dropSession } from './account.js';
 import { initAccountUI } from './account-ui.js';
 import { bindGrenadeVoice, playGrenadeVoice, grenadeVoiceEnabled, setGrenadeVoiceEnabled } from './grenade-voice.js';
@@ -258,6 +259,7 @@ document.querySelectorAll('[data-nade-voice]').forEach((el) => { // vozes da gra
 });
 function setNadeVoice(on) { setGrenadeVoiceEnabled(on); document.querySelectorAll('[data-nade-voice]').forEach((o) => { o.checked = grenadeVoiceEnabled(); }); }
 let mode = 'dm', teamScore = [0, 0], zone = null, zoneT = 0; // modo de jogo: 'dm' (mata-mata) | 'dom' (Dominação) | 'explore' (mapa vazio) | 'treino' | 'bomb' (Bomba, protótipo)
+let botDiff = 'ceva'; // dificuldade dos bots (shared/bot-difficulty.js); a preferência entra mais abaixo, quando o menu existe
 let bombS = null, bombL = null; // Modo Bomba: estado da rodada (shared/bomb.js) e layout do mapa (sites A/B, lados)
 const MODE_OK = (m) => (m === 'dom' || m === 'bomb' || m === 'explore' || m === TRAIN.mode || m === INV.mode ? m : 'dm');
 let spawnHold = 'primary'; // arma na mão ao nascer: primary | secondary | melee (salva no navegador)
@@ -293,7 +295,8 @@ function makeEntity(name, isPlayer, skinId, tag = '#ffffff') {
     e.tagSprite = nameSprite(name, tag); e.model.group.add(e.tagSprite);
     e.bubble = new THREE.Mesh(new THREE.SphereGeometry(1.25, 20, 14), new THREE.MeshBasicMaterial({ color: COLORS.cyan, transparent: true, opacity: 0.25, depthWrite: false }));
     e.bubble.position.y = 1.0; e.model.group.add(e.bubble);
-    Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, stuck: 0, lastSeen: null, lastSeenAt: -99, walk: 0, accuracy: rand(0.045, 0.07) });
+    Object.assign(e, { bot: true, think: 0, target: null, aim: 0, strafeDir: 1, strafeT: 0, wp: null, stuck: 0, lastSeen: null, lastSeenAt: -99, walk: 0 });
+    applyBotDiff(e, botDiff);
   }
   return e;
 }
@@ -999,10 +1002,11 @@ function releaseCharge() {
   fp.cupThrowT = 0.25;
 }
 function botThrow(b, t) {
-  const from = center(b, 1.6); const to = t.pos.clone().add(new V3(t.vel.x * 0.6 + rand(-1.2, 1.2), 0.2, t.vel.z * 0.6 + rand(-1.2, 1.2)));
+  const p = profileOf(b), from = center(b, 1.6), tp = t.pos, tv = t.vel || { x: 0, y: 0, z: 0 };
+  const to = new V3(tp.x + (tv.x || 0) * p.nadeLead + rand(-p.nadeErr, p.nadeErr), tp.y + 0.2, tp.z + (tv.z || 0) * p.nadeLead + rand(-p.nadeErr, p.nadeErr));
   const dx = to.x - from.x, dz = to.z - from.z, dist = Math.hypot(dx, dz); const T = 0.55 + dist / 16; const g = -NADE.grav;
   const vel = new V3(dx / T, (to.y - from.y + 0.5 * g * T * T) / T, dz / T);
-  throwGrenade(b, from, vel); b.nextNade = gameTime + rand(7, 13);
+  throwGrenade(b, from, vel); b.nextNade = gameTime + nadeCooldown(p);
 }
 
 function wisp(p) { // rastro do fantasminha
@@ -1144,6 +1148,7 @@ function updateCorn(dt) {
 const rockets = []; const smokeGeo = new THREE.SphereGeometry(0.14, 8, 6);
 function launchRocket(e, origin, dir) {
   const R = WEAPONS[3].rocket;
+  if (!online && e) hearGunshot(entities, origin, e, gameTime);
   if (online && e.isPlayer) { netEv(['r', v3a(origin), v3a(dir), +(performance.now() / 1000).toFixed(3)]); return null; } // o servidor cria o foguete
   const near = wallDistance(origin, dir, 0.7); // colado na parede/chão: explode na hora
   if (near) { blast(near.point.clone().addScaledVector(dir, -0.12), e, { ...R, wIdx: 3 }); return null; }
@@ -1192,6 +1197,7 @@ function rocketSmoke(r, R) {
 // ---------------- Combate ----------------
 // bala: traceShot (shared/penetration.js) nas caixas de PHYS, a mesma regra do servidor: atravessa parede leve e corpos (collateral)
 function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1) {
+  if (!online && shooter) hearGunshot(entities, origin, shooter, gameTime); // bots surdos (Leitão/Ceva) ignoram; os outros vão investigar, sem atirar no som
   const w = WEAPONS[wIdx]; const res = { hit: false, kill: false, kills: 0, wall: false };
   if (shooter && shooter.model) setExpression(shooter.model, 'angry', 0.5); // cara de brava ao atirar
   const scale = wIdx === BOW ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
@@ -3207,19 +3213,30 @@ function updateBot(b, dt) {
   if (!online && bombFrozen(bombS)) { b.vel.set(0, 0, 0); b.useHold = false; animateBot(b, dt); return; } // Bomba: preparação
   if (b.frozen) { m.group.position.copy(b.pos); m.group.rotation.y = b.yaw; if (b.frozen === 'anim') animateBot(b, dt); return; } // usado só em testes ('anim': parado mas animando)
   finishReload(b);
+  const mind = profileOf(b);
   b.think -= dt;
   if (b.think <= 0) {
-    b.think = rand(0.18, 0.32);
+    b.think = nextThink(mind);
+    b.sloppy = Math.random() < mind.wrongGun;
     let best = null, bs = 1e9; const eye = center(b, 1.5);
     for (const o of entities) {
       if (o === b || !o.alive || friends(o, b)) continue;
-      const d = o.pos.distanceTo(b.pos); if (d > 55) continue;
-      const score = d * (o === b.lastAttacker ? 0.5 : 1) * (o.isPlayer ? 0.85 : 1);
-      if (score < bs && losClear(eye, center(o, 1.2)) && !smoked(eye, center(o, 1.2))) { best = o; bs = score; }
+      const d = o.pos.distanceTo(b.pos);
+      const score = considerTarget(mind, d, { attacker: o === b.lastAttacker, player: !!o.isPlayer, hp: o.hp });
+      if (score != null && score < bs && losClear(eye, center(o, 1.2)) && !smoked(eye, center(o, 1.2))) { best = o; bs = score; }
     }
-    if (b.passive || b.stunUntil > gameTime) best = null; // atordoado não trava alvo
+    if (b.passive || b.stunUntil > gameTime) best = null; // atordoado não trava alvo; fumaça continua cegando
     if (best !== b.target) { b.target = best; b.aim = 0; }
-    if (best) { b.lastSeen = best.pos.clone(); b.lastSeenAt = gameTime; }
+    if (best) {
+      b.lastSeen = best.pos.clone(); b.lastSeenAt = gameTime;
+      const losPt = (a, c) => losClear(new V3(a.x, a.y, a.z), new V3(c.x, c.y, c.z));
+      refreshCover(mind, b, best.pos, () => (nav ? nav.randomNode() : null), losPt, gameTime);
+      if (!(b.coverUntil > gameTime)) refreshFlank(mind, b, best.pos, best.pos.distanceTo(b.pos), gameTime);
+      else { b.flankUntil = 0; b.flankGoal = null; }
+      const W = WEAPONS[b.weapon]; if (W && W.mag && wantPanicReload(mind, b.mag[b.weapon] / W.mag)) startReload(b);
+    } else if (mind.nadeFlush && b.nades > 0 && b.lastSeen && gameTime - b.lastSeenAt < mind.nadeFlush && gameTime > b.nextNade && Math.random() < mind.nadeP) {
+      botThrow(b, { pos: b.lastSeen, vel: { x: 0, y: 0, z: 0 } }); // copo no último lugar visto, não através da parede
+    }
   }
   if (b.target && !b.target.alive) b.target = null;
   const t = b.target; const move = new V3(); let desiredYaw = b.yaw;
@@ -3228,37 +3245,46 @@ function updateBot(b, dt) {
     desiredYaw = Math.atan2(to.x, to.z);
     const want = botWeaponFor(b, dist);
     if (want !== b.weapon && b.switchEnd <= gameTime && (b.reloadEnd <= gameTime || WEAPONS[b.weapon].shellReload)) switchWeapon(b, want);
-    const range = BOT_RANGE[b.weapon];
+    const range = (BOT_RANGE[b.weapon] || 10) + mind.rangeBias;
     const dy = t.pos.y - b.pos.y;
     const zg = zoneGoal(b);
+    const coverOn = b.coverUntil > gameTime && b.coverGoal;
+    const flankOn = !coverOn && b.flankUntil > gameTime && b.flankGoal;
     if (zg) { const st = steer(b, zg); if (st) move.add(st.multiplyScalar(1.5)); } // Dominação: vai pra zona atirando
     else if (zone || bombS) { /* dentro da zona / no objetivo: segura a posição, só strafe */ }
+    else if (coverOn) { const st = steer(b, new V3(b.coverGoal.x, b.coverGoal.y, b.coverGoal.z)); if (st) move.add(st); } // ferido: some da linha de visão
+    else if (flankOn) { const st = steer(b, new V3(b.flankGoal.x, b.flankGoal.y, b.flankGoal.z)); if (st) move.add(st); } // dá a volta em vez de correr reto
     else if (Math.abs(dy) > 1.2 && dist > 3) { const st = steer(b, t.pos); if (st) move.add(st); } // outro andar: vai pelo grafo (rampas)
     else if (b.weapon === KNIFE) { if (dist > 1.1) move.add(to); } // faca: cola no alvo
     else if (dist > range + 3) move.add(to); else if (dist < range - 3) move.sub(to);
-    b.strafeT -= dt; if (b.strafeT <= 0) { b.strafeDir = [-1, 1, 1, -1, 0][Math.floor(Math.random() * 5)]; b.strafeT = rand(0.6, 1.8); if (Math.random() < 0.15 && b.onGround) b.vel.y = JUMP; }
-    move.add(new V3(to.z, 0, -to.x).multiplyScalar(b.strafeDir * 0.8));
-    if (b.nades > 0 && dist > 8 && dist < 24 && gameTime > b.nextNade && b.aim > b.reaction && Math.abs(t.pos.y - b.pos.y) < 3) { if (Math.random() < 0.35) botThrow(b, t); else b.nextNade = gameTime + rand(1.5, 3); }
+    b.strafeT -= dt; if (b.strafeT <= 0) { const s = rollStrafe(mind); b.strafeDir = s.dir; b.strafeT = s.t; if (s.jump && b.onGround) b.vel.y = JUMP; }
+    if (mind.burstStop && b.aim > b.reaction * 0.75 && gameTime >= (b.burstAt || 0)) { b.holdUntil = gameTime + mind.burstStop; b.burstAt = gameTime + mind.burstEvery; }
+    const stopping = gameTime < (b.holdUntil || 0); // contra-strafe: para um instante pra o tiro sair reto
+    if (!coverOn && !stopping) move.add(new V3(to.z, 0, -to.x).multiplyScalar(b.strafeDir * mind.strafeW));
+    const nade = nadeChoice(mind, b, dist, t.pos.y - b.pos.y, gameTime);
+    if (nade === 'throw') botThrow(b, t); else if (nade === 'wait') b.nextNade = gameTime + nadeWaitFor(mind);
     b.aim += dt;
     const sky = heliAimBot(b, dist);
     let shotT = t, shotDist = dist;
     if (sky) { shotT = sky.h; shotDist = sky.d; desiredYaw = Math.atan2(sky.h.pos.x - b.pos.x, sky.h.pos.z - b.pos.z); }
     let diff = desiredYaw - b.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    const scopeWait = WEAPONS[b.weapon].scope ? (b.weapon === 5 ? 1.15 : b.weapon === 6 ? 0.45 : 0.8) : 0;
-    const needAim = b.reaction + scopeWait; // sniper: os bots demoram mais pra mirar (justo)
-    if (b.aim > needAim && Math.abs(diff) < (sky ? 0.6 : 0.35)) botShoot(b, shotT, shotDist);
+    const needAim = b.reaction + scopeDelay(mind, b.weapon, !!WEAPONS[b.weapon].scope); // sniper: ainda demora mais pra mirar
+    if (b.aim > needAim && Math.abs(diff) < (sky ? mind.aimGate + 0.25 : mind.aimGate)) botShoot(b, shotT, shotDist);
   } else {
     let goal = null;
     const hp = b.hp < 45 ? pickups.filter((p) => p.active && p.type === 'health').sort((a, c) => a.pos.distanceTo(b.pos) - c.pos.distanceTo(b.pos))[0] : null;
     const nadeP = !hp && b.nades < 2 ? pickups.filter((p) => p.active && p.type === 'grenade' && p.pos.distanceTo(b.pos) < 22).sort((a, c) => a.pos.distanceTo(b.pos) - c.pos.distanceTo(b.pos))[0] : null;
     const zg = zoneGoal(b), bc = b.hp < 60 ? nearBacon(b, 12) : null;
+    const heardFresh = b.heard && gameTime - b.heardAt < mind.hearMemory;
+    const seenFresh = b.lastSeen && gameTime - b.lastSeenAt < mind.memory;
     if (bc) goal = bc.pos; else if (hp && b.hp < 30) goal = hp.pos; else if (zg) goal = zg; else if (zone || bombS) goal = b.pos; else if (hp) goal = hp.pos; else if (nadeP) goal = nadeP.pos;
-    else if (b.lastSeen && gameTime - b.lastSeenAt < 4) goal = b.lastSeen;
+    else if (heardFresh && (!seenFresh || b.heardAt >= b.lastSeenAt)) goal = new V3(b.heard.x, b.heard.y || b.pos.y, b.heard.z);
+    else if (seenFresh) goal = b.lastSeen;
     else { if (!b.wp) b.wp = randomWaypoint(); goal = b.wp; }
     const to = goal.clone().sub(b.pos); to.y = 0;
-    if (to.length() < 1.5 && Math.abs(goal.y - b.pos.y) < 0.5 && !bc) { if (goal === b.wp) b.wp = null; else b.lastSeenAt = -99; }
+    if (to.length() < 1.5 && Math.abs(goal.y - b.pos.y) < 0.5 && !bc) { if (goal === b.wp) b.wp = null; else if (goal === b.lastSeen) b.lastSeenAt = -99; else if (b.heard && goal.x === b.heard.x) b.heardAt = -99; }
     else { const st = steer(b, goal) || to.normalize(); move.copy(st); desiredYaw = Math.atan2(st.x, st.z); }
-    if (b.mag[b.weapon] < WEAPONS[b.weapon].mag * 0.5) startReload(b);
+    const W = WEAPONS[b.weapon]; if (W && W.mag && wantSafeReload(mind, b.mag[b.weapon] / W.mag)) startReload(b);
   }
   if (b.useHold) move.set(0, 0, 0); // plantando/desarmando
   if (move.lengthSq()) move.normalize().multiplyScalar(BOT_SPEED * (WEAPONS[b.weapon].move || (b.weapon === KNIFE ? MELEE.speedMul : 1)) * (b.stunUntil > gameTime ? SHOCK.slow : 1));
@@ -3267,7 +3293,7 @@ function updateBot(b, dt) {
   const blocked = moveEntity(b, dt);
   if (blocked) { b.stuck += dt; if (b.onGround) b.vel.y = JUMP; if (b.stuck > 1.2) { b.wp = randomWaypoint(); b.path = null; b.lastSeenAt = -99; b.strafeDir *= -1; b.stuck = 0; b.stuckCount = (b.stuckCount || 0) + 1; } }
   else b.stuck = Math.max(0, b.stuck - dt);
-  let d = desiredYaw - b.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); b.yaw += d * Math.min(1, dt * 9);
+  let d = desiredYaw - b.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); b.yaw += d * Math.min(1, dt * mind.turn);
   for (const i of b.slots) if (b.reserve[i] < WEAPONS[i].mag && !(WEAPONS[i].rocket && b.reserve[i] > 0)) b.reserve[i] = WEAPONS[i].reserve; // bots nunca ficam totalmente sem bala
   animateBot(b, dt);
 }
@@ -3369,9 +3395,11 @@ function steer(b, goal) {
 // escolha de arma dos bots pelo alcance: Calibre 12 de perto, Sniper de longe, Bazuca a média distância, pistola no resto
 function botWeapon(b, i) { return b.mag[i] > 0 || b.reserve[i] > 0; }
 function botWeaponFor(b, dist) {
-  // faca: de vez em quando, colado no alvo, o bot saca a faca e persegue (até 7 m)
-  if (dist < 3 && gameTime > (b.knifeRoll || 0)) { b.knifeRoll = gameTime + 1.5; b.knifeMode = Math.random() < 0.45; }
+  const mind = profileOf(b), hp = b.target ? b.target.hp : 100;
+  // faca: colado no alvo, e no Cachaço só pra acabar quem já está baixo
+  if (dist < 3 && gameTime > (b.knifeRoll || 0)) { b.knifeRoll = gameTime + 1.5; b.knifeMode = hp <= mind.knifeHp && Math.random() < mind.knifeP; }
   if (b.knifeMode && dist < 7) return b.slots[2] ?? KNIFE; if (dist >= 7) b.knifeMode = false;
+  if (b.sloppy && botWeapon(b, b.weapon)) return b.weapon; // Leitão insiste na arma errada pro alcance
   const side = b.slots[1] ?? PISTOL;
   const pr = b.primary; if (!botWeapon(b, pr)) return side;
   if (pr === 1) return dist < 14 ? pr : side;
@@ -3403,22 +3431,25 @@ function botShoot(b, t, dist = 10) {
   if (b.mag[b.weapon] <= 0) { startReload(b); return; }
   if (w.rocket && dist < 6) return; // não se explode
   if (w.corn && dist < 4) return;
+  const mind = profileOf(b);
+  const stopping = gameTime < (b.holdUntil || 0);
+  const selfMoving = !stopping && Math.hypot(b.vel.x, b.vel.z) > 1.15;
+  if (mind.holdFire && selfMoving && !w.melee && !w.rocket && !w.corn && !(w.pellets > 1)) return; // Cachaço só dispara hitscan no contra-strafe
   b.mag[b.weapon]--; setExpression(b.model, 'angry', 0.5); // bazuca/milho/rajada também
-  b.nextFire = gameTime + w.rate * (BOT_RATE[b.weapon] || (() => 1.2))();
+  b.nextFire = gameTime + w.rate * (BOT_RATE[b.weapon] || (() => 1.2))() * mind.fireMul;
   if (w.burst) { b.burstLeft = (b.burstLeft || w.burst) - 1; b.nextFire = gameTime + (b.burstLeft > 0 ? w.rate : w.burstDelay * rand(1.6, 2.6)); } // FAMAS: rajada de 3 e respira
   const origin = center(b, 1.3);
-  const tMoving = Math.hypot(t.vel.x, t.vel.z) > 2 ? 1.5 : 1;
+  const tMoving = Math.hypot(t.vel.x, t.vel.z) > 2;
   const muzzle = origin.clone().add(new V3(Math.sin(b.yaw) * 1.0, -0.25, Math.cos(b.yaw) * 1.0));
-  if (w.rocket) { // mira no pé, com antecipação
-    const lead = dist / w.rocket.speed; const at = t.pos.clone().add(new V3(t.vel.x * lead + rand(-0.8, 0.8), 0.25, t.vel.z * lead + rand(-0.8, 0.8)));
+  if (w.rocket) { // mira no pé, com antecipação física; o erro lateral é que muda com a dificuldade
+    const lead = dist / w.rocket.speed; const at = t.pos.clone().add(new V3(t.vel.x * lead + rand(-mind.rocketErr, mind.rocketErr), 0.25, t.vel.z * lead + rand(-mind.rocketErr, mind.rocketErr)));
     const o = center(b, 1.4); launchRocket(b, o, at.sub(o).normalize());
-  } else if (w.corn) { // mira com queda (shared/corn.js cornAim), um pouco à frente de quem corre
-    const o = center(b, 1.4), a = cornAim(o, t.pos.clone().add(new V3(t.vel.x * 0.35 + rand(-0.6, 0.6), 0.7, t.vel.z * 0.35 + rand(-0.6, 0.6)))); launchCorn(b, o, new V3(a.x, a.y, a.z));
+  } else if (w.corn) { // mira com queda (shared/corn.js cornAim)
+    const o = center(b, 1.4), a = cornAim(o, t.pos.clone().add(new V3(t.vel.x * mind.cornLead + rand(-mind.cornErr, mind.cornErr), 0.7, t.vel.z * mind.cornLead + rand(-mind.cornErr, mind.cornErr)))); launchCorn(b, o, new V3(a.x, a.y, a.z));
   } else {
-    const aimPt = (w.scope ? center(t, rand(0.75, 1.15)) : center(t, rand(0.7, 1.6))).add(new V3(rand(-0.3, 0.3), 0, rand(-0.3, 0.3)));
-    const dir = aimPt.sub(origin).normalize();
-    const spread = (w.pellets > 1 ? w.spread * 1.2 : w.scope ? 0.02 * tMoving : b.accuracy * tMoving * (b.weapon === PISTOL ? 0.9 : 1)) * (b.eggUntil > gameTime ? 2.5 : 1); // ovo na cara: erra mais
-    fire(b, origin, dir, b.weapon, spread, muzzle);
+    const aim = hitscanAim(mind, b, t.pos, t.vel, { aimTime: b.aim, scope: !!w.scope, pellets: w.pellets, pistol: b.weapon === PISTOL, targetMoving: tMoving, selfMoving, egged: b.eggUntil > gameTime, weaponSpread: w.spread, stance: stanceScale(t.crouch) });
+    const dir = new V3(aim.x - origin.x, aim.y - origin.y, aim.z - origin.z).normalize();
+    fire(b, origin, dir, b.weapon, aim.spread, muzzle);
     if (w.scope) b.aim = b.reaction * 0.4; // precisa remirar depois de cada tiro de sniper
   }
   sfx[w.key](distVol(b.pos) * 0.7);
@@ -4101,6 +4132,7 @@ function startGame(mapId) {
   revengeName = null; resetFeedback(); resetRewards(); resetMatchCamos();
   clearBots(); gameTime = 0; inv = null; invNet = null;
   const picked = $('modeSel').value;
+  saveBotDiff($('botDiff').value);
   mode = MODE_OK(picked); teamScore = [0, 0]; zone = null; window.__capLog = []; offlineMinutes = normTime($('timeSel').value);
   matchLimits = { weapons: null, powers: null }; rulesLive = true; // solo: arsenal inteiro. O limite de armas é regra da sala, escolhida ao criar.
   player = makeEntity(name, true, selectedSkin, '#ffd27a'); entities.push(player); fp.setSkin(selectedSkin);
@@ -4122,7 +4154,9 @@ function startGame(mapId) {
   pickups.forEach((p) => { const on = clientPower(p.type); p.active = on; p.mesh.visible = on; if (!on) p.respawnAt = Infinity; });
   invApplyLook(invMode()); if (invMode()) { player.id = -1; player.spawnedOnce = true; startInvasionOffline(); } // Invasão: decoração + core local
   showcase.visible = false;
-  $('killfeed').innerHTML = ''; flashMsg(mode === 'bomb' ? `Bomba · você é do time ${TEAM_NAMES[player.team]}` : invMode() ? `Invasão 🎃 · ${currentMap.name} · ${INV.WAVES} waves · ${KEYS.useLabel} usa poder · ${KEYS.cycleLabel} troca` : exploreMode() ? `Exploração · ${currentMap.name} · , . ou [ ] trocam a primária` : teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]}` : training() ? 'Estande do Docão · B/N/M trocam a arma' : `Mapa: ${currentMap.name}`); refreshModeHud();
+  $('killfeed').innerHTML = '';
+  const diffWord = botDiffMeta(botDiff).label;
+  flashMsg(mode === 'bomb' ? `Bomba · você é do time ${TEAM_NAMES[player.team]} · bots ${diffWord}` : invMode() ? `Invasão 🎃 · horda ${diffWord} · ${currentMap.name} · ${INV.WAVES} waves · ${KEYS.useLabel} usa poder · ${KEYS.cycleLabel} troca` : exploreMode() ? `Exploração · ${currentMap.name} · , . ou [ ] trocam a primária` : teamMode() ? `Dominação · você é do time ${TEAM_NAMES[player.team]} · bots ${diffWord}` : training() ? 'Estande do Docão · B/N/M trocam a arma' : `Mapa: ${currentMap.name} · bots ${diffWord}`); refreshModeHud();
   for (const ev of bombEv) onBombEvent(ev);
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause').classList.add('hidden'); $('hud').classList.remove('hidden'); $('socialHud').classList.remove('hidden'); $('voiceHud').classList.add('hidden'); chatSetRoom(true); // offline: o chat fica (pros códigos), sem voz $('overChat').classList.add('hidden');
   camera.clearViewOffset(); state = 'playing'; lockPointer();
@@ -4741,6 +4775,10 @@ function refreshMenuMode() {
   $('menuTeam').classList.toggle('hidden', v !== 'dom' && v !== 'bomb'); // Dominação e Bomba: escolhe o time
   $('botCount').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode || v === INV.mode);
   $('timeSel').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode || v === INV.mode);
+  const showDiff = v !== 'explore' && v !== TRAIN.mode;
+  $('botDiffLabel').classList.toggle('hidden', !showDiff);
+  $('botDiffNote').classList.toggle('hidden', !showDiff);
+  if (showDiff) paintDiffNote();
   const playTitle = v === INV.mode ? 'SOBREVIVER' : v === 'explore' ? 'EXPLORAR' : v === TRAIN.mode ? 'TREINAR' : '<img class="menu-lettering" src="./assets/menu/lettering-jogar.webp" alt="Jogar">';
   const playHint = v === INV.mode ? 'SOLO · 20 WAVES DE ZUMBIS' : v === 'explore' ? 'SEM BOTS · SEM PRESSA' : v === TRAIN.mode ? 'ESTANDE · SEM LIMITE' : 'SOLO · CONTRA BOTS';
   $('playBtn').innerHTML = `<span class="play-title">${playTitle}</span><small>${playHint}</small>`;
@@ -4748,6 +4786,22 @@ function refreshMenuMode() {
   teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); });
   syncLoadoutUi();
 }
+function paintDiffNote() {
+  const meta = botDiffMeta($('botDiff').value);
+  const inv = $('modeSel').value === INV.mode;
+  $('botDiffNote').textContent = inv
+    ? `${meta.label} · ${meta.tier}: a horda muda o cuspe, o cerco e a reação. A vida das waves continua igual. ${meta.hint}`
+    : `${meta.label} · ${meta.tier}: ${meta.hint}`;
+}
+function saveBotDiff(id) {
+  botDiff = normBotDiff(id);
+  try { localStorage.setItem('docao.botDiff', botDiff); } catch (e) { /* sem storage */ }
+  for (const el of [$('botDiff'), $('roomDiff')]) if (el && el.value !== botDiff) el.value = botDiff;
+  if ($('botDiffNote') && !$('botDiffNote').classList.contains('hidden')) paintDiffNote();
+}
+$('botDiff').onchange = () => saveBotDiff($('botDiff').value);
+$('roomDiff').onchange = () => saveBotDiff($('roomDiff').value);
+try { const d = localStorage.getItem('docao.botDiff'); if (d) saveBotDiff(d); } catch (e) { /* */ }
 $('modeSel').onchange = () => { try { localStorage.setItem('docao.mode', $('modeSel').value); } catch (e) { /* */ } refreshMenuMode(); syncMapForMode(); };
 try { const m = localStorage.getItem('docao.mode'); if (m === 'dom' || m === 'dm' || m === 'explore' || m === TRAIN.mode || m === INV.mode || m === 'bomb') $('modeSel').value = m; } catch (e) { /* */ }
 if (invMenu() || bombMenu()) syncMapForMode();
@@ -4927,7 +4981,8 @@ function renderLobby() {
   const isHost = o.myId === o.hostId, cfg = L.cfg;
   const mapName = cfg.map === 'random' ? 'Aleatório' : getMap(cfg.map).name;
   const openSlots = Math.max(0, cfg.max - L.players.filter((p) => !p.bot).length);
-  $('lobbyInfo').textContent = `${mapName} · até ${cfg.max} jogadores · bots: ${cfg.fillBots ? 'sim' : 'não'} · ${cfg.time ? cfg.time + ' min' : 'tempo padrão'}${L.state === 'playing' ? ' · partida em andamento' + (openSlots > 0 && cfg.fillBots ? ' · dá pra entrar no lugar de um bot' : '') : ''}${limitBlurb(cfg)}`;
+  const diffWord = botDiffMeta(cfg.botDiff).label;
+  $('lobbyInfo').textContent = `${mapName} · até ${cfg.max} jogadores · bots: ${cfg.fillBots ? 'sim' : 'não'} · dificuldade: ${diffWord} · ${cfg.time ? cfg.time + ' min' : 'tempo padrão'}${L.state === 'playing' ? ' · partida em andamento' + (openSlots > 0 && cfg.fillBots ? ' · dá pra entrar no lugar de um bot' : '') : ''}${limitBlurb(cfg)}`;
   const rows = L.players.filter((p) => !p.bot), dom = cfg.mode === 'dom' || cfg.mode === 'bomb'; // modos com times
   const counts = [0, 0]; for (const p of rows) if (p.team === 0 || p.team === 1) counts[p.team]++;
   $('lobbyTeam').classList.toggle('hidden', !dom);
@@ -4940,7 +4995,7 @@ function renderLobby() {
     $('lobbyName').disabled = $('lobbyNameBtn').disabled = inGame;
     $('lobbyNameMsg').textContent = me && me.name !== myName() ? `Na sala você aparece como “${me.name}”${inGame ? '' : ' (nome repetido ou ajustado)'}` : inGame ? 'Partida em andamento: o nome muda na próxima partida' : ''; }
   $('hostCtl').classList.toggle('hidden', !isHost); $('lobbyWait').classList.toggle('hidden', isHost || L.state !== 'lobby');
-  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map, cfg.mode); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); $('lobbyChatOn').value = cfg.chat === false ? '0' : '1'; }
+  if (isHost) { fillMapSelect($('lobbyMap'), cfg.map, cfg.mode); $('lobbyMax').value = String(cfg.max); $('lobbyBots').value = cfg.fillBots ? '1' : '0'; $('lobbyDiff').value = normBotDiff(cfg.botDiff); $('lobbyMode').value = cfg.mode || 'dm'; $('lobbyTime').value = String(normTime(cfg.time)); $('lobbyChatOn').value = cfg.chat === false ? '0' : '1'; }
   syncLobbyLimits(cfg, isHost); syncLoadoutUi();
   if (state === 'over') { const h = o.myId === o.hostId; $('againBtn').classList.toggle('hidden', !h); $('nextMapBtn').classList.toggle('hidden', !h); $('overWait').classList.toggle('hidden', h); }
 }
@@ -4954,9 +5009,10 @@ function limitBlurb(cfg) {
 }
 const sendCfg = (lim) => {
   if (!online) return; const mode = $('lobbyMode').value, L = lim || limitsFor(mode);
-  online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', mode, time: +$('lobbyTime').value, chat: $('lobbyChatOn').value === '1', weapons: L.weapons, powers: L.powers });
+  online.net.send({ t: 'cfg', map: $('lobbyMap').value, max: +$('lobbyMax').value, fillBots: $('lobbyBots').value === '1', botDiff: normBotDiff($('lobbyDiff').value), mode, time: +$('lobbyTime').value, chat: $('lobbyChatOn').value === '1', weapons: L.weapons, powers: L.powers });
 };
 ['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyTime', 'lobbyChatOn'].forEach((id) => ($(id).onchange = sendCfg));
+$('lobbyDiff').onchange = () => { saveBotDiff($('lobbyDiff').value); sendCfg(); };
 $('lobbyMode').onchange = () => { fillMapSelect($('lobbyMap'), $('lobbyMode').value === 'bomb' ? BOMB_MAP : $('lobbyMap').value, $('lobbyMode').value); sendCfg(limitsFor($('lobbyMode').value)); };
 $('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
 $('leaveLobby').onclick = () => leaveOnline();
@@ -4968,7 +5024,7 @@ $('onlineClose').onclick = () => { $('onlineModal').classList.add('hidden'); $('
 $('tabCreate').onclick = () => onlineTab(true); $('tabJoin').onclick = () => { onlineTab(false); $('joinCode').focus(); };
 $('createBtn').onclick = async () => {
   const b = $('createBtn'); b.disabled = true; $('onlineErr').textContent = 'Criando sala…';
-  try { const lim = limitsFor($('roomMode').value); const code = await createRoom({ map: $('roomMap').value, max: +$('roomMax').value, fillBots: $('roomBots').value === '1', mode: $('roomMode').value, time: +$('roomTime').value, weapons: lim.weapons, powers: lim.powers }); $('onlineErr').textContent = ''; joinRoom(code); }
+  try { const lim = limitsFor($('roomMode').value); saveBotDiff($('roomDiff').value); const code = await createRoom({ map: $('roomMap').value, max: +$('roomMax').value, fillBots: $('roomBots').value === '1', botDiff, mode: $('roomMode').value, time: +$('roomTime').value, weapons: lim.weapons, powers: lim.powers }); $('onlineErr').textContent = ''; joinRoom(code); }
   catch (e) { $('onlineErr').textContent = 'Não deu pra criar a sala: ' + (e.message || 'servidor fora do ar'); }
   b.disabled = false;
 };
@@ -5370,7 +5426,7 @@ function killZombieLocal(t, a, wIdx, head, back) {
 function startInvasionOffline() {
   const fogSrc = { fog: true, name: 'Névoa Assombrada', zt: 'fog', isPlayer: false, pos: new V3(), kills: 0 }; // "atacante" da névoa (câmera de morte olha pro centro)
   inv = new InvasionCore({
-    T: () => gameTime, P: PHYS, nav, size: currentMap.size,
+    T: () => gameTime, P: PHYS, nav, size: currentMap.size, botDiff: () => botDiff,
     players: () => entities.filter((e) => e.isPlayer),
     spawnZombie(type, pos) { const z = makeZombieEnt(type); z.id = invZid++; z.pos.set(pos.x, pos.y, pos.z); z.yaw = Math.atan2(-pos.x, -pos.z); entities.push(z); return z; },
     removeZombie(z) { scene.remove(z.model.group); entities = entities.filter((x) => x !== z); },
@@ -5751,7 +5807,7 @@ window.__docao = { get state() { return state; }, get ending() { return matchEnd
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get grenadeAim() { return { origin: throwOrigin().toArray(), velocity: throwVelocity(throwPower()).toArray(), points: Array.from(arcGeo.attributes.position.array.slice(0, arcGeo.drawRange.count * 3)), marker: arcMark.position.toArray(), visible: arcLine.visible, cupVisible: fp.cup.visible, handVisible: fp.cupHand.visible }; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, get scoped() { return scoped(); },
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,
-  get mode() { return mode; }, get zone() { return zone; }, set zone(v) { zone = v; }, get teamScore() { return teamScore; }, get spawnHold() { return spawnHold; }, get selectedPrimary() { return selectedPrimary; },
+  get mode() { return mode; }, get botDiff() { return botDiff; }, get zone() { return zone; }, set zone(v) { zone = v; }, get teamScore() { return teamScore; }, get spawnHold() { return spawnHold; }, get selectedPrimary() { return selectedPrimary; },
   DOM, applyTeam, damage, respawn: (e) => respawn(e), get discs() { return discs; }, fire, get lastTrace() { return window.__lastTrace; }, get holeCount() { return holes.length; }, get PHYS() { return PHYS; }, bulletHole, get eggs() { return eggs; }, get eggStains() { return eggStains.length; }, get eggSplat() { return Math.max(0, eggSplatUntil - gameTime); }, launchEgg: (e, o, d, k) => launchEgg(e, new V3(...o), new V3(...d).normalize(), k), fpGunNames: () => fp.guns.map((g) => g.name || ''), EGG_W, get effects() { return effects; }, fpGunEgg: () => { const e = fp.sling.userData.egg; return { vis: e.visible, y: +e.position.y.toFixed(3), z: +e.position.z.toFixed(3), pouchZ: +fp.sling.userData.pouch.position.z.toFixed(3) }; }, grantPokeball, get pokeFx() { return pokeFx; }, grantMinigun: () => grantMinigun(), MINIGUN, get mini() { const p = player; return p ? { spin: p.mgSpin || 0, heat: p.mgHeat || 0, hot: !!p.mgHot, firing: !!p.mgFiring, rot: fp.mini ? fp.mini.barrels.rotation.z : 0, glow: fp.mini ? fp.mini.glowMat.opacity : 0, glowOn: !!(fp.mini && fp.mini.glow.visible), shots: window.__mgShots || 0, steam: window.__mgSteam || 0, fov: camera.fov, guns: fp.guns.length, drops: fp.drops.length, hud: !document.getElementById('mgHud')?.hidden } : null; }, setMgHeat: (h) => { if (player) player.mgHeat = h; }, get fpSaberSide() { return fp.saberSide || 0; }, inspect: () => startInspect(player), stopInspect: () => stopInspect(true), get inspecting() { const s = fp.ins; return s ? { t: s.t, wpn: s.wpn, kind: s.kind, out: s.out, fade: s.fade, hold: s.hold } : null; },
   fpPumpZ: () => +fp.pumpPart.position.z.toFixed(3), get shake() { return shake; },
   fpHands: () => ({ arms: fp.fpRef.arms.visible, armsP: fp.fpRef.armsP.visible, pump: fp.pumpHand.visible, saberR: !!fp.fpRef.saberR && fp.fpRef.saberR.visible, saberL: !!fp.fpRef.saberL && fp.fpRef.saberL.visible, bowGrip: !!fp.fpRef.bowGrip && fp.fpRef.bowGrip.visible, bowDraw: !!fp.fpRef.bowDraw && fp.fpRef.bowDraw.visible, kr: fp.kr.visible, knifeFlip: fp.kpiv.rotation.x }),
