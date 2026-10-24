@@ -30,9 +30,12 @@ export function invRefillAmmo(e, WEAPONS) {
   for (const i of e.slots) {
     const w = WEAPONS[i]; if (!w || !(w.reserve > 0)) continue;
     const cap = Math.ceil(w.reserve * INV_AMMO.reserveMul);
-    if (e.reserve[i] >= cap && e.mag[i] >= w.mag) continue;
+    const left = w.akimbo ? (e.drum && e.drum[i] != null ? e.drum[i] : w.mag) : w.mag;
+    if (e.reserve[i] >= cap && e.mag[i] >= w.mag && left >= w.mag) continue;
     e.reserve[i] = Math.min(cap, e.reserve[i] + (w.rocket ? INV_AMMO.rockets : w.reserve));
-    e.mag[i] = Math.max(e.mag[i], w.mag); got = true;
+    e.mag[i] = Math.max(e.mag[i], w.mag);
+    if (w.akimbo) { if (!e.drum) e.drum = WEAPONS.map(() => null); e.drum[i] = w.mag; }
+    got = true;
   }
   return got;
 }

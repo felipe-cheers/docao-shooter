@@ -1270,6 +1270,7 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
   -webkit-text-stroke:0;text-shadow:none
 }
 #hud #mag{font:900 56px/.9 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;color:#1c3826}
+#hud #ammo.dual #mag{font-size:40px;letter-spacing:.02em}
 #hud #reserve{font:900 22px/1 "Arial Black",Impact,sans-serif;letter-spacing:0;color:#245038}
 #hud #wname{
   display:flex;align-items:center;justify-content:space-between;gap:8px;

@@ -1,4 +1,5 @@
-// Tampa do Tacho (23): bloqueio autoritativo, golpe, explosão, snapshot e bench.
+// Tampa do Tacho (25): bloqueio autoritativo, golpe, explosão, snapshot e bench.
+// O índice 23 ficou com o Revólver do Capataz; a tampa anda logo depois do akimbo.
 // Uso: node test-escudo.mjs
 import { Game } from './server/src/game.js';
 import { createPhysics } from './shared/physics.js';
@@ -20,13 +21,13 @@ const lid = () => ({
 // ---- regras (um lugar só: shared/shield.js) ----
 {
   const W = WEAPONS[TAMPA];
-  ok(TAMPA === 23 && W && W.key === 'tampa' && W.shield && W.name === 'Tampa do Tacho', `índice 23 = Tampa do Tacho (${W && W.name})`);
+  ok(TAMPA === 25 && W && W.key === 'tampa' && W.shield && W.name === 'Tampa do Tacho', `índice 25 = Tampa do Tacho (${W && W.name})`);
   ok(W.dmg === SHIELD.bash.dmg && W.rate === SHIELD.bash.rate && W.range === SHIELD.bash.reach && W.move === SHIELD.move, `arma espelha o golpe (${W.dmg}/${W.rate}/${W.range}, move ${W.move})`);
   ok(SHIELD.hp >= 600 && SHIELD.hp <= 900 && SHIELD.move >= 0.8 && SHIELD.move <= 0.85, `vida ${SHIELD.hp} e move ${SHIELD.move} na faixa`);
   ok(PRIMARIES.includes(TAMPA) && !BOT_PRIMARIES.includes(TAMPA) && CATEGORIES.some((c) => c.id === 'escudo' && c.weapons.includes(TAMPA)), 'primária na categoria Escudo, fora do sorteio normal dos bots');
   const lids = []; for (let id = 2; id <= 8; id++) if (botWantsShield(id)) lids.push(id);
   ok(!botWantsShield(2) && lids.length === 1 && lids[0] === 3, `tampa por id (sala de 7 bots: ${lids.join(',') || 'ninguém'}), o bot de teste (id 2) não leva`);
-  ok(BOT_RANGE.length === WEAPONS.length && BOT_RANGE[TAMPA] > 0 && BOT_RANGE[TAMPA] <= 6, `BOT_RANGE[23] = ${BOT_RANGE[TAMPA]} (chega perto)`);
+  ok(BOT_RANGE.length === WEAPONS.length && BOT_RANGE[TAMPA] > 0 && BOT_RANGE[TAMPA] <= 6, `BOT_RANGE[${TAMPA}] = ${BOT_RANGE[TAMPA]} (chega perto)`);
   ok(killIcon('tampa') && killIcon('tampa') !== killIcon('rifle'), 'ícone próprio no killfeed');
   ok(SHIELD.bash.dmg * 2 >= 100 && SHIELD.bash.dmg < 100, `porrada ${SHIELD.bash.dmg}: dois golpes matam, um não`);
   ok(SHIELD.charge.speed < SPEED * 1.35 + 0.6 / 0.05, `investida ${SHIELD.charge.speed} m/s cabe no anti-cheat (~21 m/s a 20 Hz)`);
