@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="hud-death.css">
 <link rel="stylesheet" href="acessorios.css">
+<link rel="stylesheet" href="truco.css">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
@@ -147,6 +148,10 @@
     <div class="ticket-board">
     <button type="button" id="menuBack" class="ticket-back" hidden>← VOLTAR À PARTIDA</button>
     <div class="menu-content">
+      <div id="gameSwitch" role="tablist" aria-label="Jogo">
+        <button type="button" id="modeShoot" class="on">Tiroteio</button>
+        <button type="button" id="modeTruco">Truco</button>
+      </div>
       <section id="menu-match" aria-label="Preparar partida" tabindex="0">
         <div class="section-heading"><span class="ticket-stamp" aria-hidden="true"><svg viewBox="0 0 96 96">
           <circle cx="48" cy="48" r="43" fill="none" stroke="currentColor" stroke-width="3"/>
@@ -189,6 +194,18 @@
     <p id="botDiffNote" class="diffnote">Ceva: o Docão de sempre. A mira, a reação e o jeito de jogar mudam — a vida não.</p>
     <div id="menuTrain" class="trainnote hidden">Treino: abre sempre no <b>Estande do Docão</b>. Os alvos não atacam e voltam em 2 s · B/N/M trocam a arma na hora · munição infinita · sem tempo.</div>
     <div id="menuTeam" class="teampick hidden"><div class="label2">Seu time</div><div class="teamrow" id="menuTeamBtns"></div></div>
+        <section id="trucoPanel" hidden aria-label="Truco Paulista">
+          <img class="truco-cover" src="./assets/menu/docao-truco-capa.jpg" alt="Docão Truco, truco paulista na fazendinha">
+          <label><span class="field-caption">Mesa</span>
+            <select id="trucoSeatsSel"><option value="4" selected>2v2 · quatro cadeiras</option><option value="2">1v1 · duelo</option></select>
+          </label>
+          <div class="truco-actions">
+            <button type="button" id="trucoBots">Jogar com bots</button>
+            <button type="button" id="trucoCreate" class="alt">Criar sala</button>
+          </div>
+          <div id="trucoJoinRow"><input id="trucoCode" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false"><button type="button" id="trucoJoin">Entrar</button></div>
+          <p id="trucoMenuErr"></p>
+        </section>
       </section>
       <section id="menu-arsenal" aria-label="Arsenal" tabindex="0" hidden>
         <div class="section-heading"><span>EQUIPAMENTO DA CASA</span><h2>Arsenal do chiqueiro</h2><p>Escolha uma primária, uma secundária e uma arma corpo a corpo. Temperar grava a peça na classe aberta.</p></div>
@@ -500,6 +517,42 @@
   </div>
 </div>
 
+<div id="trucoApp" aria-label="Mesa de truco">
+  <canvas id="trucoCanvas"></canvas>
+  <div id="trucoHud">
+    <div id="trucoScore"></div>
+    <div id="trucoBanner"></div>
+    <div id="trucoClock"><i></i></div>
+    <div id="trucoActs"></div>
+    <p id="trucoHint"></p>
+    <div id="trucoTop"><button type="button" id="trucoEmoteBtn">Sinais</button><button type="button" id="trucoLeave">Sair</button></div>
+    <div id="trucoChat">
+      <div id="trucoLog" class="chatlog" data-chat="keep"></div>
+      <form id="trucoSay" data-scope="all"><input id="trucoSayInput" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Mensagem da mesa"></form>
+    </div>
+    <div id="trucoVoice" class="voicebox" data-voicebox>
+      <button type="button" class="small" data-voice="off">Mudo</button>
+      <button type="button" class="small" data-voice="team">Dupla</button>
+      <button type="button" class="small" data-voice="all">Mesa</button>
+      <button type="button" class="small" data-mic="hold">Apertar</button>
+      <button type="button" class="small" data-mic="open">Aberto</button>
+    </div>
+    <div id="trucoEmotes"></div>
+    <div id="trucoToast" style="display:none"></div>
+    <div id="trucoLobby" class="box" style="display:none">
+      <h2>Boteco</h2>
+      <p id="trucoLobbyCode"></p>
+      <div id="trucoSeats"></div>
+      <label><input type="checkbox" id="trucoFill" checked> Completar com bots</label>
+      <div class="truco-actions"><button type="button" id="trucoStart">Iniciar partida</button><button type="button" id="trucoCopy" class="alt">Copiar link</button></div>
+    </div>
+    <div id="trucoOver" class="box" style="display:none">
+      <h2 id="trucoOverTitle">Fim de jogo</h2>
+      <button type="button" id="trucoAgain">Jogar de novo</button>
+    </div>
+  </div>
+</div>
 <script type="module" src="main.js"></script>
+<script type="module" src="truco.js"></script>
 </body>
 </html>

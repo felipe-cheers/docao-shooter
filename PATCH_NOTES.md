@@ -4,7 +4,19 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## v1.18 — Cada arma tem trejeito 🎬🐷 (23/10/2026)
+## v1.18 — Seis, Marreco! 🃏🐷 (23/10/2026)
+🃏 **TRUUUCO, MARRECO!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #20** e trouxe o **boteco pra dentro da fazendinha**: agora o Docão também joga **Truco Paulista**, no mesmo site, sem baixar nada!
+🔀 **Tiroteio | Truco:** no menu tem a chave nova. Cansou de levar bala? Puxa uma cadeira e vai pro carteado.
+🤖 **Jogar com bots:** mesa **2v2** (quatro cadeiras) ou **1v1** (duelo), contra porcos que blefam, gritam e às vezes correm de medo. Roda no seu navegador, sem servidor.
+🏠 **Sala online:** "Criar sala", manda o **código de 4 letras** ou o **link**, e a turma entra. Faltou gente? "Completar com bots". Alguém caiu? A mesa **pausa**, e se o fujão não voltar em 1 minuto um bot senta no lugar dele (e joga melhor, provavelmente).
+📣 **Pede truco, aceita, sobe pra SEIS, NOVE e DOZE, ou corre** com o rabo entre as pernas. Ficou enrolando mais de 25 segundos pra responder? Correu automático, que boteco não espera ninguém.
+🙈 **Carta escondida** a partir da segunda rodada, pra quem gosta de um mistério.
+😉 **Sinais da dupla:** pisca, sombrancelha, "beber", "mogado" e companhia, mais **chat da mesa ou só da dupla** e **voz** (Mudo, Dupla, Mesa, com Apertar ou Aberto).
+🪑 **12 a 0?** Os perdedores **passam por baixo da mesa**. Humilhação garantida, tradição respeitada.
+💸 **E o bolso do Matheus?** Truco é por lance, sem o loop do tiroteio, e contra bots nem encosta no servidor. Barato como ficha de boteco.
+🙏 Valeu, Janor, pelo PR mais "seis, marreco!" da história do chiqueiro!
+
+## Cada arma tem trejeito 🎬🐷
 🎬 **CHEGA DE ANIMAÇÃO XOXA!** Cada arma do chiqueiro agora saca, recarrega, corre e descansa do jeito dela. O Fuzil Pururuca gira no dedo, a Sniper Torresmo ganha um sopro no cano, o Canhão do Barril chega rolando, a Besta puxa a corda com os dentes e o Estilingue chacoalha o ovo na orelha.
 🔍 **Tecla I** continua a inspeção, agora com um extra por arma. De vez em quando (~8%) sai a versão ovo: fumaça em forma de porquinho, mordida no Torresmo, ronco na Bazuca.
 💨 **Cápsula pulando** nas armas de fogo que ainda não cuspiam metal, e o cano da Metralhadora do Chiqueiro esquenta de verdade. A Minigun já esquentava; agora o saque também é um içar.
