@@ -4,6 +4,20 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.19 — Quermesse do Capataz 🎪🤠🐷 (23/10/2026)
+🎪 **O JOÃO CHEGOU COM O CAMINHÃO DE MUDANÇA!** O **João** (@rramosjoao) mandou o **PR #21**, o "super PR", e trouxe metade da feira agropecuária junto:
+🐷 **Dificuldade dos bots:** **Leitão** (vê pouco e mira mal, ~0,9 s pra reagir), **Ceva** (os bots de sempre), **Javali** e **Cachaço** (~0,19 s, mira no focinho e atira andando). Vale offline, na sala online e na Invasão. Vida e dano **não mudam**: o bot só fica mais esperto, não mais bombado.
+🎒 **Classes e acessórios:** cinco classes (teclas **1–5**) com bancada de peças que fazem efeito de verdade no respawn. A **ficha** é a mesma na morte, na pausa, na preparação da Bomba e entre as waves, com o **arsenal** inteiro pra clicar e gravar na classe.
+🛡️ **Tampa do Tacho:** escudo primário de **720 de vida**. Segura bala na frente, dá **porrada** e **investida**, mas pé, fresta, flanco, costas e de cima passam. Torresmo e Canhão furam a tampa, que panela não é cofre.
+🤠 **Revólver do Capataz** na secundária: 58 no corpo, dobra na cabeça, tambor de 6. E pra quem acha pouco, **Dois Capatazes**, um em cada mão, cada uma no seu tempo. Faroeste no chiqueiro.
+⚔️ **Sabres sem castigo:** agora andam na velocidade normal e ganharam kit de duelista: combo, **guarda**, **parry** nos primeiros 0,18 s, **investida (C)**, e o **especial (Z)**: o simples **arremessa**, o duplo **gira** feito ventilador de boteco.
+🎯 **Snipers com som de cinema:** Torresmo, Canhão e Carabina ganharam tiro, eco ao longe e ferrolho. Agora o vizinho sabe que você acertou.
+✈️ **Grelha (AC-130) mais legível:** dá pra ver os tiros e a troca Espeto / Panela / Caldeirão (**1/2/3**, **F** sai).
+🎬 **Cada arma tem trejeito:** cada uma saca, recarrega, corre e descansa do seu jeito, com cápsula pulando e cano que esquenta. Parado uns 8 segundos, a arma faz gracinha, e na inspeção (**I**) às vezes sai a versão ovo. O tempo de tiro, recarga e saque **não mudou**, e quem enjoa liga **Animações reduzidas** nos Ajustes.
+🎡 **A QUERMESSE ABRIU!** No menu tem **"Ver outros jogos"**: o **Docão Tênis** (saibro, 15-30-40, vantagem, tie-break, melhor de 3 ou set único) e o **Docão Snooker** (bola 8 na mesa de bar, com bolinho no 1 contra 1). O Truco continua firme no menu.
+💸 **E o bolso do Matheus?** O tênis e o snooker rodam no seu navegador. No servidor do tiroteio entrou só regra nova, sem sala nova e sem mensagem a mais. Barato como pastel de quermesse.
+🙏 Valeu, João! Um PR desse tamanho merecia uma barraca só pra ele.
+
 ## v1.18 — Seis, Marreco! 🃏🐷 (23/10/2026)
 🃏 **TRUUUCO, MARRECO!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #20** e trouxe o **boteco pra dentro da fazendinha**: agora o Docão também joga **Truco Paulista**, no mesmo site, sem baixar nada!
 🔀 **Tiroteio | Truco:** no menu tem a chave nova. Cansou de levar bala? Puxa uma cadeira e vai pro carteado.
@@ -15,16 +29,6 @@ Jogue em **https://docao.mvalentim.dev**
 🪑 **12 a 0?** Os perdedores **passam por baixo da mesa**. Humilhação garantida, tradição respeitada.
 💸 **E o bolso do Matheus?** Truco é por lance, sem o loop do tiroteio, e contra bots nem encosta no servidor. Barato como ficha de boteco.
 🙏 Valeu, Janor, pelo PR mais "seis, marreco!" da história do chiqueiro!
-
-## Cada arma tem trejeito 🎬🐷
-🎬 **CHEGA DE ANIMAÇÃO XOXA!** Cada arma do chiqueiro agora saca, recarrega, corre e descansa do jeito dela. O Fuzil Pururuca gira no dedo, a Sniper Torresmo ganha um sopro no cano, o Canhão do Barril chega rolando, a Besta puxa a corda com os dentes e o Estilingue chacoalha o ovo na orelha.
-🔍 **Tecla I** continua a inspeção, agora com um extra por arma. De vez em quando (~8%) sai a versão ovo: fumaça em forma de porquinho, mordida no Torresmo, ronco na Bazuca.
-💨 **Cápsula pulando** nas armas de fogo que ainda não cuspiam metal, e o cano da Metralhadora do Chiqueiro esquenta de verdade. A Minigun já esquentava; agora o saque também é um içar.
-🏃 **Correr, pular e o coice** têm curva própria. A mira, o zoom e o tempo de tiro/recarga/saque **não mudaram**: a animação se encaixa no relógio do `shared/rules.js`.
-⏱️ Parado uns 8 segundos, a arma faz uma gracinha. Abateu alguém, um gesto curtinho — e some na hora se você atirar, mirar ou recarregar.
-👀 Quem está olhando de fora vê o saque, o coice e a recarga, sem modelo novo.
-♿ **Animações reduzidas** em Ajustes e na pausa (e a preferência de menos movimento do sistema). Desligou, volta o movimento antigo. O tempo de jogo é o mesmo.
-🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
 
 ## v1.17.1 — Boca Aberta 🎙️🐷 (23/10/2026)
 🎙️ **O JANOR ABRIU O MICROFONE!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #19** e agora a voz do Docão tem dois jeitos de falar, escolha o seu:
