@@ -163,7 +163,7 @@ async function onClick(e) {
 export function initCloset() {
   $('closetBtn').textContent = `${SHOP_EMOJI} ${SHOP_BUTTON}`; $('closetTitle').textContent = `${SHOP_NAME} ${SHOP_EMOJI}`; // nome da loja: constantes em shared/closet.js
   $('closetBtn').onclick = () => openCloset(); $('closetClose').onclick = closeCloset;
-  document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#chalLink')) openCloset('chal'); }); // atalho da faixa do menu
+  document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-open-chal]')) openCloset('chal'); }); // clicar num desafio do painel do menu abre a aba Desafios
   $('closetLogin').onclick = () => { closeCloset(); $('acctBtn').click(); };
   $('closetTabLook').onclick = () => setTab('look'); $('closetTabShop').onclick = () => setTab('shop'); $('closetTabChal').onclick = () => setTab('chal');
   $('closetModal').addEventListener('click', onClick);

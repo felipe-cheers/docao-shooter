@@ -16,6 +16,7 @@ async function until(fn, ms = 10000, arg) { const t0 = Date.now(); while (Date.n
 const vis = (s) => page.isVisible(s);
 await page.goto(url, { waitUntil: 'load' }); await page.waitForFunction(() => !!window.__docao, null, { timeout: 120000 }); await wait(1500);
 // convidado
+ok(await vis('#dailyPanel [data-daily-enter]') && /Desafios do dia/.test(await page.textContent('#dailyPanel')), 'menu (convidado): painel dos desafios convida a entrar na conta');
 ok(await vis('#closetBtn') && /BRECHÓ/.test(await page.textContent('#closetBtn')), 'botão 🧺 BRECHÓ aparece no menu');
 ok(/Brechó da Porca Véia/.test(await page.textContent('#closetTitle')), 'título da janela: Brechó da Porca Véia');
 await page.click('#closetBtn');
@@ -24,6 +25,9 @@ await page.screenshot({ path: `${SHOTS}/1-guest.png` });
 await page.click('#closetLogin'); ok(await vis('#acctModal'), 'convite abre a janela de conta');
 await page.click('#acctTabReg'); await page.fill('#acctNick', NICK); await page.fill('#acctPass', 'senha-forte-123'); await page.fill('#acctPass2', 'senha-forte-123'); await page.click('#acctSubmit');
 ok(await until(() => document.getElementById('acctModal').classList.contains('hidden')), 'conta criada');
+ok(await until(() => document.querySelectorAll('#dailyPanel .daily-row').length === 3), 'menu (conta): painel mostra os 3 desafios do dia');
+ok(/\d+\/\d+/.test(await page.textContent('#dailyPanel .daily-row')) && /🪙 \d+/.test(await page.textContent('#dailyPanel')) && /novos em/.test(await page.textContent('#dailyPanel')), 'painel: progresso x/meta, prêmio em Docoins e contagem até o reset');
+ok(!/Logado como/.test(await page.textContent('#acctTxt')), 'faixa da conta enxuta (sem "Logado como")');
 ok(/0<\/b> Docoins|🪙 0 Docoins/.test(await page.innerHTML('#acctTxt')) || /Docoins/.test(await page.textContent('#acctTxt')), 'faixa do menu mostra o saldo de Docoins');
 // Brechó com conta
 await page.click('#closetBtn'); await until(() => !document.getElementById('closetMain').classList.contains('hidden'));

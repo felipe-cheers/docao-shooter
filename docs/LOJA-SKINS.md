@@ -35,7 +35,7 @@ Com o teto diário de 400 e a loja a 40–300, dá para comprar de 2 a 10 partes
 - Contagem: a sala (`server/src/game.js`, `cq()`) soma contadores por jogador com conta (abates, cabeça, armas, streaks, zonas, botijão, zumbis, poderes, danças, chat, voz...). Treino não conta e Exploração é offline (nunca chega ao servidor).
 - Gravação: no fim da partida ou na saída, junto do ranking. `recordStats` lê `accounts.chal` (1 SELECT, só se houve contagem), aplica e grava no **mesmo UPDATE** do crédito da partida. `chal IS antigo` impede pagar duas vezes se duas salas gravarem juntas.
 - Prêmio: entra no saldo na hora em que completa. **Sem teto** (o limite é ser só 3 por dia). Os tetos de partida (80/partida, 400/dia) continuam.
-- Leitura: `GET /api/me` → `chal: { day, resetIn, list: [{ id, text, mode, tier, goal, reward, prog, done }] }`. Tela: aba 🎯 Desafios do Brechó e atalho "🎯 Desafios x/3" na faixa da conta no menu.
+- Leitura: `GET /api/me` → `chal: { day, resetIn, list: [{ id, text, mode, tier, goal, reward, prog, done }] }`. Tela: painel "🎯 Desafios do dia" no menu principal (no céu em telas ≥1000×600; dentro da ficha em telas menores), com texto, x/meta, prêmio, ✓ e contagem até o reset; clicar abre a aba 🎯 Desafios do Brechó. Convidado vê uma chamada para entrar. Usa o mesmo /api/me da conta (só leitura).
 - Migração: coluna `accounts.chal TEXT` na `0003_desafios.sql` (separada; NÃO aplicada em produção, nem a 0002).
 
 ## Segurança (servidor autoritativo)

@@ -5,17 +5,31 @@
 import { getAccount, getStats, getChal, onAccount, register, login, logout, loadRank, refreshStats } from './account.js';
 import { nickError, passError, cleanNick } from './shared/nick.js';
 import { COIN_ICON, CURRENCY } from './shared/closet.js';
+import { TIERS } from './shared/challenges.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const RANK_MODES = [['all', 'Geral'], ['dm', 'Mata-mata'], ['dom', 'Dominação'], ['bomb', 'Bomba'], ['inv', 'Invasão']];
 let reg = false, rankMode = 'all', rankSort = 'kills', busy = false;
 
-const chalChip = () => { const c = getChal(); if (!c || !c.list) return ''; const n = c.list.filter((x) => x.done).length; return ` · <button type="button" id="chalLink" class="chal-link" title="Desafios do dia">🎯 Desafios ${n}/${c.list.length}</button>`; };
+// ---------- painel "Desafios do dia" no menu principal (só leitura: vem no mesmo /api/me da conta; nada é gravado) ----------
+const left = (s) => { s = Math.max(0, s | 0); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${String(m).padStart(2, '0')}min` : m ? `${m}min` : 'menos de 1 min'; };
+let dailyTimer = 0, dailyAsked = 0;
+function renderDaily() {
+  const box = $('dailyPanel'); if (!box) return; const a = getAccount(), c = a ? getChal() : null;
+  if (!a) { box.innerHTML = `<div class="daily-head"><b>🎯 Desafios do dia</b></div><p class="daily-guest">3 desafios novos todo dia valendo <b>Docoins ${COIN_ICON}</b>. <button type="button" class="daily-enter" data-daily-enter>ENTRAR NA CONTA</button></p>`; box.classList.add('guest'); return; }
+  box.classList.remove('guest');
+  if (!c || !c.list) { box.innerHTML = '<div class="daily-head"><b>🎯 Desafios do dia</b><span>carregando…</span></div>'; return; }
+  if (c.resetIn <= 0 && Date.now() - dailyAsked > 30000) { dailyAsked = Date.now(); refreshStats(); } // virou o dia: busca os novos (1 leitura)
+  const done = c.list.filter((x) => x.done).length;
+  box.innerHTML = `<div class="daily-head"><b>🎯 Desafios do dia <em>${done}/${c.list.length}</em></b><span title="Novos desafios à meia-noite de Brasília">⏳ novos em <b>${left(c.resetIn)}</b></span></div>`
+    + c.list.map((x) => `<button type="button" class="daily-row t${x.tier}${x.done ? ' done' : ''}" data-open-chal title="${esc(x.text + ' — ' + TIERS[x.tier] + ' · ' + x.mode)}"><span class="daily-text">${esc(x.text)}</span>`
+      + `<span class="daily-prize">${x.done ? '✓ ' : ''}${COIN_ICON} ${x.reward}</span><span class="daily-bar"><i style="width:${Math.round(100 * Math.min(1, x.prog / x.goal))}%"></i></span><span class="daily-prog">${x.prog}/${x.goal}</span></button>`).join('');
+}
 function renderStrip(a) {
   const t = $('acctTxt'), b = $('acctBtn');
-  if (a) { t.innerHTML = `🐷 Logado como <b>${esc(a.nick)}</b> · ${COIN_ICON} <b>${a.coins | 0}</b> ${CURRENCY}${chalChip()}`; b.textContent = 'MINHA CONTA'; }
-  else { t.textContent = 'Convidado · crie uma conta para ter apelido só seu, skin guardada e ranking'; b.textContent = 'ENTRAR'; }
+  if (a) { t.innerHTML = `🐷 <b>${esc(a.nick)}</b> · <span class="nw">${COIN_ICON} <b>${a.coins | 0}</b> ${CURRENCY}</span>`; b.textContent = 'MINHA CONTA'; }
+  else { t.textContent = 'Convidado · com conta: apelido só seu, skin guardada e ranking'; b.textContent = 'ENTRAR'; }
 }
 function renderUser() {
   const a = getAccount(), s = (getStats() || {}).all || { kills: 0, deaths: 0, wins: 0, matches: 0 };
@@ -67,6 +81,8 @@ export function initAccountUI() {
   $('acctForm').addEventListener('submit', submit);
   $('acctLogout').onclick = async () => { await logout(); renderUser(); $('acctNick').focus(); };
   for (const id of ['acctModal', 'rankModal']) { $(id).addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') $(id).classList.add('hidden'); }); $(id).addEventListener('mousedown', (e) => e.stopPropagation()); }
-  onAccount((a) => { renderStrip(a); renderUser(); });
-  renderStrip(getAccount()); setMode(false);
+  onAccount((a) => { renderStrip(a); renderUser(); renderDaily(); });
+  renderStrip(getAccount()); renderDaily(); setMode(false);
+  $('dailyPanel').addEventListener('click', (e) => { if (e.target.closest('[data-daily-enter]')) openAcct(); });
+  clearInterval(dailyTimer); dailyTimer = setInterval(() => { if (getAccount() && !document.getElementById('menu').classList.contains('hidden')) renderDaily(); }, 30000); // só o relógio anda (sem rede)
 }

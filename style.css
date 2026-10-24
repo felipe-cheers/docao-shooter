@@ -1759,8 +1759,6 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 .closet-card small{display:block;margin-top:2px;font:700 11px/1.25 "Trebuchet MS",sans-serif;color:#5b4a2c}
 
 /* desafios do dia (aba do Brechó + atalho na faixa do menu) */
-button.chal-link{margin:0;padding:0 2px;width:auto;font:inherit;font-weight:900;color:#8a2a1c;background:none;border:0;border-bottom:2px dotted #8a2a1c;cursor:pointer;box-shadow:none}
-button.chal-link:hover{color:#203e35;border-color:#203e35}
 .chal-head{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px;font:900 15px "Trebuchet MS",sans-serif;color:var(--ink)}.chal-head span{font-size:12px;color:#5b4a2c}
 .chal-card{margin:0 0 8px;padding:9px 11px;background:#fff5d3;border:2px solid #9f8b66;border-left-width:7px;border-radius:5px}
 .chal-card.tF{border-left-color:#3d8b4f}.chal-card.tM{border-left-color:#d38b1d}.chal-card.tD{border-left-color:#b3261e}
@@ -1772,5 +1770,27 @@ button.chal-link:hover{color:#203e35;border-color:#203e35}
 .chal-bar{height:9px;background:#e6d3a8;border:1px solid #9f8b66;border-radius:5px;overflow:hidden}.chal-bar i{display:block;height:100%;background:linear-gradient(90deg,#f2c94c,#d4a82a)}
 .done .chal-bar i{background:#3d8b4f}
 .chal-prog{margin-top:3px;font:800 12px "Trebuchet MS",sans-serif;color:#5b4a2c;text-align:right}
-#menu .acct-strip button.chal-link{display:inline;padding:0 1px;font:900 12px/1.3 "Trebuchet MS",sans-serif;letter-spacing:0;color:#8a2a1c;background:none;border:0;border-bottom:2px dotted #8a2a1c;border-radius:0;box-shadow:none;transform:none;white-space:nowrap}
-#menu .acct-strip button.chal-link:hover{color:#203e35;border-color:#203e35;filter:none}
+
+/* ---------- Desafios do dia no menu principal ----------
+   Tela de computador (>=1000x600): cartãozinho no céu, entre o logo e a Dança da Vitória (não mexe na ficha).
+   Tela menor/celular: entra na ficha, logo abaixo da conta (a ficha já rola). */
+#menu .acct-txt{overflow-wrap:anywhere}
+#menu .daily-panel{margin:-6px 0 12px;padding:6px 8px 4px;background:#fff5d3eb;border:2px solid #9f8b66;border-radius:5px;box-shadow:2px 3px #291e1855;color:var(--ink);font:700 12px/1.2 "Trebuchet MS",sans-serif}
+#menu .daily-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+#menu .daily-head>b{font:900 13px "Trebuchet MS",sans-serif;letter-spacing:.3px;color:var(--ink)}#menu .daily-head em{font-style:normal;color:#8a2a1c}
+#menu .daily-head span{font-size:11px;color:#5b4a2c;white-space:nowrap}#menu .daily-head span b{color:#8a2a1c}
+#menu button.daily-row{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"t n p" "b b b";column-gap:7px;row-gap:2px;align-items:center;width:100%;margin:0 0 3px;padding:3px 6px 4px 7px;text-align:left;font:inherit;color:inherit;background:#fffaf0;border:1px solid #c9b48a;border-left:5px solid #3d8b4f;border-radius:4px;box-shadow:none;cursor:pointer;transform:none;letter-spacing:0}
+#menu button.daily-row.tM{border-left-color:#d38b1d}#menu button.daily-row.tD{border-left-color:#b3261e}
+#menu button.daily-row:hover{background:#fff;filter:none}
+#menu button.daily-row.done{background:#e9f4dc}
+#menu .daily-text{grid-area:t;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;font-size:12px}
+#menu .daily-prize{grid-area:p;font:900 12px "Trebuchet MS",sans-serif;color:#7a5a08;white-space:nowrap}#menu .done .daily-prize{color:#2f7a40}
+#menu .daily-bar{grid-area:b;height:4px;background:#e6d3a8;border-radius:2px;overflow:hidden}#menu .daily-bar i{display:block;height:100%;background:linear-gradient(90deg,#f2c94c,#d4a82a)}#menu .done .daily-bar i{background:#3d8b4f}
+#menu .daily-prog{grid-area:n;font-size:11px;font-weight:900;color:#5b4a2c;white-space:nowrap}
+#menu .daily-guest{margin:0;font-size:12px}#menu button.daily-enter{margin:4px 0 0;padding:4px 10px;width:auto;font:900 11px "Trebuchet MS",sans-serif;letter-spacing:1px;color:#efdfbb;background:var(--ink);border:2px solid #162c25;border-radius:3px;box-shadow:2px 3px #291e1888;cursor:pointer}
+@media (min-width:1000px) and (min-height:600px){
+  #menu .daily-panel{position:fixed;z-index:4;top:14px;left:calc(50% - 170px);width:340px;margin:0;transform:rotate(-1deg)}
+}
+#menu .acct-strip{flex-wrap:wrap}#menu .acct-txt{flex:1 1 120px}#menu .acct-btns{margin-left:auto}
+@media (max-width:720px){#menu .daily-panel{margin:-4px 0 10px}#menu .acct-txt{flex:none}}
+#menu .acct-txt .nw{white-space:nowrap}
