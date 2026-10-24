@@ -39,12 +39,14 @@ input[type=range]{padding:0;height:34px;background:none;border:none}
 @keyframes gun-lean-hot{0%,100%{transform:rotate(-2deg) translateY(-3px) scale(1.04)}50%{transform:rotate(.4deg) translateY(-11px) scale(1.04)}}
 @media(prefers-reduced-motion:reduce){#menu .gun-card{animation:none}}
 @media(max-width:720px){
- #menu .loadout-dock{left:8px;right:8px;top:auto;bottom:92px;width:auto;flex-direction:row;justify-content:center;gap:8px}
+ /* a faixa de armas fica acima do Jogar. bottom:92 cobria os botões. */
+ #menu .loadout-dock{left:8px;right:8px;top:auto;bottom:max(188px,26vh);width:auto;flex-direction:row;justify-content:center;gap:6px;z-index:8}
  #menu .dock-title{display:none}
- #menu .gun-card{width:108px;animation:none}
- #menu .loadout-dock .wthumb{height:42px}
- #menu .gun-face{padding:6px}
+ #menu .gun-card{width:104px;animation:none}
+ #menu .loadout-dock .wthumb{height:32px}
+ #menu .gun-face{padding:4px 6px}
  #menu .gun-face b{font-size:11px}
+ #menu .gun-face small{display:none}
 }
 #menu .dance-dock{position:fixed;left:var(--dance-x,auto);right:14px;top:var(--dance-y,96px);z-index:6;width:148px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 #menu .dance-stage{position:relative;height:312px}
@@ -1341,6 +1343,20 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
   clip-path:polygon(0 0,100% 0,82% 100%,18% 100%)
 }
 #hud .cupicon.on{opacity:1;background:linear-gradient(#fff 0 16%,#e0232b 16% 100%)}
+@media (max-width:480px){
+  #hud #bottomright{right:8px;bottom:10px;width:calc(100vw - 16px)}
+  #hud #ammo{padding:4px 10px 16px}
+  #hud #mag{font-size:44px}
+  #hud #ammo.dual #mag{font-size:30px}
+  #hud #wname{margin-top:4px;padding:5px 16px 5px 14px}
+  #hud #gear{gap:4px;padding:0 2px}
+  #hud #slots{gap:4px}
+  #hud .slot .wico{width:34px}
+  #hud #tac{gap:6px}
+  #hud .tico.smoke{width:18px}
+  #hud #nades{gap:2px}
+  #hud .cupicon{width:13px;height:18px}
+}
 #hud #reloadmsg{
   margin:2px 2px 0 0;height:auto;min-height:0;text-align:right;color:var(--brick);
   font:700 12px/1.2 "Trebuchet MS",Arial,sans-serif;background:transparent;
