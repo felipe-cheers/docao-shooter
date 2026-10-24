@@ -16,12 +16,12 @@ const CSS = `
 }
 #streakCount[hidden]{display:none!important}
 #streakCount b{
-  display:block;font-family:Impact,"Arial Black",sans-serif;
+  display:block;font-family:var(--font);
   font-size:68px;line-height:.85;white-space:nowrap;color:#ffd27a;
   -webkit-text-stroke:6px #000;paint-order:stroke fill;text-shadow:0 3px 0 #000;
 }
 #streakCount small{
-  display:block;margin-top:4px;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  display:block;margin-top:4px;font-family:var(--font);
   font-size:15px;font-weight:bold;letter-spacing:1.5px;color:#ffe8c2;text-shadow:0 2px 0 #000;
 }
 #streakBar{
@@ -56,7 +56,7 @@ const CSS = `
 }
 #streakBar .streak-card b{
   position:absolute;left:0;right:0;bottom:2px;text-align:center;
-  font-family:Impact,"Arial Black",sans-serif;font-size:16px;line-height:1;
+  font-family:var(--font);font-size:16px;line-height:1;
   color:inherit;text-shadow:0 1px 0 #000,0 0 3px #000;pointer-events:none;
 }
 #streakBar .streak-glyph{
@@ -135,7 +135,7 @@ const CSS = `
 #nukeReady{
   position:absolute;right:0;bottom:calc(100% + 6px);
   pointer-events:none;user-select:none;white-space:nowrap;
-  font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  font-family:var(--font);
   font-size:13px;font-weight:bold;letter-spacing:.2px;color:#ffd27a;
   background:rgba(14,10,8,.92);border:2px solid #e63946;border-radius:8px;
   padding:5px 8px;box-shadow:0 0 10px rgba(230,57,70,.4);
@@ -166,11 +166,11 @@ const CSS = `
   gap:10px;padding:0 4px;pointer-events:none;
 }
 #strikeMap h2{
-  margin:0;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  margin:0;font-family:var(--font);
   font-size:15px;font-weight:bold;letter-spacing:.2px;line-height:1.1;color:#ffd27a;
 }
 #strikeMap .strike-left{
-  font-family:Impact,"Arial Black",sans-serif;font-size:18px;line-height:1;color:#fff8ea;
+  font-family:var(--font);font-size:18px;line-height:1;color:#fff8ea;
   text-shadow:0 1px 0 #000;
 }
 #strikeMap canvas{
@@ -190,12 +190,12 @@ const CSS = `
 }
 #nukeBanner[hidden]{display:none!important}
 #nukeBanner b{
-  display:block;font-family:Impact,"Arial Black",sans-serif;
+  display:block;font-family:var(--font);
   font-size:220px;line-height:.78;letter-spacing:-2px;color:#a52e26;
   text-shadow:5px 5px 0 #203e35;
 }
 #nukeBanner span{
-  display:block;margin-top:4px;font-family:Impact,"Arial Black",sans-serif;
+  display:block;margin-top:4px;font-family:var(--font);
   font-size:44px;line-height:1;letter-spacing:3px;color:#203e35;
 }
 @media (max-height:760px){

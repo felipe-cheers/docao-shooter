@@ -55,6 +55,8 @@ import { initAccountUI } from './account-ui.js';
 import { initCloset } from './closet-ui.js';
 import { bindGrenadeVoice, playGrenadeVoice, grenadeVoiceEnabled, setGrenadeVoiceEnabled } from './grenade-voice.js';
 import { POWER_UPS, normHand, clampLoadout, botPool, powerOn, savedToLimits, limitsToSaved } from './shared/loadout.js';
+// fonte Fredoka (canvas de HUD/nomes usa a fonte só depois de carregada; o CSS já tem font-display: swap)
+try { document.fonts?.load('700 32px Fredoka'); } catch {}
 
 const V3 = THREE.Vector3;
 const $ = (id) => document.getElementById(id);
@@ -110,7 +112,7 @@ function canvasTex(w, h, draw) {
 }
 function nameSprite(text, color = '#ffffff') {
   const tex = canvasTex(256, 64, (x, w, h) => {
-    x.font = 'bold 34px "Trebuchet MS", Arial'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = 'bold 34px Fredoka, "Trebuchet MS", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
     x.lineWidth = 7; x.strokeStyle = '#2a1410'; x.strokeText(text, w / 2, h / 2); x.fillStyle = color; x.fillText(text, w / 2, h / 2);
   });
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
@@ -1506,7 +1508,7 @@ function ensureHeliHud() {
   let node = document.getElementById('heliHud');
   if (!node) {
     const style = document.createElement('style');
-    style.textContent = '#heliHud{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(14,10,8,.92);border:2px solid #e63946;border-radius:8px;pointer-events:none;user-select:none}#heliHud[hidden]{display:none!important}#heliHud b{font-family:"Trebuchet MS",Arial,sans-serif;font-size:13px;color:#ffd27a}#heliHud i{display:block;width:120px;height:8px;border-radius:2px;background:#3a1818;box-shadow:inset 0 0 0 1px #000}#heliHud i span{display:block;height:100%;width:100%;background:linear-gradient(#ffd27a,#e63946)}#heliHud small{font-family:Impact,Arial,sans-serif;font-size:16px;color:#fff}';
+    style.textContent = '#heliHud{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(14,10,8,.92);border:2px solid #e63946;border-radius:8px;pointer-events:none;user-select:none}#heliHud[hidden]{display:none!important}#heliHud b{font-family:var(--font);font-size:13px;color:#ffd27a}#heliHud i{display:block;width:120px;height:8px;border-radius:2px;background:#3a1818;box-shadow:inset 0 0 0 1px #000}#heliHud i span{display:block;height:100%;width:100%;background:linear-gradient(#ffd27a,#e63946)}#heliHud small{font-family:var(--font);font-size:16px;color:#fff}';
     document.head.appendChild(style);
     node = document.createElement('div');
     node.id = 'heliHud';
@@ -1683,7 +1685,7 @@ function makeAc130Mesh() {
 function ensureAc130Hud() {
   if (document.getElementById('ac130Vig')) return;
   const style = document.createElement('style');
-  style.textContent = '#ac130Vig{position:fixed;inset:0;z-index:5;pointer-events:none;background:transparent;box-shadow:inset 0 0 120px 42px rgba(184,98,16,.72)}#ac130Vig[hidden]{display:none!important}#ac130Lock{position:fixed;left:50%;bottom:108px;transform:translateX(-50%);z-index:26;pointer-events:none;user-select:none;font:700 14px "Trebuchet MS",Arial,sans-serif;color:#ffd27a;text-shadow:0 1px 0 #000;background:rgba(28,16,6,.8);border:2px solid #c47820;border-radius:6px;padding:4px 10px;white-space:nowrap}#ac130Lock[hidden]{display:none!important}';
+  style.textContent = '#ac130Vig{position:fixed;inset:0;z-index:5;pointer-events:none;background:transparent;box-shadow:inset 0 0 120px 42px rgba(184,98,16,.72)}#ac130Vig[hidden]{display:none!important}#ac130Lock{position:fixed;left:50%;bottom:108px;transform:translateX(-50%);z-index:26;pointer-events:none;user-select:none;font:700 14px var(--font);color:#ffd27a;text-shadow:0 1px 0 #000;background:rgba(28,16,6,.8);border:2px solid #c47820;border-radius:6px;padding:4px 10px;white-space:nowrap}#ac130Lock[hidden]{display:none!important}';
   document.head.appendChild(style);
   const vig = document.createElement('div'); vig.id = 'ac130Vig'; vig.hidden = true; document.body.appendChild(vig);
   const lock = document.createElement('div'); lock.id = 'ac130Lock'; lock.hidden = true; document.body.appendChild(lock);
@@ -1816,16 +1818,16 @@ function updateNetGunships(dt) {
 }
 const _gm = new V3();
 // barra de calor da minigun (embaixo da mira)
-function ensureMiniHud() { let n = document.getElementById('mgHud'); if (n) return n; const st = document.createElement('style'); st.textContent = `#mgHud{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:200px;z-index:12;pointer-events:none;text-align:center;font:700 11px "Trebuchet MS",Arial,sans-serif;color:#e8fbff;text-shadow:0 1px 0 #000}#mgHud[hidden]{display:none!important}#mgHud i{display:block;margin-top:3px;height:8px;background:rgba(0,0,0,.6);border:1px solid #e8fbff;border-radius:4px;overflow:hidden}#mgHud i span{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd27a,#ff4a2a)}#mgHud.hot{color:#ff6a4a;animation:mgHot .4s steps(2) infinite}@keyframes mgHot{50%{opacity:.35}}`; document.head.appendChild(st); n = document.createElement('div'); n.id = 'mgHud'; n.hidden = true; n.innerHTML = '<b>CALOR</b><i><span></span></i>'; document.body.appendChild(n); return n; }
+function ensureMiniHud() { let n = document.getElementById('mgHud'); if (n) return n; const st = document.createElement('style'); st.textContent = `#mgHud{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:200px;z-index:12;pointer-events:none;text-align:center;font:700 11px var(--font);color:#e8fbff;text-shadow:0 1px 0 #000}#mgHud[hidden]{display:none!important}#mgHud i{display:block;margin-top:3px;height:8px;background:rgba(0,0,0,.6);border:1px solid #e8fbff;border-radius:4px;overflow:hidden}#mgHud i span{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd27a,#ff4a2a)}#mgHud.hot{color:#ff6a4a;animation:mgHot .4s steps(2) infinite}@keyframes mgHot{50%{opacity:.35}}`; document.head.appendChild(st); n = document.createElement('div'); n.id = 'mgHud'; n.hidden = true; n.innerHTML = '<b>CALOR</b><i><span></span></i>'; document.body.appendChild(n); return n; }
 function paintMiniHud(p) { const n = ensureMiniHud(), on = !!(p.alive && p.weapon === MINIGUN && !gunner); n.hidden = !on; if (!on) return; n.classList.toggle('hot', !!p.mgHot); n.firstChild.textContent = p.mgHot ? 'SUPERAQUECEU' : (p.mgSpin || 0) < 1 && p.mgWant ? 'EMBALANDO' : 'CALOR'; n.querySelector('span').style.width = ((p.mgHeat || 0) * 100).toFixed(0) + '%'; }
 function ensureGunnerHud() {
   let node = document.getElementById('gunnerHud');
   if (node) return node;
   const style = document.createElement('style');
-  style.textContent = `#gunnerHud{position:fixed;inset:0;z-index:24;pointer-events:none;user-select:none;font-family:"Trebuchet MS",Arial,sans-serif;color:#e8fbff}
+  style.textContent = `#gunnerHud{position:fixed;inset:0;z-index:24;pointer-events:none;user-select:none;font-family:var(--font);color:#e8fbff}
 #gunnerHud[hidden]{display:none!important}
 #gunnerHud .gh-top{position:absolute;top:74px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
-#gunnerHud .gh-top b{font-family:Impact,"Arial Black",sans-serif;font-size:16px;letter-spacing:1px;text-shadow:0 2px 0 #000}
+#gunnerHud .gh-top b{font-family:var(--font);font-size:16px;letter-spacing:1px;text-shadow:0 2px 0 #000}
 #gunnerHud .gh-hp{width:220px;height:8px;background:rgba(0,0,0,.6);border:1px solid #e8fbff;border-radius:4px;overflow:hidden}
 #gunnerHud .gh-hp span{display:block;height:100%;background:#7ee08a;transition:width .15s}
 #gunnerHud .gh-top small{font-weight:700;text-shadow:0 1px 0 #000}
@@ -2010,7 +2012,7 @@ function ensurePredatorHud() {
     node.innerHTML = '<b>MÍSSIL DA GRANJA</b><i></i><small>mexe o mouse · segura o tiro pra acelerar</small>';
     document.body.appendChild(node);
     const style = document.createElement('style');
-    style.textContent = '#predatorHud{position:fixed;inset:0;z-index:24;pointer-events:none;box-shadow:inset 0 0 0 34px #140e0c,inset 0 0 0 38px #3a2a22,inset 0 0 80px rgba(0,0,0,.45)}#predatorHud[hidden]{display:none!important}#predatorHud b{position:absolute;top:46px;left:50%;transform:translateX(-50%);font-family:Impact,Arial,sans-serif;letter-spacing:1px;color:#d7f3ff;text-shadow:0 2px 0 #000}#predatorHud small{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);color:#ffe8c2;font-weight:bold;text-shadow:0 2px 0 #000}#predatorHud i{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%)}#predatorHud i:before,#predatorHud i:after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px #000}#predatorHud i:before{left:8px;top:-10px;width:2px;height:38px}#predatorHud i:after{top:8px;left:-10px;height:2px;width:38px}';
+    style.textContent = '#predatorHud{position:fixed;inset:0;z-index:24;pointer-events:none;box-shadow:inset 0 0 0 34px #140e0c,inset 0 0 0 38px #3a2a22,inset 0 0 80px rgba(0,0,0,.45)}#predatorHud[hidden]{display:none!important}#predatorHud b{position:absolute;top:46px;left:50%;transform:translateX(-50%);font-family:var(--font);letter-spacing:1px;color:#d7f3ff;text-shadow:0 2px 0 #000}#predatorHud small{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);color:#ffe8c2;font-weight:bold;text-shadow:0 2px 0 #000}#predatorHud i{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%)}#predatorHud i:before,#predatorHud i:after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px #000}#predatorHud i:before{left:8px;top:-10px;width:2px;height:38px}#predatorHud i:after{top:8px;left:-10px;height:2px;width:38px}';
     document.head.appendChild(style);
   }
   return node;
@@ -2093,7 +2095,7 @@ const missileHud = (() => {
   x.strokeStyle = '#d7f3ff'; x.lineWidth = 4;
   for (const [cx, cy, sx, sy] of [[24, 24, 1, 1], [744, 24, -1, 1], [24, 406, 1, -1], [744, 406, -1, -1]]) { x.beginPath(); x.moveTo(cx, cy + sy * 44); x.lineTo(cx, cy); x.lineTo(cx + sx * 44, cy); x.stroke(); }
   x.lineWidth = 3; x.beginPath(); x.arc(384, 215, 22, 0, Math.PI * 2); x.moveTo(384, 175); x.lineTo(384, 200); x.moveTo(384, 230); x.lineTo(384, 255); x.moveTo(344, 215); x.lineTo(369, 215); x.moveTo(399, 215); x.lineTo(424, 215); x.stroke();
-  x.textAlign = 'center'; x.font = 'bold 30px Impact, Arial, sans-serif'; x.fillStyle = '#d7f3ff'; x.shadowColor = '#000'; x.shadowOffsetY = 2; x.fillText('MÍSSIL DA GRANJA', 384, 62);
+  x.textAlign = 'center'; x.font = 'bold 30px Fredoka, "Trebuchet MS", Arial, sans-serif'; x.fillStyle = '#d7f3ff'; x.shadowColor = '#000'; x.shadowOffsetY = 2; x.fillText('MÍSSIL DA GRANJA', 384, 62);
   x.font = 'bold 20px Arial, sans-serif'; x.fillStyle = '#ffe8c2'; x.fillText('mexe o mouse · segura o tiro pra acelerar', 384, 392);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const hudScene = new THREE.Scene(), hudCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -3774,7 +3776,7 @@ const dmgPops = [];
 function dmgPopup(t, amount, head) {
   const n = Math.round(amount); if (!(n > 0) || !t.pos) return;
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const x = cv.getContext('2d');
-  x.font = '900 64px "Arial Black", Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 10; x.strokeStyle = '#2a1410';
+  x.font = '900 64px Fredoka, "Trebuchet MS", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 10; x.strokeStyle = '#2a1410';
   const txt = head ? `${n}!` : String(n); x.strokeText(txt, 128, 52); x.fillStyle = head ? '#ffd23a' : '#ffffff'; x.fillText(txt, 128, 52);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false }));
