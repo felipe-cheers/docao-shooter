@@ -346,7 +346,7 @@ export class Game {
         this.io.saveCfg && this.io.saveCfg(this.cfg); if (this.state === 'playing') this.syncBots(); this.sendLobby(); this.sendVoices(); break;
       case 'testGod': if (this.test && e.alive) e.invulnUntil = this.T + clamp(+m.s || 0, 0, 120); break; // só testes (ALLOW_TEST=1): invulnerável por s segundos
       case 'testKs': if (this.test && this.state === 'playing' && e.alive) { const n = clamp(m.n | 0, 0, 30); for (let i = 0; i < n; i++) this.streakKill(e); } break; // só testes (ALLOW_TEST=1)
-      case 'testKill': if (this.test && this.state === 'playing' && e.alive) { const v = [...this.ents.values()].find((x) => x !== e && x.alive && !x.zt); if (v) this.kill(v, e, e.weapon, false); } break; // só testes (ALLOW_TEST=1): abate o 1º vivo (ranking)
+      case 'testKill': if (this.test && this.state === 'playing' && e.alive) { const v = [...this.ents.values()].find((x) => x !== e && x.alive && !x.zt); if (v) this.kill(v, e, e.weapon, !!m.head); } break; // só testes (ALLOW_TEST=1): abate o 1º vivo (ranking); head: 1 = de cabeça (desafio D03)
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
       case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? this.nextMapId() : this.cfg.map)); break;
       case 'testInv': if (this.test && this.inv && this.state === 'playing') this.testInv(e, m); break; // só testes (ALLOW_TEST=1)

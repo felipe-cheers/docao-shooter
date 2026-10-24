@@ -1853,10 +1853,12 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 #menu .daily-prize{grid-area:p;font:900 12px var(--font);color:#7a5a08;white-space:nowrap}#menu .done .daily-prize{color:#2f7a40}
 #menu .daily-bar{grid-area:b;height:4px;background:#e6d3a8;border-radius:2px;overflow:hidden}#menu .daily-bar i{display:block;height:100%;background:linear-gradient(90deg,#f2c94c,#d4a82a)}#menu .done .daily-bar i{background:#3d8b4f}
 #menu .daily-prog{grid-area:n;font-size:11px;font-weight:900;color:#5b4a2c;white-space:nowrap}
-#menu .daily-guest{margin:0;font-size:12px}#menu button.daily-enter{margin:4px 0 0;padding:4px 10px;width:auto;font:900 11px var(--font);letter-spacing:1px;color:#efdfbb;background:var(--ink);border:2px solid #162c25;border-radius:3px;box-shadow:2px 3px #291e1888;cursor:pointer}
+#menu .daily-guest{margin:0;font-size:12px}#menu .daily-note{margin:4px 0 0;font-size:11px;line-height:1.3;opacity:.8}#menu button.daily-enter{margin:4px 0 0;padding:4px 10px;width:auto;font:900 11px var(--font);letter-spacing:1px;color:#efdfbb;background:var(--ink);border:2px solid #162c25;border-radius:3px;box-shadow:2px 3px #291e1888;cursor:pointer}
 @media (min-width:1000px) and (min-height:600px){
   #menu .daily-panel{position:fixed;z-index:4;top:14px;left:calc(50% - 170px);width:340px;margin:0;transform:rotate(-1deg)}
 }
 #menu .acct-strip{flex-wrap:wrap}#menu .acct-txt{flex:1 1 120px}#menu .acct-btns{margin-left:auto}
 @media (max-width:720px){#menu .daily-panel{margin:-4px 0 10px}#menu .acct-txt{flex:none}}
 #menu .acct-txt .nw{white-space:nowrap}
+
+#finalboard .overnote{margin:8px 0 0;font-size:12px;font-weight:700;color:#7a3b10}

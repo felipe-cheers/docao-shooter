@@ -24,7 +24,8 @@ function renderDaily() {
   const done = c.list.filter((x) => x.done).length;
   box.innerHTML = `<div class="daily-head"><b>🎯 Desafios do dia <em>${done}/${c.list.length}</em></b><span title="Novos desafios à meia-noite de Brasília">⏳ novos em <b>${left(c.resetIn)}</b></span></div>`
     + c.list.map((x) => `<button type="button" class="daily-row t${x.tier}${x.done ? ' done' : ''}" data-open-chal title="${esc(x.text + ' — ' + TIERS[x.tier] + ' · ' + x.mode)}"><span class="daily-text">${esc(x.text)}</span>`
-      + `<span class="daily-prize">${x.done ? '✓ ' : ''}${COIN_ICON} ${x.reward}</span><span class="daily-bar"><i style="width:${Math.round(100 * Math.min(1, x.prog / x.goal))}%"></i></span><span class="daily-prog">${x.prog}/${x.goal}</span></button>`).join('');
+      + `<span class="daily-prize">${x.done ? '✓ ' : ''}${COIN_ICON} ${x.reward}</span><span class="daily-bar"><i style="width:${Math.round(100 * Math.min(1, x.prog / x.goal))}%"></i></span><span class="daily-prog">${x.prog}/${x.goal}</span></button>`).join('')
+    + '<p class="daily-note">🌐 Conta só em <b>partida online</b> logado (sala com bots vale). Offline e Treino não contam.</p>';
 }
 function renderStrip(a) {
   const t = $('acctTxt'), b = $('acctBtn');

@@ -669,6 +669,7 @@ function beginVictory() {
   model.danceBase = { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw + Math.PI };
   model.group.visible = true; model.group.scale.set(1, 1, 1);
   if (player.bacon && player.bacon.grp) player.bacon.grp.visible = false;
+  resetAds(); // terminou mirando (sniper/luneta): sem isso o zoom da mira ficava na dança e a câmera parecia colada no Docão
   victory.on = true; victory.model = model; victory.clock = 0;
   pickups.forEach((p) => { p.mesh.visible = false; });
   $('gameover').classList.add('dancing');
@@ -745,17 +746,24 @@ function updateMatchEnding(realDt) {
 function frameVictoryCam() {
   const m = victory.model; if (!m) return;
   const b = m.danceBase;
-  camTgt.set(m.group.position.x, b.y + 1.02, m.group.position.z);
-  let bestD = 0, bx = camTgt.x, by = camTgt.y + 0.4, bz = camTgt.z + 3;
+  camTgt.set(m.group.position.x, b.y + 1.2, m.group.position.z); // meio do Docão com chapéu alto (e o Dourado flutuando)
+  // distância que cabe o Docão inteiro (≈2,6 m de altura com chapéu, ≈1,8 m de braço a braço dançando) com folga, inclusive em tela estreita
+  const tanV = Math.tan(THREE.MathUtils.degToRad(BASE_FOV) / 2), aspect = Math.max(0.3, innerWidth / Math.max(1, innerHeight));
+  const want = clamp(Math.max(1.6 / (tanV * 0.78), 1.5 / (tanV * aspect * 0.8)), 5, 9);
+  let bestD = 0, bx = camTgt.x, by = camTgt.y + 0.6, bz = camTgt.z + want;
   for (let i = 0; i < 8; i++) {
     const face = b.yaw + 0.4 + i * (Math.PI / 4) + Math.sin(victory.clock * 0.35) * 0.08;
-    let d = 4.2;
-    for (; d > 1.35; d -= 0.4) {
-      camTmp.set(camTgt.x + Math.sin(face) * d, camTgt.y + 0.22 + d * 0.08, camTgt.z + Math.cos(face) * d);
+    let d = want;
+    for (; d > 2.2; d -= 0.35) {
+      camTmp.set(camTgt.x + Math.sin(face) * d, camTgt.y + 0.35 + d * 0.1, camTgt.z + Math.cos(face) * d);
       if (losClear(camTgt, camTmp)) break;
     }
     if (d > bestD) { bestD = d; bx = camTmp.x; by = camTmp.y; bz = camTmp.z; }
-    if (d >= 3.8) break;
+    if (d >= want - 0.4) break;
+  }
+  if (bestD < 3.4) { // cantinho apertado: em vez de colar no Docão, sobe a câmera (olhando de cima ele cabe inteiro)
+    const lift = (3.4 - bestD) * 1.1; camTmp.set(bx, by + lift, bz);
+    if (losClear(camTgt, camTmp)) by += lift;
   }
   camera.position.set(bx, by, bz);
   camera.lookAt(camTgt);
@@ -4084,6 +4092,7 @@ function updatePlayer(dt) {
   const jumpPressed = !!keys.Space; keys.Space = false;
   if (!p.alive) {
     if (ac130) endAc130(false); // o corpo no chão morreu: solta a mira da Grelha e mostra a câmera da morte (o avião continua no ar)
+    if (gunner) endGunner(false); // garantia: mira do Chopper nunca sobrevive à morte (resetRewards já solta; "guiando" trava o WASD)
     if (emote.on) stopEmote();
     saberSfx.hum(false);
     if (p.charging) { p.charging = false; arcLine.visible = arcMark.visible = false; }
@@ -4555,6 +4564,7 @@ function botShoot(b, t, dist = 10) {
 const menuViewButtons = [...document.querySelectorAll('[data-menu-view]')];
 let menuViewTrigger = null;
 function setMenuView(view, trigger) {
+  if (view !== 'arsenal') closeBench(); // fechou a caixa do Arsenal: a bancada fecha junto
   for (const name of ['match', 'arsenal', 'operator', 'settings']) $('menu-' + name).hidden = name !== view;
   for (const button of menuViewButtons) button.setAttribute('aria-expanded', String(button.dataset.menuView === view));
   $('menuBack').hidden = view === 'match';
@@ -5296,7 +5306,7 @@ function cycleExplorePrimary(dir) {
   flashMsg(WEAPONS[i].name);
 }
 function startGame(mapId) {
-  clearMatchEnding();
+  clearMatchEnding(); closeBench(); // bancada do Arsenal aberta no menu comia W/S/setas/1-5 dentro da partida
   endVictory(); stopEmote();
   resetAds(); stopInspect(true); // inspeção velha não sobrevive ao 'Jogar de novo'
   initAudio();
@@ -5363,6 +5373,7 @@ function endGame() {
   matchEnding.dance = outcome === 'win' && playerWonMatch({ mode, rows: winRows, teamW, invWon: inv && inv.won }); // a dança começa quando o placar entra
   $('finalboard').innerHTML = boardHtml();
   if (player && player.shieldBlocked > 0) $('finalboard').insertAdjacentHTML('beforeend', `<p class="shieldend">Dano segurado na tampa: ${Math.round(player.shieldBlocked)}</p>`);
+  if (getAccount()) $('finalboard').insertAdjacentHTML('beforeend', '<p class="overnote">🌐 Partida offline não conta pros desafios do dia nem dá Docoins: jogue numa sala online (pode ser só com bots) pra valer.</p>');
   const nm = getMap(nextOfflineMap()); $('overMap').innerHTML = `Mapa: <b>${escapeHtml(currentMap.name)}</b> · próximo: <b>${escapeHtml(nm.name)}</b>`;
   ['againBtn', 'nextMapBtn'].forEach((id) => $(id).classList.remove('hidden')); $('overWait').classList.add('hidden');
   $('overChat').classList.add('hidden');
@@ -5514,7 +5525,7 @@ function tryOpenChat(e) {
   if (e.repeat || !chatShown() || !chatRoomOn() || state !== 'playing') return false;
   if (e.code === 'KeyT') { chatUseAll(); return openChat('all'); }
   if (e.code === 'KeyY' || e.code === 'KeyU') return openChat(socialTeam() ? 'team' : 'all');
-  if ((e.code === 'Enter' || e.code === 'NumpadEnter') && player && player.alive) return openChat('all');
+  if ((e.code === 'Enter' || e.code === 'NumpadEnter') && player && player.alive && performance.now() - lastRespawnMs > 900) return openChat('all'); // Enter que renasceu (ou o 2º Enter do 'Nascendo...') não abre o chat: senão o WASD ia digitar na caixinha
   return false;
 }
 document.addEventListener('keydown', (e) => {
@@ -6123,6 +6134,8 @@ function stampBench() {
 }
 function benchKey(e) {
   if (!benchOn) return false;
+  if (state !== 'menu') { closeBench(); return false; } // a bancada é do menu: aberta e esquecida (FECHAR CAIXA não fechava) ela comia W/S/setas/1-5 a partida inteira
+
   const slots = slotsOf(benchWeapon);
   const pieces = piecesOf(benchWeapon, benchSlot);
   if (!slots.length || !pieces.length) { if (e.code === 'Escape') { closeBench(); return true; } return false; }
@@ -6313,7 +6326,9 @@ function requestRespawn() {
 }
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
 function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
-function onPlayerRespawn() { clearHitMarks(); rsSent = false; deathCamState.on = false; deathCamState.killer = null; tuckDeathMenu(); document.body.classList.remove('deadgray', 'dead'); if (!bombPick && !invPick && !pauseClassOpen()) document.body.classList.remove('cls-on'); if (ghost) ghost.model.group.visible = false;
+let lastRespawnMs = -1e9;
+function onPlayerRespawn() { clearHitMarks(); rsSent = false; lastRespawnMs = performance.now(); if (gunner) endGunner(false); if (predator) clearPredator(); closeBench(); // nada de mira guiada nem bancada sobrando da vida anterior (travava o andar)
+  deathCamState.on = false; deathCamState.killer = null; tuckDeathMenu(); document.body.classList.remove('deadgray', 'dead'); if (!bombPick && !invPick && !pauseClassOpen()) document.body.classList.remove('cls-on'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
 
@@ -6405,6 +6420,7 @@ function leaveOnline(silent) {
   const u = new URL(location.href); u.searchParams.delete('sala'); history.replaceState(null, '', u.toString());
   $('lobby').classList.add('hidden'); $('netbar').classList.add('hidden'); $('socialHud').classList.add('hidden'); $('overChat').classList.add('hidden');
   if (!silent && state !== 'menu') toMenu(); else if (!silent) $('menu').classList.remove('hidden');
+  if (getAccount()) setTimeout(() => { if (!online && getAccount()) loadMe(); }, 3000); // saiu no meio: o servidor grava o que contou ao sair; o painel de desafios e o saldo atualizam (antes ficavam velhos até recarregar)
 }
 function onNetStatus(st, detail) {
   if (!online) return; online.status = st;
@@ -6527,6 +6543,7 @@ function removeEnt(id) {
   scene.remove(e.model.group); o.ents.delete(id); entities = entities.filter((x) => x !== e);
 }
 function startOnlineMatch(m) {
+  closeBench();
   const o = online; stopInspect(true);
   if (o.inMatch && o.mapId === m.map && state !== 'over' && player) { // reconexão no meio da partida: só ressincroniza
     for (const info of m.ents) if (!o.ents.has(info.id) && info.id !== o.myId) remoteEnt(info);
@@ -7296,7 +7313,7 @@ function invEndText() {
 }
 
 // ganchos para testes automatizados
-window.__docao = { get state() { return state; }, get ending() { return matchEnding; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, TAMPA, get shield() { const p = player; return p ? { hp: p.shieldHp || 0, broken: !!p.shieldBroken, blocked: Math.round(p.shieldBlocked || 0), raised: shieldRaised(p), stage: shieldStage(p.shieldHp) } : null; }, shieldAttack: (kind = 0) => player && shieldStrike(player, kind, camera.position.clone(), new V3(0, 0, -1).applyQuaternion(camera.quaternion)), startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
+window.__docao = { get state() { return state; }, toMenu: () => toMenu(), benchOpen: () => benchOn, victoryFit: () => { const m = victory.model; if (!m) return null; m.group.updateMatrixWorld(true); const box = new THREE.Box3(), c = []; m.group.traverseVisible((o) => { if (o.isMesh && o.geometry) { o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } }); const _u = 0, v = new V3(); for (let i = 0; i < 8; i++) { v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera); c.push([v.x, v.y]); } return { minX: Math.min(...c.map((q) => q[0])), maxX: Math.max(...c.map((q) => q[0])), minY: Math.min(...c.map((q) => q[1])), maxY: Math.max(...c.map((q) => q[1])), h: box.max.y - box.min.y, fov: camera.fov, dist: camera.position.distanceTo(m.group.position) }; }, get ending() { return matchEnding; }, get entities() { return entities; }, get player() { return player; }, get camera() { return camera; }, TAMPA, get shield() { const p = player; return p ? { hp: p.shieldHp || 0, broken: !!p.shieldBroken, blocked: Math.round(p.shieldBlocked || 0), raised: shieldRaised(p), stage: shieldStage(p.shieldHp) } : null; }, shieldAttack: (kind = 0) => player && shieldStrike(player, kind, camera.position.clone(), new V3(0, 0, -1).applyQuaternion(camera.quaternion)), startGame, endGame, pause, visible: (e) => losClear(center(player, EYE), center(e, 1.2)),
   set time(v) { gameTime = v; }, get time() { return gameTime; }, get grenades() { return grenades; }, get grenadeAim() { return { origin: throwOrigin().toArray(), velocity: throwVelocity(throwPower()).toArray(), points: Array.from(arcGeo.attributes.position.array.slice(0, arcGeo.drawRange.count * 3)), marker: arcMark.position.toArray(), visible: arcLine.visible, cupVisible: fp.cup.visible, handVisible: fp.cupHand.visible }; }, get explosions() { return explosions; }, get pickups() { return pickups; }, get ads() { return ads; }, get fov() { return camera.fov; }, get rockets() { return rockets; }, get lastKnock() { return lastKnock; }, WEAPONS, setPrimary, tuneClass, armClass, get classes() { return classes; }, get classIndex() { return classIndex; }, get held() { return player ? gunOf(player, player.weapon) : null; }, get scoped() { return scoped(); },
   MAPS, loadMap, selectMap, get map() { return currentMap; }, get nav() { return nav; }, get navMs() { return navMs; }, get spawns() { return SPAWNS; }, groundAt, collides, get solids() { return solids; },
   get online() { return online; }, joinRoom, leaveOnline, netEv,

@@ -4,6 +4,15 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.20.1 — Macarena no Chiqueiro 🎶🐷 (24/10/2026)
+🎶 **DALE A TU CUERPO ALEGRÍA, MACARENA!** O Brechó mal abriu e a Porca Véia já trouxe mais duas danças pro balcão:
+🕺 **Passinho do Jamal** (450 🪙): pé cruzando, ombro gingando, chutinho pra lá e pra cá. O baile funk chegou no chiqueiro.
+🎶 **Macarena** (400 🪙): braço, braço, ombro, cabeça, rebola e dá a voltinha. Igual na festa de firma, só que com rabinho enrolado.
+🎯 **Desafio que "não contava":** fomos atrás de cada abate de cabeça, da sala até o cofrinho, e a conta está certa. O pulo do gato: **desafio e Docoin só valem em partida online, com a conta logada** (sala só com bots também vale). Offline e Treino não contam, e agora o painel do menu e o fim da partida offline **avisam isso com todas as letras**. E quem sai da sala no meio já vê o progresso e o saldo atualizados no menu, sem precisar recarregar a página.
+🧊 **Docão congelado:** abriu a **bancada do Arsenal** no menu, fechou a caixa pelo botão e foi jogar? A bancada continuava aberta escondida e comia o **W e o S** a partida inteira. Agora ela fecha sozinha. E o Enter que te faz renascer não abre mais o chat sem querer, que aí o WASD ia virar textão na caixinha.
+📸 **Câmera da vitória com distância de fotógrafo:** quem ganhava mirando de luneta levava o zoom pra dança e só via o focinho do Docão. Agora a câmera volta pro normal, recua e sobe um pouco: dá pra ver o Docão inteiro, do casco ao chapéu (até o Dourado flutuando), no PC e no celular deitado.
+💸 **E o bolso do Matheus?** Nenhuma sala nova e nenhuma mensagem a mais na partida. O único extra é uma conferida no saldo quando você sai da sala no meio, o mesmo que já acontecia no fim da partida. A Macarena é de graça pro servidor.
+
 ## v1.20 — Brechó da Porca Véia 🧺🐷 (24/10/2026)
 🧺 **A PORCA VÉIA ABRIU O BRECHÓ!** Quem tem conta agora tem onde torrar dinheiro. Botão **🧺 BRECHÓ** no menu, e o caixa só aceita a moeda da casa:
 🪙 **Docoin:** só se ganha **jogando** (abate, fim de partida, vitória e wave da Invasão), com teto de 80 por partida e 400 por dia, que porco não é agiota. E não, Docoin não cai no chão igual bacon: vai direto pro cofrinho.
