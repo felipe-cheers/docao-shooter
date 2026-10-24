@@ -87,10 +87,25 @@ function buildGun(side) {
 
   const hand = makeFPForearm('classico');
   hand.userData.noCamo = true;
-  hand.position.set(0, -0.02, 0.02);
+  shrinkFist(hand, 0.62);
   pivot.add(hand);
+  // a mão de apoio só aparece na mira fechada do revólver simples
+  const support = side > 0 ? makeFPForearm('classico') : null;
+  if (support) {
+    support.userData.noCamo = true;
+    support.visible = false;
+    shrinkFist(support, 0.5);
+    pivot.add(support);
+  }
 
-  return { pivot, spin, hinge, cyl, hammer: hammerP, loader, flash, flashMat, hand, side };
+  return { pivot, spin, hinge, cyl, hammer: hammerP, loader, flash, flashMat, hand, support, side };
+}
+
+function shrinkFist(hand, k) {
+  for (const c of hand.children) {
+    if (c === hand.userData.arm) continue;
+    c.scale.setScalar(k);
+  }
 }
 
 function freshAnim() {
@@ -137,9 +152,19 @@ export function capatazSkin(skinId) {
       const prev = gun.hand;
       gun.hand = makeFPForearm(skinId || 'classico');
       gun.hand.userData.noCamo = true;
+      shrinkFist(gun.hand, 0.62);
       gun.hand.position.copy(prev.position);
       gun.pivot.remove(prev);
       gun.pivot.add(gun.hand);
+      if (gun.support) {
+        const old = gun.support;
+        gun.support = makeFPForearm(skinId || 'classico');
+        gun.support.userData.noCamo = true;
+        shrinkFist(gun.support, 0.5);
+        gun.support.visible = old.visible;
+        gun.pivot.remove(old);
+        gun.pivot.add(gun.support);
+      }
     }
   }
 }
@@ -165,12 +190,43 @@ export function noteCapataz(kind, data = {}) {
   }
 }
 
-function shoulderFor(gun) {
-  return new THREE.Vector3(gun.side * 0.22, -0.48, 0.55);
+const GRIP = new THREE.Vector3(0.01, -0.15, 0.08);
+// na mira a mão desce pro cabo e afasta da lente, pra o punho não estourar no centro
+const GRIP_ADS = new THREE.Vector3(0.0, -0.2, -0.02);
+const SHOULDER_HIP = new THREE.Vector3();
+const SHOULDER_ADS = new THREE.Vector3(0.0, -1.2, -0.06);
+
+function seatHands(gun, pose, ads, spinning) {
+  const { hand, support, spin, side } = gun;
+  if (!hand) return;
+  const aimK = side > 0 ? clamp01((ads - 0.15) / 0.7) : 0;
+  const grip = GRIP.clone().lerp(GRIP_ADS, aimK);
+  // no giro do dedo a mão fica parada; no resto ela acompanha o cabo
+  if (spinning) hand.position.copy(grip);
+  else hand.position.copy(grip).applyEuler(spin.rotation).add(spin.position);
+  hand.position.x += side * 0.012 * (1 - aimK);
+  shrinkFist(hand, 0.62 + (0.36 - 0.62) * aimK);
+  SHOULDER_HIP.set(side * 0.22, -1.05, 0.28);
+  const shoulder = SHOULDER_HIP.lerp(SHOULDER_ADS, aimK);
+  aimForearm(hand, shoulder, 0.62 + (0.36 - 0.62) * aimK);
+  if (!support) return;
+  const showSupport = aimK > 0.82;
+  support.visible = showSupport;
+  if (!showSupport) return;
+  support.position.set(-0.04, -0.21, -0.06);
+  shrinkFist(support, 0.32);
+  aimForearm(support, new THREE.Vector3(-0.05, -1.2, -0.04), 0.32);
 }
 
-function poseGun(gun, pose, idle, time) {
-  const { spin, hinge, cyl, hammer, loader, hand, side } = gun;
+function aimForearm(hand, shoulder, girth) {
+  hand.rotation.set(0, 0, 0);
+  poseFPForearm(hand, shoulder);
+  const arm = hand.userData.arm;
+  if (arm) { arm.scale.x = girth; arm.scale.z = girth; }
+}
+
+function poseGun(gun, pose, idle, time, ads, spinning) {
+  const { spin, hinge, cyl, hammer, loader, side } = gun;
   spin.rotation.set(pose.rx, pose.ry, pose.rz);
   spin.position.set(pose.x, pose.y + idle, pose.z);
   hinge.rotation.y = pose.open * side;
@@ -182,7 +238,7 @@ function poseGun(gun, pose, idle, time) {
   loader.visible = pose.loader > 0.02;
   loader.position.set(side * pose.loader * 0.12, -0.02 * (1 - pose.loader), 0.08 + (1 - pose.loader) * 0.22);
   loader.rotation.z = (1 - pose.loader) * side * 1.4;
-  if (hand) poseFPForearm(hand, shoulderFor(gun));
+  seatHands(gun, pose, ads, spinning);
   if (pose.flash > 0) {
     gun.flashMat.opacity = pose.flash;
     gun.flash.rotation.z = time * 17;
@@ -348,7 +404,8 @@ export function stepCapataz(dt, ctx) {
       pose.y *= 1 - ctx.ads;
       pose.rz *= 1 - ctx.ads;
     }
-    poseGun(gun, pose, idle, time);
+    const spinning = equipT < a.equipDur;
+    poseGun(gun, pose, idle, time, ctx.ads || 0, spinning);
   });
 }
 

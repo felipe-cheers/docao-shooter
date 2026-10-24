@@ -5876,7 +5876,9 @@ window.__docao = { get state() { return state; }, get ending() { return matchEnd
     fp.root.updateMatrixWorld(true);
     const gun = g.userData.guns[0], left = g.userData.guns[1];
     const proj = (obj, x, y, z) => { const v = obj.localToWorld(new V3(x, y, z)).project(fpCam); return [+v.x.toFixed(3), +v.y.toFixed(3)]; };
-    return { ads: +ads.toFixed(2), sight: proj(gun.spin, 0, 0.052, -0.3), muzzle: proj(gun.spin, 0, 0.02, -0.36), grip: proj(gun.spin, 0, -0.09, 0.04), leftMuzzle: left ? proj(left.spin, 0, 0.02, -0.36) : null, hud: $('mag') ? $('mag').textContent : '', mode: fireModeLabel(WEAPONS[p.weapon]) };
+    const hand = gun.hand ? proj(gun.hand, 0, 0, 0) : null;
+    const support = gun.support && gun.support.visible ? proj(gun.support, 0, 0, 0) : null;
+    return { ads: +ads.toFixed(2), sight: proj(gun.spin, 0, 0.052, -0.3), muzzle: proj(gun.spin, 0, 0.02, -0.36), grip: proj(gun.spin, 0, -0.09, 0.04), hand, support, leftMuzzle: left ? proj(left.spin, 0, 0.02, -0.36) : null, hud: $('mag') ? $('mag').textContent : '', mode: fireModeLabel(WEAPONS[p.weapon]) };
   },
   setSecondary, REV: 23, REV2: 24,
   // Invasão 🎃
