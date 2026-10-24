@@ -19,15 +19,17 @@ Quem morre vira bacon 🥓 e o bacon cura quem pisar nele.
 
 </div>
 
-Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são sintetizados com WebAudio e não há código, arte, nome ou áudio de terceiros. Abra o link, escolha a skin e comece a pururucar. Não precisa instalar nem criar conta.
+Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são sintetizados com WebAudio e não há código, arte, nome ou áudio de terceiros. Abra o link, escolha a skin e comece a pururucar. Não precisa instalar nem criar conta: dá pra jogar sempre como **convidado**. Se quiser, crie uma **conta opcional** pra ter apelido fixo, ranking e skin guardada.
 
 ---
 
 ## 📚 Sumário
 
 - [🎮 Como jogar](#-como-jogar)
+- [👤 Conta e ranking](#-conta-e-ranking)
 - [⌨️ Controles](#️-controles)
 - [🏆 Modos de jogo](#-modos-de-jogo)
+  - [🎃 Invasão · Hordas de Zumbis](#-invasão--hordas-de-zumbis)
   - [💣 Bomba · Planta o Botijão](#-bomba--planta-o-botijão)
 - [🗺️ Mapas](#️-mapas)
 - [🔫 Armas](#-armas)
@@ -54,22 +56,39 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 4. Escolha o **mapa** (ou **Aleatório**, que sorteia um mapa a cada partida) e o **modo**.
 5. Clique em **JOGAR OFFLINE** ou em **JOGAR ONLINE**.
 
-O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no navegador.
+O nome, a skin, as armas, a dança da vitória, o mapa, o modo, a dificuldade dos bots e a sensibilidade ficam salvos no navegador. Com uma conta, o apelido e a skin ficam guardados no servidor (veja [Conta e ranking](#-conta-e-ranking)).
 
 ### 🤖 Offline (contra bots)
 
 - De **4 a 6 bots**, cada um com nome de comida: Farofa, Pipoca, Trufa, Bolota, Torresmo, Paçoca, Linguiça, Quindim, Coxinha e Pururuca.
 - Os bots ganham uma primária aleatória, escolhem a arma pela distância, pegam vida e Copo Bomba, arremessam granadas e sobem e descem andares pelas rampas.
+- A **Dificuldade** (Leitão, Ceva, Javali ou Cachaço) muda como eles miram, reagem e se movem. A Ceva é o jeito antigo. A vida e o dano das armas não mudam. Na Invasão a mesma escolha mexe no cuspe e no cerco da horda, sem aumentar a vida das waves. A preferência fica salva no navegador.
 - No menu também dá pra escolher o **Tempo** da partida e a **Sensibilidade** do mouse (normal e mirando).
 
 ### 🌐 Online (com a galera)
 
-- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots** e o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min). Sai um **código de 4 letras**.
+- **Criar sala:** escolha mapa, modo (Mata-mata, Dominação, Treino, Invasão ou Bomba), **máximo de jogadores (2 a 10)**, se quer **completar com bots**, a **dificuldade** deles (Leitão, Ceva, Javali ou Cachaço), o **tempo** (Padrão, 3, 5, 7, 10, 15 ou 20 min) e **quais armas e power-ups valem na sala** (o loadout da sala). Sai um **código de 4 letras**.
 - **Entrar na sala:** digite o código ou abra o link de convite `https://docao.mvalentim.dev/?sala=ABCD`, que já cai direto no lobby.
 - **Convite:** no lobby e na pausa tem Copiar link, Copiar código, WhatsApp, Telegram, Slack e Compartilhar.
-- **Anfitrião (★):** troca mapa, máximo, bots, modo, tempo e **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
-- **Nomes repetidos:** o servidor ajusta sozinho, então o segundo "Matheus" vira "Matheus (2)".
+- **Anfitrião (★):** troca mapa, máximo, bots, dificuldade, modo, tempo, as armas e os power-ups liberados e o **chat (liga/desliga)**, e clica em **INICIAR PARTIDA**. No fim, ele escolhe **JOGAR DE NOVO** ou **PRÓXIMO MAPA ▸**.
+- **Armas da sala:** o dono libera ou bloqueia categorias de armas e power-ups (killstreaks, vida, munição, Copo Bomba, fumaça e pau de choque). Os bots só sacam armas que a sala permite, o lobby mostra o que ficou liberado e o menu lembra a sua arma padrão de cada categoria. Cada slot (primária, secundária e corpo a corpo) sempre fica com pelo menos uma arma.
+- **Nomes repetidos:** o servidor ajusta sozinho, então o segundo "Matheus" vira "Matheus (2)". Se o apelido for de uma **conta**, quem não é o dono entra como "(conv)".
 - **Caiu a conexão?** O jogo reconecta sozinho e você volta com o mesmo jogador e o mesmo placar.
+
+---
+
+## 👤 Conta e ranking
+
+A conta é **opcional**: quem não quiser criar uma joga como **convidado**, exatamente como antes, sem e-mail nem perguntas.
+
+- **Apelido fixo:** um apelido é de uma conta só (3 a 16 caracteres; letras, números, espaço, ponto, hífen e _). "Matheus", "matheus" e "Mathéus" contam como o mesmo apelido. Logado, o seu nome na sala é o da conta e não muda no meio do jogo. Quem tentar entrar com o apelido de outra pessoa vira "(conv)".
+- **Skin salva:** a skin que você escolher volta quando você entrar de novo. Só vale **skin que já existe** no jogo. Convidado guarda a skin só no navegador.
+- **Ranking:** abates, mortes, vitórias e partidas por modo (Mata-mata, Dominação, Bomba e Invasão), ordenado por abates ou por vitórias, no botão **Ranking** do menu. Só conta o que você joga **logado** e o **Treino não vale**.
+- **Segurança:** senha com mínimo de 8 caracteres, guardada com **PBKDF2-SHA256** (nunca em texto puro) e sessão por **token** (só o hash fica no banco). Há limite de tentativas contra quem fica chutando senha, e a mensagem de erro não diz se errou o apelido ou a senha.
+- **Banco:** as contas ficam num **Cloudflare D1** (`docao-contas`), ligado ao Worker pelo binding `DB`. As gravações do ranking são feitas em lote, só quando você sai da sala ou a partida acaba, e a lista do ranking fica 1 minuto em cache.
+- **Sem D1, sem drama:** se o Worker estiver sem o binding `DB`, as rotas de conta respondem 503 e o jogo segue normal como convidado.
+
+Como subir e testar isso está em [Deploy](#deploy) e em [`docs/LOGIN-DEPLOY.md`](docs/LOGIN-DEPLOY.md).
 
 ---
 
@@ -90,17 +109,20 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **I** | inspecionar a arma (segure pra ficar olhando) · mostra camuflagem e abates |
 | **Q** (segurar e soltar) | carrega e arremessa o **Copo Bomba** |
 | **4** | granada de **fumaça** (só offline) |
-| **5** | granada de **atordoamento** (só offline) |
-| **F** | usa o **killstreak** pronto (o mais antigo primeiro) |
+| **5** | **pau de choque**: arremessa uma estaca elétrica (online e offline) |
+| **F** | usa o **killstreak** pronto (o mais antigo primeiro). Não existe na Invasão |
 | **E** (segurar) | Modo Bomba: **planta** o Botijão (Ataque, dentro do site) ou **desarma** (Defesa, perto dele) |
 | **Tab** (segurar) | placar |
-| **Esc** ou **P** | pausa |
+| **B** | **dança da vitória** em 3ª pessoa por uns 3 s (escolha o passo no menu ou na pausa; dançando você não atira). No Treino, na preparação da Bomba e na Invasão o B tem outra função (veja abaixo) |
+| **H** | liga ou desliga as **vozes da granada** no meio da partida, com aviso na tela |
+| `` ` `` (crase) | pausa leve: solta o mouse sem abrir o menu. Aperte de novo pra voltar |
+| **Esc** ou **P** | pausa (no menu de pausa o botão **Vozes da granada** fica bem em destaque no topo) |
 
 **Na tela de morte**
 
 | Tecla | O que faz |
 |---|---|
-| **1 – 9** (ou clique no cartão) | escolhe a primária do próximo renascimento: 1 Fuzil Pururuca · 2 Mini Uzi · 3 P90 · 4 Calibre 12 · 5 Sniper Torresmo · 6 Canhão do Barril · 7 Carabina da Granja · 8 Bazuca · 9 Escopeta Semi |
+| **1 – 9** (ou clique no cartão) | escolhe a primária do próximo renascimento, na ordem da lista (as armas liberadas pela sala): 1 Fuzil Pururuca · 2 Commando da Granja · 3 MP5K da Granja · 4 P90 da Granja · 5 FAMAS da Pocilga · 6 Calibre 12 · 7 Sniper Torresmo · 8 Canhão do Barril · 9 Carabina da Granja |
 | **Espaço** / **Enter** ou botão **RENASCER** | volta pro jogo (liberado depois de 5 s) |
 
 **Online: chat e voz**
@@ -112,7 +134,9 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **Enter** | abre o chat (com o Docão vivo) |
 | **Esc** | fecha o chat |
 | **J** | troca a voz: Mudo → Todos → Time |
-| **K** (segurar) | fala no microfone (push-to-talk) |
+| **K** (segurar) | fala no microfone no modo **Apertar** (push-to-talk). No modo **Aberto** o microfone fica livre e o K não é preciso |
+
+A caixa de voz (no menu, no lobby e na pausa) tem **Mudo / Todos / Time** e, ao lado, **Apertar** e **Aberto**. A escolha fica salva no navegador. **Mudo cala nos dois modos**, e no **Aberto** sair da janela corta o microfone até você voltar.
 
 **Modos especiais**
 
@@ -121,6 +145,9 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | Treino | **B** | próxima primária, na hora e com pente cheio |
 | Treino | **N** | próxima secundária |
 | Treino | **M** | alterna faca ↔ sabre |
+| Invasão | **G** / **X** | usa o poder selecionado / troca de poder |
+| Invasão | **B** (entre as waves) | abre o painel de armas (solta o mouse) · **1–9** primária · **N** secundária · **M** faca/sabre |
+| Bomba (preparação) | **B** · **N** · **M** · **G** | abre o painel de armas · próxima secundária · próxima corpo a corpo · solta o mouse pra clicar |
 | Exploração | **,** e **.** (ou **[** e **]**) | primária anterior / próxima |
 
 ---
@@ -152,6 +179,21 @@ Um estande de tiro no estilo The Range, que abre sempre no mapa **Estande do Doc
 - Números de dano sobem em cima do alvo (amarelo = cabeça).
 - **B / N / M** trocam a arma na hora, a reserva de munição é infinita e o Copo Bomba volta sozinho. Não tem limite de tempo.
 - Online, os jogadores se dão dano normalmente, então dá pra fazer X1 com a galera.
+
+### 🎃 Invasão · Hordas de Zumbis
+
+Modo **cooperativo** em que todo mundo joga no **mesmo time** contra hordas de **Docões zumbis**. Funciona **offline (solo)** e **online (até 10 jogadores)**. O mapa padrão é o **Rodízio do Docão**, e a **Fazenda Mal-Assombrada** foi feita só pra ele. Os mapas de sempre também entram, com decoração de Halloween.
+
+- **20 waves**, cada uma mais difícil (mais zumbis, mais vida, mais velocidade e mais dano). A **cada 5 waves** vem o chefão **Docão Abóbora**. Sobreviveu à wave 20, venceu. Entre as waves tem uma pausa de uns 15 s.
+- **Zumbis:** **Docão Podre** (o comum), **Esqueleto Corredor** (rápido e frágil), **Barrigão de Gás** (grande, lento, e **explode** quando cai) e **Cuspidor** (cospe de longe).
+- **2 vidas** por jogador. Morreu com vida sobrando, você renasce. Sem vidas, você assiste até alguém usar a **Ressurreição**. Todo mundo fora = fim de jogo.
+- **Névoa Assombrada:** a área segura diminui e muda de lugar a cada wave. Fora dela você perde vida (os zumbis não sentem a névoa). Uma seta mostra onde fica a área segura.
+- **Poderes** (caem dos zumbis, pega-se passando por cima, guarda até **3**): **Abóbora Explosiva**, **Uivo do Lobisomem**, **Poção de Cura**, **Lanterna Sagrada**, **Fantasma** e **Ressurreição** (rara). **G** usa e **X** troca.
+- **Sem fogo amigo:** tiro, explosão e poder nunca machucam jogador (nem você). Quem machuca é zumbi e névoa.
+- **Sem killstreak** e **sem dança**: aqui quem manda são os poderes, e o **B** só abre o painel de armas entre as waves.
+- **Munição:** muitas caixas pelo mapa, que voltam em **6 s**, dão até **1,5×** a reserva e enchem o pente (a bazuca ganha +2 foguetes). Os zumbis também soltam caixa (o Barrigão é o mais generoso).
+- **Tiro:** a bala **atravessa a fila de zumbis** (até 8 corpos, com 82% do dano a cada um), e nunca machuca você.
+- **Trilha própria** de terror, que pesa mais na luta contra o chefão.
 
 ### 💣 Bomba · Planta o Botijão
 
@@ -196,7 +238,7 @@ O **Pátio Ferrugem** fica fora porque é pequeno demais, e o **Estande** é só
 
 ## 🗺️ Mapas
 
-São **10 mapas** de partida, mais o Estande do Docão, que só abre no modo Treino. Todos têm prédios com interior, vários andares ligados por rampas, telhados onde dá pra subir e pelo menos uma linha longa pra Sniper. A geometria, os nomes e a arte são originais. Quando o mapa cita um jogo, foi só a inspiração de layout.
+São **9 mapas** pro Mata-mata, a Dominação e a Exploração, mais o **Rodízio do Docão** (Bomba e Invasão), a **Fazenda Mal-Assombrada** (só Invasão) e o **Estande do Docão** (só Treino). Todos têm prédios com interior, vários andares ligados por rampas, telhados onde dá pra subir e pelo menos uma linha longa pra Sniper. A geometria, os nomes e a arte são originais. Quando o mapa cita um jogo, foi só a inspiração de layout.
 
 | Mapa | Como é |
 |---|---|
@@ -208,7 +250,8 @@ São **10 mapas** de partida, mais o Estande do Docão, que só abre no modo Tre
 | 🏘️ **Vizinhança Cheers** | Estilo Nuketown: duas casas de dois andares frente a frente, garagens com telhado, sacadas, quintais e o ônibus no meio da rua. |
 | 🍻 **Bar Cheers Noturno** | Estilo Office: salão com balcão e palco, VIP com sacada no andar de cima, terraço, banheiros, escritório, sinuca e corredores compridos. |
 | 🥛 **HOTMILK** | O campus inteiro: Bloco 01 ao norte, Bloco 02 ao sul, estacionamento com catraca atrás, praça entre os blocos e portão na frente. |
-| 🍖 **Rodízio do Docão** *(Bomba)* | Feito pro modo Bomba: o Ataque nasce num curral ao norte e tem três rotas (Rua do Espeto, Avenida da Linguiça e Beco da Farofa) até o Quintal do Espeto (A) e a Varanda da Costela (B). A Defesa nasce no pátio sul. |
+| 🍖 **Rodízio do Docão** *(Bomba e Invasão)* | Feito pro modo Bomba: o Ataque nasce num curral ao norte e tem três rotas (Rua do Espeto, Avenida da Linguiça e Beco da Farofa) até o Quintal do Espeto (A) e a Varanda da Costela (B). A Defesa nasce no pátio sul. |
+| 🏚️ **Fazenda Mal-Assombrada** *(Invasão)* | Noite de Halloween na fazenda: casarão de dois andares no meio, celeiro velho, cemitério com mausoléu, capela em ruínas e milharal. Os zumbis saem da névoa, e o mapa é só da Invasão. |
 | 🔩 **Pátio Ferrugem** | Pátio pequeno no estilo do Rust. A torre do meio é a mais alta, com rampa do chão até o topo. |
 | 🎯 **Estande do Docão** *(Treino)* | Raias de 10, 20, 30 e 50 m, alvos andando, área de explosivos e arco, cercadinho da faca e do sabre e arena X1. |
 
@@ -227,26 +270,30 @@ Você leva **uma primária + uma secundária + uma arma corpo a corpo**, escolhi
 | Arma | Pente / reserva | Dano | Cabeça | Cadência | Recarga | Alcance | Queda | Zoom |
 |---|---|---|---|---|---|---|---|---|
 | **Fuzil Pururuca** (automático) | 30 / 120 | 20 | ×2 | 0,1 s | 1,6 s | 140 m | — | 40° |
-| **Mini Uzi do Leitão** (automática) | 25 / 100 | 11 | ×1,6 | 0,055 s | 1,35 s | 70 m | 8 → 28 m, até 35% | 55° |
+| **Commando da Granja** (automática) | 30 / 120 | 12 | ×1,4 | 0,09 s | 1,8 s | 150 m | — | 36° |
+| **Metralhadora do Chiqueiro** (automática) | 100 / 300 | 15 | ×1,6 | 0,08 s | 3,1 s | 130 m | 18 → 55 m, até 50% | 48° |
+| **MP5K da Granja** (automática) | 30 / 90 | 16 | ×1,5 | 0,088 s | 1,5 s | 90 m | 8 → 28 m, até 35% | 52° |
 | **P90 da Granja** (automática) | 50 / 150 | 14 | ×1,5 | 0,07 s | 1,7 s | 110 m | 16 → 48 m, até 45% | 48° |
 | **FAMAS da Pocilga** (rajada de 3) | 30 / 120 | 34 | ×1,5 | 0,065 s na rajada · 0,3 s entre rajadas | 2,1 s | 150 m | 16 → 50 m, até 60% | 46° |
 
-Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto.
+Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto. A **Commando** tem recuo quase zero e dano baixo (rajada reta como régua). A **Metralhadora** tem fita grande e deixa você **5% mais lento**. A **MP5K** entrou no lugar da Mini Uzi (mesmo botão).
 
 ### 💥 Escopeta (primária)
 
 | Arma | Pente / reserva | Dano | Cabeça | Cadência | Recarga | Alcance | Queda | Zoom |
 |---|---|---|---|---|---|---|---|---|
-| **Escopeta Chiqueiro · Calibre 12** (pump) | 8 / 32 | 8 bagos × 18 | ×1,5 | 0,8 s | 0,25 s + 0,45 s por cartucho (atirar interrompe) | 45 m | 7 → 30 m, até 30% | 55° |
+| **Escopeta Chiqueiro · Calibre 12** (pump, SPAS-12) | 8 / 32 | 9 bagos × 17 | ×1,5 | 0,62 s | 0,2 s + 0,38 s por cartucho (atirar interrompe) | 45 m | 8 → 20 m, até 20% | 55° |
 | **Escopeta Semi do Leitão** | 8 / 32 | 8 bagos × 13 | ×1,5 | 0,36 s | 1,4 s | 40 m | 6 → 22 m, até 25% | 58° |
+
+A **Calibre 12** é uma SPAS-12: o cone é fechado e ela **acerta andando**. De perto um tiro mata (até uns 8 m) e quem leva **sai voando pra trás** (o Barrigão e o chefão da Invasão são pesados demais pra isso).
 
 ### 🎯 Precisão (primária, com luneta)
 
 | Arma | Pente / reserva | Dano | Cabeça | Cadência (ferrolho) | Recarga | Alcance | Luneta |
 |---|---|---|---|---|---|---|---|
 | **Sniper Torresmo** | 5 / 20 | 100 (1 tiro no corpo mata) | ×1,5 | 1,15 s | 2,3 s | 220 m | 13° |
-| **Canhão do Barril** | 3 / 6 | 180 (mata em qualquer lugar) | ×1 | 1,85 s | 3,1 s | 260 m | 8° |
-| **Carabina da Granja** | 10 / 40 | 55 (2 no corpo, 1 na cabeça) | ×2,2 | 0,58 s | 1,9 s | 180 m | 24° |
+| **Canhão do Barril** | 3 / 12 | 180 (mata em qualquer lugar) | ×1 | 1,85 s | 3,1 s | 260 m | 8° |
+| **Carabina da Granja** | 7 / 40 | 55 (2 no corpo, 1 na cabeça) | ×2,2 | 0,58 s | 2,9 s | 180 m | 24° |
 
 - Com a **luneta aberta e parado** (menos de 1,5 m/s), o tiro vai exatamente no centro. Andando ou no ar ele espalha um pouco, e sem luneta espalha mais. A Torresmo é a que mais espalha sem luneta.
 - Cada uma tem a sua luneta, e o ferrolho fecha a luneta depois de cada tiro.
@@ -296,13 +343,25 @@ No **arco**, segure o clique pra puxar a corda: em 0,7 s ela chega no talo, e a 
 ### 🧱 Penetração e collateral
 
 - A bala **atravessa paredes finas, muretas e caixotes**, perdendo dano conforme a espessura. Chão, laje, muro grosso, contêiner e ônibus seguram a bala.
-- Limite de parede por arma: Canhão 1,6 m · Sniper 0,9 m · Carabina 0,6 m · Fuzil e FAMAS 0,35 m · P90 0,25 m · Pistola e Uzi 0,2 m. As escopetas, a Furadeira, a besta, o arco e os projéteis não atravessam.
+- Limite de parede por arma: Canhão 1,6 m · Sniper 0,9 m · Carabina 0,6 m · Metralhadora 0,4 m · Fuzil e FAMAS 0,35 m · Commando 0,3 m · P90 0,25 m · Pistola e MP5K 0,2 m. As escopetas, a Furadeira, a besta, o arco e os projéteis não atravessam.
 - **Collateral** nas snipers: a bala atravessa corpos. Sniper até 2 extras (×0,75 a cada um), Canhão até 3 (×0,85) e Carabina 1 (×0,6).
 - A regra é a mesma no cliente e no servidor (`shared/penetration.js`).
+
+- **Na Invasão** a bala atravessa a fila de zumbis (veja o modo).
 
 ### 🔍 Inspecionar
 
 Segure **I** pra girar a arma na mão e ver um cartão com a camuflagem e os abates com ela.
+
+### 🌽 Arsenal da Quermesse
+
+O **Arsenal da Quermesse** (v1.9) trouxe as armas mais malucas do jogo: **FAMAS da Pocilga**, **Disco Voador**, **Lança-Milho da Quermesse**, **Estilingue de Ovo** e **Sabre Duplo**, além da **penetração de parede**, do **collateral** e do **Inspecionar**. A **Metralhadora do Chiqueiro**, a **Commando da Granja** e a **MP5K da Granja** completam a categoria Rajada.
+
+### 🔄 Trocar de arma no meio da partida
+
+- **Pausa:** trocar uma arma pelo menu de pausa te derruba e você nasce de novo com o equipamento novo, no máximo **a cada 10 s**. No **Treino** a troca é na hora (e de pé) e na **Invasão** só vale no painel **B**, entre as waves.
+- **Tela de morte:** escolha a primária do próximo renascimento com **1–9** ou clicando no cartão.
+- **Bomba:** a troca é toda rodada, na preparação.
 
 ---
 
@@ -312,11 +371,12 @@ Segure **I** pra girar a arma na mão e ver um cartão com a camuflagem e os aba
 |---|---|---|---|---|---|
 | 🥤 **Copo Bomba** | **Q** (segura e solta) | nasce com 1, máx. 3 | 2,5 s | 6 m | até **130** de dano em área, 40% em você mesmo, com empurrão |
 | 🌫️ **Fumaça** | **4** | 1 por vida | 1,15 s | 5,6 m | nuvem que tampa a visão por **12 s** |
-| ⚡ **Atordoamento** | **5** | 1 por vida | 1,0 s | 7,2 m | por **3,4 s**, quem estiver no raio (até você) fica lento (35% da velocidade), com a tela ofuscada, e não atira |
+| ⚡ **Pau de choque** | **5** | 1 por vida, máx. 2 | cai em arco e **finca** no 1º contato | 4,5 m | por **3 s** a estaca dá **6 choques** de 7 de dano. Quem leva fica lento (35% da velocidade), com a mira tremendo e a tela azul piscando, e não atira nem joga granada |
 
-- O **Copo Bomba** é um copo de festa vermelho com o logo "C!" que explode em confete, espuma e cerveja. A barra de força enche em 1,2 s, um arco tracejado mostra a trajetória e o copo quica nas paredes.
+- O **Copo Bomba** é um copo de festa vermelho com o logo "C!" que explode em confete, espuma e cerveja. A barra de força enche em 1,2 s, e a **linha de mira mostra o caminho inteiro do copo até a explosão** (quicadas em parede e rampa incluídas): o copo explode exatamente onde a linha termina. Ele sai da mão do Docão (não da testa) e a conta de física é a mesma no seu PC e no servidor, então ping alto não muda onde ele cai.
 - Os copos que flutuam no mapa dão +1 e reaparecem depois de 20 s.
-- A fumaça e o atordoamento **só funcionam offline** e não causam dano.
+- A **fumaça** só funciona offline e não causa dano. O **pau de choque** funciona **online, offline e na Invasão** (zumbi também leva susto), mas **nunca mata**: quem está com pouca vida fica com 1 de vida. Você ganha 1 por vida, a caixa de Copo Bomba dá outro, e se você estiver levando choque não consegue arremessar.
+- **Vozes da granada:** o Copo Bomba fala! **"GRANADA!"** no instante em que o copo sai da sua mão e **"BANANA!"** quando explode (vozes gravadas pelo Matheus). Vale pros seus copos, os dos outros e os dos bots, com volume que cai com a distância. Só o Copo Bomba fala. Quem quiser silêncio desliga em **Ajustes**, no menu de **pausa (Esc)**, onde o botão fica em destaque, ou com a tecla **H** no meio da partida. Desligadas, voltam o *toc* do arremesso e o *BUM* de sempre. A escolha fica salva no navegador (padrão: ligadas).
 
 ---
 
@@ -330,13 +390,15 @@ Abates seguidos sem morrer enchem a barra da direita. Quando um prêmio fica pro
 | **5** | 🚀 **Míssil da granja** | abre o laptop e você **pilota um míssil em primeira pessoa**, que sai do alto do céu e vai pra onde o mouse aponta: até **460** de dano num raio de **26 m** (40% em você) |
 | **7** | 🚁 **Gavião da granja** | helicóptero que fica até **30 s** atirando nos inimigos (16 de dano por tiro). Ele tem 280 de vida e dá pra derrubar |
 | **10** | 🚁 **Chopper da granja** | você vai pra porta de um helicóptero que roda o mapa por **60 s** e escolhe entre a **metralhadora giratória** (20 por tiro, esquenta) e a **sniper** com luneta (140 por tiro). Ele tem **560** de vida e dá pra derrubar |
-| **15** | ☢️ **Fim da chapa** *(secreto)* | puxa o rádio, roda uma contagem de **5 s** e **todo mundo morre, menos você** (e o seu time na Dominação). Morrer depois de puxar o rádio não cancela |
+| **13** | ✈️ **Grelha da granja** | um **avião (AC-130)** roda o mapa por **40 s** e você só aponta e atira com três armas: **Espeto** (rajada fina), **Panela** (explosão média) e **Caldeirão** (explosão grande, recarga lenta). **1/2/3** trocam de arma e **F** sai. O avião tem **420** de vida e dá pra derrubar |
+| **15** | ☢️ **Fim da chapa** | puxa o rádio, roda uma contagem de **5 s** e **todo mundo morre, menos você** (e o seu time na Dominação e na Bomba). A explosão **encerra a partida na hora** e quem chamou **vence** (ou o time dele), mesmo perdendo no placar. Morrer depois de puxar o rádio não cancela |
 
 - Depois do 15º abate a sequência recomeça. O prêmio ganho **fica guardado mesmo se você morrer**.
 - O Olho da granja, o Gavião e o Chopper chegam por uma **chamada no rádio** de 1 s. O Gavião erra 30% dos tiros.
 - No kill feed cada abate mostra o **ícone da arma** ou do killstreak.
-- Os abates do Gavião e da nuke não contam pra sequência. Cada abate do Gavião vale 25 pontos.
-- **Online** quem manda é o servidor: ele conta a sequência, confere o prêmio e aplica o dano do míssil, do Gavião e do Fim da chapa, e todo mundo vê o efeito. Os outros jogadores podem derrubar o Gavião.
+- Os abates do Gavião, do Chopper, da Grelha e da nuke não contam pra sequência. Quem cair no fogo da Grelha aparece no placar como "Grelha da granja".
+- **Na Invasão não tem killstreak.** Cada abate do Gavião vale 25 pontos.
+- **Online** quem manda é o servidor: ele conta a sequência, confere o prêmio e aplica o dano do míssil, do Gavião, do Chopper, da Grelha e do Fim da chapa, e todo mundo vê o efeito. Os outros jogadores podem derrubar o Gavião.
 - **Pontos:** +10 por acerto, +100 por abate e +150 por abate na cabeça.
 
 ### 🎨 Camuflagens (valem pra partida)
@@ -353,7 +415,9 @@ Abates com a **mesma arma** na mesma partida mudam a cor dela. Tudo zera na part
 
 ## ❤️ Mecânicas
 
-- **Morte = BACON 🥓:** o Docão dá um "pop", some numa nuvem de fumaça e vira uma tira de bacon que quica chiando no chão. A câmera da morte fica olhando pra quem te matou.
+- **Morte = BACON 🥓:** o Docão dá um "pop", some numa nuvem de fumaça e vira uma tira de bacon que quica chiando no chão. A **câmera do assassino** passa a seguir quem te matou (jogador, bot ou zumbi). Se ele sumir ou morrer, a câmera fica onde você caiu.
+- **Tela cinza e mouse livre:** enquanto você está morto o mundo fica **cinza**, o painel de escolha de arma fica pequeno, no canto e meio transparente (passe o mouse e ele acorda), e o **cursor fica livre** pra você clicar na arma que quiser. Renasceu, as cores voltam e a mira volta na hora. O mesmo vale pro painel **B** da Invasão.
+- **De onde veio o dano:** quando você leva dano aparece um **arco vermelho na borda da tela apontando pra origem**. Ele gira com a câmera, some em **1,5 s**, funciona com jogador, bot e zumbi, e junta golpes parecidos (até 30° de diferença) num arco só, com no máximo **4** na tela. Explosão e helicóptero apontam pro lugar de onde o dano realmente veio, e o choque aponta pra estaca. Dano sem dono (névoa, queda, você mesmo) dá só um flash vermelho leve.
 - **Bacon que cura:** qualquer Docão vivo que pisar no bacon (menos o próprio morto) ganha **+10 de vida**, até 100. O bacon fica no chão por uns 3,45 s.
 - **Regeneração:** se você levou dano de **outro** Docão e ficou **5 s** sem apanhar, a vida volta a **+10 por segundo** até 100, com a barra brilhando em verde. Se o último dano foi seu (bazuca no pé, o seu Copo Bomba, o seu míssil), não regenera.
 - **Pickups:** o pickup de vida dá **+50**, a caixa de munição enche a reserva e o copo dá +1 Copo Bomba.
@@ -466,6 +530,16 @@ Depois abra o jogo apontando pro servidor local, inclusive em duas abas pra test
 http://localhost:8124/?server=ws://127.0.0.1:8787
 ```
 
+Para testar **contas e ranking** no seu computador, crie o banco local (o D1 é simulado na pasta `server/.wrangler`, nada vai pra Cloudflare) antes de subir o Worker:
+
+```bash
+cd server
+npx wrangler d1 migrations apply docao-contas --local
+npx wrangler dev --port 8787
+```
+
+Ou rode `./tools/rodar-login-mac.sh`, que faz isso e sobe o site (porta 8135) e o Worker (porta 8795, mude com `SITE_PORT` e `WORKER_PORT`) de uma vez. Pra zerar as contas de teste, apague `server/.wrangler`. O `ALLOW_TEST` **não** é ligado nesse script.
+
 Parâmetros de URL úteis:
 - `?server=` troca o servidor (o padrão está em `config.js`)
 - `?sala=ABCD` entra direto no lobby
@@ -475,6 +549,13 @@ Parâmetros de URL úteis:
 
 - **Site:** a Vercel publica a `main` sozinha. O `.vercelignore` deixa `server/` e os testes de fora.
 - **Servidor:** `cd server && npx wrangler deploy`. Para só gerar o bundle, use `npx wrangler deploy --dry-run --outdir dist`. Se mudar a URL do Worker, ajuste `SERVER_URL` em `config.js`. Publique o Worker **antes** do site quando o protocolo mudar.
+- **Contas (D1):** o Worker usa o binding `DB` (D1 `docao-contas`, declarado em `server/wrangler.jsonc`) além do `ROOMS` (Durable Object `Room`). Num ambiente novo:
+  1. `cd server && npx wrangler d1 create docao-contas` e copie o `database_id` pro `server/wrangler.jsonc`.
+  2. `npx wrangler d1 migrations apply docao-contas --remote` (as migrações ficam em `server/migrations/`).
+  3. Faça o deploy do Worker **com** os dois bindings (`ROOMS` e `DB`), sem `ALLOW_TEST`, e só depois publique o site.
+  4. Confira `/health`, o cadastro, o login, `/api/rank` e uma partida como convidado e outra com conta.
+  Sem o binding `DB` as rotas de conta respondem 503 e o jogo segue como convidado. Detalhes e custos do D1 em [`docs/LOGIN-DEPLOY.md`](docs/LOGIN-DEPLOY.md).
+- **`ALLOW_TEST`:** variável só pra testes automáticos locais (`wrangler dev --var ALLOW_TEST:1`). **Nunca** ligue em produção.
 
 ---
 
@@ -482,19 +563,36 @@ Parâmetros de URL úteis:
 
 Os testes de navegador usam **Playwright** em modo headless, e vários deles salvam capturas em `screenshots/`. Instale as dependências na raiz com `npm install` e suba o servidor estático. A maioria espera o jogo em `http://localhost:8124/`. `test.mjs`, `test-maps.mjs` e `test-streaks.mjs` usam a porta 8123 (o `test-streaks` aceita `SITE=`).
 
-| Sem navegador | Offline (navegador) | Online (precisa do `wrangler dev`) |
+| Sem navegador (Node) | Offline (navegador) | Online (precisa do `wrangler dev`) |
 |---|---|---|
 | `test-shared.mjs`: regras compartilhadas | `test.mjs`: fluxo geral | `test-online.mjs` |
-| `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Shift, câmera e animação | |
-| `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-dom.mjs` |
-| `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-idle.mjs` |
-| `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-names.mjs` |
-| `tools/stuck-repro.mjs`: ninguém fica preso na parede | `test-treino.mjs`, `test-faca.mjs`, `test-bacon.mjs` | `test-online-nextmap.mjs` |
-| `tools/bomb-walk.mjs`: sites e tempo a pé no modo Bomba | `test-bomb.mjs`: modo Bomba (aceita `SITE=`) | `test-online-bomb.mjs`: modo Bomba online (`MAP=` troca o mapa) |
-| | `test-mira.mjs`, `test-reload.mjs`, `test-respawn.mjs` | `test-faca-online.mjs`, `test-treino-online.mjs` |
-| | `test-nextmap.mjs`, `test-skin-start.mjs` | `test-prod.mjs`, `test-prod-dom.mjs` |
+| `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Shift, câmera e animação | `test-online-dom.mjs` |
+| `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-idle.mjs` |
+| `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-names.mjs` |
+| `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-nextmap.mjs` |
+| `test-loadout.mjs`: memória e limites de armas da sala | `test-treino.mjs`, `test-faca.mjs`, `test-bacon.mjs` | `test-online-bomb.mjs`: Bomba online (`MAP=` troca o mapa) |
+| `test-lmg.mjs`: Metralhadora do Chiqueiro | `test-bomb.mjs`: modo Bomba (aceita `SITE=`) | `test-faca-online.mjs`, `test-treino-online.mjs` |
+| `test-gunner-server.mjs`: Chopper no servidor | `test-gunner.mjs`: Chopper offline | `test-prod.mjs`, `test-prod-dom.mjs` |
+| `test-damage-indicator.mjs`: regras dos arcos de dano | `tools/test-dano-dir.mjs`: arco de dano na borda da tela | `tools/test-online-invasao.mjs`: Invasão online |
+| `test-invasao-municao.mjs`: caixas de munição da Invasão | `tools/test-invasao.mjs`: modo Invasão offline | `tools/test-killstreak-online.mjs`: míssil, Gavião e nuke online |
+| `test-grenade.mjs`: mira do Copo Bomba (preview × cliente × servidor) | `test-grenade-browser.mjs`: Copo Bomba no navegador | `test-grenade-voz.mjs`: vozes da granada, offline e online |
+| `tools/stuck-repro.mjs`: ninguém fica preso na parede | `test-spas.mjs`: Calibre 12 / SPAS-12 | `test-login.mjs`: contas, ranking e skin (precisa de D1 local) |
+| `tools/bomb-walk.mjs`: sites e tempo a pé no modo Bomba | `test-choque.mjs`: pau de choque | `test-login-ui.mjs`: telas de login e ranking (D1 local) |
+| `tools/bomb-layout.mjs`, `tools/coplanar-audit.mjs`: sites da Bomba e z-fighting dos mapas | `test-penetracao.mjs`: penetração e collateral | |
+| | `test-famas.mjs`, `test-disc.mjs`, `test-milho.mjs`, `test-ovo.mjs`, `test-besta.mjs`, `test-sabre.mjs`: uma por arma | |
+| | `test-inspect.mjs`, `test-anim.mjs`: Inspecionar e animações das armas | |
+| | `test-mira.mjs`, `test-reload.mjs`, `test-respawn.mjs`, `test-nextmap.mjs`, `test-skin-start.mjs` | |
+| | `tools/test-b-key.mjs`: dança no B, painel B da Invasão e Docão que gira no menu | |
+| | `tools/test-morto-mouse.mjs`: mouse livre quando morto | |
 | | `test-match-end.mjs`: fim de partida (câmera lenta, resultado, zoom, online com WebSocket controlado; aceita `SITE=`) | |
-| | | `tools/test-killstreak-online.mjs`: míssil, Gavião e nuke online |
+
+Os testes de **conta** precisam do D1 local migrado e do Worker rodando com `ALLOW_TEST` (só local):
+
+```bash
+cd server && npx wrangler d1 migrations apply docao-contas --local
+npx wrangler dev --port 8787 --var ALLOW_TEST:1    # ALLOW_TEST só pros testes automáticos
+node test-login.mjs        # o cabeçalho do arquivo mostra as variáveis e URLs que ele aceita
+```
 
 Exemplo do online:
 
@@ -509,32 +607,47 @@ node test-online.mjs http://localhost:8124/ ws://127.0.0.1:8787
 
 ```
 docao-shooter/
-├── index.html · style.css     # menu, HUD, lobby, pausa e placar
+├── index.html · style.css · hud-death.css   # menu, HUD, lobby, pausa, placar e tela de morte
 ├── main.js                    # o jogo: física, armas, bots, áudio, fluxo e online
-├── maps.js                    # os mapas (só dados) + PLAY_MAPS
+├── maps.js                    # os mapas (só dados) + PLAY_MAPS, BOMB_MAPS e INV_MAPS
 ├── world.js · world-offsets.js  # monta o mundo e as miniaturas dos mapas
 ├── nav.js                     # grafo de navegação + A* dos bots
 ├── docao.js · costumes.js     # modelo 3D do Docão e peças de fantasia
 ├── skins.js                   # registro das skins (só dados)
+├── menu-backdrop.js · menu-wardrobe.js · victory-dance.js   # cenário do menu, mala de figurinos e danças da vitória
+├── account.js · account-ui.js # conta opcional: login, apelido, ranking e skin salva (fala com /api/*)
 ├── killstreak-ui.js · uav.js  # barra de prêmios e minimapa
 ├── bomb-gfx.js                # Modo Bomba: o Botijão e as marcas dos sites
-├── tactical-nades.js          # fumaça e atordoamento
-├── weapon-camo.js · weapon-thumbs.js   # camuflagens e miniaturas das armas
-├── sniper-view.js · bow-view.js · saber-view.js · fp-gear.js  # modelos em 1ª pessoa
+├── invasion-gfx.js · invasion-music.js   # Modo Invasão: zumbis, poderes, névoa e trilha de terror
+├── tactical-nades.js          # fumaça
+├── grenade-voice.js           # vozes do Copo Bomba ("granada!" e "banana!")
+├── damage-dir.js              # arcos vermelhos de direção do dano
+├── killfeed-icons.js          # ícones do kill feed
+├── inspect.js · weapon-camo.js · weapon-thumbs.js   # inspecionar, camuflagens e miniaturas das armas
+├── sniper-view.js · bow-view.js · saber-view.js · slingshot-view.js · fp-gear.js   # modelos em 1ª pessoa
+├── saber-sfx.js               # sons do sabre
 ├── bacon.js · feedback.js     # bacon da morte, medalhas e pontos
-├── chat.js · voice.js · net.js · config.js   # chat, voz (WebRTC), rede e URL do servidor
+├── chat.js · voice.js · net.js · config.js   # chat, voz (WebRTC, Apertar/Aberto), rede e URL do servidor
 ├── shared/                    # regras usadas pelo cliente e pelo servidor
 │   ├── rules.js               # armas, Copo Bomba, física, tempos, bots
-│   ├── combat.js · melee.js   # explosões, dispersão da sniper, faca
-│   ├── domination.js · training.js   # Dominação e Treino
-│   ├── bomb.js                     # Modo Bomba: rodadas, sites, plantar/desarmar, bots
-│   └── physics.js · names.js  # colisão e nomes
-├── server/                    # Cloudflare Worker + Durable Object "Room"
-│   └── src/index.js · src/game.js
-├── tools/                     # planta dos mapas, screenshots, auditorias
+│   ├── bot-difficulty.js      # Leitão, Ceva, Javali e Cachaço (mira, reação e movimento)
+│   ├── combat.js · melee.js · penetration.js   # explosões, sniper, faca, parede e collateral
+│   ├── domination.js · training.js · bomb.js · invasion.js   # Dominação, Treino, Bomba e Invasão
+│   ├── killstreaks.js         # ciclo de prêmios, Gavião, Chopper, Grelha e nuke
+│   ├── loadout.js             # armas e power-ups liberados por sala
+│   ├── shock.js · disc.js · corn.js · egg.js   # pau de choque, Disco, Lança-Milho e Ovo
+│   ├── emote.js · stance.js   # dança da vitória e postura (agachar)
+│   └── physics.js · names.js · nick.js   # colisão, nomes e regras de apelido de conta
+├── server/                    # Cloudflare Worker + Durable Object "Room" + D1
+│   ├── src/index.js · src/game.js · src/auth.js   # rotas, partida autoritativa e contas/ranking
+│   ├── migrations/            # esquema do D1 (0001_contas.sql)
+│   └── wrangler.jsonc         # bindings ROOMS (Durable Object) e DB (D1)
+├── assets/                    # vozes da granada (mp3) e arte do menu (svg)
+├── docs/                      # guias de arte e o LOGIN-DEPLOY.md (D1 e conta)
+├── tools/                     # testes extras, planta dos mapas, screenshots, auditorias e rodar-login-mac.sh
 ├── vendor/                    # Three.js r169 + BufferGeometryUtils
 ├── test*.mjs                  # testes (Playwright e Node)
-└── PATCH_NOTES.md             # histórico de versões
+└── PATCH_NOTES.md             # histórico de versões (PATCHNOTES.md e O-QUE-MUDOU.md são antigos)
 ```
 
 ---
@@ -555,8 +668,9 @@ docao-shooter/
 - **Anti-cheat básico:** o servidor confere velocidade máxima, posição dentro do mapa e fora das paredes, cadência por arma, munição, pente e recarga, e se o tiro sai perto do olho.
 - **Bots online:** rodam no servidor com a mesma IA dos bots offline. Ocupam as vagas livres e saem quando alguém entra.
 - **Reconexão:** o token fica na `sessionStorage` e a vaga fica guardada por 30 s.
-- **Voz:** o áudio vai de navegador a navegador (WebRTC). O servidor só apresenta os jogadores.
-- **Custo:** cada mensagem recebida por WebSocket conta 1/20 de requisição no plano grátis (100 mil por dia). Se precisar economizar, use `?hz=10`.
+- **Voz:** o áudio vai de navegador a navegador (WebRTC). O servidor só apresenta os jogadores. Cada jogador escolhe **Apertar** (segura K) ou **Aberto** (microfone livre enquanto não estiver em Mudo).
+- **Contas:** `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/me`, `PUT /api/me/skin` e `GET /api/rank`, tudo em `server/src/auth.js` e no D1. Entrar na sala com conta custa 1 leitura (token → conta); o ranking é gravado em lote ao sair da sala ou no fim da partida (visitante e Treino: 0 escritas).
+- **Custo:** cada mensagem recebida por WebSocket conta 1/20 de requisição no plano grátis (100 mil por dia). Se precisar economizar, use `?hz=10`. O D1 usa uma cota separada, e por isso o ranking fica 60 s em cache e as gravações vão em lote (veja [`docs/LOGIN-DEPLOY.md`](docs/LOGIN-DEPLOY.md)).
 
 </details>
 
@@ -590,8 +704,9 @@ Ideias, bugs e sugestões de mapa ou skin são bem-vindos nas issues. 🐷
 
 ## ⚠️ Limitações conhecidas
 
-- A **fumaça** e o **atordoamento** só funcionam offline.
-- Online o **Olho da granja** (minimapa) é calculado no seu próprio jogo. O míssil, o Gavião e o Fim da chapa são decididos pelo servidor.
+- A **fumaça** só funciona offline.
+- A **conta** é opcional e depende do D1: se o servidor estiver sem ele, o jogo segue só como convidado.
+- Online o **Olho da granja** (minimapa) é calculado no seu próprio jogo. O míssil, o Gavião, o Chopper, a Grelha e o Fim da chapa são decididos pelo servidor.
 - A colisão é feita de caixas alinhadas, por isso os andares são ligados por rampas (não há escada de mão) e barris e silos colidem como quadrados.
 - Os bots não fazem rocket jump nem pulam entre telhados.
 
@@ -599,10 +714,12 @@ Ideias, bugs e sugestões de mapa ou skin são bem-vindos nas issues. 🐷
 
 ## 🙌 Créditos
 
-- **Matheus Valentim** ([@valentimm](https://github.com/valentimm)): criador do jogo e da maior parte do código, dos mapas e das skins
-- **João** ([@rramosjoao](https://github.com/rramosjoao)): mira, snipers, granadas táticas, killstreaks, Arsenal do Chiqueiro, Gavião, míssil pilotado e camuflagens
-- **Janor** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers)): chat, voz e convite da sala
-- **Paulo** ([@paulo-cheers](https://github.com/paulo-cheers)): campus HOTMILK e modo Exploração
+- **Matheus Valentim** ([@valentimm](https://github.com/valentimm)): criador do jogo e da maior parte do código, dos mapas e das skins, além do modo Bomba, do login com contas e ranking e da voz das granadas
+- **João** ([@rramosjoao](https://github.com/rramosjoao)): mira, snipers, granadas táticas, killstreaks, Arsenal do Chiqueiro e da Quermesse, Gavião, míssil pilotado e camuflagens, Metralhadora do Chiqueiro e HUD da fazenda (PR #13), SPAS-12 e pau de choque (PR #16), câmera lenta no fim da partida (PR #17) e o **AC-130 Grelha da granja**, o nuke que encerra a partida e o ajuste de armas (PR #18)
+- **Janor** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers)): chat, voz e convite da sala, e a voz **Apertar ou Aberto** (PR #19)
+- **Paulo** ([@paulo-cheers](https://github.com/paulo-cheers)): campus HOTMILK, modo Exploração e o Salão de Festa (armas e power-ups por sala, dança da vitória no B e Docão que gira no menu, PR #14)
+- **Felipe Gomes** ([@felipe-cheers](https://github.com/felipe-cheers)): agachar com hitbox sincronizada (PR #9), arcos de direção do dano (PR #15) e a linha de mira completa do Copo Bomba
+- **Hiro** ([@hiro-cheers](https://github.com/hiro-cheers)): o menu da Comanda da Fazendinha (PR #8)
 
 O Docão é o mascote da **Cheers** 🧡
 

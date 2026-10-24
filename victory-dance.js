@@ -177,6 +177,7 @@ export function hideVictoryGuns(model) {
   if (!model || !model.guns || model._gunsHidden) return;
   model._gunVis = model.guns.map((g) => g.visible);
   model.guns.forEach((g) => { g.visible = false; if (g.userData.twin) g.userData.twin.visible = false; });
+  if (model.backLid) { model._lidVis = model.backLid.visible; model.backLid.visible = false; }
   model._gunsHidden = true;
 }
 
@@ -188,6 +189,7 @@ export function resetVictoryPose(model) {
   model.group.rotation.z = 0;
   if (model._gunsHidden && model.guns) {
     model.guns.forEach((g, i) => { g.visible = !!model._gunVis[i]; if (g.userData.twin) g.userData.twin.visible = g.visible; });
+    if (model.backLid && model._lidVis != null) { model.backLid.visible = model._lidVis; model._lidVis = null; }
     model._gunsHidden = false;
   }
 }

@@ -2,6 +2,7 @@
 // O loop da partida deve chamar makeNukeRider() e pôr o grupo na cena (cai no centro). Ainda não está ligado.
 import * as THREE from 'three';
 import { makeWorldSaber } from './saber-view.js';
+import { makeWorldShield } from './shield-view.js';
 import { getSkin } from './skins.js';
 import { mergeVertices } from './vendor/BufferGeometryUtils.js';
 import { crouchAmount, stanceScale } from './shared/stance.js';
@@ -401,6 +402,7 @@ export function makeDocao(skinOrId, opts = {}) {
   const nail = mesh(new THREE.SphereGeometry(0.026, 8, 6), toon('#fff3dc'), point, 0); nail.scale.set(0.8, 0.45, 1); nail.position.y = 0.175;
   // armas em 3ª pessoa
   const guns = [];
+  let backLid = null;
   if (withGun) {
     const r = new THREE.Group(); r.position.set(0.0, 0.9, 0.62); g.add(r);
     mesh(new THREE.BoxGeometry(0.11, 0.13, 0.62), toon('#3b3f4a'), r, 0.01);
@@ -545,7 +547,30 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.06, 0.08, 0.22), toon('#5c4632'), cd, 0.006).position.set(0, -0.01, -0.32);
     mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), toon('#2a2d35'), cd, 0.005).position.set(0, -0.1, 0.02);
     guns.push(cd); // 22 = Commando da Granja
-    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd]) o.visible = false;
+    const worldRev = (side) => {
+      const gun = new THREE.Group(); gun.name = side < 0 ? 'capataz-l' : 'capataz';
+      const grip = mesh(new THREE.BoxGeometry(0.05, 0.13, 0.05), toon('#6b3a1e'), gun, 0.006);
+      grip.position.set(0, -0.07, 0.03); grip.rotation.x = 0.45; grip.userData.noCamo = true;
+      mesh(new THREE.BoxGeometry(0.06, 0.07, 0.12), toon('#3c414c'), gun, 0.006);
+      const hinge = new THREE.Group(); hinge.position.set(side * 0.02, 0.015, -0.01); gun.add(hinge);
+      const cyl = new THREE.Group(); hinge.add(cyl);
+      const drum = mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.06, 10), toon('#d9a441'), cyl, 0.004);
+      drum.rotation.x = Math.PI / 2; drum.userData.noCamo = true;
+      const barrel = mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.22, 8), toon('#2a2e36'), gun, 0.005);
+      barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, 0.16);
+      mesh(new THREE.BoxGeometry(0.012, 0.04, 0.016), toon('#14171c'), gun, 0.003).position.set(0, 0.05, -0.02);
+      gun.userData.cyl = cyl; gun.userData.hinge = hinge; gun.userData.side = side;
+      gun.scale.setScalar(1.65); // na mão do boneco o tambor precisa ler de longe
+      return gun;
+    };
+    const rv = worldRev(1); rv.position.set(0, -0.52, 0.05); rv.rotation.set(-Math.PI / 2, 0.18, 0.08); arms[0].add(rv); guns.push(rv); // 23 = Revólver do Capataz
+    const rv2 = new THREE.Group(); rv2.name = 'capataz2'; g.add(rv2);
+    const rvR = worldRev(1); rvR.position.set(0, -0.52, 0.05); rvR.rotation.set(-Math.PI / 2, 0.28, 0.12); arms[0].add(rvR);
+    const rvL = worldRev(-1); rvL.position.set(0, -0.52, 0.05); rvL.rotation.set(-Math.PI / 2, -0.28, -0.12); arms[1].add(rvL);
+    rv2.userData.extra = rvR; rv2.userData.twin = rvL; guns.push(rv2); // 24 = Dois Capatazes
+    const tp = makeWorldShield(); tp.name = 'tampa'; tp.position.set(0, 0.98, 0.62); g.add(tp); guns.push(tp); // 25 = Tampa do Tacho
+    backLid = makeWorldShield(); backLid.name = 'tampa-costas'; backLid.position.set(0, 1.15, -0.32); backLid.rotation.y = Math.PI; backLid.visible = false; g.add(backLid);
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd, rv, rv2, rvR, rvL, tp]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -559,7 +584,7 @@ export function makeDocao(skinOrId, opts = {}) {
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
   for (const b of brows) b.userData.base = { p: b.position.clone(), q: b.quaternion.clone() };
   const face = { eyes, brows, faceM, tex: [tone, beard, facePaint], neutralMap: faceM.map, angryMap: null, t: 0, target: 0, hold: 0 };
-  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
+  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, backLid, flashMats: [skinM, faceM, shirtM, snoutM] };
 }
 
 // Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.
@@ -593,7 +618,10 @@ export function setPose(model, pose) {
     else if (pose === 'reload') a.rotation.set(-0.8, -s * 0.4, s * 0.1);
     else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
     else if (pose === 'saber2') { if (i === 0) a.rotation.set(-1.25, 0.15, -0.4); else a.rotation.set(-1.25, -0.15, 0.4); } // um sabre em cada mão, abertos
+    else if (pose === 'revolver2') { if (i === 0) a.rotation.set(-1.2, 0.42, -0.45); else a.rotation.set(-1.2, -0.42, 0.45); } // um revólver em cada casco
+    else if (pose === 'revolver') { if (i === 0) a.rotation.set(-1.25, 0.28, -0.2); else a.rotation.set(-0.35, -0.15, 0.25); } // direita no cabo, esquerda solta
     else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
+    else if (pose === 'shield') { if (i === 0) a.rotation.set(-0.9, 0.35, -0.2); else a.rotation.set(-1.45, -0.25, 0.15); } // esquerda segura a tampa na frente
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
   });

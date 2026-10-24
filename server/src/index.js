@@ -10,6 +10,8 @@
 //  "ping" → "pong" é respondido automaticamente (setWebSocketAutoResponse), sem acordar o objeto nem contar como requisição.
 // ============================================================
 import { DurableObject } from 'cloudflare:workers';
+import { TrucoRoom } from './truco-room.js';
+export { TrucoRoom };
 import { Game } from './game.js';
 import { SKINS } from '../../skins.js';
 import { handleAccountRoute, accountFromToken, nickRegistered, saveSkin, recordStats } from './auth.js';
@@ -28,6 +30,30 @@ export default {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (url.pathname === '/' || url.pathname === '/health') return json({ ok: true, name: 'docao-shooter-server' });
+    if (url.pathname === '/api/truco/rooms' && req.method === 'POST') {
+      if (!env.TRUCO_ROOMS) return json({ error: 'Sala de truco indisponível' }, 503);
+      let body = {}; try { body = await req.json(); } catch (e) { /* corpo vazio */ }
+      const seats = body.seats === 2 ? 2 : 4;
+      for (let i = 0; i < 12; i++) {
+        const code = newCode(); const stub = env.TRUCO_ROOMS.get(env.TRUCO_ROOMS.idFromName('truco:' + code));
+        const r = await stub.fetch('https://truco/init', { method: 'POST', body: JSON.stringify({ code, seats }) });
+        if (r.status === 200) return json({ code });
+      }
+      return json({ error: 'Não deu pra gerar um código de sala' }, 503);
+    }
+    const trucoInfo = url.pathname.match(/^\/api\/truco\/rooms\/([A-Za-z]{4})\/?$/);
+    if (trucoInfo) {
+      if (!env.TRUCO_ROOMS) return json({ exists: false }, 503);
+      const code = trucoInfo[1].toUpperCase(); const stub = env.TRUCO_ROOMS.get(env.TRUCO_ROOMS.idFromName('truco:' + code));
+      const r = await stub.fetch('https://truco/info'); return json(await r.json(), r.status);
+    }
+    const trucoWs = url.pathname.match(/^\/ws\/truco\/([A-Za-z]{4})\/?$/);
+    if (trucoWs) {
+      if (!env.TRUCO_ROOMS) return json({ error: 'Sala de truco indisponível' }, 503);
+      if (req.headers.get('Upgrade') !== 'websocket') return json({ error: 'Esperado WebSocket' }, 426);
+      const code = trucoWs[1].toUpperCase(); const stub = env.TRUCO_ROOMS.get(env.TRUCO_ROOMS.idFromName('truco:' + code));
+      return stub.fetch(new Request('https://truco/ws' + url.search, { method: 'GET', headers: req.headers }));
+    }
     if (url.pathname === '/api/rooms' && req.method === 'POST') {
       let body = {}; try { body = await req.json(); } catch (e) { /* corpo vazio */ }
       for (let i = 0; i < 12; i++) {

@@ -4,8 +4,11 @@ const $ = (id) => document.getElementById(id);
 
 let hooks = { send() {}, teamMode() { return false; }, myId() { return 0; }, onChange() {} };
 let scope = 'off';
+let mode = 'hold'; // hold = só enquanto K está presa; open = microfone ligado o tempo todo
 let stream = null;
 let ptt = false;
+let away = false;
+let localAn = null;
 let roster = new Map();
 let peers = new Map();
 let muted = new Set();
@@ -21,33 +24,65 @@ export function voiceToggleMute(id) {
   hooks.onChange();
 }
 export function voiceScope() { return scope; }
+export function voiceSnap() { return { scope, mode }; }
 export function voiceCycle() {
-  const order = hooks.teamMode() ? ['off', 'all', 'team'] : ['off', 'all'];
+  const order = hooks.order ? hooks.order() : hooks.teamMode() ? ['off', 'all', 'team'] : ['off', 'all'];
   const i = order.indexOf(scope);
   setScope(order[(i < 0 ? 0 : i + 1) % order.length]);
+}
+export function voiceUseHooks(next) {
+  const prev = hooks;
+  hooks = { ...hooks, ...next };
+  return () => { hooks = prev; };
+}
+export async function voiceArm(nextScope, nextMode) {
+  const prev = { scope, mode };
+  let scopeTo = nextScope === 'team' || nextScope === 'all' ? nextScope : 'off';
+  if (scopeTo === 'team' && !hooks.teamMode()) scopeTo = 'all';
+  if (scopeTo !== 'off') { const ok = await ensureMic(); if (!ok) return prev; }
+  mode = nextMode === 'open' ? 'open' : 'hold';
+  scope = scopeTo; ptt = false;
+  const mine = roster.get(hooks.myId()); if (mine) mine.scope = scope;
+  applyMic();
+  hooks.send({ t: 'voice', scope });
+  syncPeers(); paint();
+  return prev;
+}
+export function voiceRestore(prev) {
+  if (!prev) return;
+  scope = prev.scope === 'team' || prev.scope === 'all' ? prev.scope : 'off';
+  if (scope === 'team' && !hooks.teamMode()) scope = 'all';
+  mode = prev.mode === 'open' ? 'open' : 'hold';
+  ptt = false;
+  const mine = roster.get(hooks.myId()); if (mine) mine.scope = scope;
+  applyMic();
+  hooks.send({ t: 'voice', scope });
+  syncPeers(); paint();
 }
 
 export function initVoice(h) {
   hooks = h;
+  try { mode = localStorage.getItem('docao.voice.gate') === 'open' ? 'open' : 'hold'; } catch (e) { mode = 'hold'; }
   document.querySelectorAll('[data-voicebox] [data-voice]').forEach((b) => { b.addEventListener('click', () => setScope(b.dataset.voice)); });
+  document.querySelectorAll('[data-voicebox] [data-mic]').forEach((b) => { b.addEventListener('click', () => setMode(b.dataset.mic)); });
   const unlock = () => { resume(); for (const rec of peers.values()) if (rec.audio) rec.audio.play().catch(() => {}); };
   document.addEventListener('pointerdown', unlock);
   document.addEventListener('keydown', unlock);
+  window.addEventListener('blur', () => { away = true; ptt = false; applyMic(); });
+  window.addEventListener('focus', () => { away = false; applyMic(); });
   setInterval(sample, 120);
   paint();
 }
 
 export function voicePtt(down) {
-  if (scope === 'off' || !stream) { if (!down) mark(hooks.myId(), false); return; }
+  if (mode === 'open') return;
+  if (scope === 'off' || !stream || away) { ptt = false; applyMic(); return; }
   ptt = !!down;
-  const track = stream.getAudioTracks()[0];
-  if (track) track.enabled = ptt;
-  mark(hooks.myId(), ptt);
-  paint();
+  applyMic();
 }
 
 export function voiceReset() {
-  scope = 'off'; ptt = false; roster = new Map(); muted.clear(); talking.clear();
+  scope = 'off'; ptt = false; roster = new Map(); muted.clear(); talking.clear(); localAn = null;
   for (const id of [...peers.keys()]) closePeer(id);
   if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
   paint(); hooks.onChange();
@@ -58,6 +93,7 @@ export function voiceRoster(list) {
   const mine = roster.get(hooks.myId());
   if (mine && mine.scope !== scope) scope = mine.scope;
   if (scope === 'off') ptt = false;
+  applyMic();
   syncPeers(); paint();
 }
 export function voiceSignal(from, kind, data) { onSignal(from, kind, data); }
@@ -69,17 +105,32 @@ async function setScope(next) {
   if (next === scope) { paint(); return; }
   if (next !== 'off') { const ok = await ensureMic(); if (!ok) { paint(); return; } }
   scope = next; ptt = false;
-  if (stream) stream.getAudioTracks().forEach((t) => { t.enabled = false; });
   const mine = roster.get(hooks.myId()); if (mine) mine.scope = scope;
-  mark(hooks.myId(), false);
+  applyMic();
   hooks.send({ t: 'voice', scope });
   syncPeers(); paint();
+}
+async function setMode(next) {
+  const want = next === 'open' ? 'open' : 'hold';
+  if (want === mode) { paint(); return; }
+  if (want === 'open' && scope !== 'off') { const ok = await ensureMic(); if (!ok) { paint(); return; } }
+  mode = want; ptt = false;
+  try { localStorage.setItem('docao.voice.gate', mode); } catch (e) { /* sem storage */ }
+  applyMic();
+}
+function applyMic() {
+  const on = scope !== 'off' && !away && (mode === 'open' || ptt);
+  const track = stream && stream.getAudioTracks()[0];
+  if (track) track.enabled = on;
+  if (!(mode === 'open' && scope !== 'off' && !away)) mark(hooks.myId(), mode === 'hold' && on);
+  paint();
 }
 async function ensureMic() {
   if (stream) { resume(); return true; }
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
     stream.getAudioTracks().forEach((t) => { t.enabled = false; });
+    armLocal();
     resume();
     return true;
   } catch (e) {
@@ -87,6 +138,12 @@ async function ensureMic() {
     if (toast) toast.textContent = 'Não deu para usar o microfone';
     return false;
   }
+}
+function armLocal() {
+  if (!stream || localAn) return;
+  const c = audio(); if (!c) return;
+  const src = c.createMediaStreamSource(stream);
+  const an = c.createAnalyser(); an.fftSize = 512; src.connect(an); localAn = an;
 }
 function resume() { const c = audio(); if (c && c.state === 'suspended') c.resume(); }
 function audio() { if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); } return actx; }
@@ -160,27 +217,33 @@ function mark(id, on) {
   if (on) talking.add(id); else talking.delete(id);
   if (had !== on) hooks.onChange();
 }
+function loud(an) {
+  const buf = new Uint8Array(an.fftSize); an.getByteTimeDomainData(buf);
+  let sum = 0; for (let i = 0; i < buf.length; i++) { const x = (buf[i] - 128) / 128; sum += x * x; }
+  return Math.sqrt(sum / buf.length) > 0.05;
+}
 function sample() {
   let changed = false;
-  for (const [id, rec] of peers) {
-    if (!rec.an) continue;
-    const buf = new Uint8Array(rec.an.fftSize); rec.an.getByteTimeDomainData(buf);
-    let sum = 0; for (let i = 0; i < buf.length; i++) { const x = (buf[i] - 128) / 128; sum += x * x; }
-    const on = Math.sqrt(sum / buf.length) > 0.05 && !muted.has(id);
+  const hear = (id, on) => {
     const had = talking.has(id);
     if (on) talking.add(id); else talking.delete(id);
     if (had !== on) changed = true;
-  }
+  };
+  if (mode === 'open' && scope !== 'off' && !away && localAn) hear(hooks.myId(), loud(localAn));
+  for (const [id, rec] of peers) if (rec.an) hear(id, loud(rec.an) && !muted.has(id));
   if (changed) hooks.onChange();
 }
 function paint() {
   const team = hooks.teamMode();
-  const hint = scope === 'off' ? 'J troca a voz · mudo' : scope === 'team' ? 'J troca · segure K · só o time' : 'J troca · segure K · a sala ouve';
+  const gate = mode === 'open' ? 'microfone aberto' : 'segure K';
+  const hint = scope === 'off' ? (mode === 'open' ? 'J troca a voz · mudo · aberto quando ligar' : 'J troca a voz · mudo') : scope === 'team' ? `J troca · ${gate} · só o time` : `J troca · ${gate} · a sala ouve`;
+  const hot = scope !== 'off' && !away && (mode === 'open' || ptt);
   document.querySelectorAll('[data-voicebox]').forEach((box) => {
     const teamBtn = box.querySelector('[data-voice=team]');
     if (teamBtn) teamBtn.classList.toggle('hidden', !team);
     box.querySelectorAll('[data-voice]').forEach((b) => b.classList.toggle('on', b.dataset.voice === scope));
-    box.classList.toggle('live', ptt && scope !== 'off');
+    box.querySelectorAll('[data-mic]').forEach((b) => b.classList.toggle('on', b.dataset.mic === mode));
+    box.classList.toggle('live', hot);
     const h = box.querySelector('.voicehint'); if (h) h.textContent = hint;
   });
 }
