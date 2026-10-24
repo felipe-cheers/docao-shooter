@@ -1275,6 +1275,8 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 #hud #saberpips i.on{background:#fff1c2}
 #hud #saberc,#hud #saberz{font:800 11px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.04em;color:#d7e7ff;opacity:.45}
 #hud #saberc.ready,#hud #saberz.ready{opacity:1;color:#fff6e4}
+#hud #protmsg{align-self:flex-end;margin:4px 8px 0 0;padding:2px 6px;border-radius:3px;background:rgba(20,14,10,.55);font:800 11px/1 "Trebuchet MS",Arial,sans-serif;letter-spacing:.04em;color:#d7e7ff;pointer-events:none}
+#hud #protmsg.hidden{display:none}
 #hud #gear{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;
   gap:8px;margin:7px 0 0;padding:0 8px;background:transparent;color:var(--cream)

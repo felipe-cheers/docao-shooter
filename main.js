@@ -964,7 +964,7 @@ function updateParticles(dt) {
     else if (p.kind === 'wisp') { m.position.addScaledVector(p.vel, dt); m.scale.setScalar(p.s0 * (1 + k)); m.material.opacity = 0.3 * (1 - k); }
     else if (p.kind === 'corn') { const g = groundAt(m.position.x, m.position.z, m.position.y) + 0.04; p.vel.y -= 12 * dt; m.position.addScaledVector(p.vel, dt); if (m.position.y <= g) { m.position.y = g; p.vel.y = Math.abs(p.vel.y) > 1.5 ? -p.vel.y * 0.35 : 0; p.vel.x *= 0.6; p.vel.z *= 0.6; p.spin.multiplyScalar(0.6); } m.rotation.x += p.spin.x * dt; m.rotation.z += p.spin.z * dt; m.material.opacity = k > 0.7 ? (1 - k) / 0.3 : 1; } // pipoca quicando
     else if (p.kind === 'smoke') { p.vel.multiplyScalar(1 - 1.5 * dt); p.vel.y += 0.6 * dt; m.position.addScaledVector(p.vel, dt); m.scale.setScalar(p.s0 * (1 + k * 2.2)); m.material.opacity = 0.7 * (1 - k); }
-    else if (p.kind === 'spark') { p.vel.y -= 6 * dt; m.position.addScaledVector(p.vel, dt); m.material.opacity = 1 - k; m.scale.setScalar(1 - k * 0.55); }
+    else if (p.kind === 'spark') { p.vel.y -= 6 * dt; m.position.addScaledVector(p.vel, dt); m.material.opacity = 0.55 * (1 - k); m.scale.setScalar(1 - k * 0.35); }
     if (k >= 1) { scene.remove(m); if (m.material) m.material.dispose(); if (p.kind === 'flash' || p.kind === 'ring') m.geometry.dispose(); particles.splice(i, 1); }
   }
 }
@@ -2341,9 +2341,11 @@ function updateHud(dt) {
   updateHitDirs();
   $('vignette').style.opacity = Math.max(hurtLevel, p.alive && p.hp < 35 ? 0.35 + Math.sin(gameTime * 6) * 0.1 : 0);
   const cm = $('centermsg');
+  const prot = $('protmsg');
+  const shielded = !!(p.alive && gameTime < p.invulnUntil && msgTimer <= 0);
+  if (prot) { prot.textContent = shielded ? 'PROTEGIDO' : ''; prot.classList.toggle('hidden', !shielded); }
   if (!p.alive) cm.textContent = `${p.killW === W_BOMB ? 'Você explodiu com o botijão 💥' : `Você foi ${p.killW === KNIFE ? 'moggado' : 'pururucado'} por ${p.lastAttacker && p.lastAttacker !== p ? p.lastAttacker.name : '???'}${p.killW === KNIFE && p.killBack ? ' (pelas costas!)' : ''}`} · ${respawnReady(p) ? (rsSent ? 'renascendo...' : 'clique em RENASCER (ou Espaço)') : Number.isFinite(p.respawnAt) ? `renasce em ${Math.max(0, p.respawnAt - gameTime).toFixed(1)}s` : 'aguarde...'}`;
   else if (msgTimer > 0) { msgTimer -= dt; if (cm.textContent.startsWith('Você foi ')) cm.textContent = ''; } // mensagem (ex.: "Mapa: …") tem prioridade; tira o "Você foi pururucado" que sobrou de antes de nascer
-  else if (gameTime < p.invulnUntil) cm.textContent = 'PROTEGIDO';
   else cm.textContent = '';
   if (!$('tabboard').classList.contains('hidden')) $('tabboard').innerHTML = boardHtml();
 }
@@ -2783,10 +2785,10 @@ function updateFP(dt) {
     const mode = (st && st.spinUntil > gameTime) || (fp.saberMode === 'spin' && fp.actionT > 0) ? 'spin' : fp.saberMode === 'dash' && fp.actionT > 0 ? 'dash' : st && st.blocking && fp.actionT <= 0 ? 'block' : fp.saberMode === 'fin' && fp.actionT > 0 ? 'fin' : '';
     if (g.userData.twin) { poseKnight(g, mode === 'spin' || fp.saberSide === 0 ? k : 0, 1, true, mode); poseKnight(g.userData.twin, mode === 'spin' || fp.saberSide === 1 ? k : 0, -1, true, mode); }
     else poseKnight(g, k, 1, false, mode);
-    const hot = Math.min(1, Math.hypot(p.vel.x, p.vel.z) / SPEED * 0.55 + (fp.actionT > 0 ? 0.7 : 0) + (st && st.blocking ? 0.35 : 0));
+    const hot = Math.min(1, Math.hypot(p.vel.x, p.vel.z) / SPEED * 0.2 + (fp.actionT > 0 ? 0.4 : 0) + (st && st.blocking ? 0.18 : 0));
     for (const hold of g.userData.twin ? [g, g.userData.twin] : [g]) {
       const glow = hold.userData.glow;
-      if (glow && glow.material) glow.material.opacity = 0.22 + hot * 0.5;
+      if (glow && glow.material) glow.material.opacity = 0.2 + hot * 0.18; // no máximo ~0,38: o brilho não vira uma mancha na mira
     }
     if (ins.twist) { g.rotateZ(ins.twist); if (g.userData.twin) g.userData.twin.rotateZ(-ins.twist); } // inspecionar: torce o cabo (o poseKnight reescreve o quaternion todo quadro)
   }
@@ -3052,43 +3054,73 @@ function resetAds() { $('scope').classList.add('hidden'); crossEl.classList.remo
 
 // ---------------- Jogador ----------------
 const fwd = new V3(), right = new V3();
-const sparkGeo = new THREE.SphereGeometry(0.04, 5, 4);
-function saberSparks(pos, n = 8) {
+const sparkGeo = new THREE.SphereGeometry(0.015, 5, 4);
+function saberSparks(pos, n = 4) {
   if (!pos) return;
-  const p = pos.clone ? pos.clone() : new V3(pos.x || 0, pos.y || 0, pos.z || 0);
-  for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfff1c2 : 0x7ec8ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-    m.position.copy(p); scene.add(m);
-    particles.push({ mesh: m, vel: new V3(rand(-1, 1), rand(0.15, 1.2), rand(-1, 1)).normalize().multiplyScalar(rand(2.5, 7)), life: rand(0.16, 0.34), t: 0, kind: 'spark' });
+  let p0 = pos.clone ? pos.clone() : new V3(pos.x || 0, pos.y || 0, pos.z || 0);
+  const camDist = p0.distanceTo(camera.position);
+  if (camDist < 1.25) {
+    const away = p0.clone().sub(camera.position);
+    if (away.lengthSq() < 1e-6) away.set(-Math.sin(player && player.yaw || 0), 0.15, -Math.cos(player && player.yaw || 0));
+    p0 = camera.position.clone().addScaledVector(away.normalize(), 1.35);
+  }
+  const count = Math.min(n, 5);
+  const nearCam = camDist < 1.6;
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: i % 2 ? 0xfff1c2 : 0xffc4d0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+    m.position.copy(p0); scene.add(m);
+    const vel = new V3(rand(-1, 1), rand(0.35, 1.1), rand(-1, 1)).normalize().multiplyScalar(rand(1.1, 2.6));
+    if (nearCam) { const away = p0.clone().sub(camera.position); if (away.lengthSq() > 1e-4 && vel.dot(away) < 0) vel.addScaledVector(away.normalize(), 2); }
+    particles.push({ mesh: m, vel, life: rand(0.08, 0.14), t: 0, kind: 'spark' });
   }
 }
-let saberTrail = null; const saberTrailPts = []; const _tip = new V3();
+// Rastro fino na cena da arma (mesmo espaço da lâmina). Some em ~0,15 s. Não vai pro mundo: uma linha na frente da câmera cobria o alvo.
+const SABER_TRAIL_LIFE = 0.15;
+const saberTrailLines = [null, null];
+const saberTrailPts = [[], []];
+const _tip = new V3();
+function saberTrailLine(i) {
+  if (saberTrailLines[i]) return saberTrailLines[i];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(16 * 3), 3));
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffd5e0, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true }));
+  line.frustumCulled = false; line.visible = false; line.renderOrder = 6; fpScene.add(line);
+  saberTrailLines[i] = line; return line;
+}
 function sampleSaberTrail() {
-  if (!saberTrail) {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(48 * 3), 3));
-    saberTrail = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xb7e4ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
-    saberTrail.frustumCulled = false; saberTrail.visible = false; scene.add(saberTrail);
-  }
-  const p = player, g = p && fp.guns[p.weapon];
-  const hot = p && p.alive && isSaber(p.weapon) && g && (Math.hypot(p.vel.x, p.vel.z) > 2.2 || fp.actionT > 0 || (p.saber && (p.saber.blocking || p.saber.dashUntil > gameTime)));
-  if (!hot) { if (saberTrailPts.length) saberTrailPts.shift(); }
-  else {
+  const p = player, g = p && fp.guns[p.weapon], st = p && p.saber;
+  const now = gameTime;
+  const hot = !!(p && p.alive && isSaber(p.weapon) && g && g.visible && fp.root.visible && (fp.actionT > 0 || (st && (st.dashUntil > now || st.spinUntil > now))));
+  if (hot) {
     fp.root.updateWorldMatrix(true, true);
     const holds = g.userData.twin ? [g, g.userData.twin] : [g];
-    for (const h of holds) { _tip.set(0, 0, -0.83); h.localToWorld(_tip); _tip.applyQuaternion(camera.quaternion).add(camera.position); saberTrailPts.push(_tip.clone()); }
-    while (saberTrailPts.length > 18) saberTrailPts.shift();
+    const spin = st && st.spinUntil > now;
+    holds.forEach((h, i) => {
+      if (holds.length > 1 && !spin && fp.saberMode !== 'dash' && fp.saberSide !== i) return;
+      _tip.set(0, 0, -0.83); h.localToWorld(_tip);
+      if (_tip.z > -0.45) return; // ponta encostada na lente: não risca a tela
+      const bag = saberTrailPts[i];
+      const last = bag[bag.length - 1];
+      const dist = last ? last.p.distanceTo(_tip) : 1;
+      if (last && dist > 1.4) bag.length = 0; // a pose pulou: não liga dois pontos distantes
+      if (!last || dist > 0.015) bag.push({ p: _tip.clone(), t: now });
+    });
   }
-  const attr = saberTrail.geometry.attributes.position, arr = attr.array;
-  const n = saberTrailPts.length;
-  saberTrail.visible = n > 1;
-  for (let i = 0; i < 48; i++) {
-    const q = saberTrailPts[Math.min(n - 1, i)] || _tip;
-    arr[i * 3] = q.x; arr[i * 3 + 1] = q.y; arr[i * 3 + 2] = q.z;
+  for (let i = 0; i < 2; i++) {
+    const bag = saberTrailPts[i];
+    while (bag.length && now - bag[0].t > SABER_TRAIL_LIFE) bag.shift();
+    const line = saberTrailLine(i), attr = line.geometry.attributes.position, arr = attr.array;
+    const n = Math.min(bag.length, 16), start = bag.length - n;
+    line.visible = n > 1;
+    for (let k = 0; k < 16; k++) {
+      const q = bag[Math.min(bag.length - 1, start + Math.max(0, k))] ;
+      const v = q ? q.p : _tip;
+      arr[k * 3] = v.x; arr[k * 3 + 1] = v.y; arr[k * 3 + 2] = v.z;
+    }
+    line.geometry.setDrawRange(0, n);
+    attr.needsUpdate = true;
+    if (n > 1) line.geometry.computeBoundingSphere();
   }
-  saberTrail.geometry.setDrawRange(0, Math.max(n, 0));
-  attr.needsUpdate = true;
-  if (n > 1) saberTrail.geometry.computeBoundingSphere();
 }
 function saberSpace(e) { return e && e.isPlayer ? 'aim' : 'model'; }
 function saberForward(e) {
@@ -3108,7 +3140,7 @@ function swingSaber(p) {
   const forward = saberForward(p);
   if (online && p.isPlayer) { netEv(['sw', v3a(origin), [forward.x, 0, forward.z], +(performance.now() / 1000).toFixed(3)]); return sw; }
   const hit = saberArcLocal(p, origin, forward, sw.dmg, sw.reach, sw.arc);
-  if (hit) { saberSfx.clash(); saberSparks(origin.clone().add(new V3(forward.x, 0, forward.z).multiplyScalar(1.1)), sw.idx === 2 ? 14 : 8); }
+  if (hit) saberSfx.clash();
   return sw;
 }
 function saberArcLocal(p, origin, forward, dmg, reach, arc) {
@@ -3120,7 +3152,7 @@ function saberArcLocal(p, origin, forward, dmg, reach, arc) {
     targets.push({ e, x: e.pos.x, z: e.pos.z });
   }
   const hits = targetsInArc({ x: eye.x, z: eye.z }, forward, reach, arc, targets);
-  for (const h of hits) damage(h.e, dmg, p, p.weapon, false);
+  for (const h of hits) { damage(h.e, dmg, p, p.weapon, false); if (p.isPlayer) saberSparks(center(h.e, 1.05), 4); }
   return hits.length > 0;
 }
 function saberRadiusLocal(p, dmg, radius) {
