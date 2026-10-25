@@ -29,6 +29,7 @@ Tudo foi feito do zero: os modelos são procedurais em Three.js, os sons são si
 - [👤 Conta e ranking](#-conta-e-ranking)
 - [🧺 Brechó da Porca Véia, Docoins e desafios](#-brechó-da-porca-véia-docoins-e-desafios)
 - [⌨️ Controles](#️-controles)
+- [💣 Docão Minado](#-docão-minado)
 - [🏆 Modos de jogo](#-modos-de-jogo)
   - [🎃 Invasão · Hordas de Zumbis](#-invasão--hordas-de-zumbis)
   - [💣 Bomba · Planta o Botijão](#-bomba--planta-o-botijão)
@@ -516,6 +517,25 @@ Pra criar um tipo novo de peça, crie uma função em `PARTS` no `costumes.js`. 
 
 ---
 
+## 💣 Docão Minado
+
+Campo minado da fazendinha, na quermesse. No menu do tiroteio, **Ver outros jogos** abre o `hub.html`; a barraca do Minado leva a `minado.html`.
+
+- **A bomba é escolhida:** Botijão, Copo Bomba, Granada, Pau de choque ou Ovo. O desenho na casa estourada é o que você marcou, e o número conta os vizinhos daquele tipo.
+- **Tamanho:** Chiqueirinho (9×9, 10 no cercado cheio), Granja (16×16, 40) e Fazendona (30×16, 99). Nos outros formatos a quantidade acompanha o tanto de chão.
+- **Formato**, escolhido junto com o tamanho: Cercado, Lago, Celeiro, Silhueta do Docão, Ferradura e Trilha do milharal (a fazenda); Raquete (Docão Tênis); Mesa do Snooker, com as caçapas fora do jogo; Leque do Truco, três cartas. Casa de fora do desenho não existe.
+- O primeiro clique nunca estoura e abre um claro, quando cabe. Direito (ou segurar, ou o botão **Marcar**) planta a bandeirinha. Clique num número já aberto limpa os vizinhos se as bandeirinhas fecharem a conta.
+- Pisou numa bomba: a frase na tela é **o Barriguinha te pegou**.
+
+Roda no navegador, sem servidor. Com o site local no ar (veja [Rodando localmente](#-rodando-localmente)):
+
+```
+http://localhost:8124/minado.html
+http://localhost:8124/hub.html
+```
+
+As regras estão em `minado/rules.js`. `node test-minado.mjs` cobre bomba, tamanho, formato, vitória e derrota.
+
 ## 💻 Rodando localmente
 
 O jogo é um site estático com módulos ES, e o Three.js já vem em `vendor/`. Só precisa ser servido por HTTP:
@@ -579,6 +599,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | Sem navegador (Node) | Offline (navegador) | Online (precisa do `wrangler dev`) |
 |---|---|---|
 | `test-shared.mjs`: regras compartilhadas | `test.mjs`: fluxo geral | `test-online.mjs` |
+| `test-minado.mjs`: Docão Minado (bomba, tamanho, formato) | | |
 | `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Shift, câmera e animação | `test-online-dom.mjs` |
 | `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-idle.mjs` |
 | `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-names.mjs` |
@@ -651,6 +672,9 @@ docao-shooter/
 │   ├── shock.js · disc.js · corn.js · egg.js   # pau de choque, Disco, Lança-Milho e Ovo
 │   ├── emote.js · stance.js   # dança da vitória e postura (agachar)
 │   └── physics.js · names.js · nick.js   # colisão, nomes e regras de apelido de conta
+├── hub.html · hub.css         # quermesse: Shooter, Tênis, Snooker e Minado
+├── minado.html · minado.css   # Docão Minado
+├── minado/rules.js · minado/main.js   # bombas, tamanhos, formatos e a partida
 ├── server/                    # Cloudflare Worker + Durable Object "Room" + D1
 │   ├── src/index.js · src/game.js · src/auth.js   # rotas, partida autoritativa e contas/ranking
 │   ├── migrations/            # esquema do D1 (0001_contas, 0002_loja, 0003_desafios)
