@@ -283,13 +283,13 @@ Você leva **uma primária + uma secundária + uma arma corpo a corpo**, escolhi
 | Arma | Pente / reserva | Dano | Cabeça | Cadência | Recarga | Alcance | Queda | Zoom |
 |---|---|---|---|---|---|---|---|---|
 | **Fuzil Pururuca** (automático) | 30 / 120 | 20 | ×2 | 0,1 s | 1,6 s | 140 m | — | 40° |
-| **Commando da Granja** (automática) | 30 / 120 | 12 | ×1,4 | 0,09 s | 1,8 s | 150 m | — | 36° |
-| **Metralhadora do Chiqueiro** (automática) | 100 / 300 | 15 | ×1,6 | 0,08 s | 3,1 s | 130 m | 18 → 55 m, até 50% | 48° |
+| **Commando da Granja** (automática) | 30 / 120 | 18 | ×1,4 | 0,09 s | 1,8 s | 150 m | — | 36° |
+| **Metralhadora do Chiqueiro** (automática) | 100 / 300 | 20 | ×1,6 | 0,08 s | 3,1 s | 130 m | 18 → 55 m, até 50% | 48° |
 | **MP5K da Granja** (automática) | 30 / 90 | 16 | ×1,5 | 0,088 s | 1,5 s | 90 m | 8 → 28 m, até 35% | 52° |
 | **P90 da Granja** (automática) | 50 / 150 | 14 | ×1,5 | 0,07 s | 1,7 s | 110 m | 16 → 48 m, até 45% | 48° |
 | **FAMAS da Pocilga** (rajada de 3) | 30 / 120 | 34 | ×1,5 | 0,065 s na rajada · 0,3 s entre rajadas | 2,1 s | 150 m | 16 → 50 m, até 60% | 46° |
 
-Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto. A **Commando** tem recuo quase zero e dano baixo (rajada reta como régua). A **Metralhadora** tem fita grande e deixa você **5% mais lento**. A **MP5K** entrou no lugar da Mini Uzi (mesmo botão).
+Na **FAMAS** um clique dispara 3 tiros, com o recuo subindo reto. A **Commando** tem recuo quase zero, 18 de dano e rajada precisa. A **Metralhadora** causa 20 de dano perto, tem fita grande, recarga lenta e deixa você **5% mais lento**. A **MP5K** entrou no lugar da Mini Uzi (mesmo botão).
 
 ### 💥 Escopeta (primária)
 
