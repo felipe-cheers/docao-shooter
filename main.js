@@ -1364,7 +1364,7 @@ function fire(shooter, origin, dir, wIdx, spread, muzzle, mul = 1, hand = 0) {
       const bag = bags.get(h.e) || []; bag.push(h.dmg); bags.set(h.e, bag);
     }
     if (tr.heli) { heliDmg.set(tr.heli.h, (heliDmg.get(tr.heli.h) || 0) + tr.heli.dmg); puff(end, 0xffe08a); } else if (tr.stop === 'wall') puff(end);
-    if (shooter.isPlayer) window.__lastTrace = { end: +tr.end.toFixed(3), stop: tr.stop, holes: tr.holes.length, hits: tr.hits.map((h) => ({ name: h.e.name, dmg: +h.dmg.toFixed(2), head: h.head, walls: h.walls, bodies: h.bodies })) };
+    if (shooter.isPlayer) window.__lastTrace = { dir: d.toArray(), end: +tr.end.toFixed(3), stop: tr.stop, holes: tr.holes.length, hits: tr.hits.map((h) => ({ name: h.e.name, dmg: +h.dmg.toFixed(2), head: h.head, walls: h.walls, bodies: h.bodies })) };
   }
   for (const [sh, dmg] of heliDmg) { hurtHeli(dmg, sh); res.hit = true; if (shooter && shooter.isPlayer) sfx.hit(); }
   const mine = !!(online && shooter.isPlayer);
@@ -4088,8 +4088,8 @@ function shootRevolver(p, w, latched) {
     window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: p.weapon, hand: h };
   }
 }
-function applyShotRecoil(p, w) {
-  kickRecoil(p, w, gameTime, ads);
+function applyShotRecoil(p, w, shotScoped = false) {
+  kickRecoil(p, w, gameTime, ads, shotScoped);
   camera.rotation.set(p.pitch, p.yaw, 0);
 }
 function updatePlayer(dt) {
@@ -4198,6 +4198,7 @@ function updatePlayer(dt) {
       if (w.burst) { if (!bursting) { p.burstLeft = w.burst; p.burstW = p.weapon; } p.burstLeft--; }
       p.mag[p.weapon]--; p.nextFire = gameTime + (w.burst && !p.burstLeft ? w.burstDelay : w.rate); p.invulnUntil = Math.min(p.invulnUntil, gameTime);
       if (w.burst && p.mag[p.weapon] === 0) p.burstLeft = 0;
+      const shotScoped = scoped(); // captura antes de iniciar o ferrolho, que fecha a luneta
       const dir = new V3(0, 0, -1).applyQuaternion(camera.quaternion);
       const moving = Math.hypot(p.vel.x, p.vel.z) > 1 || !p.onGround;
       let spread;
@@ -4218,7 +4219,7 @@ function updatePlayer(dt) {
       else if (ejectsBrass(w.key)) ejectBrass(w.key);
       if (heatsBarrel(w.key) && !w.spin) fp.lmgHeat = Math.min(1, (fp.lmgHeat || 0) + 0.045); // LMG: o cano esquenta. A minigun já tem o calor dela.
       if (w.scope) shake = Math.max(shake, 0.15);
-      applyShotRecoil(p, w);
+      applyShotRecoil(p, w, shotScoped);
       window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: p.weapon }; // testes
       if (p.mag[p.weapon] === 0) startReload(p);
     } else { sfx.empty(); p.nextFire = gameTime + 0.25; startReload(p); }

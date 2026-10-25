@@ -8,11 +8,12 @@ const PATTERNS = {
   burst: [0, 0.08, -0.08],
   single: [0.1, -0.1, 0.06, -0.06],
 };
-export function recoilProfile(w) {
+export function recoilProfile(w, scoped = false) {
   const automatic = !!(w.auto || w.spin || w.burst);
   const pattern = w.burst ? PATTERNS.burst : w.spin || w.key === 'lmg' ? PATTERNS.heavy
     : w.key === 'uzi' || w.key === 'p90' ? PATTERNS.smg : automatic ? PATTERNS.rifle : PATTERNS.single;
-  return { pattern, gain: w.scope ? 0.85 : w.revolver ? 0.8 : w.pellets > 1 ? 0.85 : 1,
+  const hipGain = w.key === 'canhao' ? 1.8 : w.key === 'carabina' ? 2.2 : 0.85;
+  return { pattern, gain: w.scope ? (scoped ? 0.85 : hipGain) : w.revolver ? 0.8 : w.pellets > 1 ? 0.85 : 1,
     delay: Math.max(0.18, Math.min(0.32, (w.rate || 0.1) * 1.35)),
     reset: Math.max(0.4, (w.rate || 0.1) * 1.8), recover: w.scope ? 9 : 7,
     pitchCap: 0.24, yawCap: 0.065, automatic };
@@ -23,9 +24,9 @@ export function cancelRecoilReturn(p) {
   if (p.recoil) { p.recoil.pitch = 0; p.recoil.yaw = 0; }
   p.recoilLift = 0;
 }
-export function kickRecoil(p, w, now, ads = 0) {
+export function kickRecoil(p, w, now, ads = 0, scoped = ads >= 0.85) {
   if (!(w.recoil > 0) || w.melee || w.saber) return;
-  const prof = recoilProfile(w);
+  const prof = recoilProfile(w, scoped);
   if (!p.recoil || p.recoil.key !== w.key) resetRecoil(p);
   const r = p.recoil ||= { key: w.key, shots: 0, last: -Infinity, pitch: 0, yaw: 0, profile: prof };
   if (now - r.last > prof.reset) r.shots = 0;

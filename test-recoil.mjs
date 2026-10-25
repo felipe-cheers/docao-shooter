@@ -5,6 +5,22 @@ import { WEAPONS } from './shared/rules.js';
 const ent = () => ({ pitch: 0, yaw: 0, crouch: 0 });
 const rifle = WEAPONS[0];
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
+test('Commando e LMG exigem compensação após cinco tiros, com dano original', () => {
+  for (const [key, damage] of [['commando', 12], ['lmg', 15]]) {
+    const w = WEAPONS.find(w => w.key === key), hip = ent(), ads = ent();
+    for (let i = 0; i < 5; i++) { kickRecoil(hip, w, i * w.rate); kickRecoil(ads, w, i * w.rate, 1); }
+    assert.ok(hip.pitch > 0.1, key); assert.ok(ads.pitch > 0.08, key); assert.equal(w.dmg, damage);
+  }
+});
+test('só Canhão/Carabina têm coice sem luneta reforçado; com luneta mantêm o anterior', () => {
+  for (const index of [2, 5, 6]) {
+    const w = WEAPONS[index], hip = ent(), scope = ent();
+    kickRecoil(hip, w, 0, 0, false); kickRecoil(scope, w, 0, 1, true);
+    close(scope.pitch, w.recoil * 0.85 * 0.75);
+    if (index === 2) close(hip.pitch, w.recoil * 0.85);
+    else assert.ok(hip.pitch > w.recoil * 1.7);
+  }
+});
 test('spray reproduzível, sobe e muda de lado sem sorteio', () => {
   const spray = () => {
     const p = ent(), trace = [];
