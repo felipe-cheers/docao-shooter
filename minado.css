@@ -20,13 +20,19 @@ body{
 }
 [hidden]{display:none !important}
 #lobby{
+  position:relative;
   min-height:100dvh;
-  background:
-    linear-gradient(100deg,#1a120ccc 0%,#1a120c88 40%,#1a120c55 100%),
-    url("./assets/menu/fazendinha-entardecer.webp") center/cover no-repeat;
   padding:28px 16px 48px;
 }
+#lobby::before{
+  content:"";
+  position:fixed;inset:0;z-index:0;
+  background:
+    linear-gradient(90deg,#1a120c99 0%,#1a120c44 34%,#1a120c66 100%),
+    url("./assets/hub/minado.jpg") center/cover no-repeat;
+}
 #comanda{
+  position:relative;z-index:1;
   width:min(760px,100%);
   margin:0 auto;
   padding:22px 22px 18px;
