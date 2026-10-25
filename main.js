@@ -1,5 +1,6 @@
 // Docão Shooter — jogo original de tiro em primeira pessoa com o Docão (mascote Cheers).
 import * as THREE from 'three';
+import { kickRecoil, stepRecoil, resetRecoil, cancelRecoilReturn } from './shared/recoil.js';
 import { makeWardrobeCase } from './menu-wardrobe.js';
 import { makeMenuBackdrop } from './menu-backdrop.js';
 import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, setCrouchPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife, setExpression, updateExpression, makeNukeRider } from './docao.js';
@@ -1439,7 +1440,7 @@ function finishReload(e) {
   const need = w.mag - e.mag[e.weapon]; const take = Math.min(need, e.reserve[e.weapon]);
   e.mag[e.weapon] += take; e.reserve[e.weapon] -= take; e.reloadEnd = 0;
 }
-function setWeapon(e, idx) { e.weapon = idx; if (e.model) e.model.guns.forEach((g, i) => { g.visible = i === idx; if (g.userData.twin) g.userData.twin.visible = g.visible; if (g.userData.extra) g.userData.extra.visible = g.visible; }); syncShieldWorn(e); } // twin: 2º sabre ou revólver da esquerda. extra: o da direita do par.
+function setWeapon(e, idx) { if (e.weapon !== idx) resetRecoil(e); e.weapon = idx; if (e.model) e.model.guns.forEach((g, i) => { g.visible = i === idx; if (g.userData.twin) g.userData.twin.visible = g.visible; if (g.userData.extra) g.userData.extra.visible = g.visible; }); syncShieldWorn(e); } // twin: 2º sabre ou revólver da esquerda. extra: o da direita do par.
 // pinta as lâminas dos dois sabres (e do par do Sabre Duplo)
 function colorSabers(guns, hex) { for (const i of [SABER, SABER2]) { const g = guns[i]; if (!g) continue; setSaberColor(g, hex); if (g.userData.twin) setSaberColor(g.userData.twin, hex); } }
 function switchWeapon(e, idx) {
@@ -4002,7 +4003,7 @@ function updateMinigun(p, dt, w) {
   const spread = w.spread * (moving ? 1.35 : 1) * (1 + (p.mgHeat || 0) * 0.5); // quente abre um pouco
   fire(p, camera.position.clone(), dir, MINIGUN, spread, camera.localToWorld(new V3(0.16, -0.24, -1.0)));
   sfx.minigun(); fp.kick = Math.min(0.05, fp.kick + 0.012); fp.flashT = 0.035; shake = Math.max(shake, 0.07); ejectCase(fp.mgCase);
-  p.pitch = clamp(p.pitch + w.recoil * (0.4 + Math.random() * 0.6), -1.5, 1.5); p.yaw += (Math.random() - 0.5) * w.recoil * 0.8;
+  applyShotRecoil(p, w);
   p.mgHeat = (p.mgHeat || 0) + S.heat; if (p.mgHeat >= 1) { p.mgHeat = 1; p.mgHot = true; p.mgFiring = false; sfx.steam(); flashMsg('Minigun superaqueceu!'); }
   window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: MINIGUN }; window.__mgShots = (window.__mgShots || 0) + 1; // testes
   if (p.mag[MINIGUN] === 0) startReload(p);
@@ -4082,13 +4083,14 @@ function shootRevolver(p, w, latched) {
     fire(p, camera.position.clone(), dir, p.weapon, spread, muzzle, 1, h);
     sfx[w.key](); noteCapataz('shot', { hand: h, dual: !!w.akimbo });
     fp.kick = Math.min(0.22, fp.kick + w.recoil * 2.4);
-    const kick = w.recoil * (0.55 + Math.random() * 0.35);
-    p.pitch = clamp(p.pitch + kick, -1.5, 1.5);
-    p.recoilLift = (p.recoilLift || 0) + kick;
-    p.yaw += (Math.random() - 0.5) * w.recoil * 0.2;
+    applyShotRecoil(p, w);
     shake = Math.max(shake, w.akimbo ? 0.07 : 0.12);
     window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: p.weapon, hand: h };
   }
+}
+function applyShotRecoil(p, w) {
+  kickRecoil(p, w, gameTime, ads);
+  camera.rotation.set(p.pitch, p.yaw, 0);
 }
 function updatePlayer(dt) {
   const p = player;
@@ -4128,8 +4130,8 @@ function updatePlayer(dt) {
   saberPreMove(p, dt);
   moveEntity(p, dt);
   const bob = p.onGround ? Math.abs(Math.sin(fp.bob)) * 0.05 * stanceScale(p.crouch) : 0;
+  stepRecoil(p, dt, gameTime);
   camera.position.set(p.pos.x, p.pos.y + eyeHeight(p) + bob, p.pos.z); camera.rotation.set(p.pitch, p.yaw, 0);
-  if (p.recoilLift > 0) { const back = (WEAPONS[p.weapon] && WEAPONS[p.weapon].recoilBack) || 0; if (back > 0) { const n = Math.min(p.recoilLift, back * dt); p.pitch = clamp(p.pitch - n, -1.5, 1.5); p.recoilLift -= n; camera.rotation.x = p.pitch; } }
   if (p.alive && p.stunUntil > gameTime) { camera.rotation.x += rand(-1, 1) * 0.012; camera.rotation.y += rand(-1, 1) * 0.012; } // levou choque: mira tremendo
   if (shake > 0) {
     if (!guiding) { camera.position.add(new V3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(shake * 0.25)); camera.rotation.z += rand(-1, 1) * shake * 0.05; }
@@ -4216,7 +4218,7 @@ function updatePlayer(dt) {
       else if (ejectsBrass(w.key)) ejectBrass(w.key);
       if (heatsBarrel(w.key) && !w.spin) fp.lmgHeat = Math.min(1, (fp.lmgHeat || 0) + 0.045); // LMG: o cano esquenta. A minigun já tem o calor dela.
       if (w.scope) shake = Math.max(shake, 0.15);
-      if (!w.scope) { p.pitch = clamp(p.pitch + w.recoil * (0.5 + Math.random() * 0.5), -1.5, 1.5); p.yaw += (Math.random() - 0.5) * w.recoil * (w.burst ? 0.15 : 0.4); } // rajada sobe reto, quase sem desvio pro lado // Sniper: coice só visual, a mira não sai do lugar
+      applyShotRecoil(p, w);
       window.__lastShot = { dir: dir.toArray(), origin: camera.position.toArray(), spread, w: p.weapon }; // testes
       if (p.mag[p.weapon] === 0) startReload(p);
     } else { sfx.empty(); p.nextFire = gameTime + 0.25; startReload(p); }
@@ -5465,7 +5467,7 @@ document.addEventListener('mousemove', (e) => {
   if (!e.movementX && !e.movementY) return;
   const s = sens * (ads > 0.2 ? sensAds : 1) * (camera.fov / BASE_FOV); // mirando usa o slider "Mirando"; o zoom ainda deixa o mouse mais lento
   // A nova direção escolhida pelo jogador encerra a recuperação do coice.
-  player.recoilLift = 0;
+  cancelRecoilReturn(player);
   lookInputSeq++;
   player.yaw -= e.movementX * 0.0015 * s; player.pitch = clamp(player.pitch - e.movementY * 0.0015 * s, -1.5, 1.5);
 });
@@ -6337,7 +6339,7 @@ function requestRespawn() {
 $('respawnBtn').onclick = (ev) => { ev.stopPropagation(); requestRespawn(); };
 function onPlayerDeath(opts) { clearHitMarks(); if (player) { player.mgWant = false; player.mgSpin = 0; player.mgFiring = false; } rsSent = false; resetRewards(true); if (!(opts && opts.keepAim) && document.pointerLockElement) { deathUnlock = true; document.exitPointerLock(); } mouseDown = false; rightDown = false; if (player) player.bowDraw = player.eggDraw = 0; }
 let lastRespawnMs = -1e9;
-function onPlayerRespawn() { clearHitMarks(); rsSent = false; lastRespawnMs = performance.now(); if (gunner) endGunner(false); if (predator) clearPredator(); closeBench(); // nada de mira guiada nem bancada sobrando da vida anterior (travava o andar)
+function onPlayerRespawn() { if (player) resetRecoil(player); clearHitMarks(); rsSent = false; lastRespawnMs = performance.now(); if (gunner) endGunner(false); if (predator) clearPredator(); closeBench(); // nada de mira guiada nem bancada sobrando da vida anterior (travava o andar)
   deathCamState.on = false; deathCamState.killer = null; tuckDeathMenu(); document.body.classList.remove('deadgray', 'dead'); if (!bombPick && !invPick && !pauseClassOpen()) document.body.classList.remove('cls-on'); if (ghost) ghost.model.group.visible = false;
   // o pointer lock é assíncrono: só avisa se ainda estiver sem mouse depois de um tempinho (o clique em RENASCER já pediu o lock)
   setTimeout(() => { if (!document.pointerLockElement && deathUnlock && state === 'playing' && player && player.alive) flashMsg(RELOCK_MSG); }, 600); }
