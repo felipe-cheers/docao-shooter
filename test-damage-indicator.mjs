@@ -91,3 +91,10 @@ test('Gavião usa a posição do helicóptero em vez do dono', (test) => {
   assert.notEqual(ev[7][0], a.pos.x);
 });
 
+
+test('pau de choque: o arco aponta pra estaca (origem = topo da estaca), não pro dono', () => {
+  const { g, a, t } = room(); a.pos = { x: 50, y: 0, z: 50 }; t.pos = { x: 0, y: 0, z: 0 }; t.hp = 100; g.P = { ...g.P, rayWorldN: () => null, groundAt: () => 0 };
+  g.shocks.push({ id: 1, owner: a, pos: { x: 2, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, vel: { x: 0, y: 0, z: 0 }, t: 0, stuck: true, until: 5, nextPulse: 0 });
+  g.T = 0.1; g.stepShocks(0.05);
+  assert.deepEqual(g.events.find((e) => e[0] === 'h')[7], [2, 0.5, 0]);
+});

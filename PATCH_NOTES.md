@@ -4,6 +4,156 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.20.1 — Macarena no Chiqueiro 🎶🐷 (24/10/2026)
+🎶 **DALE A TU CUERPO ALEGRÍA, MACARENA!** O Brechó mal abriu e a Porca Véia já trouxe mais duas danças pro balcão:
+🕺 **Passinho do Jamal** (450 🪙): pé cruzando, ombro gingando, chutinho pra lá e pra cá. O baile funk chegou no chiqueiro.
+🎶 **Macarena** (400 🪙): braço, braço, ombro, cabeça, rebola e dá a voltinha. Igual na festa de firma, só que com rabinho enrolado.
+🎯 **Desafio que "não contava":** fomos atrás de cada abate de cabeça, da sala até o cofrinho, e a conta está certa. O pulo do gato: **desafio e Docoin só valem em partida online, com a conta logada** (sala só com bots também vale). Offline e Treino não contam, e agora o painel do menu e o fim da partida offline **avisam isso com todas as letras**. E quem sai da sala no meio já vê o progresso e o saldo atualizados no menu, sem precisar recarregar a página.
+🧊 **Docão congelado:** abriu a **bancada do Arsenal** no menu, fechou a caixa pelo botão e foi jogar? A bancada continuava aberta escondida e comia o **W e o S** a partida inteira. Agora ela fecha sozinha. E o Enter que te faz renascer não abre mais o chat sem querer, que aí o WASD ia virar textão na caixinha.
+📸 **Câmera da vitória com distância de fotógrafo:** quem ganhava mirando de luneta levava o zoom pra dança e só via o focinho do Docão. Agora a câmera volta pro normal, recua e sobe um pouco: dá pra ver o Docão inteiro, do casco ao chapéu (até o Dourado flutuando), no PC e no celular deitado.
+💸 **E o bolso do Matheus?** Nenhuma sala nova e nenhuma mensagem a mais na partida. O único extra é uma conferida no saldo quando você sai da sala no meio, o mesmo que já acontecia no fim da partida. A Macarena é de graça pro servidor.
+
+## v1.20 — Brechó da Porca Véia 🧺🐷 (24/10/2026)
+🧺 **A PORCA VÉIA ABRIU O BRECHÓ!** Quem tem conta agora tem onde torrar dinheiro. Botão **🧺 BRECHÓ** no menu, e o caixa só aceita a moeda da casa:
+🪙 **Docoin:** só se ganha **jogando** (abate, fim de partida, vitória e wave da Invasão), com teto de 80 por partida e 400 por dia, que porco não é agiota. E não, Docoin não cai no chão igual bacon: vai direto pro cofrinho.
+🎯 **3 desafios diários:** todo dia à **meia-noite de Brasília** chegam 3 desafios novos (um fácil, um médio e um difícil), sorteados de um banco de **60** que passa por todos os modos online. Plantar botijão, segurar zona, derrubar zumbi, chamar killstreak... Completou, a Docoin cai na hora, **sem teto**.
+📋 **Desafios no menu principal:** os 3 do dia aparecem logo na tela inicial, com barra de progresso, prêmio e ✓ quando você completa. Ninguém mais esquece de fazer a lição de casa.
+🎭 **8 fantasias completas**, estilo Fortnite: Super Porco, Ninja do Chiqueiro, Peão de Rodeio, Chef Supremo do Rodízio, Estrela do Rock, Capitão Costelinha, Caipira de Festa Junina e o **Docão Dourado**, que flutua (1500 🪙, pra quem é rico de verdade).
+🧢 **Bonés e chapéus aos montes:** Boné do Churrasqueiro, Chapéu de Palha da Roça, Fone Gamer Neon, Chifrinhos de Boi, Capuz de Coelhinho e outras peças pra cabeça, rosto, pescoço, corpo, mãos e pés. Monta o visual, salva na conta e desfila.
+💃 **6 danças pra comprar**, no mesmo esquema do Moonwalk, do Mewing e do 6 7: Escovinha, Robozão da Granja, Galinha Maluca, Espirro do Porquinho, Rebolado do Leitão e Helicóptero. As três de sempre continuam de graça.
+🧍 **Boneco paradinho:** no provador o Docão fica **parado e de frente**, pra você ver o que está vestindo. Quer ver as costas? Arrasta ou usa ◀ Frente ▶. Ele só se mexe quando você experimenta uma dança.
+🔤 **Fonte nova: Fredoka** no jogo inteiro. Mais redondinha, mais fazendinha, mais fofa. O Trebuchet foi aposentado com honras.
+💸 **E o bolso do Matheus?** O saldo e os desafios são gravados junto com o que o ranking já gravava no fim da partida. O banco nem sentiu.
+
+## v1.19 — Quermesse do Capataz 🎪🤠🐷 (23/10/2026)
+🎪 **O JOÃO CHEGOU COM O CAMINHÃO DE MUDANÇA!** O **João** (@rramosjoao) mandou o **PR #21**, o "super PR", e trouxe metade da feira agropecuária junto:
+🐷 **Dificuldade dos bots:** **Leitão** (vê pouco e mira mal, ~0,9 s pra reagir), **Ceva** (os bots de sempre), **Javali** e **Cachaço** (~0,19 s, mira no focinho e atira andando). Vale offline, na sala online e na Invasão. Vida e dano **não mudam**: o bot só fica mais esperto, não mais bombado.
+🎒 **Classes e acessórios:** cinco classes (teclas **1–5**) com bancada de peças que fazem efeito de verdade no respawn. A **ficha** é a mesma na morte, na pausa, na preparação da Bomba e entre as waves, com o **arsenal** inteiro pra clicar e gravar na classe.
+🛡️ **Tampa do Tacho:** escudo primário de **720 de vida**. Segura bala na frente, dá **porrada** e **investida**, mas pé, fresta, flanco, costas e de cima passam. Torresmo e Canhão furam a tampa, que panela não é cofre.
+🤠 **Revólver do Capataz** na secundária: 58 no corpo, dobra na cabeça, tambor de 6. E pra quem acha pouco, **Dois Capatazes**, um em cada mão, cada uma no seu tempo. Faroeste no chiqueiro.
+⚔️ **Sabres sem castigo:** agora andam na velocidade normal e ganharam kit de duelista: combo, **guarda**, **parry** nos primeiros 0,18 s, **investida (C)**, e o **especial (Z)**: o simples **arremessa**, o duplo **gira** feito ventilador de boteco.
+🎯 **Snipers com som de cinema:** Torresmo, Canhão e Carabina ganharam tiro, eco ao longe e ferrolho. Agora o vizinho sabe que você acertou.
+✈️ **Grelha (AC-130) mais legível:** dá pra ver os tiros e a troca Espeto / Panela / Caldeirão (**1/2/3**, **F** sai).
+🎬 **Cada arma tem trejeito:** cada uma saca, recarrega, corre e descansa do seu jeito, com cápsula pulando e cano que esquenta. Parado uns 8 segundos, a arma faz gracinha, e na inspeção (**I**) às vezes sai a versão ovo. O tempo de tiro, recarga e saque **não mudou**, e quem enjoa liga **Animações reduzidas** nos Ajustes.
+🎡 **A QUERMESSE ABRIU!** No menu tem **"Ver outros jogos"**: o **Docão Tênis** (saibro, 15-30-40, vantagem, tie-break, melhor de 3 ou set único) e o **Docão Snooker** (bola 8 na mesa de bar, com bolinho no 1 contra 1). O Truco continua firme no menu.
+💸 **E o bolso do Matheus?** O tênis e o snooker rodam no seu navegador. No servidor do tiroteio entrou só regra nova, sem sala nova e sem mensagem a mais. Barato como pastel de quermesse.
+🙏 Valeu, João! Um PR desse tamanho merecia uma barraca só pra ele.
+
+## v1.18 — Seis, Marreco! 🃏🐷 (23/10/2026)
+🃏 **TRUUUCO, MARRECO!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #20** e trouxe o **boteco pra dentro da fazendinha**: agora o Docão também joga **Truco Paulista**, no mesmo site, sem baixar nada!
+🔀 **Tiroteio | Truco:** no menu tem a chave nova. Cansou de levar bala? Puxa uma cadeira e vai pro carteado.
+🤖 **Jogar com bots:** mesa **2v2** (quatro cadeiras) ou **1v1** (duelo), contra porcos que blefam, gritam e às vezes correm de medo. Roda no seu navegador, sem servidor.
+🏠 **Sala online:** "Criar sala", manda o **código de 4 letras** ou o **link**, e a turma entra. Faltou gente? "Completar com bots". Alguém caiu? A mesa **pausa**, e se o fujão não voltar em 1 minuto um bot senta no lugar dele (e joga melhor, provavelmente).
+📣 **Pede truco, aceita, sobe pra SEIS, NOVE e DOZE, ou corre** com o rabo entre as pernas. Ficou enrolando mais de 25 segundos pra responder? Correu automático, que boteco não espera ninguém.
+🙈 **Carta escondida** a partir da segunda rodada, pra quem gosta de um mistério.
+😉 **Sinais da dupla:** pisca, sombrancelha, "beber", "mogado" e companhia, mais **chat da mesa ou só da dupla** e **voz** (Mudo, Dupla, Mesa, com Apertar ou Aberto).
+🪑 **12 a 0?** Os perdedores **passam por baixo da mesa**. Humilhação garantida, tradição respeitada.
+💸 **E o bolso do Matheus?** Truco é por lance, sem o loop do tiroteio, e contra bots nem encosta no servidor. Barato como ficha de boteco.
+🙏 Valeu, Janor, pelo PR mais "seis, marreco!" da história do chiqueiro!
+
+## v1.17.1 — Boca Aberta 🎙️🐷 (23/10/2026)
+🎙️ **O JANOR ABRIU O MICROFONE!** O **Janor** (@Janor-Neto-Cheers) mandou o **PR #19** e agora a voz do Docão tem dois jeitos de falar, escolha o seu:
+🔘 **Apertar:** o clássico. Só fala quem está **segurando K**. Ideal pra quem tem cachorro latindo, panela no fogo ou tio dando opinião ao fundo.
+🔓 **Aberto:** microfone **livre**, sem segurar tecla nenhuma. Falou, a sala ouve. E o anel do seu nome **acende** quando você fala, pra todo mundo saber quem é o porco tagarela.
+🔇 **Mudo cala nos dois modos.** Nada de "mas eu tava no Aberto!": Mudo manda mais que tudo.
+🪟 **Trocou de janela?** Com o mic aberto, sair da aba **corta o áudio na hora** e voltar **religa**. Fim do papo particular vazando pra sala inteira. 🙏
+💾 **O Docão lembra da sua escolha** neste navegador. Por padrão continua no **Apertar**, porque porco prevenido não conta o que come no almoço.
+🧩 Os botões **Apertar** e **Aberto** aparecem no menu, no lobby e na pausa, ao lado de Mudo, Todos e Time. **Todos** continua falando pra sala e **Time** só pro time. Só cliente: o servidor nem percebeu.
+
+## v1.17 — Crachá do Porquinho 🪪🐷 (23/10/2026)
+🪪 **O DOCÃO AGORA TEM CRACHÁ!** Chegou o **login**, e o melhor: ele é **opcional**. Não quer conta? Joga de **convidado** como sempre, sem perguntar nada nem pedir e-mail (o chiqueiro é democrático).
+🐷 **Apelido fixo:** criou a conta, o apelido é **seu e só seu**. Ninguém mais entra na sala com o seu nome (quem tentar vira "(conv)", o impostor), e você também não troca de nome no meio do jogo. Reputação de porco se constrói.
+🏆 **Ranking do chiqueiro:** abates, mortes, vitórias e partidas **por modo**, com ordem por abates ou por vitórias. Só entra o que você joga logado, e o **Treino não vale** (bater em boneco não dá fama). Fim da chapa vencendo a partida conta como vitória, claro.
+🎭 **Skin salva na conta:** a skin que você escolher fica guardada e volta quando você entrar de novo. Só vale **skin que já existe** no jogo, sem inventar fantasia por fora.
+🔐 **Segurança de porco esperto:** senha guardada com **PBKDF2** (nunca em texto puro), sessão por **token** (só o hash fica no banco), limite de tentativas contra quem fica chutando senha, e a mensagem de erro não entrega se errou o apelido ou a senha.
+💸 **E o bolso do Matheus?** Ranking com cache de 1 minuto e gravação em lote, só ao sair da sala ou no fim da partida. Barato como churrasco de domingo.
+🙏 Testado no Mac do Matheus antes de subir.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.16.2 — Granada de Bolso 🎛️💣 (23/10/2026)
+🎛️ **A GRANADA AGORA TEM CONTROLE REMOTO!** Antes você tinha que abrir o menu pra calar o "GRANADA!" e o "BANANA!". Agora dá pra decidir no meio do tiroteio:
+⌨️ **Aperte H em partida** e as vozes da granada ligam ou desligam na hora, com aviso na tela: "🔊 Vozes da granada: ligadas" ou "🔇 ... desligadas". Funciona em todos os modos (inclusive Invasão, Bomba e online) e não atrapalha chat, painel B, nem nada que você esteja digitando.
+⏸️ **Apertou ESC?** O botão **"Vozes da granada"** agora é a primeira coisa da pausa, grandão e destacado, pra clicar sem procurar. Tudo continua sincronizado com o botão dos Ajustes, e o Docão lembra da sua escolha.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.16.1 — Granada Silenciosa 🤫💣 (23/10/2026)
+🤫 **CALA A BOCA, GRANADA!** Tem gente que ama o "GRANADA!" e o "BANANA!", e tem gente que quer jogar em paz sem frutas gritando. Agora os dois lados vivem em harmonia:
+🔘 **Novo botão "Vozes da granada"** em **Ajustes** (e também no menu de pausa). Desmarcou? O Copo Bomba volta pro som de sempre: o *toc* do arremesso e o *BUM* da explosão, sem ninguém avisando nada.
+💾 **O Docão lembra da sua escolha** neste navegador. Por padrão a voz continua **ligada**, porque o Matheus é vaidoso.
+🔇 Vale pra tudo: seu copo, o dos outros, bots e online. Silêncio total, só estrondo.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.16 — Grelha na Granja 🔥🐷 (23/10/2026)
+🤝 **O JOÃO VOLTOU, E TROUXE UM AVIÃO!** O **João** (@rramosjoao) mandou o **PR #18** e o céu do Docão nunca mais foi o mesmo:
+✈️ **NOVO KILLSTREAK: AC-130 «Grelha da granja»!** Chegou nos **13 abates** (entre o Chopper e o nuke). É um avião lá no alto rodando o mapa por **40 segundos**, e você só aponta e manda brasa com três armas: **Espeto** (rajada fina), **Panela** (explosão média) e **Caldeirão** (explosão que dá medo, de recarga lenta). Mas cuidado: o avião tem vida (420) e dá pra derrubar. Funciona online e offline, com tela de mira e tudo. Quem cair pro fogo da Grelha entra no placar como "Grelha da granja".
+☢️ **O FIM DA CHAPA AGORA ACABA O JOGO!** Estourou o nuke? A partida **fecha na hora** e **vence quem chamou** (ou o time dele), mesmo perdendo no placar. Na Invasão continua sem killstreak, e na Bomba também vale. Quer dizer: se você está perdendo, só falta fazer 15 abates seguidos. Fácil, né? 😅
+🔫 **Arsenal mexido** (o João mexeu na churrasqueira inteira):
+  • 🆕 **Commando da Granja:** recuo quase zero, dano baixo e rajada reta como régua. Já está no menu de armas.
+  • 🔫 **MP5K da Granja** entrou no lugar da Mini Uzi (mesmo botão): 30/90, mais dano e mais alcance.
+  • 🎯 **Carabina da Granja:** agora 7 balas no pente e recarrega mais devagar (2,9 s). Pensa antes de atirar.
+  • 💥 **Canhão do Barril:** de 6 para **12** balas de reserva. Mais barril pra todo mundo.
+  • 🌀 **Minigun do Galpão:** 600 tiros de uma vez, sem reserva, e agora anda na velocidade normal.
+🧟 **Invasão:** a bala do **Fuzil agora atravessa os zumbis**, com dano menor a cada um (e nunca machuca você). Fila de zumbi virou espetinho.
+🧪 Tem teste novo pra tudo isso (e o de killstreaks ganhou o AC-130).
+🙏 Valeu, João! (PR #18)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.15 — Câmera Lenta no Torresmo 🎬🥓 (23/10/2026)
+🤝 **O JOÃO VOLTOU COM CINEMA!** O **João** (@rramosjoao) mandou o **PR #17** e o fim de partida deixou de ser um "pimba, acabou" pra virar **cena de filme**:
+📋 **A tela de fim agora parece a comanda do churrasco:** prancheta de madeira, papel creme, prendedor de metal e o título em tinta com pincelada vermelha. Cada time tem a sua cor, e a Invasão tem verde-oliva (venceu) ou roxo (perdeu). Placar igualzinho ao do Tab, botão de **Jogar de novo** em tijolo, **Próximo mapa** em oliva e **Menu** no papel. Até o chat do online foi pro papel.
+🎬 **Câmera lenta de 1,5 segundo:** acabou a partida? Tudo desacelera na sua visão, com a mesma posição, direção e zoom, e a arma continua na mão. Dá pra ver a última granada rolando, o último torresmo voando e o último bot com cara de quem não entendeu nada.
+🛑 **Placar fechado na hora:** depois do resultado ninguém mais atira, morre, captura nem renasce. Fim é fim, e não adianta reclamar com o juiz.
+🏆 **Plaquinha de VITÓRIA!, DERROTA ou EMPATE!** na hora, com o placar entrando uns 0,8 segundo depois. E a **dança da vitória** só começa quando a câmera lenta acaba, pra ninguém dançar no meio da cena.
+🤝 **Empate de verdade:** no mata-mata, empatou, é **EMPATE!**. Chega de "vence quem aparecer primeiro na lista".
+📶 **Online sem fantasma:** pacotes atrasados que chegam depois do resultado são ignorados até a próxima partida.
+🧘 Tem **movimento reduzido** ligado no seu aparelho? O placar abre direto, sem câmera lenta.
+🙏 Valeu, João! (PR #17)
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.14.1 — Granada, Banana! 🍌💣 (23/10/2026)
+📣 **O Copo Bomba agora fala!** E fala com a voz do próprio Matheus, gravada com todo o carinho (e nenhum ensaio):
+🗣️ **"GRANADA!"** no exato instante em que o copo sai da sua mão. Não é quando você começa a segurar o botão, é quando solta. Avisar o inimigo faz parte do estilo.
+🍌 **"BANANA!"** quando o copo explode. Ninguém sabe por quê. O Docão também não pergunta.
+🔊 **Todo mundo ouve:** a granada dos outros jogadores (e dos bots) também grita, com **volume que cai com a distância**. Quem está perto ouve alto; quem está do outro lado do mapa fica em paz (a "granada" some a uns 60 metros e a "banana" a uns 50).
+🙅 **Só o Copo Bomba:** a Pokébola, o míssil e o foguete continuam na dieta de sempre, sem frutas.
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.14 — Operação Bacon 🥓💣 (23/10/2026)
+🚨 **NOVO MODO: BOMBA!** Dois times, um botijão de churrasco e muita pressão. O **Ataque** (Vermelho) leva o **Botijão do Churrasco** até o site **A** ou **B**. A **Defesa** (Azul) tem que impedir, ou desarmar antes de virar torresmo. Estilo "plante e defenda", mas com cheiro de bacon. 🥓
+🧯 **Plantar:** segure **E** por **4 segundos** dentro do site. Quanto mais nervoso o time, mais o dedo escorrega.
+🔧 **Desarmar:** a Defesa segura **E** por **7 segundos** perto do botijão. Passou da metade, fica salvo (o Docão agradece o esforço).
+⏲️ **Plantou, bipou:** o botijão **bipa cada vez mais rápido** e **explode em 45 segundos**, levando todo mundo no raio. Quem está perto vira churrasquinho. Não fique de bobeira, porco assado não joga mais.
+🏁 **Primeiro a 13 rodadas vence.** Depois da 12ª rodada vem o aviso **"Troca de lado!"**, e quem atacava agora defende (e vice-versa, sem choro).
+🕙 **Preparação de 10 segundos:** todo mundo parado no spawn do seu lado, só olhando e pensando na vida. Só depois do VALENDO a rodada começa de verdade.
+🔫 **Painel de armas toda rodada:** na preparação aparece um painel com as armas (primária, secundária e corpo a corpo). Troque na hora com **1–9**, **N**, **M**, **G** e **B**. Respeita as armas liberadas pela sala. Ele some sozinho quando o jogo começa.
+🎖️ **Killstreaks guardados:** a sequência e os streaks que você juntou **passam pra rodada seguinte**. Trocar de rodada não é morrer. Só o que ainda está no ar (Gavião, míssil, Fim da chapa) vai embora na virada.
+💀 **Morreu? Renasce.** O renascimento continua normal (5 segundos + RENASCER), no spawn do seu lado. A rodada **não acaba por eliminação**, porque aqui ninguém sai do churrasco mais cedo.
+🗺️ **Mapa novo: Rodízio do Docão!** Feito pro modo: comprido, com **três rotas** (Rua do Espeto, Avenida da Linguiça e Beco da Farofa). **Sites e spawns feitos à mão** em vários mapas (o **HOTMILK** entrou no rodízio), com o Ataque nascendo longe dos sites. O Pátio Ferrugem ficou de fora por ser pequeno demais e o Estande é só do Treino.
+📣 **Instruções na tela:** aviso grande dizendo o que fazer ("Segure E para plantar o botijão", "Leve o botijão até o A ou o B" com a distância), barra de segundos e um **Como jogar** no menu.
+💬 **Funciona online e offline,** com chat e voz do time (na Bomba, o time é o seu lado), e com tudo que já existia: Invasão, loadout por sala, killer cam, tela cinza, arcos de dano, SPAS-12 e pau de choque. A explosão do botijão não ativa a câmera do assassino, e trocar de arma no meio da rodada nunca mata.
+🙏 Feito e testado pelo **Matheus**, com muitas rodadas de bacon.
+🤫 Dizem que alguns segredos se escondem no chat... mas o Docão não conta nada.
+
+## v1.13.1 — Mira de Granada 🎯💣 (23/10/2026)
+🤝 **O FELIPE VOLTOU!** O **Felipe Gomes** (@felipe-cheers) estava cansado de jogar copo bomba no escuro, torcendo pra ele cair "mais ou menos ali". Mandou o conserto, e agora o Docão arremessa com a **ficha técnica na mão**:
+🎯 **A linha de mira mostra o caminho inteiro do copo, até a explosão:** quicadas, parede, rampa, tudo. Segurou o botão, viu onde vai explodir, soltou, e **explodiu exatamente ali**. Chega de "foi mal, achei que ia passar".
+🥤 **O copo sai da mão, não da testa:** a granada agora parte de onde o copo está na tela, com a mesma conta da preview. Funciona agachado, colado na parede, com zoom e mirando pro céu. A Pokébola também ganhou mira de professor.
+🧮 **Física igualzinha pra todo mundo:** o arremesso agora anda em passinhos fixos, no seu PC e no servidor. Ping alto, FPS baixo ou computador de cebola não mudam mais onde a granada cai.
+✋ O copo ganhou uma **animação de soltura** (o braço joga de verdade, e não só some).
+⚡ Levou choque segurando o copo? Nada de arremesso: a granada fica com você.
+🙏 Valeu, Felipe!
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
+## v1.13 — Calibre 12 Meteoro ⚡🐗 (23/10/2026)
+🤝 **MAIS UMA DO CHIQUEIRO!** O **João** (@rramosjoao) chegou com o **PR #16** e entregou três presentes de uma vez. O Docão agradece, o resto do servidor chora:
+🔫 **Calibre 12 virou SPAS-12 (e agora é de verdade):** 9 chumbos por tiro, cone fechado, **acerta andando**, bombeia mais rápido e recarrega cartucho em velocidade de quem tá atrasado pro churrasco. Modelo novinho (preto, protetor de calor furado, coronha dobrada) em 1ª e 3ª pessoa, coice de ombro, tremida de tela e um **estrondo bem mais grave**. Quem leva tiro de perto **sai voando pra trás** (Barrigão e chefe da Invasão são pesados demais pra isso, sorry). A Semi continua sendo a das 2 rajadinhas.
+🏹 **Besta consertada:** antes ela atravessava a tela na diagonal, gigante, como se fosse uma antena de TV. Agora aponta **reta pra frente**, centraliza quando você mira, e a mão de apoio só vai na corda na hora de recarregar.
+⚡ **Pau de choque (tecla 5), finalmente funciona:** você arremessa uma **estaca elétrica** que finca onde bater (chão, parede, rampa) e dá **choque por 3 segundos** em quem estiver perto. Quem leva fica **lento, sem atirar, com a mira tremendo e a tela azul piscando**. Funciona no online e na Invasão (zumbi também leva um susto!). Você ganha 1 por vida, e a caixa de Copo Bomba dá outro.
+😇 **O pau de choque NUNCA mata:** é só um **susto elétrico**. Quem tá com pouca vida fica com 1 de vida, tremendo, mas vivo. O Docão é bagunceiro, não assassino.
+🎯 Levou choque? O **arco vermelho de dano aponta pra estaca**, não pra quem jogou. Dá pra fugir sabendo de onde vem o zumbido.
+🙏 Valeu, João! (PR #16)
+🤫 Dizem que o chiqueiro ainda guarda segredos... mas o Docão não conta nada.
+
 ## v1.12.1 — Mira de Elite do Felipe 🎯💥 (23/10/2026)
 🤝 **PARCERIA DO CHIQUEIRO!** O **Felipe Gomes** (@felipe-cheers) mandou o **PR #15** com um indicador de dano parecido com o nosso... e, em vez de brigar, o Docão **roubou as melhores ideias dele** (com crédito, claro 🫡🐷):
 💥 **Explosão e helicóptero agora apontam pro lugar certo:** antes, se o foguete (ou o Gavião) te acertava, o arco apontava pro *dono* do tiro, que podia estar do outro lado do mapa. Agora o servidor manda **de onde a explosão realmente veio**, e o arco aponta pra ela. Tomou foguete na cara? O arco olha pra fumaça, não pro fofoqueiro.

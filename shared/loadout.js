@@ -10,12 +10,13 @@ export const POWER_UPS = [
   { id: 'missile', title: 'Míssil' },
   { id: 'heli', title: 'Gavião' },
   { id: 'gunner', title: 'Chopper' },
+  { id: 'ac130', title: 'Grelha' },
   { id: 'nuke', title: 'Fim da chapa' },
   { id: 'health', title: 'Vida' },
   { id: 'ammo', title: 'Munição' },
   { id: 'grenade', title: 'Copo Bomba' },
   { id: 'smoke', title: 'Fumaça' },
-  { id: 'stun', title: 'Atordoamento' },
+  { id: 'stun', title: 'Pau de choque' },
 ];
 export const POWER_IDS = POWER_UPS.map((p) => p.id);
 const CAT_IDS = CATEGORIES.map((c) => c.id);

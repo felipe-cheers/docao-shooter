@@ -6,6 +6,7 @@ const REWARDS = [
   { need: 5, name: 'Míssil da granja', icon: 'missiles' },
   { need: 7, name: 'Gavião da granja', icon: 'heli' },
   { need: 10, name: 'Chopper da granja', icon: 'heli gunner' },
+  { need: 13, name: 'Grelha da granja', icon: 'plane' },
 ];
 
 const CSS = `
@@ -15,12 +16,12 @@ const CSS = `
 }
 #streakCount[hidden]{display:none!important}
 #streakCount b{
-  display:block;font-family:Impact,"Arial Black",sans-serif;
+  display:block;font-family:var(--font);
   font-size:68px;line-height:.85;white-space:nowrap;color:#ffd27a;
   -webkit-text-stroke:6px #000;paint-order:stroke fill;text-shadow:0 3px 0 #000;
 }
 #streakCount small{
-  display:block;margin-top:4px;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  display:block;margin-top:4px;font-family:var(--font);
   font-size:15px;font-weight:bold;letter-spacing:1.5px;color:#ffe8c2;text-shadow:0 2px 0 #000;
 }
 #streakBar{
@@ -55,7 +56,7 @@ const CSS = `
 }
 #streakBar .streak-card b{
   position:absolute;left:0;right:0;bottom:2px;text-align:center;
-  font-family:Impact,"Arial Black",sans-serif;font-size:16px;line-height:1;
+  font-family:var(--font);font-size:16px;line-height:1;
   color:inherit;text-shadow:0 1px 0 #000,0 0 3px #000;pointer-events:none;
 }
 #streakBar .streak-glyph{
@@ -110,6 +111,18 @@ const CSS = `
 #streakBar .streak-glyph.heli.gunner{color:#9fe0ff}
 #streakBar .streak-glyph.heli.gunner{box-shadow:inset 0 -3px 0 -1px transparent}
 #streakBar .streak-glyph.heli.gunner::before{border-radius:2px 7px 2px 2px;box-shadow:-5px 6px 0 -3px currentColor}
+#streakBar .streak-glyph.plane{width:26px;height:16px}
+#streakBar .streak-glyph.plane i{
+  display:block;position:absolute;left:0;top:6px;width:26px;height:3px;
+  border-radius:1px;background:currentColor;font-style:normal;
+}
+#streakBar .streak-glyph.plane::before{
+  content:"";position:absolute;left:11px;top:1px;width:3px;height:14px;
+  border-radius:1px;background:currentColor;
+}
+#streakBar .streak-glyph.plane::after{
+  content:"";position:absolute;left:8px;top:1px;width:9px;height:2px;background:currentColor;
+}
 /* todos neutros; só brilha o que está guardado pra usar (F) */
 #streakBar .streak-card{opacity:.85}
 #streakBar .streak-card.ready{opacity:1;color:#fff}
@@ -122,7 +135,7 @@ const CSS = `
 #nukeReady{
   position:absolute;right:0;bottom:calc(100% + 6px);
   pointer-events:none;user-select:none;white-space:nowrap;
-  font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  font-family:var(--font);
   font-size:13px;font-weight:bold;letter-spacing:.2px;color:#ffd27a;
   background:rgba(14,10,8,.92);border:2px solid #e63946;border-radius:8px;
   padding:5px 8px;box-shadow:0 0 10px rgba(230,57,70,.4);
@@ -153,11 +166,11 @@ const CSS = `
   gap:10px;padding:0 4px;pointer-events:none;
 }
 #strikeMap h2{
-  margin:0;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  margin:0;font-family:var(--font);
   font-size:15px;font-weight:bold;letter-spacing:.2px;line-height:1.1;color:#ffd27a;
 }
 #strikeMap .strike-left{
-  font-family:Impact,"Arial Black",sans-serif;font-size:18px;line-height:1;color:#fff8ea;
+  font-family:var(--font);font-size:18px;line-height:1;color:#fff8ea;
   text-shadow:0 1px 0 #000;
 }
 #strikeMap canvas{
@@ -169,25 +182,25 @@ const CSS = `
   box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
 }
 #nukeBanner{
-  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-  z-index:60;text-align:center;pointer-events:none;user-select:none;
+  position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);
+  z-index:80;text-align:center;pointer-events:none;user-select:none;
+  padding:8px 28px 16px;background:#fff0cc;
+  border:5px solid #203e35;border-radius:4px;
+  box-shadow:7px 8px 0 #a52e26;
 }
 #nukeBanner[hidden]{display:none!important}
-#nukeBanner span{
-  display:block;font-family:Impact,"Arial Black",sans-serif;font-size:78px;
-  line-height:.9;letter-spacing:1px;color:#ff3b3b;
-  -webkit-text-stroke:7px #1a0505;paint-order:stroke fill;
-  text-shadow:0 0 22px #ff2a2a,0 5px 0 #2a1410;
-}
 #nukeBanner b{
-  display:block;margin-top:6px;font-family:Impact,"Arial Black",sans-serif;
-  font-size:132px;line-height:.8;color:#ffd27a;
-  -webkit-text-stroke:8px #000;paint-order:stroke fill;
-  text-shadow:0 0 26px #ffb703,0 6px 0 #000;
+  display:block;font-family:var(--font);
+  font-size:220px;line-height:.78;letter-spacing:-2px;color:#a52e26;
+  text-shadow:5px 5px 0 #203e35;
+}
+#nukeBanner span{
+  display:block;margin-top:4px;font-family:var(--font);
+  font-size:44px;line-height:1;letter-spacing:3px;color:#203e35;
 }
 @media (max-height:760px){
-  #nukeBanner span{font-size:56px}
-  #nukeBanner b{font-size:96px}
+  #nukeBanner b{font-size:148px}
+  #nukeBanner span{font-size:30px}
 }
 `;
 
@@ -238,6 +251,7 @@ function makeGlyph(icon) {
   if (icon === 'missiles') {
     glyph.append(document.createElement('i'), document.createElement('i'), document.createElement('i'));
   }
+  if (icon === 'plane') glyph.append(document.createElement('i'));
   return glyph;
 }
 
@@ -266,7 +280,7 @@ function ensureBar() {
     }
     const pips = document.createElement('div');
     pips.className = 'streak-pips';
-    for (let i = 0; i < 10; i++) pips.appendChild(document.createElement('i'));
+    for (let i = 0; i < 15; i++) pips.appendChild(document.createElement('i'));
     bar.append(stack, pips);
   }
   return bar;
@@ -321,13 +335,14 @@ function ensureNuke() {
     banner = document.createElement('div');
     banner.id = 'nukeBanner';
     banner.hidden = true;
-    const title = document.createElement('span');
-    title.textContent = 'FIM DA CHAPA';
-    const num = document.createElement('b');
-    num.textContent = '0';
-    banner.append(title, num);
     document.body.appendChild(banner);
   }
+  let num = banner.querySelector('b');
+  let title = banner.querySelector('span');
+  if (!num) { num = document.createElement('b'); num.textContent = '0'; }
+  if (!title) title = document.createElement('span');
+  title.textContent = 'FIM DA CHAPA';
+  banner.replaceChildren(num, title); // número enorme no centro, "FIM DA CHAPA" embaixo; vale pra quem chamou também
   return banner;
 }
 
@@ -389,7 +404,7 @@ function applyCycle(cycle) {
 }
 
 // ready = ids guardados ('uav', 'missile', 'heli'); o card brilha enquanto tiver um pra usar
-const READY_ID = { 3: 'uav', 5: 'missile', 7: 'heli', 10: 'gunner' };
+const READY_ID = { 3: 'uav', 5: 'missile', 7: 'heli', 10: 'gunner', 13: 'ac130' };
 function applyReady(ids) {
   document.querySelectorAll('#streakBar .streak-card').forEach((card) => {
     card.classList.toggle('ready', ids.includes(READY_ID[card.dataset.need]));
@@ -640,7 +655,7 @@ export function showNukeCount(seconds) {
   const num = banner.querySelector('b');
   const n = Math.round(Number(seconds));
   if (num) num.textContent = Number.isFinite(n) ? String(n) : '0';
-  banner.hidden = false;
+  banner.hidden = false; // todo mundo, inclusive quem chamou
 }
 
 export function hideNuke() {

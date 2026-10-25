@@ -123,6 +123,7 @@ export function makeFPCrossbow() {
   g.userData.string = knot;
   g.userData.bolt = bolt;
   g.userData.grip = new THREE.Vector3(0.02, -0.11, 0.24);
+  g.userData.fore = new THREE.Vector3(-0.01, -0.085, -0.26); // telha: mão de apoio embaixo do trilho (fora da recarga)
   g.userData.draw = new THREE.Vector3(0, ny, cock);
   g.userData.gripHand = 0;
   g.userData.drawHand = 1;

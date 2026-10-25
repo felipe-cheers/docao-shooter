@@ -11,6 +11,7 @@ let scope = 'all';
 let composeScope = 'all';
 let suppress = 0;
 let teamOn = false;
+let teamWord = 'Time';
 let sig = '';
 
 export function chatTyping() { return typing; }
@@ -71,6 +72,13 @@ export function chatSetRoom(on) {
   if (!roomOn) closeChat(false);
 }
 export function chatSetTeam(on) { teamOn = !!on; if (!teamOn) composeScope = 'all'; paintScope(); }
+export function chatTeamWord(w) { teamWord = w || 'Time'; }
+export function chatUseHooks(next) {
+  const prev = hooks;
+  hooks = { ...hooks, ...next };
+  return () => { hooks = prev; };
+}
+export function chatSay(scope, text) { sendText(scope, text); }
 export function chatClear() { lines = []; sig = ''; render(true); }
 export function chatSeed(list) { lines = Array.isArray(list) ? list.slice(-30) : []; sig = ''; render(true); }
 export function chatPush(line) {
@@ -131,7 +139,7 @@ function paintScope() {
 }
 function lineHtml(l) {
   if (l.sys) return `<div class="cline sys">${esc(l.text)}</div>`;
-  const who = l.scope === 'team' ? 'Time' : 'Todos';
+  const who = l.scope === 'team' ? teamWord : 'Todos';
   const tm = l.team === 0 ? 'tm0' : l.team === 1 ? 'tm1' : 'tmx';
   return `<div class="cline${l.dead ? ' dead' : ''}"><i>${who}</i> <b class="${tm}">${esc(l.name)}</b> ${esc(l.text)}${l.dead ? ' <em>(morto)</em>' : ''}</div>`;
 }

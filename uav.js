@@ -63,7 +63,7 @@ const CSS = `
   box-shadow:0 0 0 1px rgba(0,0,0,.72), 0 12px 28px rgba(0,0,0,.45), inset 0 0 18px rgba(230,195,74,.1);
   pointer-events:none;
   color:#ffe7a3;
-  font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+  font-family:var(--font);
   user-select:none;
 }
 #uav.hidden,#uav[hidden]{display:none!important}
@@ -73,7 +73,7 @@ const CSS = `
   justify-content:center;
   gap:6px;
   margin:0;
-  font-family:"Arial Black",Impact,sans-serif;
+  font-family:var(--font);
   font-size:12px;
   font-weight:400;
   letter-spacing:.3px;
@@ -107,7 +107,7 @@ const CSS = `
   margin:0;
   min-width:3ch;
   text-align:center;
-  font-family:"Arial Black",Impact,sans-serif;
+  font-family:var(--font);
   font-size:16px;
   font-weight:400;
   letter-spacing:.6px;
@@ -317,8 +317,8 @@ function paintCompass(ctx, F) {
     if (x < F.left || x > F.right) continue;
     const cardinal = dir.label.length === 1;
     ctx.font = cardinal
-      ? '700 12px "Trebuchet MS", sans-serif'
-      : '700 10px "Trebuchet MS", sans-serif';
+      ? '700 12px Fredoka, "Trebuchet MS", Arial, sans-serif'
+      : '700 10px Fredoka, "Trebuchet MS", Arial, sans-serif';
     ctx.fillStyle = cardinal ? '#F7A531' : '#f3e6c0';
     ctx.fillText(dir.label, x, y);
   }

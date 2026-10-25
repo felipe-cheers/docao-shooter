@@ -1,6 +1,8 @@
 // Docão procedural: modelo 3D fiel à arte oficial + sistema de skins.
+// O loop da partida deve chamar makeNukeRider() e pôr o grupo na cena (cai no centro). Ainda não está ligado.
 import * as THREE from 'three';
 import { makeWorldSaber } from './saber-view.js';
+import { makeWorldShield } from './shield-view.js';
 import { getSkin } from './skins.js';
 import { mergeVertices } from './vendor/BufferGeometryUtils.js';
 import { crouchAmount, stanceScale } from './shared/stance.js';
@@ -400,14 +402,25 @@ export function makeDocao(skinOrId, opts = {}) {
   const nail = mesh(new THREE.SphereGeometry(0.026, 8, 6), toon('#fff3dc'), point, 0); nail.scale.set(0.8, 0.45, 1); nail.position.y = 0.175;
   // armas em 3ª pessoa
   const guns = [];
+  let backLid = null;
   if (withGun) {
     const r = new THREE.Group(); r.position.set(0.0, 0.9, 0.62); g.add(r);
     mesh(new THREE.BoxGeometry(0.11, 0.13, 0.62), toon('#3b3f4a'), r, 0.01);
     mesh(new THREE.BoxGeometry(0.07, 0.2, 0.1), toon('#e63946'), r, 0.01).position.set(0, -0.13, 0.02);
     const br = mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8), toon('#222'), r, 0); br.position.set(0, 0.01, 0.42); br.rotation.x = Math.PI / 2;
+    // Calibre 12 em 3ª pessoa: SPAS-12 (preta, protetor de calor furado, tubo, telha com sulcos, coronha dobrada por cima)
     const sg = new THREE.Group(); sg.position.copy(r.position); g.add(sg);
-    mesh(new THREE.BoxGeometry(0.14, 0.12, 0.5), toon('#8b5a2b'), sg, 0.01).position.z = -0.05;
-    for (const s of [-1, 1]) { const b = mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 10), toon('#55555f'), sg, 0.01); b.position.set(s * 0.035, 0.03, 0.35); b.rotation.x = Math.PI / 2; }
+    const spM = toon('#2a2d33'), spD = toon('#1b1d22'), spP = toon('#202227'), spH = toon('#08090b');
+    mesh(new THREE.BoxGeometry(0.11, 0.13, 0.32), spM, sg, 0.01).position.z = -0.04;
+    const spG = mesh(new THREE.BoxGeometry(0.06, 0.15, 0.07), spP, sg, 0.008); spG.position.set(0, -0.12, -0.14); spG.rotation.x = 0.35;
+    const spB = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.55, 10), toon('#3a3d44'), sg, 0.008); spB.rotation.x = Math.PI / 2; spB.position.set(0, 0.035, 0.38);
+    const spS = mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.3, 12), spD, sg, 0.008); spS.rotation.x = Math.PI / 2; spS.position.set(0, 0.04, 0.3);
+    for (const z of [0.2, 0.28, 0.36]) mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 8), spH, sg, 0).position.set(0, 0.077, z); // furos
+    const spT = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.48, 10), spM, sg, 0.008); spT.rotation.x = Math.PI / 2; spT.position.set(0, -0.035, 0.36);
+    mesh(new THREE.BoxGeometry(0.1, 0.085, 0.2), spP, sg, 0.008).position.set(0, -0.035, 0.32); // telha
+    for (const z of [0.25, 0.3, 0.35, 0.4]) mesh(new THREE.BoxGeometry(0.104, 0.089, 0.012), spH, sg, 0).position.set(0, -0.035, z);
+    for (const x of [-0.04, 0.04]) mesh(new THREE.BoxGeometry(0.01, 0.014, 0.4), spD, sg, 0.004).position.set(x, 0.09, 0); // coronha dobrada
+    mesh(new THREE.BoxGeometry(0.09, 0.05, 0.02), spD, sg, 0.004).position.set(0, 0.075, 0.2);
     // sniper (cano longo + luneta)
     const sn = new THREE.Group(); sn.position.copy(r.position); g.add(sn);
     mesh(new THREE.BoxGeometry(0.1, 0.12, 0.75), toon('#5c7a3a'), sn, 0.01).position.z = 0.02;
@@ -528,7 +541,36 @@ export function makeDocao(skinOrId, opts = {}) {
     mesh(new THREE.BoxGeometry(0.1, 0.16, 0.14), toon('#5c6b3a'), lm, 0.006).position.set(-0.12, -0.06, 0.02);
     mesh(new THREE.BoxGeometry(0.05, 0.14, 0.06), toon('#2a2d35'), lm, 0.006).position.set(0, -0.12, 0.1);
     guns.push(lm); // 21 = Metralhadora do Chiqueiro
-    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm]) o.visible = false;
+    const cd = new THREE.Group(); cd.name = 'commando'; cd.position.copy(r.position); g.add(cd);
+    mesh(new THREE.BoxGeometry(0.07, 0.08, 0.7), toon('#3a4038'), cd, 0.008).position.z = 0.02;
+    const cdb = mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.46, 8), toon('#22252c'), cd, 0.005); cdb.rotation.x = Math.PI / 2; cdb.position.set(0, 0.015, 0.56);
+    mesh(new THREE.BoxGeometry(0.06, 0.08, 0.22), toon('#5c4632'), cd, 0.006).position.set(0, -0.01, -0.32);
+    mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), toon('#2a2d35'), cd, 0.005).position.set(0, -0.1, 0.02);
+    guns.push(cd); // 22 = Commando da Granja
+    const worldRev = (side) => {
+      const gun = new THREE.Group(); gun.name = side < 0 ? 'capataz-l' : 'capataz';
+      const grip = mesh(new THREE.BoxGeometry(0.05, 0.13, 0.05), toon('#6b3a1e'), gun, 0.006);
+      grip.position.set(0, -0.07, 0.03); grip.rotation.x = 0.45; grip.userData.noCamo = true;
+      mesh(new THREE.BoxGeometry(0.06, 0.07, 0.12), toon('#3c414c'), gun, 0.006);
+      const hinge = new THREE.Group(); hinge.position.set(side * 0.02, 0.015, -0.01); gun.add(hinge);
+      const cyl = new THREE.Group(); hinge.add(cyl);
+      const drum = mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.06, 10), toon('#d9a441'), cyl, 0.004);
+      drum.rotation.x = Math.PI / 2; drum.userData.noCamo = true;
+      const barrel = mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.22, 8), toon('#2a2e36'), gun, 0.005);
+      barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, 0.16);
+      mesh(new THREE.BoxGeometry(0.012, 0.04, 0.016), toon('#14171c'), gun, 0.003).position.set(0, 0.05, -0.02);
+      gun.userData.cyl = cyl; gun.userData.hinge = hinge; gun.userData.side = side;
+      gun.scale.setScalar(1.65); // na mão do boneco o tambor precisa ler de longe
+      return gun;
+    };
+    const rv = worldRev(1); rv.position.set(0, -0.52, 0.05); rv.rotation.set(-Math.PI / 2, 0.18, 0.08); arms[0].add(rv); guns.push(rv); // 23 = Revólver do Capataz
+    const rv2 = new THREE.Group(); rv2.name = 'capataz2'; g.add(rv2);
+    const rvR = worldRev(1); rvR.position.set(0, -0.52, 0.05); rvR.rotation.set(-Math.PI / 2, 0.28, 0.12); arms[0].add(rvR);
+    const rvL = worldRev(-1); rvL.position.set(0, -0.52, 0.05); rvL.rotation.set(-Math.PI / 2, -0.28, -0.12); arms[1].add(rvL);
+    rv2.userData.extra = rvR; rv2.userData.twin = rvL; guns.push(rv2); // 24 = Dois Capatazes
+    const tp = makeWorldShield(); tp.name = 'tampa'; tp.position.set(0, 0.98, 0.62); g.add(tp); guns.push(tp); // 25 = Tampa do Tacho
+    backLid = makeWorldShield(); backLid.name = 'tampa-costas'; backLid.position.set(0, 1.15, -0.32); backLid.rotation.y = Math.PI; backLid.visible = false; g.add(backLid);
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd, rv, rv2, rvR, rvL, tp]) o.visible = false;
   }
   setPose({ arms }, pose);
 
@@ -542,7 +584,7 @@ export function makeDocao(skinOrId, opts = {}) {
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
   for (const b of brows) b.userData.base = { p: b.position.clone(), q: b.quaternion.clone() };
   const face = { eyes, brows, faceM, tex: [tone, beard, facePaint], neutralMap: faceM.map, angryMap: null, t: 0, target: 0, hold: 0 };
-  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, flashMats: [skinM, faceM, shirtM, snoutM] };
+  return { group: g, legs, arms, guns, head, snout, jaw, point, skin, face, backLid, flashMats: [skinM, faceM, shirtM, snoutM] };
 }
 
 // Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.
@@ -576,7 +618,10 @@ export function setPose(model, pose) {
     else if (pose === 'reload') a.rotation.set(-0.8, -s * 0.4, s * 0.1);
     else if (pose === 'knife') { if (i === 0) a.rotation.set(-1.05, 0.25, -0.1); else a.rotation.set(-0.35, -0.15, 0.28); } // faca na direita, esquerda solta
     else if (pose === 'saber2') { if (i === 0) a.rotation.set(-1.25, 0.15, -0.4); else a.rotation.set(-1.25, -0.15, 0.4); } // um sabre em cada mão, abertos
+    else if (pose === 'revolver2') { if (i === 0) a.rotation.set(-1.2, 0.42, -0.45); else a.rotation.set(-1.2, -0.42, 0.45); } // um revólver em cada casco
+    else if (pose === 'revolver') { if (i === 0) a.rotation.set(-1.25, 0.28, -0.2); else a.rotation.set(-0.35, -0.15, 0.25); } // direita no cabo, esquerda solta
     else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
+    else if (pose === 'shield') { if (i === 0) a.rotation.set(-0.9, 0.35, -0.2); else a.rotation.set(-1.45, -0.25, 0.15); } // esquerda segura a tampa na frente
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
   });
@@ -760,4 +805,50 @@ export function updateExpression(model, dt) {
   if (angry && !f.angryMap) f.angryMap = headTexture(...f.tex, true);
   const map = angry ? f.angryMap : f.neutralMap;
   if (f.faceM.map !== map) { f.faceM.map = map; f.faceM.emissiveMap = map; }
+}
+
+// Fim da chapa: Docão enorme, bravo, segurando a ogiva. O loop anima a queda; aqui só nasce o grupo.
+const NUKE_HOLD = 120;
+function makeFarmOgiva() {
+  const g = new THREE.Group();
+  g.name = 'ogiva';
+  g.position.set(0, 0.28, 0.62);
+  const add = (geo, color, th = 0.014) => {
+    const m = new THREE.Mesh(geo, toonWarm(color, 0.18));
+    outline(m, th); m.castShadow = true; g.add(m); return m;
+  };
+  add(new THREE.CylinderGeometry(0.4, 0.44, 1.28, 8), '#5f6b32');
+  const band = add(new THREE.CylinderGeometry(0.47, 0.47, 0.2, 8), '#fff0cc', 0.01); band.position.y = 0.08;
+  const stripe = add(new THREE.CylinderGeometry(0.48, 0.48, 0.07, 8), '#a52e26', 0.008); stripe.position.y = 0.32;
+  const nose = add(new THREE.CylinderGeometry(0.05, 0.44, 0.58, 8), '#a52e26', 0.012); nose.position.y = -0.9;
+  const snout = add(new THREE.CylinderGeometry(0.15, 0.17, 0.09, 8), '#ec5c0c', 0.008); snout.position.y = -1.22;
+  for (const s of [-1, 1]) {
+    const n = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 5), basic('#3a0806'));
+    n.position.set(s * 0.055, -1.22, 0.055); g.add(n);
+  }
+  const cap = add(new THREE.CylinderGeometry(0.26, 0.4, 0.14, 8), '#203e35', 0.01); cap.position.y = 0.68;
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    const fin = add(new THREE.BoxGeometry(0.34, 0.36, 0.05), '#203e35', 0.008);
+    fin.position.set(Math.cos(a) * 0.56, 0.62, Math.sin(a) * 0.56);
+    fin.rotation.y = a;
+  }
+  const plate = add(new THREE.BoxGeometry(0.02, 0.26, 0.32), '#fff0cc', 0.006); plate.position.set(0.49, 0.02, 0);
+  return g;
+}
+export function makeNukeRider() {
+  const root = new THREE.Group();
+  root.name = 'nukeRider';
+  const model = makeDocao(null, { withGun: false, pose: 'idle' });
+  model.arms[0].rotation.set(-0.35, 0.55, -0.7);
+  model.arms[1].rotation.set(-0.35, -0.55, 0.7);
+  setExpression(model, 'angry', NUKE_HOLD);
+  updateExpression(model, 1);
+  model.group.add(makeFarmOgiva());
+  root.add(model.group);
+  root.scale.setScalar(2.45); // ~5 m de altura
+  root.position.set(0, 44, 0);
+  root.rotation.x = -0.12;
+  root.userData.model = model;
+  return root;
 }

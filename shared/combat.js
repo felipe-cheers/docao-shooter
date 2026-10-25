@@ -46,6 +46,14 @@ export function explosionHits(c, o, ents, losClear, owner, teamMode, direct = nu
   }
   return out;
 }
+// empurrão de tiro (Calibre 12): W.knock = { push, lift }; k = parte do tiro cheio que acertou (cabeça conta mais, teto 1). Direção = atirador → alvo no plano.
+// zt = tipo do zumbi (Invasão): Barrigão e chefe quase não se mexem, senão um jogador sozinho segura os dois longe
+const ZT_KNOCK = { tank: 0.2, boss: 0.08 };
+export function shotKnock(W, from, to, dmg, zt) {
+  if (!W || !W.knock || !(dmg > 0)) return null;
+  const k = Math.min(1, dmg / (W.dmg * Math.max(1, W.pellets))) * (ZT_KNOCK[zt] ?? 1); let dx = to.x - from.x, dz = to.z - from.z; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+  return { x: dx * W.knock.push * k, y: W.knock.lift * k, z: dz * W.knock.push * k };
+}
 // raio × cápsula vertical em pos (com folga pad). Devolve t ≥ 0 do primeiro contato ou null.
 export function rayCapsule(o, d, maxT, pos, pad = 0, crouch = 0) {
   const scale = stanceScale(crouch), R = BODY.r + pad, ry = BODY.r * scale + pad;
@@ -63,8 +71,9 @@ export function rayCapsule(o, d, maxT, pos, pad = 0, crouch = 0) {
 }
 // dispersão do Sniper: scoped = luneta aberta (o overlay aparece), speed = velocidade horizontal, air = no ar.
 // looseHip = Torresmo sem luneta: no quadril o tiro abre bem mais. Com a luneta e parado continua reto.
-export function sniperSpread(scoped, speed, air, looseHip = false) {
-  if (scoped) return air ? 0.02 : speed < 1.5 ? 0 : 0.012;
-  if (looseHip) return air ? 0.2 : speed < 1.5 ? 0.11 : 0.16;
-  return air ? 0.06 : speed < 1.5 ? 0.025 : 0.045;
+export function sniperSpread(scoped, speed, air, looseHip = false, hipMul = 1, swayMul = 1) {
+  const hip = Number.isFinite(hipMul) ? hipMul : 1, sway = Number.isFinite(swayMul) ? swayMul : 1;
+  if (scoped) return air ? 0.02 * sway : speed < 1.5 ? 0 : 0.012 * sway;
+  if (looseHip) return (air ? 0.2 : speed < 1.5 ? 0.11 : 0.16) * hip;
+  return (air ? 0.06 : speed < 1.5 ? 0.025 : 0.045) * hip;
 }

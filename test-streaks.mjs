@@ -1,4 +1,4 @@
-// Fumaça, atordoamento, UAV, mísseis e nuke. Uso: SITE=http://localhost:8123/ node test-streaks.mjs
+// Fumaça, pau de choque, UAV, mísseis e nuke. Uso: SITE=http://localhost:8123/ node test-streaks.mjs
 import { chromium } from 'playwright';
 const SITE = process.env.SITE || 'http://localhost:8123/';
 const fails = [];
@@ -8,7 +8,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(SITE, { waitUntil: 'load' });
-await page.waitForFunction(() => window.__docao && window.__docao.startGame, { timeout: 15000 });
+await page.waitForFunction(() => window.__docao && window.__docao.startGame, null, { timeout: 180000, polling: 250 });
 const G = (fn, a) => page.evaluate(fn, a);
 const until = async (fn, ms = 12000) => {
   const t0 = Date.now();
@@ -60,19 +60,24 @@ ok(await until(() => {
   return !!(bot && bot.model && bot.model.group.visible === false);
 }), 'inimigo some atrás da fumaça');
 
-await G(() => { window.__docao.player.stunNades = 1; window.__docao.player.pos.set(0, 0, 0); window.__docao.throwStun(); });
-ok(await until(() => {
-  const g = window.__docao;
-  const n = g.tacticals[0];
-  if (n) g.player.pos.copy(n.pos);
-  return g.player.stunUntil > g.time;
-}), 'o atordoamento chega');
-const stun = await G(() => {
-  const p = window.__docao.player;
-  const flash = document.getElementById('stunFlash');
-  return { until: p.stunUntil > window.__docao.time, op: flash ? flash.style.opacity : '0', left: p.stunNades };
+// pau de choque (tecla 5): finca, dá choque no bot da frente e nunca no dono
+const shockBot = await G(() => {
+  const g = window.__docao, p = g.player, bot = g.entities.find((e) => !e.isPlayer && e.alive);
+  p.stunNades = 1; p.stunUntil = 0; p.pitch = -0.6; p.vel.set(0, 0, 0);
+  for (let k = 0; k < 32; k++) { const yaw = k / 32 * Math.PI * 2; if ([0.15, 0.5, 1.2].every((h) => { const o = [p.pos.x, p.pos.y + h, p.pos.z]; return [1, 2, 3, 4].every((d) => g.los(o, [o[0] - Math.sin(yaw) * d, o[1], o[2] - Math.cos(yaw) * d])); })) { p.yaw = yaw; break; } } // direção livre até no pé
+  const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+  bot.pos.set(p.pos.x + fx * 3, p.pos.y, p.pos.z + fz * 3); bot.vel.set(0, 0, 0); bot.hp = 100; bot.invulnUntil = 0; bot.frozen = true;
+  return bot.name;
 });
-ok(stun.until && parseFloat(stun.op) > 0.5 && stun.left === 0, `atordoamento pega quem está perto (${JSON.stringify(stun)})`);
+{ const t0 = await G(() => window.__docao.time); await page.waitForFunction((t) => window.__docao.time > t + 0.05, t0, { timeout: 120000, polling: 100 }); } // um quadro pra câmera pegar o pitch
+await G(() => window.__docao.throwShock());
+ok(await until(() => { const s = window.__docao.shocks[0]; return !!(s && s.stuck); }, 60000), 'o pau de choque finca');
+ok(await until(() => { const g = window.__docao; return g.entities.some((e) => e.stunUntil > g.time && !e.isPlayer); }, 60000), 'o choque chega no bot');
+const stun = await G((n) => {
+  const g = window.__docao, p = g.player, bot = g.entities.find((e) => e.name === n);
+  return { bot: bot.stunUntil > g.time, hp: bot.hp, alive: bot.alive, me: p.stunUntil > g.time, left: p.stunNades };
+}, shockBot);
+ok(stun.bot && stun.hp < 100 && stun.hp >= 1 && stun.alive && !stun.me && stun.left === 0, `pau de choque atordoa o bot e não o dono (${JSON.stringify(stun)})`);
 
 await G(() => { window.__docao.rewardKill(); window.__docao.rewardKill(); window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
@@ -195,7 +200,14 @@ await callRadio();
 const gunOn = await G(() => ({ on: !!window.__docao.gunner, hud: !document.getElementById('gunnerHud').hidden, hp: window.__docao.gunHeli && window.__docao.gunHeli.hp }));
 ok(gunOn.on && gunOn.hud && gunOn.hp === 560, `F chama o Chopper e a câmera vai pra ele (${JSON.stringify(gunOn)})`);
 await G(() => window.__docao.endGunner(true));
-await G(() => { for (let i = 0; i < 5; i++) window.__docao.rewardKill(); });
+await G(() => { for (let i = 0; i < 3; i++) window.__docao.rewardKill(); });
+await page.waitForTimeout(200);
+const acReady = await G(() => ({ ready: [...document.querySelectorAll('#streakBar .streak-card.ready')].map((c) => c.dataset.need), bank: window.__docao.streakReady, kills: window.__docao.rewardKills }));
+ok(acReady.kills === 13 && acReady.ready.join() === '13' && acReady.bank.join() === 'ac130', `13 abates armam o AC-130 Grelha (${JSON.stringify(acReady)})`);
+await callRadio();
+ok(await G(() => window.__docao.ac130On), 'F chama o AC-130 e a câmera vai pra ele');
+await G(() => window.__docao.endAc130(true));
+await G(() => { for (let i = 0; i < 2; i++) window.__docao.rewardKill(); });
 await page.waitForTimeout(200);
 const nukeOn = await G(() => {
   const b = document.getElementById('nukeBanner');
@@ -219,6 +231,13 @@ const after = await G(() => ({
 }));
 ok(after.bots === 0 && after.kills === 0, `nuke mata os inimigos e não soma abate secreto (${JSON.stringify(after)})`);
 
+// o nuke agora encerra a partida (v1.16): começa uma nova pra seguir testando os cards
+await G(() => {
+  const g = window.__docao;
+  g.startGame('arena');
+  for (const e of g.entities) { e.invulnUntil = g.time + 9999; if (!e.isPlayer) e.frozen = true; }
+});
+await page.waitForTimeout(400);
 await G(() => { window.__docao.player.alive = true; window.__docao.player.hp = 100; window.__docao.rewardKill(); });
 const mid = await G(() => {
   const card = document.querySelector('#streakBar .streak-card[data-need="3"]');

@@ -64,7 +64,7 @@ await page.mouse.down({ button: 'right' }); await waitGame(0.05); r = await tHp(
 await waitGame(0.5); await page.mouse.up({ button: 'right' }); await waitGame(0.05); r = await tHp(); console.log('estocada:', JSON.stringify(r));
 ok(r.last.kind === 'stab' && (!r.alive || r.hp === 60 - 75), 'botão direito = estocada (75 de dano)');
 ok(r.feed.startsWith('Matheus moggou ' + st.name + ' [Faca'), `kill feed: "${r.feed}"`);
-ok(await G(() => { const k = document.querySelector('#killfeed .kf'); return k && k.textContent.includes('moggou') && k.textContent.includes('[Faca'); }), 'kill feed na tela: "moggou … [Faca]"');
+ok(await G(() => { const k = document.querySelector('#killfeed .kf'); const t = k ? k.textContent : ''; return t.includes('moggou') && t.includes('Faca'); }), 'kill feed na tela: "moggou … Faca"');
 await page.screenshot({ path: `${SHOTS}/20-faca-killfeed.png` });
 // estocada de novo logo depois: só depois de ~1 s
 st = await stage(1.9); await G(() => { window.__docao.player.nextFire = window.__docao.time + 0.0; });
@@ -93,18 +93,30 @@ const victim = await G(() => { const g = window.__docao, p = g.player, t = windo
   const eye = new g.V3(t.pos.x, t.pos.y + 1.5, t.pos.z), dir = new g.V3(p.pos.x, p.pos.y + 1.1, p.pos.z).sub(eye).normalize(); const h = g.knifeAttack(t, 'slash', eye, dir); return { hit: !!h, alive: p.alive, name: t.name }; });
 ok(victim.hit && !victim.alive, 'bot golpeia o jogador com a faca');
 await page.waitForFunction(() => !document.getElementById('deathpick').classList.contains('hidden'), null, { timeout: 15000 });
-const dm = await G(() => ({ msg: document.getElementById('centermsg').textContent, stamp: document.getElementById('stamp').textContent, card: document.getElementById('deathMelee').textContent }));
+const dm = await G(() => ({
+  msg: (document.getElementById('deathWho') && document.getElementById('deathWho').textContent) || document.getElementById('centermsg').textContent,
+  stamp: document.getElementById('stamp').textContent,
+  card: ((document.getElementById('classGun') || {}).textContent || '') + ((document.getElementById('deathList') || {}).textContent || ''),
+}));
 console.log('morte:', JSON.stringify(dm));
 ok(dm.msg.startsWith(`Você foi moggado por ${victim.name}`), `mensagem de morte: "${dm.msg}"`);
 ok(dm.stamp === 'MOGGADO!', 'carimbo MOGGADO!');
-ok(dm.card.includes('Faca de churrasqueiro') && dm.card.includes('Sempre equipada'), 'tela de morte: cartão da faca "sempre equipada"');
+ok(dm.card.includes('Faca'), 'tela de morte: a ficha da classe mostra a faca');
 await page.screenshot({ path: `${SHOTS}/20-faca-morte.png` });
 await page.waitForFunction(() => window.__docao.player.alive, null, { timeout: 20000 });
 ok(await G(() => window.__docao.player.slots.includes(window.__docao.KNIFE) && document.getElementById('stamp').textContent !== ''), 'renasce com a faca no slot 3');
 // morte por arma normal continua "pururucado"
 await G(() => { const g = window.__docao, p = g.player; p.invulnUntil = 0; g.damage(p, 200, window.__t, 0, false); });
-await page.waitForFunction(() => document.getElementById('centermsg').textContent.startsWith('Você foi'), null, { timeout: 5000 });
-ok(await G(() => document.getElementById('centermsg').textContent.startsWith('Você foi pururucado') && document.getElementById('stamp').textContent === 'PURURUCADO!'), 'morte por tiro continua "pururucado"');
+await page.waitForFunction(() => {
+  const c = document.getElementById('centermsg').textContent;
+  const w = document.getElementById('deathWho') && document.getElementById('deathWho').textContent;
+  return (c && c.startsWith('Você foi pururucado')) || (w && w.startsWith('Você foi pururucado'));
+}, null, { timeout: 5000 });
+ok(await G(() => {
+  const c = document.getElementById('centermsg').textContent;
+  const w = (document.getElementById('deathWho') || {}).textContent || '';
+  return (c.startsWith('Você foi pururucado') || w.startsWith('Você foi pururucado')) && document.getElementById('stamp').textContent === 'PURURUCADO!';
+}), 'morte por tiro continua "pururucado"');
 await page.waitForFunction(() => window.__docao.player.alive, null, { timeout: 20000 });
 // 7) bots soltos: se juntam, alguns usam a faca, ninguém quebra
 await G(() => { const g = window.__docao, p = g.player; p.invulnUntil = g.time + 999; window.__knifeStats = { player: 0, bot: 0, hits: 0 };

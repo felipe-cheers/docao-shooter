@@ -1,5 +1,5 @@
 // Minigun (20): "minigun" no chat troca a primária até morrer; embala 0,6 s (botão direito só embala), ~20 tiros/s, esquenta e trava,
-// anda a 60%, sem zoom. Servidor confere embalo, cadência (balde de fichas) e calor.
+// 600 tiros sem reserva, sem penalidade de movimento, sem zoom. Servidor confere embalo, cadência (balde de fichas) e calor.
 // Uso: SITE=http://localhost:8123/ node test-minigun.mjs   (SKIP_CLIENT=1 roda só regras + servidor)
 import { chromium } from 'playwright';
 import { Game } from './server/src/game.js';
@@ -9,9 +9,9 @@ const SITE = process.env.SITE || 'http://localhost:8123/';
 const fails = [], errors = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 
 // ---- regras ----
-ok(MINIGUN === 20 && WEAPONS[20] && WEAPONS[20].key === 'minigun' && WEAPONS.length === 22 && WEAPONS[21] && WEAPONS[21].key === 'lmg' && WEAPONS.every(Boolean), `WEAPONS[20] = minigun, [21] = lmg, sem buraco (${WEAPONS.length})`);
+ok(MINIGUN === 20 && WEAPONS[20] && WEAPONS[20].key === 'minigun' && WEAPONS.length === 26 && WEAPONS[21] && WEAPONS[21].key === 'lmg' && WEAPONS[22] && WEAPONS[22].key === 'commando' && WEAPONS[23].key === 'capataz' && WEAPONS[25].key === 'tampa' && WEAPONS.every(Boolean), `WEAPONS[20] = minigun, depois lmg, commando, capataz e tampa, sem buraco (${WEAPONS.length})`);
 ok(!PRIMARIES.includes(20) && !BOT_PRIMARIES.includes(20) && !CATEGORIES.some((c) => (c.weapons || c.list || []).includes(20)), 'minigun fora do Arsenal e dos bots');
-ok(BOT_RANGE.length === 22, `BOT_RANGE contínuo (${BOT_RANGE.length})`);
+ok(BOT_RANGE.length === WEAPONS.length, `BOT_RANGE contínuo (${BOT_RANGE.length})`);
 ok(isMiniCode('minigun') && isMiniCode('MINIGUN!') && isMiniCode('quero a mini gun') && isMiniCode('mini-gun') && !isMiniCode('mini') && !isMiniCode('gun') && !isMiniCode('pokebola') && !isPokeCode('minigun'), 'código: minigun, mini gun, mini-gun');
 ok(killIcon('minigun') !== killIcon('rifle'), 'ícone próprio no killfeed');
 
@@ -41,14 +41,14 @@ ok(killIcon('minigun') !== killIcon('rifle'), 'ícone próprio no killfeed');
   g.onEvent(a, ['pr', 20, 4, 7]); ok(a.nextPrimary !== 20, `servidor: 'pr' não aceita a 20 (${a.nextPrimary})`);
   a.alive = false; g.onMessage(a.id, { t: 'say', text: 'minigun' }); ok(a.slots[0] !== 20, 'servidor: morto, o código não dá nada');
   a.alive = true; g.personal.clear(); g.onMessage(a.id, { t: 'say', text: 'minigun' });
-  ok(a.slots[0] === 20 && a.weapon === 20 && a.mag[20] === 150 && (g.personal.get(a.id) || []).some((e) => e[0] === 'mgn'), `servidor: "minigun" no chat dá a minigun (${a.slots}, ${a.weapon}, ${a.mag[20]})`);
+  ok(a.slots[0] === 20 && a.weapon === 20 && a.mag[20] === 600 && a.reserve[20] === 0 && (g.personal.get(a.id) || []).some((e) => e[0] === 'mgn'), `servidor: "minigun" no chat dá a minigun (${a.slots}, ${a.weapon}, ${a.mag[20]}/${a.reserve[20]})`);
   // embalo obrigatório
   step(4); let ct = fake; g.events.length = 0;
   g.onEvent(a, ['mgs', 1, ct]); ok(g.events.some((e) => e[0] === 'mgs' && e[1] === a.id && e[2] === 1), "servidor: repassa ['mgs', id, 1]");
   step(6); r = shoot(ct + 0.3); ok(!r.ok && r.rej, 'servidor: tiro com 0,3 s de embalo é recusado');
   while (fake < ct + 0.62) step(1, 0.02);
   g.events.length = 0; r = shoot(ct + 0.62); const sh = g.events.find((e) => e[0] === 'sh' && e[1] === a.id);
-  ok(r.ok && a.mag[20] === 149 && sh && sh[2] === 20, `servidor: embalado, atira (pente ${a.mag[20]}, sh ${!!sh})`);
+  ok(r.ok && a.mag[20] === 599 && sh && sh[2] === 20, `servidor: embalado, atira (pente ${a.mag[20]}, sh ${!!sh})`);
   ct += 0.62;
   // cadência: 3 tiros no mesmo pacote passam (balde); um colado demais não
   step(6); ct = fake;
@@ -60,10 +60,10 @@ ok(killIcon('minigun') !== killIcon('rifle'), 'ícone próprio no killfeed');
   for (let i = 0; i < 60; i++) { ct += 0.045; fake += 0.0225; if (i % 2) { pin(); g.tick(); } a.mag[20] = 150; shoot(ct); }
   ok((a.rejectedShots || 0) > rj0, `servidor: relógio acelerado é recusado (${(a.rejectedShots || 0) - rj0} recusas)`);
   while (fake < ct + 0.2) step(1); ct = fake;
-  // calor: sem parar, trava perto do tiro 109 (servidor um pouco mais frio que o cliente)
-  a.mg.heat = 0; a.mag[20] = 150; a.reserve[20] = 300; let n = 0, refused = -1;
-  for (; n < 160; n++) { ct += 0.045; fake += 0.045; if (n % 2) { pin(); g.tick(); } a.mag[20] = 150; const s = shoot(ct); if (!s.ok) { refused = n; break; } }
-  ok(refused >= 95 && refused <= 115 && a.mg.hotUntil > ct, `servidor: superaquece entre 95 e 115 tiros (${refused})`);
+  // calor: sem parar, trava perto do tiro 250 (servidor soma heat×0,8; 0,005 esquenta bem mais devagar)
+  a.mg.heat = 0; a.mag[20] = 600; a.reserve[20] = 0; let n = 0, refused = -1;
+  for (; n < 280; n++) { ct += 0.045; fake += 0.045; if (n % 2) { pin(); g.tick(); } a.mag[20] = 600; const s = shoot(ct); if (!s.ok) { refused = n; break; } }
+  ok(refused >= 240 && refused <= 260 && a.mg.hotUntil > ct, `servidor: superaquece entre 240 e 260 tiros (${refused})`);
   g.onEvent(a, ['mgs', 0, ct]);
   for (let i = 0; i < 10; i++) step(1); r = shoot(ct + 0.5); ok(!r.ok, 'servidor: travado, recusa'); ct += 0.5;
   const tOn = a.mg.hotUntil + 0.05; while (fake < tOn) step(1); g.onEvent(a, ['mgs', 1, tOn]);
@@ -135,13 +135,13 @@ if (!process.env.SKIP_CLIENT) {
   const s0 = m.shots; await page.mouse.down({ button: 'right' }); await waitGame(0.8); m = await mini();
   ok(m.spin === 1 && m.shots === s0 && Math.abs(m.fov - 75) < 0.5, `cliente: botão direito só embala, sem zoom (spin ${m.spin}, fov ${m.fov.toFixed(1)})`);
   await page.mouse.up({ button: 'right' }); await waitGame(1.0);
-  // velocidade a 60%
+  // velocidade normal (move 1): igual à pistola
   const speed = async (w) => {
     await G(() => { const g = window.__docao, p = g.player, V = g.V3; for (let i = 0; i < 24; i++) { p.yaw = i / 24 * Math.PI * 2; const a = [p.pos.x, p.pos.y + 1, p.pos.z], b = [p.pos.x - Math.sin(p.yaw) * 8, p.pos.y + 1, p.pos.z - Math.cos(p.yaw) * 8]; if (g.los(a, b)) break; } p.pitch = 0; });
     await page.keyboard.down('KeyW'); await waitGame(1.0); const v = await G(() => Math.hypot(window.__docao.player.vel.x, window.__docao.player.vel.z)); await page.keyboard.up('KeyW'); await waitGame(0.4); return v;
   };
   const vMg = await speed(); await page.keyboard.press('Digit2'); await waitGame(0.5); const vPs = await speed(); await page.keyboard.press('Digit1'); await waitGame(0.9);
-  ok(Math.abs(vMg - 6.8 * 0.6) < 0.4 && Math.abs(vPs - 6.8) < 0.5, `cliente: anda a 60% com a minigun (${vMg.toFixed(2)} vs pistola ${vPs.toFixed(2)})`);
+  ok(Math.abs(vMg - 6.8) < 0.4 && Math.abs(vPs - 6.8) < 0.5, `cliente: minigun anda na velocidade normal (${vMg.toFixed(2)} vs pistola ${vPs.toFixed(2)})`);
   // abate
   const name = await G(() => {
     const g = window.__docao, p = g.player, b = g.entities.find((e) => !e.isPlayer);

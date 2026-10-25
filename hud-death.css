@@ -10,14 +10,14 @@
   background:#f6e4bd;
   border:2px solid #34402e;border-top:5px solid #674029;border-radius:4px;
   box-shadow:2px 3px 0 #291e18;
-  font-family:"Trebuchet MS",Arial,sans-serif;
+  font-family:var(--font);
   scrollbar-width:thin;scrollbar-color:#8e7855 transparent
 }
 #hud #deathpick::-webkit-scrollbar{width:8px}
 #hud #deathpick::-webkit-scrollbar-thumb{background:#8e7855;border-radius:4px}
 
 #hud #deathpick .dl{
-  margin-bottom:6px;font:800 14px/1.2 "Trebuchet MS",Arial,sans-serif;
+  margin-bottom:6px;font:800 14px/1.2 var(--font);
   color:#34402e;text-shadow:none
 }
 #hud #deathpick .dl small{
@@ -38,13 +38,13 @@
   border:1px solid #34402e;border-radius:3px;
   box-shadow:1px 2px 0 #291e18;outline:none;outline-offset:0;
   text-align:left;
-  font:800 12px/1.15 "Trebuchet MS",Arial,sans-serif
+  font:800 12px/1.15 var(--font)
 }
 #hud #deathpick button.primchip:hover{background:#fff0cc}
 #hud #deathpick button.primchip .wtxt{min-width:0;flex:1;overflow:hidden}
 #hud #deathpick button.primchip small{
   display:block;margin-top:2px;
-  color:#674029;font:700 10.5px/1.15 "Trebuchet MS",Arial,sans-serif;
+  color:#674029;font:700 10.5px/1.15 var(--font);
   text-shadow:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
 #hud #deathpick button.primchip kbd{
@@ -91,7 +91,7 @@
   background:#536044;color:#fff0cc;-webkit-text-fill-color:#fff0cc;
   border:2px solid #3c4934;border-radius:6px;box-shadow:0 2px #38442e;
   text-align:center;letter-spacing:.4px;
-  font:900 24px/1.1 "Arial Black",Impact,sans-serif
+  font:900 24px/1.1 var(--font)
 }
 #hud #deathpick #respawnBtn:hover,
 #hud #deathpick #respawnBtn:disabled,
