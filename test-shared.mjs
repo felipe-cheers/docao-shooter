@@ -32,7 +32,8 @@ const tgt = ent(0, 0), dh = explosionHits({ x: 1.2, y: 1, z: 0 }, R, [tgt], () =
 ok(dh.dmg < 120 && Math.abs(dh2.dmg - 120) < 1e-6, 'foguete que bateu no casco (direct) = dano máximo pra quem foi atingido');
 // sniper
 ok(sniperSpread(true, 0, false) === 0 && sniperSpread(true, 1.2, false) === 0, 'Sniper com luneta parado/quase parado: dispersão 0');
-ok(sniperSpread(true, 6, false) > 0 && sniperSpread(true, 6, false) < 0.02 && sniperSpread(false, 0, false) <= 0.03, 'Sniper andando / sem luneta: dispersão pequena');
+ok(sniperSpread(true, 6, false) > 0 && sniperSpread(true, 6, false) < 0.02, 'Sniper com luneta andando: dispersão pequena');
+ok(sniperSpread(false, 0, false) >= 0.1 && sniperSpread(false, 6, false) > sniperSpread(false, 0, false) && sniperSpread(false, 0, true) > sniperSpread(false, 6, false), 'Canhão e Carabina sem luneta: cone largo, maior andando e no ar');
 ok(sniperSpread(false, 0, false, true) >= 0.1 && sniperSpread(true, 0, false, true) === 0, 'Torresmo sem luneta abre; com luneta parado continua reto');
 // zona
 const z1 = newZoneState({ x: 0, y: 0, z: 0 }); stepZone(z1, [1, 0], 1); const z2 = newZoneState({ x: 0, y: 0, z: 0 }); stepZone(z2, [2, 0], 1);

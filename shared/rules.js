@@ -90,12 +90,12 @@ export const WEAPONS = [
   // 20 · Minigun do Galpão: fora do Arsenal (código "minigun" no chat). Embala 0,6 s, ~22 tiros/s, esquenta e trava; 600 tiros sem reserva, sem zoom.
   { key: 'minigun', name: 'Minigun do Galpão', short: 'Minigun', chip: 'Minigun', mag: 600, reserve: 0, dmg: 12, headMul: 1.4, rate: 0.045, auto: true, pellets: 1, spread: 0.03, reload: 4.2, range: 120, recoil: 0.006, adsFov: 75, adsSpread: 1, flashZ: -0.86,
     falloff: [14, 45, 0.55], spin: { up: 0.6, down: 0.9, heat: 0.005, cool: 0.5 }, heavy: true, noAds: true, move: 1, desc: 'Embala 0,6 s · ~22 tiros/s · esquenta e trava · 600 tiros, sem reserva' },
-  // 21 · Metralhadora do Chiqueiro: fita grande, automática. DPS abaixo do fuzil (15 / 0,08 s = 187 contra 200). Anda 5% mais devagar. Sem heavy/spin (cairia na inspeção da minigun); perfil próprio lmg.
-  { key: 'lmg', name: 'Metralhadora do Chiqueiro', short: 'Metralhadora', chip: 'LMG', mag: 100, reserve: 300, dmg: 15, headMul: 1.6, rate: 0.08, auto: true, pellets: 1, spread: 0.024, reload: 3.1, range: 130, recoil: 0.012, adsFov: 48, adsSpread: 0.22, flashZ: -0.95,
-    falloff: [18, 55, 0.5], move: 0.95, inspect: 'lmg', desc: 'Fita · 100/300 · anda 5% mais devagar · menos dano por segundo que o fuzil' },
-  // 22 · Commando da Granja: recuo quase zero, dano baixo, preciso. Rajada reta (ref. Commando do Black Ops).
-  { key: 'commando', name: 'Commando da Granja', short: 'Commando', chip: 'Commando', mag: 30, reserve: 120, dmg: 12, headMul: 1.4, rate: 0.09, auto: true, pellets: 1, spread: 0.003, reload: 1.8, range: 150, recoil: 0.002, adsFov: 36, adsSpread: 0.04, flashZ: -0.8,
-    move: 1, desc: 'Recuo quase zero · dano baixo · 30/120 · rajada reta' },
+  // 21 · Metralhadora do Chiqueiro: fita grande, recuo forte, recarga lenta e movimento 5% mais lento.
+  { key: 'lmg', name: 'Metralhadora do Chiqueiro', short: 'Metralhadora', chip: 'LMG', mag: 100, reserve: 300, dmg: 15, headMul: 1.6, rate: 0.08, auto: true, pellets: 1, spread: 0.024, reload: 3.1, range: 130, recoil: 0.032, adsFov: 48, adsSpread: 0.22, flashZ: -0.95,
+    falloff: [18, 55, 0.5], move: 0.95, inspect: 'lmg', desc: 'Fita · 100/300 · recuo forte · anda 5% mais devagar · recarga lenta' },
+  // 22 · Commando da Granja: cone preciso, mas a rajada sobe e exige compensação.
+  { key: 'commando', name: 'Commando da Granja', short: 'Commando', chip: 'Commando', mag: 30, reserve: 120, dmg: 12, headMul: 1.4, rate: 0.09, auto: true, pellets: 1, spread: 0.003, reload: 1.8, range: 150, recoil: 0.025, adsFov: 36, adsSpread: 0.04, flashZ: -0.8,
+    move: 1, desc: 'Rajada com subida · 12 de dano · 30/120 · compense o recuo' },
   // 23 · Revólver do Capataz: secundária de dupla ação. 58 no corpo (2 tiros) e 116 na cabeça (1) até o começo do falloff.
   // rate 0,4 s = 150 RPM. O coice sobe forte e volta (recoilBack) antes do próximo tiro. Tambor de 6, recarga lenta.
   { key: 'capataz', name: 'Revólver do Capataz', short: 'Capataz', chip: 'Revólver', mag: 6, reserve: 30, dmg: 58, headMul: 2, rate: 0.4, auto: false, pellets: 1, spread: 0.011, moveSpread: 1.55, reload: 2.45, range: 85, recoil: 0.074, recoilBack: 0.4, adsFov: 46, adsSpread: 0.1, flashZ: -0.55,
