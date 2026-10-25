@@ -5462,7 +5462,10 @@ document.addEventListener('mousemove', (e) => {
     return;
   }
   if (predator) return;
+  if (!e.movementX && !e.movementY) return;
   const s = sens * (ads > 0.2 ? sensAds : 1) * (camera.fov / BASE_FOV); // mirando usa o slider "Mirando"; o zoom ainda deixa o mouse mais lento
+  // A nova direção escolhida pelo jogador encerra a recuperação do coice.
+  player.recoilLift = 0;
   lookInputSeq++;
   player.yaw -= e.movementX * 0.0015 * s; player.pitch = clamp(player.pitch - e.movementY * 0.0015 * s, -1.5, 1.5);
 });
