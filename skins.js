@@ -38,12 +38,13 @@
 //   peças das skins novas: boiHorns {color, band} · ribbonSkirt {colors, band} · messyHair {color} · squareGlasses {color}
 //                sleeveStripes {color} · shortsStripes {color} · quiffHair {color, side} · beard {color} (bigode + barba por fazer)
 //                hoodStrings {color} · lanyard {color, logo} · longPants {color} · shoes também aceita {sole}
+//                faixa {colors:[verde, amarelo, azul], color}  faixa presidencial no peito (verde em cima, brasão no centro)
 //   face:  { paint: 'skull' }   pintura leve no rosto (bochechas/focinho continuam)
 //   eyes:  { iris: '#hex', ring: '#hex' }  tom da íris e anel escuro em volta (opcionais)
 //   float: true                 flutua de leve (bob) e solta um rastro fraquinho no jogo
 //   Peças novas: crie uma função em PARTS (costumes.js).
 
-import { lookToSkin, isLookCode, parseLook } from './shared/closet.js';
+import { lookToSkin, isLookCode, parseLook, itemById } from './shared/closet.js';
 
 export const SKINS = [
   {
@@ -243,6 +244,10 @@ export const SKINS = [
     ],
   },
 ];
+
+// Fantasia grátis do Brechó, também na lista de skins (convidado e conta equipam sem comprar).
+const faixaItem = itemById('c9');
+if (faixaItem && faixaItem.costume) SKINS.push({ id: 'faixa-presidencial', name: faixaItem.name, ...JSON.parse(JSON.stringify(faixaItem.costume)) });
 
 export const DEFAULT_SKIN = 'classico';
 export const getSkin = (id) => SKINS.find((s) => s.id === id) || lookToSkin(id) || SKINS[0]; // id também pode ser um visual personalizado ("x1....", ver shared/closet.js)

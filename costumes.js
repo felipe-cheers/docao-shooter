@@ -516,4 +516,121 @@ Object.assign(PARTS, {
     for (const leg of rig.legs) M(new THREE.CapsuleGeometry(0.15, 0.16, 4, 14), m, leg, 0.01).position.y = -0.15;
     return null;
   },
+  // Faixa presidencial: banda diagonal no peito (ombro direito → quadril esquerdo), verde/amarela/azul, com o brasão no centro.
+  faixa(o, rig) {
+    const g = new THREE.Group();
+    const GREEN = (o.colors && o.colors[0]) || '#009c3b';
+    const YELLOW = (o.colors && o.colors[1]) || '#ffdf00';
+    const BLUE = (o.colors && o.colors[2]) || '#002776';
+    const hug = (x, y, z, lift = 0.03) => {
+      const yy = Math.max(0.42, Math.min(1.12, y));
+      const R = torsoR(yy);
+      const sx = x, sz = z / 0.85, d = Math.hypot(sx, sz);
+      if (d < R + lift) { const k = (R + lift) / (d || 1); return new V3(sx * k, y, sz * k * 0.85); }
+      return new V3(x, y, z);
+    };
+    // ombro direito do Docão é −x (a mão direita é arms[0])
+    const curve = new THREE.CatmullRomCurve3([
+      hug(-0.22, 0.98, -0.46, 0.02),
+      new V3(-0.55, 1.08, 0.02),
+      hug(-0.28, 0.96, 0.28, 0.035),
+      hug(-0.12, 0.82, 0.36, 0.04),
+      hug(0.04, 0.70, 0.40, 0.04),
+      hug(0.20, 0.56, 0.34, 0.035),
+      hug(0.32, 0.44, 0.16, 0.03),
+      new V3(0.30, 0.30, 0.28),
+      new V3(0.22, 0.16, 0.34),
+    ], false, 'centripetal');
+    const frames = [];
+    let prevB = null;
+    const SAMPLES = 32;
+    for (let i = 0; i <= SAMPLES; i++) {
+      const t = i / SAMPLES;
+      const p = curve.getPointAt(t);
+      const tan = curve.getTangentAt(t).normalize();
+      const radial = new V3(p.x, p.y > 1.05 ? 0.4 : 0, p.z);
+      if (radial.lengthSq() < 1e-5) radial.set(0, 0, 1);
+      radial.normalize();
+      let B = new V3().crossVectors(tan, radial);
+      if (B.lengthSq() < 1e-6) B = new V3().crossVectors(tan, new V3(0, 1, 0));
+      B.normalize();
+      if (prevB && B.dot(prevB) < 0) B.negate();
+      let N = new V3().crossVectors(B, tan).normalize();
+      if (N.dot(radial) < 0) { N.negate(); B.negate(); }
+      if (prevB && B.dot(prevB) < 0) { B.negate(); N.negate(); }
+      prevB = B.clone();
+      frames.push({ p, tan, B, N });
+    }
+    const stripe = (offset, half, color, lift) => {
+      const pos = [], idx = [];
+      frames.forEach((f, i) => {
+        const c = f.p.clone().addScaledVector(f.B, offset).addScaledVector(f.N, lift);
+        const a = c.clone().addScaledVector(f.B, -half), b = c.clone().addScaledVector(f.B, half);
+        pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+        if (i) { const k = (i - 1) * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+      });
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, toon(color, { side: THREE.DoubleSide }));
+      g.add(mesh); outline(mesh, 0.006); mesh.castShadow = true;
+    };
+    // borda escura + três faixas. O lado +B fica mais alto no peito: verde em cima, amarelo no meio, azul embaixo.
+    stripe(0, 0.112, '#1a120c', 0.012);
+    stripe(0.07, 0.034, GREEN, 0.022);
+    stripe(0, 0.034, YELLOW, 0.024);
+    stripe(-0.07, 0.034, BLUE, 0.022);
+    // brasão no meio do peito, virado pra fora, estrela pra cima
+    let best = frames[0], score = 99;
+    for (const f of frames) { const s = Math.abs(f.p.y - 0.72) + Math.abs(f.p.x) * 0.25; if (f.p.z > 0.15 && s < score) { score = s; best = f; } }
+    const up = new V3(0, 1, 0);
+    let xAxis = new V3().crossVectors(up, best.N).normalize();
+    if (xAxis.lengthSq() < 0.2) xAxis = new V3(1, 0, 0);
+    const yAxis = new V3().crossVectors(best.N, xAxis).normalize();
+    const badge = new THREE.Group();
+    badge.position.copy(best.p).addScaledVector(best.N, 0.05);
+    badge.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, best.N));
+    g.add(badge);
+    const starShape = new THREE.Shape();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.045 : 0.105;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      i ? starShape.lineTo(x, y) : starShape.moveTo(x, y);
+    }
+    starShape.closePath();
+    const gold = toon('#e2b33a'), goldDark = toon('#8a6414'), leaf = toon('#1f7a34'), leafDark = toon('#145226');
+    M(new THREE.ExtrudeGeometry(starShape, { depth: 0.018, bevelEnabled: false }), gold, badge, 0.006).position.z = -0.01;
+    const globe = M(new THREE.SphereGeometry(0.052, 18, 14), toon(BLUE), badge, 0.005); globe.position.z = 0.02;
+    const band = M(new THREE.TorusGeometry(0.05, 0.011, 6, 24), toon('#f7f4ea'), badge, 0.003);
+    band.rotation.x = Math.PI / 2; band.scale.y = 0.42; band.position.z = 0.02;
+    // Cruzeiro do Sul, bem simples, no globo azul
+    for (const [x, y] of [[0.0, 0.028], [0.012, 0.012], [-0.01, 0.006], [0.006, -0.008], [-0.016, 0.022]]) {
+      const st = M(new THREE.SphereGeometry(0.007, 8, 6), toon('#f7f7f2'), badge, 0);
+      st.position.set(x, y, 0.062);
+    }
+    const top = new THREE.Shape();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.008 : 0.02;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      i ? top.lineTo(x, y) : top.moveTo(x, y);
+    }
+    top.closePath();
+    const topStar = M(new THREE.ExtrudeGeometry(top, { depth: 0.01, bevelEnabled: false }), gold, badge, 0.003);
+    topStar.position.set(0, 0.1, 0.01);
+    // espada atrás da estrela (só a lâmina, pra ler de longe)
+    const sword = M(new THREE.BoxGeometry(0.012, 0.2, 0.008), toon('#d9dde4'), badge, 0.003);
+    sword.position.set(0, 0.01, -0.012);
+    M(new THREE.BoxGeometry(0.04, 0.012, 0.01), goldDark, badge, 0.003).position.set(0, -0.07, -0.01);
+    // ramos: café à esquerda, fumo à direita (leitura do brasão, bem reduzida)
+    for (const s of [-1, 1]) {
+      const sprig = new THREE.Group(); sprig.position.set(s * 0.09, -0.01, 0.01); sprig.rotation.z = s * 0.7; badge.add(sprig);
+      M(new THREE.CylinderGeometry(0.006, 0.008, 0.11, 6), toon('#6b4a2a'), sprig, 0.003).rotation.z = 0.4;
+      for (const [yy, sc] of [[0.02, 1], [0.045, 0.85], [-0.01, 0.7]]) {
+        const lf = M(new THREE.SphereGeometry(0.022, 10, 8), yy > 0 ? leaf : leafDark, sprig, 0.003);
+        lf.scale.set(0.45, 1, 0.28); lf.position.set(s * -0.012, yy, 0.01); lf.rotation.z = s * 0.8;
+        lf.scale.multiplyScalar(sc);
+      }
+    }
+    return g;
+  },
 });
