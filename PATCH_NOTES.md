@@ -4,6 +4,15 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.22 — Coice na Medida 🎯🐷 (26/10/2026)
+🎯 **ACABOU A MOLEZA DO SPRAY.** O **Felipe** (@felipe-cheers) mandou o **PR #23** e foi pro estande de tiro calibrar o coice das armas, uma por uma, e ainda testou tudo antes de entregar:
+📈 **Spray que dá pra aprender:** cada arma agora sobe sempre do mesmo jeito. Acabou o tranco aleatório de sorteio de quermesse: treinou o puxão, acertou o puxão. Parou de atirar, a mira volta suave pro lugar. E se você já corrigiu a mira no mouse, o jogo **não puxa de volta** contra a sua mão.
+🔫 **Commando da Granja:** era "recuo quase zero", rajada reta feito régua de pedreiro. Agora a rajada **sobe** e pede compensação (recoil 0,002 → 0,025). Dano e cadência continuam iguais, só ficou honesta.
+🐗 **Metralhadora do Chiqueiro:** 100 balas de fita e agora com coice de porco bravo (0,012 → 0,032). Segura firme ou vai pintar o teto do celeiro.
+🔭 **Canhão e Carabina da Granja sem luneta:** o tranco no quadril ficou bem maior, e a **dispersão sem luneta** das snipers abriu bastante. O "noscope de quermesse" virou loteria de verdade. **Com luneta, nada muda**: quem mira direitinho continua acertando do mesmo jeito. O Torresmo segue sendo o pior no quadril, por tradição.
+🧪 Vieram testes novos de recoil, de entrada do mouse e um teste no navegador com e sem luneta. Ninguém mais vai mexer no coice sem a régua do Felipe apitar.
+💸 **E o bolso do Matheus?** Tudo roda no navegador. O servidor da Cloudflare nem sabe que a arma pula. Zero centavo a mais.
+
 ## v1.21 — Docão Minado 💣🐷 (25/10/2026)
 💣 **TEM COISA ENTERRADA, E VOCÊ ESCOLHE O QUÊ.** O **Paulo** (@paulo-cheers) mandou o **PR #22** e abriu mais uma barraca na quermesse: o **Docão Minado**, campo minado clássico com focinho de fazenda. Fica em **Ver outros jogos**, junto do Tênis, do Snooker e do caminho de volta pro Truco.
 🫙 **A bomba é a sua:** antes de pisar, escolhe o que está no chão — **Botijão**, **Copo Bomba**, **Granada**, **Pau de choque** ou **Ovo**. O número da casa conta quantos daquele trem tem nos vizinhos.
