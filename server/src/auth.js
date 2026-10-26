@@ -6,6 +6,7 @@
 //  - Tudo é OPCIONAL: sem D1 configurado (env.DB) as rotas respondem 503 e o jogo segue como convidado.
 // ============================================================
 import { cleanNick, nickKey, nickError, passError } from '../../shared/nick.js';
+import { START_COINS } from '../../shared/closet.js';
 import { SKINS, skinOk } from '../../skins.js';
 import { coinCreditStmt, chalUpdates, wallet, buyItem, equipSkin } from './shop.js';
 
@@ -142,11 +143,11 @@ export async function handleAccountRoute(req, env, url, json) {
       await rlHit(env, 'rg:' + ip, REG_WINDOW);
       const hash = await hashPassword(b.password), t = now();
       let id;
-      try { id = (await env.DB.prepare('INSERT INTO accounts (nick, nick_key, pass_hash, created_at) VALUES (?, ?, ?, ?)').bind(nick, key, hash, t).run()).meta.last_row_id; }
+      try { id = (await env.DB.prepare('INSERT INTO accounts (nick, nick_key, pass_hash, created_at, coins) VALUES (?, ?, ?, ?, ?)').bind(nick, key, hash, t, START_COINS).run()).meta.last_row_id; }
       catch (e) { return json({ error: 'Esse apelido já tem dono' }, 409); } // corrida: UNIQUE barrou
       const token = await newSession(env, id);
       await housekeeping(env);
-      return json({ token, account: { nick, skin: null } }, 201);
+      return json({ token, account: { nick, skin: null, coins: START_COINS } }, 201);
     }
     if (p === '/api/auth/login' && m === 'POST') {
       const b = await readJson(req); if (!b || typeof b.nick !== 'string' || typeof b.password !== 'string' || b.password.length > 128 || b.nick.length > 64) return json({ error: GENERIC }, 401);

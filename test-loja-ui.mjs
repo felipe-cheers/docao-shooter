@@ -28,11 +28,16 @@ ok(await until(() => document.getElementById('acctModal').classList.contains('hi
 ok(await until(() => document.querySelectorAll('#dailyPanel .daily-row').length === 3), 'menu (conta): painel mostra os 3 desafios do dia');
 ok(/\d+\/\d+/.test(await page.textContent('#dailyPanel .daily-row')) && /🪙 \d+/.test(await page.textContent('#dailyPanel')) && /novos em/.test(await page.textContent('#dailyPanel')), 'painel: progresso x/meta, prêmio em Docoins e contagem até o reset');
 ok(!/Logado como/.test(await page.textContent('#acctTxt')), 'faixa da conta enxuta (sem "Logado como")');
-ok(/0<\/b> Docoins|🪙 0 Docoins/.test(await page.innerHTML('#acctTxt')) || /Docoins/.test(await page.textContent('#acctTxt')), 'faixa do menu mostra o saldo de Docoins');
+ok(/500<\/b>\s*Docoins|🪙\s*500\s*Docoins/.test(await page.innerHTML('#acctTxt')), 'faixa do menu mostra os 500 Docoins iniciais');
 // Brechó com conta
 await page.click('#closetBtn'); await until(() => !document.getElementById('closetMain').classList.contains('hidden'));
 ok(await vis('#closetMain') && await vis('#closetCanvas'), 'conta: o Brechó abre com prévia 3D');
-ok(/🪙\s*0/.test(await page.textContent('#closetWallet')), 'saldo 0 na carteira');
+ok(/🪙\s*500/.test(await page.textContent('#closetWallet')), 'conta nova: carteira começa com 500 Docoins');
+await page.click('#closetClose');
+const id = sql(`SELECT id FROM accounts WHERE nick = '${NICK}'`)[0].id;
+sql(`UPDATE accounts SET coins = 0 WHERE id = ${id}`);
+await page.click('#closetBtn'); await until(() => /🪙\s*0/.test(document.getElementById('closetWallet').textContent), 8000);
+ok(/🪙\s*0/.test(await page.textContent('#closetWallet')), 'saldo zerado no teste: carteira mostra 0');
 await page.click('#closetTabShop');
 ok((await page.$$('#closetShop .closet-card')).length >= 30, 'loja lista as partes (30+)');
 ok(await page.isDisabled('[data-buy="h1"]') && /FALTAM 60/.test(await page.textContent('[data-buy="h1"]')), 'sem Docoins o botão de comprar fica travado ("FALTAM 60")');
@@ -40,7 +45,7 @@ await page.click('[data-try="h3"]'); ok(await page.evaluate(() => document.query
 await page.click('[data-try="h3"]');
 await page.click('#closetClose');
 // ganha Docoins "jogando": no teste, coloca saldo direto no D1 LOCAL
-const id = sql(`SELECT id FROM accounts WHERE nick = '${NICK}'`)[0].id; sql(`UPDATE accounts SET coins = 200 WHERE id = ${id}`);
+sql(`UPDATE accounts SET coins = 200 WHERE id = ${id}`);
 await page.click('#closetBtn'); await until(() => /200/.test(document.getElementById('closetWallet').textContent), 8000);
 ok(/200/.test(await page.textContent('#closetWallet')), 'ao abrir, o saldo vem do servidor (200)');
 await page.click('#closetTabShop'); await page.screenshot({ path: `${SHOTS}/2-loja.png` });
