@@ -4,6 +4,11 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.23 — Faixa e Bolso Cheio 🇧🇷🪙🐷 (26/10/2026)
+🇧🇷 **O DOCÃO VIROU PRESIDENTE.** Entrou a fantasia **Faixa Presidencial**, grátis e de graça mesmo: terno escuro, calça, sapato e a faixa verde-amarela-azul no peito, do ombro direito até o quadril esquerdo, com o brasão no meio. Aparece no **Trocar visual** e no **Brechó** como **GRÁTIS / PADRÃO** — convidado e conta logada já podem vestir, sem gastar Docoin e sem botão de compra.
+🪙 **Bolso com 500 na entrada.** Conta nova já nasce com **500 Docoins**. Quem já tinha conta ganhou **+500** de uma vez (as quatro contas que existiam no Brechó). Preços do Brechó continuam iguais: Super Porco 900, Docão Dourado 1500, e o resto no mesmo lugar.
+💸 **E o bolso do Matheus?** Teve migration no D1 e deploy do Worker (salvar o visual grátis e o saldo inicial). Sem Durable Object novo e sem sala a mais. Barato como discurso de posse.
+
 ## v1.22 — Coice na Medida 🎯🐷 (26/10/2026)
 🎯 **ACABOU A MOLEZA DO SPRAY.** O **Felipe** (@felipe-cheers) mandou o **PR #23** e foi pro estande de tiro calibrar o coice das armas, uma por uma, e ainda testou tudo antes de entregar:
 📈 **Spray que dá pra aprender:** cada arma agora sobe sempre do mesmo jeito. Acabou o tranco aleatório de sorteio de quermesse: treinou o puxão, acertou o puxão. Parou de atirar, a mira volta suave pro lugar. E se você já corrigiu a mira no mouse, o jogo **não puxa de volta** contra a sua mão.
