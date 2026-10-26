@@ -31,5 +31,35 @@ ok(coins('Velha') === START_COINS && coins('Rica') === 120 + START_COINS, `conta
 ins.run('Nova', 'nova', 'x', 2, START_COINS);
 ok(coins('Nova') === START_COINS && coins('Rica') === 620, `conta criada depois da migração fica em ${coins('Nova')} e a antiga não ganha de novo`);
 
+// cadastro de verdade (PBKDF2 + D1 falso): o INSERT do Worker grava 500, e a migração já aplicada não soma de novo
+const live = new DatabaseSync(':memory:');
+for (const f of ['0001_contas.sql', '0002_loja.sql', '0003_desafios.sql', '0004_saldo_inicial.sql']) live.exec(read('./server/migrations/' + f));
+const wrap = (sql, args = []) => ({ sql, args, bind(...a) { return wrap(sql, a); },
+  async all() { return { results: live.prepare(sql).all(...args) }; },
+  async first() { return live.prepare(sql).get(...args) || null; },
+  async run() { const r = live.prepare(sql).run(...args); return { meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } }; } });
+const env = { DB: { prepare: (sql) => wrap(sql), async batch(list) {
+  live.exec('BEGIN');
+  try {
+    const out = [];
+    for (const s of list) {
+      const st = live.prepare(s.sql);
+      if (/^\s*SELECT/i.test(s.sql)) out.push({ results: st.all(...s.args) });
+      else { const r = st.run(...s.args); out.push({ meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } }); }
+    }
+    live.exec('COMMIT'); return out;
+  } catch (e) { live.exec('ROLLBACK'); throw e; }
+} } };
+const { handleAccountRoute } = await import('./server/src/auth.js');
+const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json' } });
+const req = (method, path, body, token) => new Request('https://docao.test' + path, { method, headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.8', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+const reg = await handleAccountRoute(req('POST', '/api/auth/register', { nick: 'Leitão', password: 'senha-forte-123' }), env, new URL('https://docao.test/api/auth/register'), json);
+const regBody = await reg.json();
+const row = live.prepare('SELECT coins FROM accounts WHERE nick = ?').get('Leitão');
+ok(reg.status === 201 && regBody.account.coins === START_COINS && row.coins === START_COINS, `cadastro devolve e grava ${row && row.coins} Docoins`);
+const me = await handleAccountRoute(req('GET', '/api/me', null, regBody.token), env, new URL('https://docao.test/api/me'), json);
+const meBody = await me.json();
+ok(me.status === 200 && meBody.account.coins === START_COINS, `/api/me da conta nova traz ${meBody.account && meBody.account.coins} Docoins`);
+
 console.log(fails.length ? `\n${fails.length} FALHA(S)` : '\nTUDO OK');
 process.exit(fails.length ? 1 : 0);
