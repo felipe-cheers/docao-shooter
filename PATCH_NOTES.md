@@ -4,6 +4,12 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.26 — B de Bala na Kill Cam 🔫📹🐷 (26/10/2026)
+🙏 **FOI MAL, GRANJA.** No v1.25 a gente limpou a kill cam e a **ficha de armas** sumiu junto, e vocês ficaram sem trocar de arma morto. O Docão ouve a comunidade: voltou, sem tampar a cara de quem te furou.
+🔫 **Aperta B:** morto na kill cam, **B** abre e fecha a ficha de armas. Em cima do tempo do **Renasce** fica escrito **B — armas** pra ninguém esquecer.
+⎋ **Esc fecha a ficha** sem abrir a pausa. Vivo, o **B** continua igualzinho. No **X1** não tem atalho (lá a arma é sorteada). Veio no **PR #29**.
+💸 **E o bolso do Matheus?** Só navegador. Zero Worker, zero Durable Object.
+
 ## v1.25 — Kill Cam Limpa 📹🐷 (26/10/2026)
 📹 **AGORA DÁ PRA VER QUEM TE FUROU.** Morreu e a **ficha de armas** (#deathpick) subia na cara, tampando a kill cam inteira. Você caía e nem sabia qual porco tinha sido. Fofoca sem rosto não vale.
 🐷 **Some na hora certa:** enquanto a câmera está no assassino, a ficha some. Fica só o **Renascer** e o **nome de quem te matou** no canto. Placar, chat e killfeed continuam no lugar.
