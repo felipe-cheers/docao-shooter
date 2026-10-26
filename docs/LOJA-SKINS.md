@@ -12,7 +12,9 @@
 O visual vira um **código curto** (ex.: `x1.3.5.h3.f2.s1`, no máx. 48 caracteres): `x1.` + cor da camiseta + cor do shorts + ids das partes. É esse texto que vai na rede no lugar do id da skin. O servidor só aceita a forma canônica (cores na paleta, partes existentes, uma por espaço).
 
 ## Moeda: Docoins (só ganha jogando)
-Sem compra com dinheiro real, sem conversão. Tudo calculado no **servidor** (o cliente nunca informa saldo ou ganho):
+Sem compra com dinheiro real, sem conversão. Tudo calculado no **servidor** (o cliente nunca informa saldo ou ganho).
+
+Conta nova começa com **500 Docoins** (`START_COINS` em `shared/closet.js`; o cadastro grava `coins` no INSERT). Conta que já existia ganha **+500 uma vez** na migração `0004_saldo_inicial.sql` (`UPDATE accounts SET coins = coins + 500`). O Wrangler aplica cada arquivo uma vez. Convidado não tem saldo.
 
 | Evento | Docoins |
 |---|---|
@@ -110,7 +112,7 @@ Referência: o plano Workers Paid inclui D1 com cerca de 25 bilhões de linhas l
 
 ## O que falta para a produção (NÃO feito)
 1. Aprovar o catálogo/preços e as regras de ganho.
-2. Aplicar as migrações **0002** e **0003** no D1 de produção (`docao-contas`): `npx wrangler d1 migrations apply docao-contas --remote` (ou pela API, como na 0001; acrescenta colunas em `accounts` e cria `inventory`; contas existentes ficam com 0 Docoins).
+2. Aplicar as migrações **0002**, **0003** e **0004** no D1 de produção (`docao-contas`): `cd server && npx wrangler d1 migrations apply docao-contas --remote` (a 0002 acrescenta `coins` e a mochila; a 0004 soma 500 Docoins em cada conta que já existe, sem zerar o saldo). Aplicar a 0004 **antes** do deploy do Worker que grava 500 no cadastro.
 3. Deploy do Worker pela receita (bindings `ROOMS` + `DB`, sem ALLOW_TEST).
 4. Push na main e release (patch notes: rascunho em `docs/RASCUNHO-PATCH-NOTES-BRECHO.md`).
 5. Conferir em produção: cadastro, `/api/me` com `items`/`coins`, compra com conta de teste (depois apagar), salvar visual, sala online com os dois visuais.

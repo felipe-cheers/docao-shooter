@@ -7,6 +7,7 @@
 //  As peças 3D são as que já existem em costumes.js/docao.js, só com cores novas: nada de modelo novo, nada de alterar skins atuais.
 // ============================================================
 export const CURRENCY = 'Docoins', CURRENCY_ONE = 'Docoin', COIN_ICON = '🪙'; // moeda do jogo (escolhida pelo Matheus)
+export const START_COINS = 500; // saldo ao criar a conta. Quem já tinha conta ganha o mesmo valor uma vez (migração 0004).
 export const SHOP_NAME = 'Brechó da Porca Véia', SHOP_EMOJI = '🧺', SHOP_BUTTON = 'BRECHÓ'; // nome da loja (escolhido pelo Matheus): título da janela e botão do menu usam estas constantes
 export const coinsText = (n) => `${COIN_ICON} ${n | 0} ${(n | 0) === 1 ? CURRENCY_ONE : CURRENCY}`;
 export const COLORS = ['#d8261c', '#e8702a', '#f2c94c', '#6fbf3b', '#17b394', '#2b8fd8', '#1446b8', '#7a3fb5', '#e66fa8', '#f4f4f4', '#8a8a8a', '#2c2c30', '#1d1410', '#7a4a24'];
