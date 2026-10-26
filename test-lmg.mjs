@@ -4,12 +4,23 @@ import { Game } from './server/src/game.js';
 import { WEAPONS, PRIMARIES, BOT_PRIMARIES, CATEGORIES, BOT_RANGE, LMG, MINIGUN, isMiniCode } from './shared/rules.js';
 import { killIcon, weaponSvg } from './killfeed-icons.js';
 import { inspectKind } from './inspect.js';
+import { traceShot } from './shared/penetration.js';
+import { createPhysics } from './shared/physics.js';
 const fails = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 // ---- regras ----
 const W = WEAPONS[21];
 ok(LMG === 21 && W && W.key === 'lmg' && WEAPONS.length === 26 && WEAPONS[22] && WEAPONS[22].key === 'commando' && WEAPONS[23] && WEAPONS[23].key === 'capataz' && WEAPONS[24] && WEAPONS[24].key === 'capataz2' && WEAPONS[25] && WEAPONS[25].key === 'tampa' && WEAPONS.every(Boolean), `WEAPONS[21] = lmg, [22] = commando, [23] = capataz, [24] = capataz2, [25] = tampa, sem buraco (${WEAPONS.length})`);
 ok(W.mag === 100 && W.reserve === 300 && W.dmg === 15 && W.rate === 0.08 && W.auto === true && W.move === 0.95, `números: fita 100/300, 15 de dano, 0,08 s, anda 95% (${W.mag}/${W.reserve}, ${W.dmg}, ${W.rate}, ${W.move})`);
-ok(W.dmg / W.rate < WEAPONS[0].dmg / WEAPONS[0].rate, `DPS ${(W.dmg / W.rate).toFixed(0)} abaixo do fuzil ${(WEAPONS[0].dmg / WEAPONS[0].rate).toFixed(0)}`);
+ok(Math.ceil(100 / W.dmg) === 7 && Math.abs((Math.ceil(100 / W.dmg) - 1) * W.rate - 0.48) < 1e-9, 'dano original: 7 tiros no corpo e TTK de 0,48 s');
+// O traçado compartilhado é usado no cliente offline e pelo hitscan do servidor.
+const physics = createPhysics([], [100, 100]);
+for (const [index, damage, bullets, seconds] of [[21, 15, 7, 0.48], [22, 12, 9, 0.72]]) {
+  const weapon = WEAPONS[index], target = { e: {}, p: { x: 0, y: 0, z: -8 } };
+  const hit = traceShot(physics, { x: 0, y: 0.8, z: 0 }, { x: 0, y: 0, z: -1 }, weapon, [target]).hits[0];
+  const count = hit ? Math.ceil(100 / hit.dmg) : 0;
+  ok(hit && !hit.head && hit.dmg === damage && count === bullets && Math.abs((count - 1) * weapon.rate - seconds) < 1e-9,
+    `${weapon.short}: traçado real causa ${hit && hit.dmg}, mata em ${count} tiros no corpo (${seconds} s)`);
+}
 ok(W.reload > WEAPONS[0].reload && W.pen > 0, `recarrega mais devagar que o fuzil (${W.reload} s) e atravessa parede fina (${W.pen} m)`);
 ok(PRIMARIES.includes(21) && BOT_PRIMARIES.includes(21) && CATEGORIES.some((c) => c.id === 'rajada' && c.weapons.includes(21)), 'está nas primárias, nos bots e na categoria Rajada');
 ok(BOT_RANGE.length === WEAPONS.length && BOT_RANGE[21] > 0, `BOT_RANGE cobre as ${WEAPONS.length} armas`);
