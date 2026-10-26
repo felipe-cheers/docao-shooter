@@ -4,6 +4,12 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.25 — Kill Cam Limpa 📹🐷 (26/10/2026)
+📹 **AGORA DÁ PRA VER QUEM TE FUROU.** Morreu e a **ficha de armas** (#deathpick) subia na cara, tampando a kill cam inteira. Você caía e nem sabia qual porco tinha sido. Fofoca sem rosto não vale.
+🐷 **Some na hora certa:** enquanto a câmera está no assassino, a ficha some. Fica só o **Renascer** e o **nome de quem te matou** no canto. Placar, chat e killfeed continuam no lugar.
+🔁 **Renasceu, voltou tudo:** depois do respawn o HUD aparece de novo, normalzinho. Hotfix do **PR #28**.
+💸 **E o bolso do Matheus?** Só mexeu no navegador. Zero Worker, zero Durable Object. Barato como lavagem de ontem.
+
 ## v1.24 — X1 no Curral + Barriguinha no Brechó 🔫🐷 (26/10/2026)
 🔫 **X1 · DUELO NO CURRAL.** O **Paulo** (@paulo-cheers) mandou o **PR #26** e abriu a porteira do bang-bang: modo **X1**, no máximo **2** porcos, mapa pequeno sorteado, cada um nascendo de um lado. Vence quem fizer **10 abates** primeiro. No chão só tem munição (sem vida), e os dois usam a **mesma arma**, que sorteia de novo toda vez que alguém cai (no 10º abate não troca: é hora da foto). Offline contra 1 bot e online com sala de 2. Se o anfitrião tenta meter X1 com 3+ na sala, o servidor trava a troca e o start: **"X1 é duelo: só cabem 2 jogadores."**
 🐷 **DOCÃO BARRIGUINHA NO BRECHÓ.** Fantasia completa a **1000 Docoins**: camisa vermelha arregaçada, shorts azul e a **barriga de fora**, igual o porco da derrota do Minado. Id `c10` (a Faixa Presidencial grátis continua no `c9`).
