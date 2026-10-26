@@ -4,6 +4,12 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.24 — X1 no Curral + Barriguinha no Brechó 🔫🐷 (26/10/2026)
+🔫 **X1 · DUELO NO CURRAL.** O **Paulo** (@paulo-cheers) mandou o **PR #26** e abriu a porteira do bang-bang: modo **X1**, no máximo **2** porcos, mapa pequeno sorteado, cada um nascendo de um lado. Vence quem fizer **10 abates** primeiro. No chão só tem munição (sem vida), e os dois usam a **mesma arma**, que sorteia de novo toda vez que alguém cai (no 10º abate não troca: é hora da foto). Offline contra 1 bot e online com sala de 2. Se o anfitrião tenta meter X1 com 3+ na sala, o servidor trava a troca e o start: **"X1 é duelo: só cabem 2 jogadores."**
+🐷 **DOCÃO BARRIGUINHA NO BRECHÓ.** Fantasia completa a **1000 Docoins**: camisa vermelha arregaçada, shorts azul e a **barriga de fora**, igual o porco da derrota do Minado. Id `c10` (a Faixa Presidencial grátis continua no `c9`).
+🛒 **Confirmação antes de torrar Docoin.** Todo **COMPRAR** do Brechó agora pergunta **"Deseja comprar [item] por X Docoins?"** — Cancelar, Esc ou clique fora não gasta nada.
+💸 **E o bolso do Matheus?** Worker atualizado pro X1 e pro catálogo novo. Sem Durable Object novo.
+
 ## v1.23 — Faixa e Bolso Cheio 🇧🇷🪙🐷 (26/10/2026)
 🇧🇷 **O DOCÃO VIROU PRESIDENTE.** Entrou a fantasia **Faixa Presidencial**, grátis e de graça mesmo: terno escuro, calça, sapato e a faixa verde-amarela-azul no peito, do ombro direito até o quadril esquerdo, com o brasão no meio. Aparece no **Trocar visual** e no **Brechó** como **GRÁTIS / PADRÃO** — convidado e conta logada já podem vestir, sem gastar Docoin e sem botão de compra.
 🪙 **Bolso com 500 na entrada.** Conta nova já nasce com **500 Docoins**. Quem já tinha conta ganhou **+500** de uma vez (as quatro contas que existiam no Brechó). Preços do Brechó continuam iguais: Super Porco 900, Docão Dourado 1500, e o resto no mesmo lugar.
