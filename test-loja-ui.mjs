@@ -51,6 +51,11 @@ ok(/200/.test(await page.textContent('#closetWallet')), 'ao abrir, o saldo vem d
 await page.click('#closetTabShop'); await page.screenshot({ path: `${SHOTS}/2-loja.png` });
 ok(!(await page.isDisabled('[data-buy="h1"]')), 'com saldo o botão COMPRAR libera');
 await page.click('[data-buy="h1"]');
+ok(await vis('#closetBuyAsk') && /Deseja comprar Boné do Churrasqueiro por 60 Docoins\?/.test(await page.textContent('#closetBuyAskText')), 'compra pede confirmação antes de gastar');
+await page.click('#closetBuyNo');
+ok(!(await vis('#closetBuyAsk')) && /🪙\s*200/.test(await page.textContent('#closetWallet')) && /COMPRAR/.test(await page.textContent('[data-buy="h1"]')), 'cancelar não compra e não mexe no saldo');
+await page.click('[data-buy="h1"]');
+await page.click('#closetBuyYes');
 ok(await until(() => /NA MOCHILA/.test(document.querySelector('[data-buy="h1"]').textContent), 8000), 'compra feita: cartão vira "NA MOCHILA"');
 ok(/🪙\s*140/.test(await page.textContent('#closetWallet')), 'saldo caiu pra 140 (preço decidido pelo servidor)');
 ok(sql(`SELECT coins FROM accounts WHERE id = ${id}`)[0].coins === 140 && sql(`SELECT item FROM inventory WHERE account_id = ${id}`).length === 1, 'D1 confirma: 140 Docoins e 1 item na mochila');

@@ -39,6 +39,7 @@
 //                sleeveStripes {color} · shortsStripes {color} · quiffHair {color, side} · beard {color} (bigode + barba por fazer)
 //                hoodStrings {color} · lanyard {color, logo} · longPants {color} · shoes também aceita {sole}
 //                faixa {colors:[verde, amarelo, azul], color}  faixa presidencial no peito (verde em cima, brasão no centro)
+//                bellyOut {roll, rollDark}  camisa arregaçada com a barriga de fora (Docão Barriguinha)
 //   face:  { paint: 'skull' }   pintura leve no rosto (bochechas/focinho continuam)
 //   eyes:  { iris: '#hex', ring: '#hex' }  tom da íris e anel escuro em volta (opcionais)
 //   float: true                 flutua de leve (bob) e solta um rastro fraquinho no jogo
