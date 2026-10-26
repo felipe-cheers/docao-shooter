@@ -258,6 +258,9 @@ button.clsrow:active{transform:none}
   display:flex;flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;
   grid-template-columns:none;gap:6px;max-width:none;width:auto
 }
+#hud #deathpick.cls-screen.x1 #deathList.cls-list,
+#hud #deathpick.cls-screen.x1 #deathArms,
+#hud #deathpick.cls-screen.x1 #classGun{display:none}
 #hud #deathpick.cls-screen button.clsrow,
 #hud #deathpick.cls-screen button.clsrow:hover,
 #hud #deathpick.cls-screen button.clsrow:focus,

@@ -1171,11 +1171,56 @@ function flipHotmilkZ(part, cz) {
   });
 }
 
+// ---------- X1: três currais pequenos. Cada um nasce do seu lado (x < 0 oeste, x > 0 leste). Só munição. ----------
+{
+  const wood = '#9c6b3a', hay = '#c4a574', post = '#6e5a48';
+  const sign = (x, z, text) => ({ t: 'sign', x, y: 2.5, z, w: 4.4, h: 1.15, rot: 0, text, bg: '#c44536', fg: '#fff6e4' });
+  const duel = (o) => MAPS.push({
+    x1: true, wallH: 3, wallColor: ['#c9844a', '#b8733a'], navSpacing: 1.5,
+    palette: DAY({ ground: '#d7b56a', tiles: ['#e4c78a', '#c9a45c', 24, 8] }),
+    showcase: [0, 0, 3], view: [0, 12, 14, 0, -0.65],
+    ...o,
+  });
+  {
+    const boxes = [crate(0, 0, 2.2, 1.35, wood), crate(-3.4, 3.2, 1.45, 1.1, hay), crate(3.4, -3.2, 1.45, 1.1, hay), B(-1.3, -6.3, 1.3, -5.5, 1.05, wood), B(-1.3, 5.5, 1.3, 6.3, 1.05, wood)];
+    duel({
+      id: 'x1-curral', name: 'Curral Miúdo', desc: 'X1: curral curto, caixote no meio. Cada Docão nasce de um lado.',
+      size: [12, 9], ...fin(boxes),
+      props: [sign(0, -8.55, 'CURRAL X1'), { t: 'keg', x: -6.2, z: 5.2 }, { t: 'keg', x: 6.2, z: -5.2 }, { t: 'hay', x: -7, z: -5.4 }, { t: 'hay', x: 7, z: 5.4 }],
+      spawns: [[-9.2, -2.2], [-9.2, 2.4], [9.2, 2.2], [9.2, -2.4]],
+      pickups: [['ammo', -4.4, 0], ['ammo', 4.4, 0], ['ammo', 0, 4.5], ['ammo', 0, -4.5]],
+    });
+  }
+  {
+    const boxes = [B(-2.4, -1.5, -0.7, 4.4, 1.25, wood), B(0.7, -4.4, 2.4, 1.5, 1.25, wood), crate(-6.2, 2.4, 1.4, 1.15, hay), crate(6.2, -2.4, 1.4, 1.15, hay)];
+    duel({
+      id: 'x1-pinguela', name: 'Pinguela', desc: 'X1: corredor estreito com duas coberturas no meio. Um lado contra o outro.',
+      size: [16, 7], ...fin(boxes),
+      props: [sign(0, -6.55, 'PINGUELA'), { t: 'keg', x: -10, z: 3.6 }, { t: 'keg', x: 10, z: -3.6 }],
+      spawns: [[-13.1, -1.6], [-13.1, 1.8], [13.1, 1.6], [13.1, -1.8]],
+      pickups: [['ammo', -8, 0.2], ['ammo', 8, -0.2], ['ammo', 0, 3.6], ['ammo', 0, -3.4]],
+    });
+  }
+  {
+    const boxes = [];
+    for (const [x, z] of [[-3.3, -3.3], [3.3, -3.3], [-3.3, 3.3], [3.3, 3.3]]) boxes.push(B(x - 0.42, z - 0.42, x + 0.42, z + 0.42, 2.3, post));
+    boxes.push(crate(0, 0, 1.7, 1.1, hay));
+    duel({
+      id: 'x1-chiqueiro', name: 'Chiqueirinho', desc: 'X1: quatro postes e um caixote no centro. Nasce de frente pro outro lado.',
+      size: [10, 10], ...fin(boxes),
+      props: [sign(0, -9.55, 'X1'), { t: 'hay', x: -6.4, z: 6.2 }, { t: 'hay', x: 6.4, z: -6.2 }, { t: 'keg', x: 6.2, z: 6 }, { t: 'keg', x: -6.2, z: -6 }],
+      spawns: [[-7.3, -1.8], [-7.3, 2], [7.3, 1.8], [7.3, -2]],
+      pickups: [['ammo', 0, 5.6], ['ammo', 0, -5.6], ['ammo', -5.2, 0], ['ammo', 5.2, 0]],
+    });
+  }
+}
+
 export const getMap = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
-// mapas jogáveis nas listas/rodízio (o Estande só abre no modo Treino)
+// mapas jogáveis nas listas/rodízio (o Estande só abre no modo Treino; os currais do X1 só abrem no X1)
 // Modo Invasão: o Rodízio do Docão e a Fazenda Mal-Assombrada só abrem na Invasão (os outros modos continuam com os mapas de sempre)
 const INV_ONLY = new Set(['rodizio', 'fazenda-assombrada']);
-export const PLAY_MAPS = MAPS.filter((m) => !m.training && !m.invasionOnly && !INV_ONLY.has(m.id));
+export const PLAY_MAPS = MAPS.filter((m) => !m.training && !m.invasionOnly && !m.x1 && !INV_ONLY.has(m.id));
+export const X1_MAPS = MAPS.filter((m) => m.x1);
 // mapas da Invasão: os dois feitos pra ela primeiro, depois os de sempre (com decoração de Halloween só nesse modo)
 // mapas do Modo Bomba: só os com sites/spawns feitos à mão (o Rodízio, que na Invasão é exclusivo, vale aqui: foi feito pra Bomba); Pátio Ferrugem é pequeno demais e o Estande é do Treino
 export const BOMB_MAPS = MAPS.filter((m) => m.bomb && !m.training && !m.invasionOnly);
