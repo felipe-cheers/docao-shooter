@@ -5,7 +5,7 @@ Jogue em **https://docao.mvalentim.dev**
 ---
 
 ## v1.21 — Docão Minado 💣🐷 (25/10/2026)
-💣 **TEM COISA ENTERRADA, E VOCÊ ESCOLHE O QUÊ.** Abriu mais uma barraca na quermesse: o **Docão Minado**, campo minado clássico com focinho de fazenda. Fica em **Ver outros jogos**, junto do Tênis, do Snooker e do caminho de volta pro Truco.
+💣 **TEM COISA ENTERRADA, E VOCÊ ESCOLHE O QUÊ.** O **Paulo** (@paulo-cheers) mandou o **PR #22** e abriu mais uma barraca na quermesse: o **Docão Minado**, campo minado clássico com focinho de fazenda. Fica em **Ver outros jogos**, junto do Tênis, do Snooker e do caminho de volta pro Truco.
 🫙 **A bomba é a sua:** antes de pisar, escolhe o que está no chão — **Botijão**, **Copo Bomba**, **Granada**, **Pau de choque** ou **Ovo**. O número da casa conta quantos daquele trem tem nos vizinhos.
 📐 **Tamanho e formato, os dois, à vontade:** **Chiqueirinho** (9×9), **Granja** (16×16) e **Fazendona** (30×16). E o chão muda de forma: **Cercado**, **Lago**, **Celeiro**, **Silhueta do Docão**, **Ferradura**, **Trilha do milharal**, **Raquete** (a do Tênis), **Mesa do Snooker** (com as caçapas) e **Leque do Truco** (três cartas). Qualquer tamanho combina com qualquer formato.
 🚩 O primeiro passo nunca estoura. Bandeirinha marca a desconfiança. Clicar num número já aberto limpa o resto, se as bandeirinhas fecharem a conta.
