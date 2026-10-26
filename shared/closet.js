@@ -83,6 +83,9 @@ ITEMS.push(
       { type: 'longPants', color: '#1c1f26' },
       { type: 'shoes', color: '#141416', sole: '#2a2a2e' },
     ] } },
+  // Barriguinha: o porco da derrota do Docão Minado (camisa arregaçada, barriga de fora). Cores do desenho; a barriga usa a pele do Docão (peça bellyOut).
+  { id: 'c10', name: 'Docão Barriguinha', emoji: '🐷', price: 1000, costume: { shirt: { color: '#b73c28', trim: '#8e2c1e' }, pants: '#2c5f92',
+    parts: [{ type: 'bellyOut', roll: '#c44b36', rollDark: '#8e2c1e' }] } },
 );
 // ---------- DANÇAS (espaço "d"): não entram no visual (código), vão pra mochila e a escolhida é a do botão B. As 3 de sempre continuam grátis. ----------
 ITEMS.push(

@@ -633,4 +633,21 @@ Object.assign(PARTS, {
     }
     return g;
   },
+  // ---------- Docão Barriguinha (derrota do Docão Minado: camisa arregaçada, barriga de fora) ----------
+  // A barriga é a mesma construção do Barrigão (esfera na frente do tronco), no material de pele que o Docão já usa. Sem malha nova.
+  bellyOut(o, rig) {
+    const g = new THREE.Group();
+    const belly = M(new THREE.SphereGeometry(0.32, 28, 18), rig.skinM, g, 0.012);
+    belly.scale.set(1.15, 0.82, 0.95); belly.position.set(0, 0.58, 0.4);
+    const navel = M(new THREE.TorusGeometry(0.032, 0.01, 8, 16), toon('#c45a18'), g, 0);
+    navel.position.set(0, 0.55, 0.7); navel.rotation.x = Math.PI / 2 - 0.25;
+    const y = 0.84, r = torsoR(y) + 0.04;
+    const roll = M(new THREE.TorusGeometry(r, 0.07, 12, 32), toon(o.roll || '#c44b36'), g, 0.008);
+    roll.rotation.x = Math.PI / 2; roll.position.set(0, y, 0.06); roll.scale.set(1, 0.9, 1);
+    const cream = M(new THREE.TorusGeometry(r + 0.01, 0.02, 8, 28), toon('#f6e4bd'), g, 0);
+    cream.rotation.x = Math.PI / 2; cream.position.set(0, y + 0.01, 0.08); cream.scale.set(1, 0.9, 1);
+    const band = M(new THREE.TorusGeometry(r * 0.98, 0.022, 8, 28), toon(o.rollDark || '#8e2c1e'), g, 0);
+    band.rotation.x = Math.PI / 2; band.position.set(0, y + 0.055, 0.04); band.scale.set(1, 0.9, 1);
+    return g;
+  },
 });

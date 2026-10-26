@@ -13,7 +13,7 @@ import { COLORS, SLOTS, ITEMS, CURRENCY, COIN_ICON, SHOP_NAME, SHOP_EMOJI, SHOP_
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-let look = { ...DEFAULT_LOOK, items: {} }, tab = 'look', trial = null, busy = false, three = null, raf = 0;
+let look = { ...DEFAULT_LOOK, items: {} }, tab = 'look', trial = null, busy = false, three = null, raf = 0, pendingBuy = null;
 
 const currentCode = () => { const items = { ...look.items }; if (trial && trial.slot !== DANCE_SLOT) { if (trial.slot !== COSTUME_SLOT) delete items[COSTUME_SLOT]; items[trial.slot] = trial.id; } return encodeLook({ shirt: look.shirt, pants: look.pants, items }); };
 const msg = (t, ok = false) => { const m = $('closetMsg'); m.textContent = t || ''; m.style.color = ok ? '#2a6f4a' : ''; };
@@ -128,10 +128,27 @@ export function openCloset(want) {
   if (getAccount()) { loadLookFromAccount(); startThree(); render(); if (!raf) raf = requestAnimationFrame(loop); refreshStats().then(() => { if (!$('closetModal').classList.contains('hidden')) { loadLookFromAccount(); render(); } }); }
   else render();
 }
-function closeCloset() { clearInterval(chalTimer); $('closetModal').classList.add('hidden'); trial = null; stopDance(); stopThree(); }
+function closeAsk() { pendingBuy = null; const d = $('closetBuyAsk'); if (d) d.classList.add('hidden'); }
+function askBuy(it) {
+  pendingBuy = it;
+  $('closetBuyAskText').textContent = `Deseja comprar ${it.name} por ${it.price} Docoins?`;
+  $('closetBuyAsk').classList.remove('hidden');
+  $('closetBuyNo').focus();
+}
+function closeCloset() { clearInterval(chalTimer); closeAsk(); $('closetModal').classList.add('hidden'); trial = null; stopDance(); stopThree(); }
+async function finishBuy(it) {
+  busy = true; msg('Comprando…'); const r = await buyItem(it.id); busy = false;
+  if (r.error) msg(r.error); else { msg(`Comprou: ${it.name}! Já está na sua mochila.`, true); if (it.dance) { try { localStorage.setItem('docao.dance', it.dance); } catch (er) { /* sem storage */ } document.dispatchEvent(new CustomEvent('docao-dance-pick', { detail: it.dance })); } else { if (it.slot === COSTUME_SLOT) look.items = {}; else delete look.items[COSTUME_SLOT]; look.items[it.slot] = it.id; } trial = null; }
+  render();
+}
 
 async function onClick(e) {
   const t = e.target; if (busy) return;
+  if (pendingBuy) {
+    if (t.id === 'closetBuyAsk' || t.closest('#closetBuyNo')) { closeAsk(); return; }
+    if (t.closest('#closetBuyYes')) { const it = pendingBuy; closeAsk(); await finishBuy(it); return; }
+    return;
+  }
   const sw = t.closest('[data-shirt],[data-pants]');
   if (sw) { if (sw.dataset.shirt !== undefined) look.shirt = +sw.dataset.shirt; else look.pants = +sw.dataset.pants; msg(''); render(); return; }
   const sl = t.closest('button[data-slot]');
@@ -148,11 +165,7 @@ async function onClick(e) {
     if (r.error) msg(r.error); else { msg('Visual salvo! Ele já está valendo. 🐷', true); document.dispatchEvent(new CustomEvent('docao-look-saved')); } return;
   }
   const buy = t.closest('button[data-buy]');
-  if (buy) {
-    busy = true; buy.disabled = true; const it = itemById(buy.dataset.buy); const r = await buyItem(buy.dataset.buy); busy = false;
-    if (r.error) msg(r.error); else { msg(`Comprou: ${it.name}! Já está na sua mochila.`, true); if (it.dance) { try { localStorage.setItem('docao.dance', it.dance); } catch (er) { /* sem storage */ } document.dispatchEvent(new CustomEvent('docao-dance-pick', { detail: it.dance })); } else { if (it.slot === COSTUME_SLOT) look.items = {}; else delete look.items[COSTUME_SLOT]; look.items[it.slot] = it.id; } trial = null; }
-    render(); return;
-  }
+  if (buy && !buy.disabled) { const it = itemById(buy.dataset.buy); if (it) askBuy(it); return; }
   const card = t.closest('[data-try]');
   if (card) {
     const it = itemById(card.dataset.try); trial = trial && trial.id === it.id ? null : { id: it.id, slot: it.slot };
@@ -168,7 +181,7 @@ export function initCloset() {
   $('closetLogin').onclick = () => { closeCloset(); $('acctBtn').click(); };
   $('closetTabLook').onclick = () => setTab('look'); $('closetTabShop').onclick = () => setTab('shop'); $('closetTabChal').onclick = () => setTab('chal');
   $('closetModal').addEventListener('click', onClick);
-  $('closetModal').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') closeCloset(); });
+  $('closetModal').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { if (pendingBuy) closeAsk(); else closeCloset(); } });
   $('closetModal').addEventListener('mousedown', (e) => e.stopPropagation());
   onAccount((a) => { if (!a && !$('closetModal').classList.contains('hidden')) { stopThree(); render(); } else if (a && !$('closetModal').classList.contains('hidden') && !busy) { renderWallet(); renderShop(); renderChal(); } });
 }
