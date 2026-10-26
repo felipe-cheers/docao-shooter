@@ -414,8 +414,9 @@ function equipX1Local(e, w) {
   e.mgSpin = 0; e.mgHeat = 0; e.mgHot = false; e.mgWant = false; e.mgFiring = false;
   setWeapon(e, w);
 }
+function x1WeaponOk(i) { const list = (typeof activeWeapons === 'function' && activeWeapons()) || (!online ? limitsFor(X1.mode).weapons : null); return !list || list.includes(i); }
 function rollX1AndTell() {
-  x1Gun = rollX1Weapon(x1Gun);
+  x1Gun = rollX1Weapon(x1Gun, x1WeaponOk);
   for (const e of entities) if (e.alive) equipX1Local(e, x1Gun);
   flashMsg(`Nova arma: ${WEAPONS[x1Gun].short}`);
 }
@@ -5397,7 +5398,7 @@ function startGame(mapId) {
   const bombEv = mode === 'bomb' ? startBombOffline() : [];
   for (const e of entities) e.caps = 0;
   for (const e of entities) { e.alive = false; }
-  if (x1Mode()) { x1Gun = rollX1Weapon(-1); entities.forEach((e, i) => { e.x1Side = i % 2; }); }
+  if (x1Mode()) { x1Gun = rollX1Weapon(-1, x1WeaponOk); entities.forEach((e, i) => { e.x1Side = i % 2; }); }
   for (const e of entities) respawn(e);
   pickups.forEach((p) => { const on = clientPower(p.type); p.active = on; p.mesh.visible = on; if (!on) p.respawnAt = Infinity; });
   invApplyLook(invMode()); if (invMode()) { player.id = -1; player.spawnedOnce = true; startInvasionOffline(); } // Invasão: decoração + core local
@@ -6519,6 +6520,7 @@ function onNetMessage(m) {
     case 's': if (o.inMatch && state !== 'over') applySnapshot(m); break; // resultado fechado: snapshot atrasado não mexe na cena
     case 'p': if (o.inMatch && state !== 'over') for (const ev of m.ev) personalEvent(ev); break;
     case 'end': if (o.inMatch) onlineEnd(m); break;
+    case 'hostMsg': if (m.msg) { $('lobbyStatus').textContent = m.msg; flashMsg(m.msg); } break;
     case 'teamOk': {
       o.myPref = m.pref; const msg = m.blocked ? 'Esse time ficaria com 2 jogadores a mais — você foi pro Automático (equilibrado).' : '';
       $('lobbyTeamErr').textContent = msg; $('teamPickErr').textContent = msg;
@@ -6576,8 +6578,17 @@ const sendCfg = (lim) => {
 };
 ['lobbyMap', 'lobbyMax', 'lobbyBots', 'lobbyTime', 'lobbyChatOn'].forEach((id) => ($(id).onchange = sendCfg));
 $('lobbyDiff').onchange = () => { saveBotDiff($('lobbyDiff').value); sendCfg(); };
-$('lobbyMode').onchange = () => { if ($('lobbyMode').value === X1.mode) $('lobbyMax').value = '2'; fillMapSelect($('lobbyMap'), $('lobbyMode').value === 'bomb' ? BOMB_MAP : $('lobbyMap').value, $('lobbyMode').value); sendCfg(limitsFor($('lobbyMode').value)); };
-$('startOnline').onclick = () => { if (online) { initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value }); } };
+$('lobbyMode').onchange = () => {
+  const mode = $('lobbyMode').value, humans = online && online.lobby ? online.lobby.players.filter((p) => !p.bot).length : 0;
+  if (mode === X1.mode && humans > X1.MAX) { $('lobbyMode').value = (online.cfg && online.cfg.mode) || 'dm'; $('lobbyStatus').textContent = `X1 é duelo: só cabem ${X1.MAX} jogadores. Tem ${humans} na sala.`; return; }
+  if (mode === X1.mode) $('lobbyMax').value = '2';
+  fillMapSelect($('lobbyMap'), $('lobbyMode').value === 'bomb' ? BOMB_MAP : $('lobbyMap').value, mode); sendCfg(limitsFor(mode));
+};
+$('startOnline').onclick = () => {
+  if (!online) return; const humans = online.lobby ? online.lobby.players.filter((p) => !p.bot).length : 0;
+  if (isX1($('lobbyMode').value) && humans > X1.MAX) { $('lobbyStatus').textContent = `X1 é duelo: só cabem ${X1.MAX} jogadores. Tem ${humans} na sala.`; return; }
+  initAudio(); online.net.send({ t: 'start', map: $('lobbyMap').value });
+};
 $('leaveLobby').onclick = () => leaveOnline();
 // ---------- menu online ----------
 function onlineTab(create) { $('tabCreate').classList.toggle('active', create); $('tabJoin').classList.toggle('active', !create); $('paneCreate').classList.toggle('hidden', !create); $('paneJoin').classList.toggle('hidden', create); }

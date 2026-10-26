@@ -65,7 +65,7 @@ export class Game {
     this.ents = new Map(); this.nextId = 1; this.hostId = 0;
     this.state = 'lobby'; this.mapId = null; this.T = 0; this.t0 = 0;
     this.events = []; this.personal = new Map(); this.nades = []; this.shocks = []; this.rockets = []; this.blades = []; this.discs = []; this.eggs = []; this.corns = []; this.cornPops = []; this.pickups = []; this.bacons = []; this.helis = []; this.gunships = []; this.nukes = []; this.projId = 1;
-    this.forcedWinTeam = null; this.nukeWinner = 0; this.x1Gun = 0;
+    this.forcedWinTeam = null; this.nukeWinner = 0; this.x1Gun = 0; this.x1Hold = 0; // max de antes do X1, pra voltar ao sair
   }
   now() { return Date.now() / 1000; }
   // o mundo só avança com mensagens (limite de CPU): depois de um tempo parado, T fica velho. Acerta pelo relógio de parede antes de usar.
@@ -340,13 +340,18 @@ export class Game {
       case 'prof': if (typeof m.name === 'string' && this.state !== 'playing' && !e.acct) e.name = this.freeName(m.name, e); // nome só muda fora da partida (as plaquinhas são criadas no início)
          if (SKINS.some((s) => s.id === m.skin)) e.skin = m.skin; this.applyLoadout(e, m.primary, m.secondary, m.melee, this.state === 'lobby', m.kit); this.sendLobby(); break;
       case 'cfg': if (!isHost) return;
+        {
+          const modeOk = (m.mode === 'dm' || m.mode === 'dom' || m.mode === 'bomb' || isTraining(m.mode) || isInvasion(m.mode) || isX1(m.mode)) && this.state !== 'playing';
+          if (modeOk && isX1(m.mode) && !this.x1Mode && this.humans().length > X1.MAX) { this.io.send(id, { t: 'hostMsg', msg: `X1 é duelo: só cabem ${X1.MAX} jogadores. Tem ${this.humans().length} na sala.` }); this.sendLobby(); break; } // não chuta ninguém: a troca nem entra
+          if (modeOk && isX1(m.mode) && !this.x1Mode) this.x1Hold = this.cfg.max;
+        }
         if (m.map === 'random' || MAPS.some((x) => x.id === m.map)) this.cfg.map = m.map;
         if (isInvasion(m.mode) && m.max) m.max = Math.min(m.max | 0, INV.MAX_PLAYERS);
         if (m.max) this.cfg.max = clamp(m.max | 0, Math.max(2, this.humans().length), MAX_PLAYERS);
         if (typeof m.fillBots === 'boolean') this.cfg.fillBots = m.fillBots;
         if (typeof m.botDiff === 'string') { const next = normBotDiff(m.botDiff); if (next !== this.cfg.botDiff) { this.cfg.botDiff = next; for (const b of this.ents.values()) if (b.bot && !b.zt && !b.dummy) applyBotDiff(b, next); } else this.cfg.botDiff = next; }
         if (m.time !== undefined) this.cfg.time = normTime(m.time);
-        if ((m.mode === 'dm' || m.mode === 'dom' || m.mode === 'bomb' || isTraining(m.mode) || isInvasion(m.mode) || isX1(m.mode)) && this.state !== 'playing') { this.cfg.mode = m.mode; if (isX1(m.mode)) { this.cfg.max = X1.MAX; this.cfg.map = 'random'; } for (const h of this.humans()) { if (m.mode === 'dom' || m.mode === 'bomb') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
+        if ((m.mode === 'dm' || m.mode === 'dom' || m.mode === 'bomb' || isTraining(m.mode) || isInvasion(m.mode) || isX1(m.mode)) && this.state !== 'playing') { const leaving = this.x1Mode && !isX1(m.mode); this.cfg.mode = m.mode; if (isX1(m.mode)) { this.cfg.max = X1.MAX; this.cfg.map = 'random'; } if (leaving) { const back = this.x1Hold >= 2 ? this.x1Hold : 6; this.x1Hold = 0; this.cfg.max = clamp(back, Math.max(2, this.humans().length), MAX_PLAYERS); } for (const h of this.humans()) { if (m.mode === 'dom' || m.mode === 'bomb') this.chooseTeam(h, h.teamPref); else { h.team = -1; if (h.voice === 'team') h.voice = 'all'; } } }
         if (typeof m.chat === 'boolean') this.cfg.chat = m.chat;
         if (m.weapons !== undefined || m.powers !== undefined) {
           if (m.weapons !== undefined) this.cfg.weapons = normWeapons(m.weapons);
@@ -359,7 +364,7 @@ export class Game {
       case 'testKs': if (this.test && this.state === 'playing' && e.alive) { const n = clamp(m.n | 0, 0, 30); for (let i = 0; i < n; i++) this.streakKill(e); } break; // só testes (ALLOW_TEST=1)
       case 'testKill': if (this.test && this.state === 'playing' && e.alive) { const v = [...this.ents.values()].find((x) => x !== e && x.alive && !x.zt); if (v) this.kill(v, e, e.weapon, !!m.head); } break; // só testes (ALLOW_TEST=1): abate o 1º vivo (ranking); head: 1 = de cabeça (desafio D03)
       case 'testEnd': if (this.test && isHost && this.state === 'playing') this.endMatch(); break; // só testes (ALLOW_TEST=1)
-      case 'start': if (!isHost || this.state === 'playing') return; this.startMatch(m.map || (m.next && this.mapId ? this.nextMapId() : this.cfg.map)); break;
+      case 'start': if (!isHost || this.state === 'playing') return; if (this.x1Mode && this.humans().length > X1.MAX) { this.io.send(id, { t: 'hostMsg', msg: `X1 é duelo: só cabem ${X1.MAX} jogadores. Tem ${this.humans().length} na sala.` }); return; } this.startMatch(m.map || (m.next && this.mapId ? this.nextMapId() : this.cfg.map)); break;
       case 'testInv': if (this.test && this.inv && this.state === 'playing') this.testInv(e, m); break; // só testes (ALLOW_TEST=1)
       case 'team': {
         if (!this.teamMode) return; const r = this.chooseTeam(e, m.team);
