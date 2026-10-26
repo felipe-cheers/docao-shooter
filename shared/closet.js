@@ -2,7 +2,8 @@
 //  BRECHÓ DA PORCA VÉIA 🧺 (loja do Docão): partes de skin à venda (moeda do jogo: Docoins 🪙) e "visual personalizado".
 //  Só dados e funções puras: o cliente (prévia, loja) e o Worker (validação, compra, equipar) usam este mesmo arquivo.
 //  O visual personalizado vira um CÓDIGO curto de texto (ex.: "x1.3.5.h3.f2.s1") que viaja pela rede no lugar do id da skin.
-//  Cores da camiseta e do shorts são grátis (paleta fixa). As PARTES custam Docoins e só podem ser usadas se estiverem na mochila (D1).
+//  Cores da camiseta e do shorts são grátis (paleta fixa). As PARTES pagas custam Docoins e só entram na mochila (D1).
+//  Item com free:true e price 0 é padrão: todo mundo equipa, sem compra e sem linha na mochila.
 //  As peças 3D são as que já existem em costumes.js/docao.js, só com cores novas: nada de modelo novo, nada de alterar skins atuais.
 // ============================================================
 export const CURRENCY = 'Docoins', CURRENCY_ONE = 'Docoin', COIN_ICON = '🪙'; // moeda do jogo (escolhida pelo Matheus)
@@ -74,6 +75,13 @@ ITEMS.push(
     parts: [{ type: 'bucketHat', color: '#e2c97a', band: '#b3261e' }, { type: 'bandana', color: '#f2c94c' }, { type: 'socks', color: '#f4f4f4' }, { type: 'shoes', color: '#5a3a1c', sole: '#2a1a0c' }] } },
   { id: 'c8', name: 'Docão Dourado', emoji: '🏆', price: 1500, costume: { shirt: { color: '#d4a82a', trim: '#8a6a14', logo: { text: 'C!', color: '#fff3c4' } }, pants: '#d4a82a', float: true,
     parts: [{ type: 'fedora', color: '#d4a82a', band: '#8a6a14' }, { type: 'sunglasses', color: '#8a6a14', lens: '#2a1a0a' }, { type: 'chain', color: '#f4f4f4' }, { type: 'epaulettes', color: '#fff3c4' }, { type: 'glove', hand: 'both', color: '#fff3c4', sparkle: true }, { type: 'shoes', color: '#8a6a14', sole: '#fff3c4' }] } },
+  { id: 'c9', name: 'Faixa Presidencial', emoji: '🇧🇷', price: 0, free: true, costume: {
+    shirt: { color: '#2c333c', trim: '#f4f1ea', sleeves: 'long', sleeveColor: '#2c333c' }, pants: '#1c1f26',
+    parts: [
+      { type: 'faixa', color: '#009c3b', colors: ['#009c3b', '#ffdf00', '#002776'] },
+      { type: 'longPants', color: '#1c1f26' },
+      { type: 'shoes', color: '#141416', sole: '#2a2a2e' },
+    ] } },
 );
 // ---------- DANÇAS (espaço "d"): não entram no visual (código), vão pra mochila e a escolhida é a do botão B. As 3 de sempre continuam grátis. ----------
 ITEMS.push(
@@ -93,6 +101,8 @@ export const danceItems = () => ITEMS.filter((i) => i.slot === DANCE_SLOT);
 export const itemForDance = (dance) => ITEMS.find((i) => i.dance === dance) || null;
 export const itemById = (id) => ITEMS.find((i) => i.id === id) || null;
 export const itemPrice = (id) => { const i = itemById(id); return i ? i.price : 0; };
+// Padrão de graça: não passa pela compra nem precisa de linha na mochila. Preço 0 sozinho também conta, pra não cobrar por engano.
+export const isFreeItem = (id) => { const i = itemById(id); return !!(i && (i.free || !(i.price > 0))); };
 
 // ---------- visual personalizado ----------
 export const LOOK_PREFIX = 'x1.';

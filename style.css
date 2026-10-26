@@ -1814,6 +1814,9 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 .closet-card.try{outline:3px solid var(--red)}
 .closet-card b{display:block;font:900 13px var(--font)}
 .closet-card .price{margin:4px 0;color:var(--red);font-weight:900}
+.closet-card .price.free{color:#1d6b3a}
+.closet-card.free{border-color:#1d6b3a}
+.closet-card .free-tag{margin:4px 0 0;padding:6px;font:900 12px var(--font);text-align:center;color:#143026;background:#cfe8c4;border:2px solid #1d6b3a;border-radius:3px}
 .closet-card button{margin:4px 0 0;width:100%;padding:6px;font:900 12px var(--font);color:#fff3d6;background:var(--red);border:2px solid #7d1f19;border-radius:3px;cursor:pointer;box-shadow:none}
 .closet-card button:disabled{opacity:.55;cursor:default;background:var(--ink);border-color:#162c25}
 .closet-note{margin:6px 0;font:700 12px/1.35 var(--font);color:#5b4a2c}

@@ -9,7 +9,7 @@ import { poseVictory, resetVictoryPose, ALL_DANCES, isPaidDance, normDance } fro
 import './costumes.js';
 import { getAccount, getItems, getEarn, getChal, onAccount, refreshStats, equipLook, buyItem } from './account.js';
 import { CHAL_PER_DAY, TIERS } from './shared/challenges.js';
-import { COLORS, SLOTS, ITEMS, CURRENCY, COIN_ICON, SHOP_NAME, SHOP_EMOJI, SHOP_BUTTON, DEFAULT_LOOK, COSTUME_SLOT, DANCE_SLOT, encodeLook, parseLook, itemById, itemForDance } from './shared/closet.js';
+import { COLORS, SLOTS, ITEMS, CURRENCY, COIN_ICON, SHOP_NAME, SHOP_EMOJI, SHOP_BUTTON, DEFAULT_LOOK, COSTUME_SLOT, DANCE_SLOT, encodeLook, parseLook, itemById, itemForDance, isFreeItem } from './shared/closet.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,7 +41,7 @@ function bindSpin(canvas) {
   const end = () => { drag = null; canvas.classList.remove('drag'); };
   canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
 }
-const owned = (id) => getItems().includes(id);
+const owned = (id) => isFreeItem(id) || getItems().includes(id);
 const turn = (d) => { if (three) three.yaw = d === 0 ? 0 : three.yaw + d; };
 // dança de prévia: a da loja fica rodando enquanto a parte estiver "experimentando"; a escolhida nos botões roda uma vez
 function playDance(id, forever) { if (!three) return; three.dance = id; three.t = 0; three.danceUntil = forever ? Infinity : performance.now() + 3300; }
@@ -70,8 +70,8 @@ function renderLook() {
   const sw = (key, val) => COLORS.map((c, i) => `<button type="button" class="closet-sw${val === i ? ' on' : ''}" data-${key}="${i}" style="background:${c}" aria-label="Cor ${i + 1}"></button>`).join('');
   let h = `<div class="closet-slot"><h4>Camiseta</h4><div class="closet-chips">${sw('shirt', look.shirt)}</div></div><div class="closet-slot"><h4>Shorts</h4><div class="closet-chips">${sw('pants', look.pants)}</div></div>`;
   for (const [k, name] of SLOTS) {
-    const mine = ITEMS.filter((i) => i.slot === k && owned.has(i.id));
-    h += `<div class="closet-slot"><h4>${name}${k === COSTUME_SLOT ? ' <small>(troca camiseta, shorts e peças de uma vez)</small>' : ''}</h4><div class="closet-chips"><button type="button" data-slot="${k}" data-item=""${!look.items[k] ? ' class="on"' : ''}>Nada</button>${mine.map((i) => `<button type="button" data-slot="${k}" data-item="${i.id}"${look.items[k] === i.id ? ' class="on"' : ''}>${i.emoji} ${esc(i.name)}</button>`).join('')}${mine.length ? '' : '<span class="closet-note">Nada na mochila ainda. Veja a Loja!</span>'}</div></div>`;
+    const mine = ITEMS.filter((i) => i.slot === k && (isFreeItem(i.id) || owned.has(i.id)));
+    h += `<div class="closet-slot"><h4>${name}${k === COSTUME_SLOT ? ' <small>(troca camiseta, shorts e peças de uma vez)</small>' : ''}</h4><div class="closet-chips"><button type="button" data-slot="${k}" data-item=""${!look.items[k] ? ' class="on"' : ''}>Nada</button>${mine.map((i) => `<button type="button" data-slot="${k}" data-item="${i.id}"${look.items[k] === i.id ? ' class="on"' : ''}>${i.emoji} ${esc(i.name)}${isFreeItem(i.id) ? ' · grátis' : ''}</button>`).join('')}${mine.length ? '' : '<span class="closet-note">Nada na mochila ainda. Veja a Loja!</span>'}</div></div>`;
   }
   const cur = curDance(), mineD = ALL_DANCES.filter((d) => !isPaidDance(d.id) || owned.has(d.item));
   h += `<div class="closet-slot"><h4>Dança da vitória (tecla B)</h4><div class="closet-chips">${mineD.map((d) => `<button type="button" data-dance-pick="${d.id}"${cur === d.id ? ' class="on"' : ''}>💃 ${esc(d.name)}</button>`).join('')}</div></div>`;
@@ -84,6 +84,7 @@ function renderShop() {
   let h = `<p class="closet-note">Como ganhar ${CURRENCY}: abates, fim de partida, vitória e waves da Invasão, em partidas <b>online com conta</b> (até ${e0.cap | 0} por dia), mais os <b>3 desafios do dia</b> (sem teto). Treino não rende. Não dá pra comprar com dinheiro de verdade.</p>`;
   for (const [k, name] of SLOTS) {
     h += `<div class="closet-sec"><h4>${name}</h4><div class="closet-grid">` + ITEMS.filter((i) => i.slot === k).map((i) => {
+      if (isFreeItem(i.id)) return `<div class="closet-card free${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b><div class="price free">GRÁTIS</div><div class="free-tag">PADRÃO</div></div>`;
       const has = owned.has(i.id), can = coins >= i.price;
       return `<div class="closet-card${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b><div class="price">${COIN_ICON} ${i.price}</div><button type="button" data-buy="${i.id}"${has || !can ? ' disabled' : ''}>${has ? 'NA MOCHILA' : can ? 'COMPRAR' : 'FALTAM ' + (i.price - coins)}</button></div>`;
     }).join('') + '</div></div>';
@@ -119,7 +120,7 @@ function setTab(t) { tab = t; if (t !== 'shop') { trial = null; stopDance(); } m
 
 function loadLookFromAccount() {
   const a = getAccount(), p = a && (parseLook(a.custom) || parseLook(a.skin)); const owned = new Set(getItems());
-  look = p ? { shirt: p.shirt, pants: p.pants, items: Object.fromEntries(Object.entries(p.items).filter(([, id]) => owned.has(id))) } : { ...DEFAULT_LOOK, items: {} };
+  look = p ? { shirt: p.shirt, pants: p.pants, items: Object.fromEntries(Object.entries(p.items).filter(([, id]) => isFreeItem(id) || owned.has(id))) } : { ...DEFAULT_LOOK, items: {} };
 }
 export function openCloset(want) {
   trial = null; msg(''); tab = want === 'chal' || want === 'shop' ? want : 'look'; $('closetModal').classList.remove('hidden');
@@ -156,7 +157,7 @@ async function onClick(e) {
   if (card) {
     const it = itemById(card.dataset.try); trial = trial && trial.id === it.id ? null : { id: it.id, slot: it.slot };
     if (trial && it.dance) playDance(it.dance, true); else stopDance();
-    msg(trial ? (owned(it.id) ? 'Prévia (você já tem). Clique de novo pra tirar.' : 'Prévia (ainda não é seu). Clique de novo pra tirar.') : ''); render();
+    msg(trial ? (isFreeItem(it.id) ? `Prévia: ${it.name}. Já é sua, sem gastar Docoin.` : owned(it.id) ? 'Prévia (você já tem). Clique de novo pra tirar.' : 'Prévia (ainda não é seu). Clique de novo pra tirar.') : ''); render();
   }
 }
 

@@ -5,7 +5,7 @@
 //  equipar = 1 UPDATE condicional (não grava se nada mudou); mochila vai junto do /api/me (1 SELECT pequeno), sem polling.
 // ============================================================
 import { SKINS, skinOk } from '../../skins.js';
-import { ITEMS, itemById, parseLook, lookItemIds, EARN } from '../../shared/closet.js';
+import { ITEMS, itemById, parseLook, lookItemIds, isFreeItem, EARN } from '../../shared/closet.js';
 import { spDay, parseChal, applyChal, chalView } from '../../shared/challenges.js';
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -59,6 +59,7 @@ export async function wallet(env, id) { // saldo + mochila + quanto já ganhou h
 // compra: erro amigável por pré-leitura, segurança por lote atômico (INSERT condicional + débito condicional; chave primária barra compra dupla)
 export async function buyItem(env, id, itemId) {
   const it = typeof itemId === 'string' ? itemById(itemId) : null; if (!it) return { status: 400, error: 'Item inexistente' };
+  if (isFreeItem(it.id)) return { status: 409, error: 'Esse item já é seu: é padrão e de graça' }; // sem escrita no D1, sem debitar Docoin
   const t = now();
   const [a, inv] = await env.DB.batch([
     env.DB.prepare('SELECT coins FROM accounts WHERE id = ?').bind(id),
@@ -79,14 +80,14 @@ export async function buyItem(env, id, itemId) {
   }
 }
 
-// equipar: skin da lista (sempre pode) ou visual personalizado cujas partes estão TODAS na mochila. Só grava se mudou.
+// equipar: skin da lista (sempre pode) ou visual personalizado. Parte paga tem que estar na mochila; parte grátis (price 0) passa sem linha no D1. Só grava se mudou.
 export async function equipSkin(env, id, skin) {
   if (typeof skin !== 'string') return false;
   if (SKINS.some((s) => s.id === skin)) {
     await env.DB.prepare('UPDATE accounts SET skin = ?2 WHERE id = ?1 AND skin IS NOT ?2').bind(id, skin).run(); return true;
   }
   if (!skinOk(skin)) return false;
-  const ids = lookItemIds(skin);
+  const ids = lookItemIds(skin).filter((i) => !isFreeItem(i)); // item grátis não precisa estar na mochila
   const ph = ids.map((_, i) => '?' + (i + 3)).join(',');
   const own = ids.length ? `(SELECT COUNT(*) FROM inventory WHERE account_id = ?1 AND item IN (${ph})) = ${ids.length}` : '1 = 1';
   const r = await env.DB.prepare(`UPDATE accounts SET skin = ?2, custom = ?2 WHERE id = ?1 AND (skin IS NOT ?2 OR custom IS NOT ?2) AND ${own}`).bind(id, skin, ...ids).run();
