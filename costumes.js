@@ -379,6 +379,14 @@ Object.assign(SHIRT_DETAILS, {
     }
     x.restore();
   },
+  polo(x, d, PT) { // camisa polo: filete da gola e um botão
+    const c = d.color || '#24160e', btn = d.button || '#e6d3b0';
+    x.strokeStyle = c; x.lineWidth = 9; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(...PT(0, 1.08)); x.lineTo(...PT(0, 0.88)); x.stroke();
+    const [bx, by] = PT(0, 0.9);
+    x.fillStyle = btn; x.beginPath(); x.arc(bx, by, 8, 0, TAU); x.fill();
+    x.strokeStyle = c; x.lineWidth = 3; x.stroke();
+  },
   hoodie(x, d, PT, W) { // moletom: zíper prateado, bolso canguru e barra canelada
     const c = d.color || '#0e0e10', zip = d.zip || '#a8acb2';
     x.strokeStyle = c; x.lineWidth = 5;
@@ -433,7 +441,7 @@ Object.assign(PARTS, {
     }
     return onHead(g);
   },
-  squareGlasses(o, rig) { // óculos de armação grossa, retangular e preta
+  squareGlasses(o, rig) { // óculos de armação grossa, retangular e preta (prende na cabeça, como os outros óculos)
     const g = new THREE.Group(); const m = toon(o.color || '#121214'), lensM = new THREE.MeshBasicMaterial({ color: '#cfe8ff', transparent: true, opacity: 0.12, depthWrite: false });
     const W = 0.36, H = 0.3, T = 0.05, R = 0.06;
     const rr = (s, w, h, r) => { s.moveTo(-w / 2 + r, -h / 2); s.lineTo(w / 2 - r, -h / 2); s.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r); s.lineTo(w / 2, h / 2 - r); s.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2); s.lineTo(-w / 2 + r, h / 2); s.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r); s.lineTo(-w / 2, -h / 2 + r); s.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2); };
@@ -453,7 +461,7 @@ Object.assign(PARTS, {
       const p1 = headPoint(s * 1.45, 1.76, 0.015);
       const len = p0.distanceTo(p1); const arm = M(new THREE.BoxGeometry(0.035, 0.045, len), m, g, 0.006); arm.position.copy(p0).add(p1).multiplyScalar(0.5); arm.lookAt(p1);
     }
-    return g;
+    return onHead(g);
   },
   sleeveStripes(o, rig) { // listras diagonais nas mangas (também em 1ª pessoa)
     const m = toon(o.color || '#1fb89a');
@@ -648,6 +656,37 @@ Object.assign(PARTS, {
     cream.rotation.x = Math.PI / 2; cream.position.set(0, y + 0.01, 0.08); cream.scale.set(1, 0.9, 1);
     const band = M(new THREE.TorusGeometry(r * 0.98, 0.022, 8, 28), toon(o.rollDark || '#8e2c1e'), g, 0);
     band.rotation.x = Math.PI / 2; band.position.set(0, y + 0.055, 0.04); band.scale.set(1, 0.9, 1);
+    return g;
+  },
+  // ---------- Docão Bigzão (cabelo ondulado + colar de pérola; óculos reusa squareGlasses) ----------
+  wavyHair(o, rig) { // cabelo médio ondulado: casca lisa (igual aos outros cabelos) + ondas grossas deitadas, sem tufo
+    hideTuft(rig); const g = new THREE.Group();
+    const m = toonWarm(o.color || '#a56b3c', 0.16, { side: THREE.DoubleSide }, '#c4844a');
+    const hi = toonWarm(o.highlight || '#d7a15a', 0.22, { side: THREE.DoubleSide }, '#f0c48a');
+    const line = (th) => {
+      const a = Math.abs(th);
+      let y = a < 0.45 ? 1.95 : a < 1.15 ? 1.95 - (a - 0.45) * 0.18 : a < 2.1 ? 1.824 - (a - 1.15) * 0.14 : 1.68;
+      if (th < 0 && a < 0.85) y -= 0.03;
+      return y;
+    };
+    M(hairCap(line, 0.038, 0.08), m, g, 0.011);
+    const wave = (pts, rad, mat) => M(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 14, rad, 8, false), mat, g, 0.005);
+    // ondas deitadas no topo, da direita pra esquerda (não são mechas em pé)
+    wave([headPoint(0.95, 1.96, 0.06), headPoint(0.35, 2.01, 0.09), headPoint(-0.3, 1.99, 0.08), headPoint(-0.95, 1.93, 0.05)], 0.058, hi);
+    wave([headPoint(1.05, 1.9, 0.05), headPoint(0.25, 1.95, 0.075), headPoint(-0.5, 1.92, 0.065), headPoint(-1.1, 1.86, 0.04)], 0.05, m);
+    wave([headPoint(0.8, 1.86, 0.045), headPoint(0.05, 1.9, 0.06), headPoint(-0.7, 1.86, 0.045)], 0.042, hi);
+    return onHead(g);
+  },
+  pearl(o) { // cordão fino prateado com uma pérola redonda no peito (não é a corrente grossa)
+    const g = new THREE.Group();
+    const silver = toonWarm(o.color || '#d5dbe3', 0.45, {}, '#ffffff');
+    const gem = toonWarm(o.pearl || '#f7f3ea', 0.3, {}, '#fffdf8');
+    const chain = M(new THREE.TorusGeometry(0.23, 0.012, 8, 40), silver, g, 0.004);
+    chain.rotation.x = -(Math.PI / 2 - 0.78); chain.position.set(0, 1.06, 0.24); chain.scale.z = 0.9;
+    const pend = new THREE.Group(); pend.position.set(0, 0.94, 0.52); pend.rotation.x = -0.15; g.add(pend);
+    M(new THREE.SphereGeometry(0.058, 18, 14), gem, pend, 0.006);
+    const shine = M(new THREE.SphereGeometry(0.016, 8, 6), basic('#ffffff'), pend, 0); shine.position.set(0.014, 0.018, 0.04);
+    const bail = M(new THREE.TorusGeometry(0.018, 0.006, 6, 10), silver, pend, 0); bail.position.y = 0.062;
     return g;
   },
 });

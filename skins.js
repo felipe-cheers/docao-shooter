@@ -34,12 +34,14 @@
 //     fantasia:  ghostSheet {color, rim, opacity} · boneLimbs {color, glow, suit} · sash {color, belt, buckle, tabard}
 //                laserSword {blade} · armWraps {color, ys} · hoodDown {color, inner} · noseTube {color, plug} · desertScarf {color}
 //   shirt.details também aceita: 'bones' {color, glow} · 'tunicWrap' {color, inner} · 'stillsuit' {rib, tube, panel}
-//                       · 'star' {color, outline, x, y, size, small: [[θ, y, size]...]} · 'zigzag' {color, y} · 'diagStripes' {color} · 'hoodie' {color, zip}
+//                       · 'star' {color, outline, x, y, size, small: [[θ, y, size]...]} · 'zigzag' {color, y} · 'diagStripes' {color} · 'hoodie' {color, zip} · 'polo' {color, button}
 //   peças das skins novas: boiHorns {color, band} · ribbonSkirt {colors, band} · messyHair {color} · squareGlasses {color}
 //                sleeveStripes {color} · shortsStripes {color} · quiffHair {color, side} · beard {color} (bigode + barba por fazer)
 //                hoodStrings {color} · lanyard {color, logo} · longPants {color} · shoes também aceita {sole}
 //                faixa {colors:[verde, amarelo, azul], color}  faixa presidencial no peito (verde em cima, brasão no centro)
 //                bellyOut {roll, rollDark}  camisa arregaçada com a barriga de fora (Docão Barriguinha)
+//                wavyHair {color, highlight}  cabelo médio ondulado (Docão Bigzão)
+//                pearl {color, pearl}  cordão fino prateado com pérola redonda
 //   face:  { paint: 'skull' }   pintura leve no rosto (bochechas/focinho continuam)
 //   eyes:  { iris: '#hex', ring: '#hex' }  tom da íris e anel escuro em volta (opcionais)
 //   float: true                 flutua de leve (bob) e solta um rastro fraquinho no jogo

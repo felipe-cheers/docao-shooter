@@ -4,6 +4,10 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.27 — Docão Bigzão no Brechó 🤓🐷 (27/10/2026)
+🤓 **DOCÃO BIGZÃO.** Fantasia nova no Brechó da Porca Véia, a **1000 Docoins** (o mesmo da Barriguinha): cabelo castanho ondulado, óculos quadrado preto, camisa polo marrom e cordão de pérola. Id `c11`. Clica no cartão pra ver no porco antes de comprar; o COMPRAR continua pedindo confirmação.
+💸 **E o bolso do Matheus?** O catálogo é o mesmo arquivo do Worker (`shared/closet.js`). Sem migration, sem Durable Object novo.
+
 ## v1.26 — B de Bala na Kill Cam 🔫📹🐷 (26/10/2026)
 🙏 **FOI MAL, GRANJA.** No v1.25 a gente limpou a kill cam e a **ficha de armas** sumiu junto, e vocês ficaram sem trocar de arma morto. O Docão ouve a comunidade: voltou, sem tampar a cara de quem te furou.
 🔫 **Aperta B:** morto na kill cam, **B** abre e fecha a ficha de armas. Em cima do tempo do **Renasce** fica escrito **B — armas** pra ninguém esquecer.
