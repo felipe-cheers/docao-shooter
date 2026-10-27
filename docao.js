@@ -301,7 +301,7 @@ export function makeDocao(skinOrId, opts = {}) {
   const { withGun = true, pose = withGun ? 'gun' : 'idle' } = opts;
   const tone = safeTone(skin.body && skin.body.tone);
   const shirt = skin.shirt || {}; const trim = shirt.trim || '#1d1410';
-  const beardPart = (skin.parts || []).find((p) => p.type === 'beard'); const beard = beardPart ? (beardPart.color || '#3a2412') : null;
+  const beardPart = (skin.parts || []).find((p) => p.type === 'beard'); const beard = beardPart && beardPart.stubble !== false ? (beardPart.color || '#3a2412') : null; // stubble:false = só o bigode 3D, sem barba no queixo
   const skinM = toonWarm(tone, 0.42, {}, '#e0500a'), facePaint = skin.face && skin.face.paint, faceM = toonWarm('#ffffff', 0.3, { map: headTexture(tone, beard, facePaint), emissiveMap: headTexture(tone, beard, facePaint) }, '#ff9a80');
   const snoutM = toonWarm(PALETTE.snout, 0.25), earInM = toonWarm(PALETTE.earInner, 0.2), hoofM = toon(PALETTE.hoof);
   const shirtM = toonWarm('#ffffff', 0.14, { map: shirtTexture(shirt), emissiveMap: shirtTexture(shirt) });

@@ -487,7 +487,7 @@ Object.assign(PARTS, {
     }
     return onHead(g);
   },
-  beard(o, rig) { // bigode ralo embaixo do focinho (a barba por fazer é pintada no rosto)
+  beard(o, rig) { // bigode ralo embaixo do focinho (a barba por fazer é pintada no rosto, salvo o.stubble === false)
     const g = new THREE.Group(); const m = toonWarm(o.color || '#3a2618', 0.05);
     for (const s of [-1, 1]) {
       const p = headPoint(s * 0.2, 1.32, 0.035); const c = M(new THREE.CapsuleGeometry(0.024, 0.12, 4, 8), m, g, 0.003);

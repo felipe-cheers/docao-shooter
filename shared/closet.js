@@ -109,6 +109,19 @@ ITEMS.push(
       { type: 'longPants', color: '#15151a' },
       { type: 'shoes', color: '#b8b4c8', sole: '#f4f4f4', strap: '#f7f6fa' },
     ] } },
+  // DocYuri: cabelo bagunçado castanho, bigode fino (sem barba no queixo) e moletom azul com C!. Conceito do Yuri do Nascimento Grigoletti.
+  // stubble:false deixa só o bigode 3D da peça beard; a barba por fazer no rosto (docao.js) continua nas outras skins.
+  { id: 'c13', name: 'DocYuri', emoji: '💙', price: 1000, line: 'Cabelo bagunçado, bigode fino e moletom azul com C!', costume: {
+    shirt: { color: '#2b6cb0', trim: '#1e4e8c', sleeves: 'long', sleeveColor: '#2b6cb0',
+      details: [{ type: 'hoodie', color: '#1a4f8c', zip: '#d5dde8' }],
+      logo: { text: 'C!', color: '#d8261c', outline: '#f7f4ea', size: 0.15, x: -0.62, y: 0.84 } },
+    pants: '#1a1c20',
+    parts: [
+      { type: 'messyHair', color: '#6a4428' },
+      { type: 'beard', color: '#1a120c', stubble: false },
+      { type: 'longPants', color: '#1a1c20' },
+      { type: 'shoes', color: '#141416', sole: '#e8dfd0', strap: '#141416' },
+    ] } },
 );
 // ---------- DANÇAS (espaço "d"): não entram no visual (código), vão pra mochila e a escolhida é a do botão B. As 3 de sempre continuam grátis. ----------
 ITEMS.push(
