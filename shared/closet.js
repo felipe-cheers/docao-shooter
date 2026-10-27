@@ -88,16 +88,16 @@ ITEMS.push(
   // Barriguinha: o porco da derrota do Docão Minado (camisa arregaçada, barriga de fora). Cores do desenho; a barriga usa a pele do Docão (peça bellyOut).
   { id: 'c10', name: 'Docão Barriguinha', emoji: '🐷', price: 1000, costume: { shirt: { color: '#b73c28', trim: '#8e2c1e' }, pants: '#2c5f92',
     parts: [{ type: 'bellyOut', roll: '#c44b36', rollDark: '#8e2c1e' }] } },
-  // Docão Bigzão: o porco de óculos do castelo (cabelo ondulado, camisa polo marrom, pérola). Mesmo preço da Barriguinha.
-  { id: 'c11', name: 'Docão Bigzão', emoji: '🤓', price: 1000, team: 'tech', teamOrder: 4, aka: 'Paulo', line: 'Paulo — cabelo ondulado, óculos quadrado, camisa marrom e pérola', costume: {
+  // Docão Bigzão: o porco de óculos do castelo (cabelo ondulado, camisa polo marrom, pérola). Time Tech inteiro é de graça.
+  { id: 'c11', name: 'Docão Bigzão', emoji: '🤓', price: 0, free: true, team: 'tech', teamOrder: 4, aka: 'Paulo', line: 'Paulo — cabelo ondulado, óculos quadrado, camisa marrom e pérola', costume: {
     shirt: { color: '#3f291c', trim: '#24160e', details: [{ type: 'polo', color: '#24160e', button: '#e6d3b0' }] }, pants: '#243044',
     parts: [
       { type: 'wavyHair', color: '#a56b3c', highlight: '#d7a15a' },
       { type: 'squareGlasses', color: '#121214' },
       { type: 'pearl', color: '#d5dbe3', pearl: '#f7f3ea' },
     ] } },
-  // DocHiro: gorro azul, fone preto, moletom marinho com C! e barba rala (conceito do Guilherme Hiroshi). Mesmo preço da Barriguinha.
-  { id: 'c12', name: 'DocHiro', emoji: '🎧', price: 1000, team: 'tech', teamOrder: 3, aka: 'Hiro', line: 'Gorro azul-claro, fone preto, moletom marinho e barba rala', costume: {
+  // DocHiro: gorro azul, fone preto, moletom marinho com C! e barba rala (conceito do Guilherme Hiroshi). Time Tech inteiro é de graça.
+  { id: 'c12', name: 'DocHiro', emoji: '🎧', price: 0, free: true, team: 'tech', teamOrder: 3, aka: 'Hiro', line: 'Gorro azul-claro, fone preto, moletom marinho e barba rala', costume: {
     shirt: { color: '#1a1f2e', trim: '#15151a', sleeves: 'long', sleeveColor: '#1a1f2e',
       details: [{ type: 'hoodie', color: '#15151a', zip: '#a8acb2' }],
       logo: { text: 'C!', color: '#f4f4f4', outline: '#d8261c', size: 0.12, x: -0.28, y: 0.58 } },
@@ -113,7 +113,7 @@ ITEMS.push(
     ] } },
   // DocYuri: cabelo bagunçado castanho, bigode fino (sem barba no queixo) e moletom azul com C!. Conceito do Yuri do Nascimento Grigoletti.
   // stubble:false deixa só o bigode 3D da peça beard; a barba por fazer no rosto (docao.js) continua nas outras skins.
-  { id: 'c13', name: 'DocYuri', emoji: '💙', price: 1000, team: 'tech', teamOrder: 6, aka: 'Yuri', line: 'Cabelo bagunçado, bigode fino e moletom azul com C!', costume: {
+  { id: 'c13', name: 'DocYuri', emoji: '💙', price: 0, free: true, team: 'tech', teamOrder: 6, aka: 'Yuri', line: 'Cabelo bagunçado, bigode fino e moletom azul com C!', costume: {
     shirt: { color: '#2b6cb0', trim: '#1e4e8c', sleeves: 'long', sleeveColor: '#2b6cb0',
       details: [{ type: 'hoodie', color: '#1a4f8c', zip: '#d5dde8' }],
       logo: { text: 'C!', color: '#d8261c', outline: '#f7f4ea', size: 0.15, x: -0.62, y: 0.84 } },
@@ -126,7 +126,7 @@ ITEMS.push(
     ] } },
   // DocOny: camiseta neon de manga curta, shorts cinza, cabelo bagunçado, bigode + mosquinha, sapato escuro e raquete nas costas. Conceito do Ony.
   // stubble:false = só o bigode 3D; soul:true acrescenta a mosquinha sem pintar barba no queixo (não muda as outras skins).
-  { id: 'c14', name: 'DocOny', emoji: '🎾', price: 1000, team: 'tech', teamOrder: 5, aka: 'Ony', line: 'Camiseta neon, shorts cinza e raquete nas costas', costume: {
+  { id: 'c14', name: 'DocOny', emoji: '🎾', price: 0, free: true, team: 'tech', teamOrder: 5, aka: 'Ony', line: 'Camiseta neon, shorts cinza e raquete nas costas', costume: {
     shirt: { color: '#d4ff00', trim: '#8fbf00' }, pants: '#3a3e46',
     parts: [
       { type: 'messyHair', color: '#3b2618' },
@@ -134,7 +134,7 @@ ITEMS.push(
       { type: 'beachRacket', face: '#e10600', rim: '#141416', accent: '#2fce4a' },
       { type: 'shoes', color: '#16181c', sole: '#3a3c40' },
     ] } },
-  // Time Tech de graça: as três já eram skins padrão (skins.js). O visual do Brechó copia a malha; o id da lista continua o mesmo.
+  // Time Tech de graça: Matheus, Felipe e JanorDoc já eram skins padrão (skins.js). O visual do Brechó copia a malha; o id da lista continua o mesmo.
   { id: 'c15', name: 'Matheus', emoji: '🧔', price: 0, free: true, team: 'tech', teamOrder: 1, line: 'Topete, bigode, moletom preto e crachá', costume: {
     shirt: { color: '#1a1a1d', trim: '#0e0e10', sleeves: 'long', sleeveColor: '#1a1a1d', details: [{ type: 'hoodie', color: '#0e0e10', zip: '#a8acb2' }] },
     pants: '#121214',
