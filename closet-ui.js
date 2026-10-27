@@ -84,9 +84,9 @@ function renderShop() {
   let h = `<p class="closet-note">Como ganhar ${CURRENCY}: abates, fim de partida, vitória e waves da Invasão, em partidas <b>online com conta</b> (até ${e0.cap | 0} por dia), mais os <b>3 desafios do dia</b> (sem teto). Treino não rende. Não dá pra comprar com dinheiro de verdade.</p>`;
   for (const [k, name] of SLOTS) {
     h += `<div class="closet-sec"><h4>${name}</h4><div class="closet-grid">` + ITEMS.filter((i) => i.slot === k).map((i) => {
-      if (isFreeItem(i.id)) return `<div class="closet-card free${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b><div class="price free">GRÁTIS</div><div class="free-tag">PADRÃO</div></div>`;
+      if (isFreeItem(i.id)) return `<div class="closet-card free${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b>${i.line ? `<small>${esc(i.line)}</small>` : ''}<div class="price free">GRÁTIS</div><div class="free-tag">PADRÃO</div></div>`;
       const has = owned.has(i.id), can = coins >= i.price;
-      return `<div class="closet-card${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b><div class="price">${COIN_ICON} ${i.price}</div><button type="button" data-buy="${i.id}"${has || !can ? ' disabled' : ''}>${has ? 'NA MOCHILA' : can ? 'COMPRAR' : 'FALTAM ' + (i.price - coins)}</button></div>`;
+      return `<div class="closet-card${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b>${i.line ? `<small>${esc(i.line)}</small>` : ''}<div class="price">${COIN_ICON} ${i.price}</div><button type="button" data-buy="${i.id}"${has || !can ? ' disabled' : ''}>${has ? 'NA MOCHILA' : can ? 'COMPRAR' : 'FALTAM ' + (i.price - coins)}</button></div>`;
     }).join('') + '</div></div>';
   }
   h += `<div class="closet-sec"><h4>Danças da vitória <small>(tecla B)</small></h4><div class="closet-grid">` + ITEMS.filter((i) => i.slot === DANCE_SLOT).map((i) => {
