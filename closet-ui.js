@@ -9,7 +9,7 @@ import { poseVictory, resetVictoryPose, ALL_DANCES, isPaidDance, normDance } fro
 import './costumes.js';
 import { getAccount, getItems, getEarn, getChal, onAccount, refreshStats, equipLook, buyItem } from './account.js';
 import { CHAL_PER_DAY, TIERS } from './shared/challenges.js';
-import { COLORS, SLOTS, ITEMS, CURRENCY, COIN_ICON, SHOP_NAME, SHOP_EMOJI, SHOP_BUTTON, DEFAULT_LOOK, COSTUME_SLOT, DANCE_SLOT, encodeLook, parseLook, itemById, itemForDance, isFreeItem } from './shared/closet.js';
+import { COLORS, SLOTS, ITEMS, SHOP_TEAMS, CURRENCY, COIN_ICON, SHOP_NAME, SHOP_EMOJI, SHOP_BUTTON, DEFAULT_LOOK, COSTUME_SLOT, DANCE_SLOT, encodeLook, parseLook, itemById, itemForDance, isFreeItem, teamItems } from './shared/closet.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -78,21 +78,29 @@ function renderLook() {
   h += '<button type="button" id="closetSave" class="ticket-btn">SALVAR E USAR ESTE VISUAL</button><p class="closet-note">As skins da lista continuam no menu. O visual salvo vale nas partidas online com conta.</p>';
   $('closetLook').innerHTML = h;
 }
+function shopCard(i, owned, coins) {
+  const aka = i.aka ? `<small class="closet-aka">${esc(i.aka)}</small>` : '';
+  const line = i.line ? `<small>${esc(i.line)}</small>` : '';
+  const head = `<b>${i.emoji} ${esc(i.name)}</b>${aka}${line}`;
+  if (isFreeItem(i.id)) return `<div class="closet-card free${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}">${head}<div class="price free">GRÁTIS</div><div class="free-tag">PADRÃO</div></div>`;
+  const has = owned.has(i.id), can = coins >= i.price;
+  return `<div class="closet-card${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}">${head}<div class="price">${COIN_ICON} ${i.price}</div><button type="button" data-buy="${i.id}"${has || !can ? ' disabled' : ''}>${has ? 'NA MOCHILA' : can ? 'COMPRAR' : 'FALTAM ' + (i.price - coins)}</button></div>`;
+}
 function renderShop() {
   const e0 = getEarn();
   const owned = new Set(getItems()), a = getAccount(), coins = a ? a.coins | 0 : 0;
   let h = `<p class="closet-note">Como ganhar ${CURRENCY}: abates, fim de partida, vitória e waves da Invasão, em partidas <b>online com conta</b> (até ${e0.cap | 0} por dia), mais os <b>3 desafios do dia</b> (sem teto). Treino não rende. Não dá pra comprar com dinheiro de verdade.</p>`;
-  for (const [k, name] of SLOTS) {
-    h += `<div class="closet-sec"><h4>${name}</h4><div class="closet-grid">` + ITEMS.filter((i) => i.slot === k).map((i) => {
-      if (isFreeItem(i.id)) return `<div class="closet-card free${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b>${i.line ? `<small>${esc(i.line)}</small>` : ''}<div class="price free">GRÁTIS</div><div class="free-tag">PADRÃO</div></div>`;
-      const has = owned.has(i.id), can = coins >= i.price;
-      return `<div class="closet-card${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b>${i.line ? `<small>${esc(i.line)}</small>` : ''}<div class="price">${COIN_ICON} ${i.price}</div><button type="button" data-buy="${i.id}"${has || !can ? ' disabled' : ''}>${has ? 'NA MOCHILA' : can ? 'COMPRAR' : 'FALTAM ' + (i.price - coins)}</button></div>`;
-    }).join('') + '</div></div>';
+  for (const [id, name] of SHOP_TEAMS) {
+    const members = teamItems(id);
+    if (!members.length) continue;
+    h += `<div class="closet-sec team"><h4>${esc(name)}</h4><div class="closet-grid">${members.map((i) => shopCard(i, owned, coins)).join('')}</div></div>`;
   }
-  h += `<div class="closet-sec"><h4>Danças da vitória <small>(tecla B)</small></h4><div class="closet-grid">` + ITEMS.filter((i) => i.slot === DANCE_SLOT).map((i) => {
-    const has = owned.has(i.id), can = coins >= i.price;
-    return `<div class="closet-card${trial && trial.id === i.id ? ' try' : ''}" data-try="${i.id}"><b>${i.emoji} ${esc(i.name)}</b><small>${esc(i.line)}</small><div class="price">${COIN_ICON} ${i.price}</div><button type="button" data-buy="${i.id}"${has || !can ? ' disabled' : ''}>${has ? 'NA MOCHILA' : can ? 'COMPRAR' : 'FALTAM ' + (i.price - coins)}</button></div>`;
-  }).join('') + '</div></div>';
+  for (const [k, name] of SLOTS) {
+    const list = ITEMS.filter((i) => i.slot === k && !i.team);
+    if (!list.length) continue;
+    h += `<div class="closet-sec"><h4>${esc(name)}</h4><div class="closet-grid">${list.map((i) => shopCard(i, owned, coins)).join('')}</div></div>`;
+  }
+  h += `<div class="closet-sec"><h4>Danças da vitória <small>(tecla B)</small></h4><div class="closet-grid">${ITEMS.filter((i) => i.slot === DANCE_SLOT).map((i) => shopCard(i, owned, coins)).join('')}</div></div>`;
   $('closetShop').innerHTML = h;
 }
 // ---------- desafios do dia (só leitura: quem conta e paga é o servidor) ----------

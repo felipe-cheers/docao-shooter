@@ -12,6 +12,8 @@ export const SHOP_NAME = 'Brechó da Porca Véia', SHOP_EMOJI = '🧺', SHOP_BUT
 export const coinsText = (n) => `${COIN_ICON} ${n | 0} ${(n | 0) === 1 ? CURRENCY_ONE : CURRENCY}`;
 export const COLORS = ['#d8261c', '#e8702a', '#f2c94c', '#6fbf3b', '#17b394', '#2b8fd8', '#1446b8', '#7a3fb5', '#e66fa8', '#f4f4f4', '#8a8a8a', '#2c2c30', '#1d1410', '#7a4a24'];
 export const SLOTS = [['c', 'Fantasia completa'], ['h', 'Cabeça'], ['f', 'Rosto'], ['n', 'Pescoço'], ['b', 'Corpo'], ['w', 'Cintura'], ['g', 'Mãos'], ['s', 'Pés']];
+// Seções da loja que juntam itens (de qualquer espaço). O item aponta com team = id; teamOrder é a ordem no balcão.
+export const SHOP_TEAMS = [['tech', 'Time Tech']];
 // id = letra do espaço + número. price em Docoins. part = peça 3D (type + opções) já existente no modelo do Docão.
 export const ITEMS = [
   { id: 'h1', name: 'Boné do Churrasqueiro', emoji: '🧢', price: 60, part: { type: 'cap', color: '#d8261c', brim: '#7d1f19' } },
@@ -87,7 +89,7 @@ ITEMS.push(
   { id: 'c10', name: 'Docão Barriguinha', emoji: '🐷', price: 1000, costume: { shirt: { color: '#b73c28', trim: '#8e2c1e' }, pants: '#2c5f92',
     parts: [{ type: 'bellyOut', roll: '#c44b36', rollDark: '#8e2c1e' }] } },
   // Docão Bigzão: o porco de óculos do castelo (cabelo ondulado, camisa polo marrom, pérola). Mesmo preço da Barriguinha.
-  { id: 'c11', name: 'Docão Bigzão', emoji: '🤓', price: 1000, line: 'Cabelo ondulado, óculos quadrado, camisa marrom e pérola', costume: {
+  { id: 'c11', name: 'Docão Bigzão', emoji: '🤓', price: 1000, team: 'tech', teamOrder: 4, aka: 'Paulo', line: 'Paulo — cabelo ondulado, óculos quadrado, camisa marrom e pérola', costume: {
     shirt: { color: '#3f291c', trim: '#24160e', details: [{ type: 'polo', color: '#24160e', button: '#e6d3b0' }] }, pants: '#243044',
     parts: [
       { type: 'wavyHair', color: '#a56b3c', highlight: '#d7a15a' },
@@ -95,7 +97,7 @@ ITEMS.push(
       { type: 'pearl', color: '#d5dbe3', pearl: '#f7f3ea' },
     ] } },
   // DocHiro: gorro azul, fone preto, moletom marinho com C! e barba rala (conceito do Guilherme Hiroshi). Mesmo preço da Barriguinha.
-  { id: 'c12', name: 'DocHiro', emoji: '🎧', price: 1000, line: 'Gorro azul-claro, fone preto, moletom marinho e barba rala', costume: {
+  { id: 'c12', name: 'DocHiro', emoji: '🎧', price: 1000, team: 'tech', teamOrder: 3, aka: 'Hiro', line: 'Gorro azul-claro, fone preto, moletom marinho e barba rala', costume: {
     shirt: { color: '#1a1f2e', trim: '#15151a', sleeves: 'long', sleeveColor: '#1a1f2e',
       details: [{ type: 'hoodie', color: '#15151a', zip: '#a8acb2' }],
       logo: { text: 'C!', color: '#f4f4f4', outline: '#d8261c', size: 0.12, x: -0.28, y: 0.58 } },
@@ -111,7 +113,7 @@ ITEMS.push(
     ] } },
   // DocYuri: cabelo bagunçado castanho, bigode fino (sem barba no queixo) e moletom azul com C!. Conceito do Yuri do Nascimento Grigoletti.
   // stubble:false deixa só o bigode 3D da peça beard; a barba por fazer no rosto (docao.js) continua nas outras skins.
-  { id: 'c13', name: 'DocYuri', emoji: '💙', price: 1000, line: 'Cabelo bagunçado, bigode fino e moletom azul com C!', costume: {
+  { id: 'c13', name: 'DocYuri', emoji: '💙', price: 1000, team: 'tech', teamOrder: 6, aka: 'Yuri', line: 'Cabelo bagunçado, bigode fino e moletom azul com C!', costume: {
     shirt: { color: '#2b6cb0', trim: '#1e4e8c', sleeves: 'long', sleeveColor: '#2b6cb0',
       details: [{ type: 'hoodie', color: '#1a4f8c', zip: '#d5dde8' }],
       logo: { text: 'C!', color: '#d8261c', outline: '#f7f4ea', size: 0.15, x: -0.62, y: 0.84 } },
@@ -122,6 +124,49 @@ ITEMS.push(
       { type: 'longPants', color: '#1a1c20' },
       { type: 'shoes', color: '#141416', sole: '#e8dfd0', strap: '#141416' },
     ] } },
+  // DocOny: camiseta neon de manga curta, shorts cinza, cabelo bagunçado, bigode + mosquinha, sapato escuro e raquete nas costas. Conceito do Ony.
+  // stubble:false = só o bigode 3D; soul:true acrescenta a mosquinha sem pintar barba no queixo (não muda as outras skins).
+  { id: 'c14', name: 'DocOny', emoji: '🎾', price: 1000, team: 'tech', teamOrder: 5, aka: 'Ony', line: 'Camiseta neon, shorts cinza e raquete nas costas', costume: {
+    shirt: { color: '#d4ff00', trim: '#8fbf00' }, pants: '#3a3e46',
+    parts: [
+      { type: 'messyHair', color: '#3b2618' },
+      { type: 'beard', color: '#3a2818', stubble: false, soul: true },
+      { type: 'beachRacket', face: '#e10600', rim: '#141416', accent: '#2fce4a' },
+      { type: 'shoes', color: '#16181c', sole: '#3a3c40' },
+    ] } },
+  // Time Tech de graça: as três já eram skins padrão (skins.js). O visual do Brechó copia a malha; o id da lista continua o mesmo.
+  { id: 'c15', name: 'Matheus', emoji: '🧔', price: 0, free: true, team: 'tech', teamOrder: 1, line: 'Topete, bigode, moletom preto e crachá', costume: {
+    shirt: { color: '#1a1a1d', trim: '#0e0e10', sleeves: 'long', sleeveColor: '#1a1a1d', details: [{ type: 'hoodie', color: '#0e0e10', zip: '#a8acb2' }] },
+    pants: '#121214',
+    eyes: { iris: '#1f6b35', ring: '#0f3d1c' },
+    parts: [
+      { type: 'quiffHair', color: '#2e1c12', side: '#2a1b12' },
+      { type: 'beard', color: '#43291a' },
+      { type: 'hoodDown', color: '#1a1a1d', inner: '#0b0b0d' },
+      { type: 'hoodStrings', color: '#f4f4f4' },
+      { type: 'lanyard', color: '#d81e2a', logo: '#d81e2a' },
+      { type: 'longPants', color: '#121214' },
+      { type: 'shoes', color: '#f4f4f4', sole: '#d4d4d4', strap: '#e2e2e2' },
+    ] } },
+  { id: 'c16', name: 'Felipe', emoji: '👓', price: 0, free: true, team: 'tech', teamOrder: 2, line: 'Cabelo bagunçado, óculos quadrado e listra verde-água', costume: {
+    shirt: {
+      color: '#2c2c30', trim: '#1a1a1d', sleeveColor: '#2c2c30',
+      details: [{ type: 'diagStripes', color: '#17b394' }],
+      logo: { text: 'C!', color: '#f2f2f2', size: 0.11, x: -0.42, y: 0.92 },
+    },
+    pants: '#131315',
+    parts: [
+      { type: 'messyHair', color: '#3a2416' },
+      { type: 'squareGlasses', color: '#121214' },
+      { type: 'sleeveStripes', color: '#17b394' },
+      { type: 'shortsStripes', color: '#17b394' },
+      { type: 'shoes', color: '#141416', sole: '#f4f4f4', strap: '#f4f4f4' },
+    ] } },
+  { id: 'c17', name: 'JanorDoc', emoji: '💇', price: 0, free: true, team: 'tech', teamOrder: 7, line: 'Cabelo comprido, faixa vermelha e camisa OINK', costume: {
+    shirt: { color: '#1a1a1d', trim: '#1a1a1d', logo: { text: 'OINK', color: '#e8e8e8', outline: '#c0121e', size: 0.2 } },
+    pants: '#2e3a55',
+    parts: [{ type: 'longHair', color: '#3b2414', headband: '#c0121e' }],
+  } },
 );
 // ---------- DANÇAS (espaço "d"): não entram no visual (código), vão pra mochila e a escolhida é a do botão B. As 3 de sempre continuam grátis. ----------
 ITEMS.push(
@@ -140,6 +185,7 @@ export const isLookSlot = (k) => SLOTS.some(([x]) => x === k);
 export const danceItems = () => ITEMS.filter((i) => i.slot === DANCE_SLOT);
 export const itemForDance = (dance) => ITEMS.find((i) => i.dance === dance) || null;
 export const itemById = (id) => ITEMS.find((i) => i.id === id) || null;
+export const teamItems = (team) => ITEMS.filter((i) => i.team === team).sort((a, b) => (a.teamOrder | 0) - (b.teamOrder | 0) || (a.id < b.id ? -1 : 1));
 export const itemPrice = (id) => { const i = itemById(id); return i ? i.price : 0; };
 // Padrão de graça: não passa pela compra nem precisa de linha na mochila. Preço 0 sozinho também conta, pra não cobrar por engano.
 export const isFreeItem = (id) => { const i = itemById(id); return !!(i && (i.free || !(i.price > 0))); };

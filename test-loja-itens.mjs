@@ -1,13 +1,13 @@
 // Itens novos da loja (sem navegador): fantasia completa é exclusiva, dança não entra no código do visual, todas as peças usam partes que já existem.
 // Uso: node test-loja-itens.mjs
-import { ITEMS, SLOTS, encodeLook, parseLook, lookToSkin, itemById, itemPrice, isFreeItem, priceOfLook, danceItems, itemForDance } from './shared/closet.js';
+import { ITEMS, SLOTS, SHOP_TEAMS, encodeLook, parseLook, lookToSkin, itemById, itemPrice, isFreeItem, priceOfLook, danceItems, itemForDance, teamItems } from './shared/closet.js';
 import { SKINS } from './skins.js';
 import { DANCE_IDS, FREE_DANCES, PAID_DANCES, danceId } from './shared/emote.js';
 import { normDance, isPaidDance, ALL_DANCES } from './victory-dance.js';
 const fails = []; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) fails.push(m); };
 ok(new Set(ITEMS.map((i) => i.id)).size === ITEMS.length, 'ids únicos');
 ok(ITEMS.filter((i) => !i.free).every((i) => i.price > 0 && Number.isInteger(i.price)), 'item pago tem preço inteiro (os de graça ficam de fora)');
-ok(SLOTS[0][0] === 'c' && ITEMS.filter((i) => i.slot === 'c').length === 13, '13 fantasias completas no slot c');
+ok(SLOTS[0][0] === 'c' && ITEMS.filter((i) => i.slot === 'c').length === 17, '17 fantasias completas no slot c');
 const paid = { h1: 60, c1: 900, c8: 1500, d8: 400, b3: 100 };
 ok(Object.entries(paid).every(([id, p]) => itemPrice(id) === p), 'preço dos itens que já existiam não mudou');
 ok(isFreeItem('c9') && itemPrice('c9') === 0 && itemById('c9').name === 'Faixa Presidencial' && itemById('c9').free === true && !isFreeItem('c1') && !isFreeItem('c10') && !isFreeItem('h1'), 'Faixa Presidencial (c9) é grátis; Barriguinha e as outras continuam pagas');
@@ -41,8 +41,29 @@ ok(priceOfLook('x1.0.c.c13', []) === 1000 && priceOfLook('x1.0.c.c13', ['c13']) 
 const sk13 = lookToSkin('x1.0.c.c13');
 ok(sk13 && sk13.name === 'DocYuri' && sk13.custom === true && sk13.shirt.color === '#2b6cb0' && sk13.pants === '#1a1c20' && sk13.shirt.details.some((d) => d.type === 'hoodie') && sk13.parts.length === c13Parts.length && sk13.parts.find((p) => p.type === 'beard').stubble === false, 'código x1.0.c.c13 vira a fantasia completa, só com bigode');
 ok(parseLook('x1.0.c.c13.h1') === null && encodeLook({ shirt: 0, pants: 12, items: { c: 'c13' } }) === 'x1.0.c.c13', 'DocYuri não mistura com outras partes');
+const c14 = itemById('c14');
+const c14Parts = ['messyHair', 'beard', 'beachRacket', 'shoes'];
+const c14Beard = c14 && c14.costume.parts.find((p) => p.type === 'beard');
+ok(c14 && c14.name === 'DocOny' && c14.emoji === '🎾' && c14.price === 1000 && c14.slot === 'c' && !isFreeItem('c14') && c14.line && c14.costume.shirt.color === '#d4ff00' && c14.costume.shirt.sleeves !== 'long' && c14.costume.pants === '#3a3e46' && !c14.costume.parts.some((p) => p.type === 'longPants') && c14Parts.every((t) => c14.costume.parts.some((p) => p.type === t)) && c14Beard && c14Beard.stubble === false && c14Beard.soul === true && c14.costume.parts.find((p) => p.type === 'shoes').color === '#16181c', 'DocOny é a fantasia c14, 1000 Docoins, camiseta neon, shorts cinza, bigode sem barba, raquete e sapato escuro');
+ok(priceOfLook('x1.0.c.c14', []) === 1000 && priceOfLook('x1.0.c.c14', ['c14']) === 0, 'DocOny custa 1000 com a mochila vazia e 0 depois de comprado');
+const sk14 = lookToSkin('x1.0.c.c14');
+ok(sk14 && sk14.name === 'DocOny' && sk14.custom === true && sk14.shirt.color === '#d4ff00' && sk14.pants === '#3a3e46' && sk14.parts.length === c14Parts.length && sk14.parts.find((p) => p.type === 'beachRacket') && sk14.parts.find((p) => p.type === 'beard').stubble === false, 'código x1.0.c.c14 vira a fantasia completa, com raquete nas costas');
+ok(parseLook('x1.0.c.c14.h1') === null && encodeLook({ shirt: 0, pants: 12, items: { c: 'c14' } }) === 'x1.0.c.c14', 'DocOny não mistura com outras partes');
 const beardOf = (it) => (it.part && it.part.type === 'beard' ? it.part : (it.costume && it.costume.parts || []).find((p) => p.type === 'beard'));
-ok(['f4', 'c6', 'c12'].every((id) => { const b = beardOf(itemById(id)); return b && b.stubble !== false; }) && SKINS.find((s) => s.id === 'docao-matheus').parts.find((p) => p.type === 'beard').stubble !== false, 'Bigode de Açougueiro, Capitão, DocHiro e Docão Matheus continuam com a barba rala no queixo');
+ok(['f4', 'c6', 'c12'].every((id) => { const b = beardOf(itemById(id)); return b && b.stubble !== false && !b.soul; }) && SKINS.find((s) => s.id === 'docao-matheus').parts.find((p) => p.type === 'beard').stubble !== false, 'Bigode de Açougueiro, Capitão, DocHiro e Docão Matheus continuam com a barba rala no queixo');
+ok(ITEMS.filter((i) => beardOf(i) && beardOf(i).stubble === false).map((i) => i.id).sort().join() === 'c13,c14', 'só DocYuri e DocOny desligam a barba do queixo');
+ok(ITEMS.filter((i) => beardOf(i) && beardOf(i).soul).map((i) => i.id).join() === 'c14', 'só o DocOny pede a mosquinha');
+const sameCostume = (skinId, itemId) => {
+  const s = SKINS.find((x) => x.id === skinId), c = itemById(itemId).costume;
+  return JSON.stringify(s.shirt) === JSON.stringify(c.shirt) && s.pants === c.pants && JSON.stringify(s.parts) === JSON.stringify(c.parts) && JSON.stringify(s.eyes || null) === JSON.stringify(c.eyes || null);
+};
+ok(sameCostume('docao-matheus', 'c15') && sameCostume('docao-felipe', 'c16') && sameCostume('cabeludo', 'c17'), 'Matheus, Felipe e JanorDoc copiam a malha das skins');
+ok(SKINS.find((s) => s.id === 'cabeludo').name === 'JanorDoc' && SKINS.find((s) => s.id === 'docao-matheus').name === 'Docão Matheus' && SKINS.find((s) => s.id === 'docao-felipe').name === 'Docão Felipe', 'a skin cabeludo passa a se chamar JanorDoc; Matheus e Felipe continuam na lista');
+ok(['c15', 'c16', 'c17'].every((id) => isFreeItem(id) && itemPrice(id) === 0 && itemById(id).free === true) && priceOfLook('x1.0.c.c15', []) === 0, 'Matheus, Felipe e JanorDoc são grátis no Brechó');
+ok(SHOP_TEAMS.some(([id, name]) => id === 'tech' && name === 'Time Tech'), 'a loja tem a seção Time Tech');
+const tech = teamItems('tech');
+ok(tech.map((i) => i.id).join() === 'c15,c16,c12,c11,c14,c13,c17' && tech.map((i) => i.aka || i.name).join() === 'Matheus,Felipe,Hiro,Paulo,Ony,Yuri,JanorDoc' && ITEMS.filter((i) => i.team && i.team !== 'tech').length === 0, 'Time Tech lista Matheus, Felipe, Hiro, Paulo, Ony, Yuri e JanorDoc');
+ok(itemById('c11').name === 'Docão Bigzão' && itemById('c11').aka === 'Paulo' && /Paulo/.test(itemById('c11').line) && itemById('c12').aka === 'Hiro' && itemById('c13').aka === 'Yuri' && itemById('c14').aka === 'Ony', 'Bigzão continua c11 e ganha o apelido Paulo; Hiro, Yuri e Ony também');
 ok(ITEMS.filter((i) => i.slot === 'h').length === 17, '17 itens de cabeça (7 antigos + 10 novos)');
 ok(danceItems().length === 8 && danceItems().every((i) => PAID_DANCES.includes(i.dance)), '8 danças pagas ligadas a ids de shared/emote.js');
 ok(FREE_DANCES.join() === 'moonwalk,mewing,sixseven' && DANCE_IDS.length === 11, 'as 3 danças grátis continuam as mesmas');
