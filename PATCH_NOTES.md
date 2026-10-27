@@ -4,8 +4,8 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
-## v1.27 — Devão do Cheers no Brechó 🤓🐷 (27/10/2026)
-🤓 **DEVÃO DO CHEERS.** Fantasia nova no Brechó da Porca Véia, a **1000 Docoins** (o mesmo da Barriguinha): cabelo castanho ondulado, óculos quadrado preto, camisa polo marrom e cordão de pérola. Id `c11`. Clica no cartão pra ver no porco antes de comprar; o COMPRAR continua pedindo confirmação.
+## v1.27 — Docão Bigzão no Brechó 🤓🐷 (27/10/2026)
+🤓 **DOCÃO BIGZÃO.** Fantasia nova no Brechó da Porca Véia, a **1000 Docoins** (o mesmo da Barriguinha): cabelo castanho ondulado, óculos quadrado preto, camisa polo marrom e cordão de pérola. Id `c11`. Clica no cartão pra ver no porco antes de comprar; o COMPRAR continua pedindo confirmação.
 💸 **E o bolso do Matheus?** O catálogo é o mesmo arquivo do Worker (`shared/closet.js`). Sem migration, sem Durable Object novo.
 
 ## v1.26 — B de Bala na Kill Cam 🔫📹🐷 (26/10/2026)

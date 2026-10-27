@@ -86,8 +86,8 @@ ITEMS.push(
   // Barriguinha: o porco da derrota do Docão Minado (camisa arregaçada, barriga de fora). Cores do desenho; a barriga usa a pele do Docão (peça bellyOut).
   { id: 'c10', name: 'Docão Barriguinha', emoji: '🐷', price: 1000, costume: { shirt: { color: '#b73c28', trim: '#8e2c1e' }, pants: '#2c5f92',
     parts: [{ type: 'bellyOut', roll: '#c44b36', rollDark: '#8e2c1e' }] } },
-  // Devão do Cheers: o porco de óculos do castelo (cabelo ondulado, camisa polo marrom, pérola). Mesmo preço da Barriguinha.
-  { id: 'c11', name: 'Devão do Cheers', emoji: '🤓', price: 1000, line: 'Cabelo ondulado, óculos quadrado, camisa marrom e pérola', costume: {
+  // Docão Bigzão: o porco de óculos do castelo (cabelo ondulado, camisa polo marrom, pérola). Mesmo preço da Barriguinha.
+  { id: 'c11', name: 'Docão Bigzão', emoji: '🤓', price: 1000, line: 'Cabelo ondulado, óculos quadrado, camisa marrom e pérola', costume: {
     shirt: { color: '#3f291c', trim: '#24160e', details: [{ type: 'polo', color: '#24160e', button: '#e6d3b0' }] }, pants: '#243044',
     parts: [
       { type: 'wavyHair', color: '#a56b3c', highlight: '#d7a15a' },

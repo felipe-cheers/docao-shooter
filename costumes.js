@@ -658,7 +658,7 @@ Object.assign(PARTS, {
     band.rotation.x = Math.PI / 2; band.position.set(0, y + 0.055, 0.04); band.scale.set(1, 0.9, 1);
     return g;
   },
-  // ---------- Devão do Cheers (cabelo ondulado + colar de pérola; óculos reusa squareGlasses) ----------
+  // ---------- Docão Bigzão (cabelo ondulado + colar de pérola; óculos reusa squareGlasses) ----------
   wavyHair(o, rig) { // cabelo médio ondulado: casca lisa (igual aos outros cabelos) + ondas grossas deitadas, sem tufo
     hideTuft(rig); const g = new THREE.Group();
     const m = toonWarm(o.color || '#a56b3c', 0.16, { side: THREE.DoubleSide }, '#c4844a');

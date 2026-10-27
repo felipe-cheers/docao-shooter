@@ -21,11 +21,11 @@ ok(priceOfLook('x1.0.c.c10', []) === 1000, 'Barriguinha custa 1000 mesmo com a m
 const sk10 = lookToSkin('x1.0.c.c10');
 ok(sk10 && sk10.name === 'Docão Barriguinha' && sk10.custom === true && sk10.shirt.color === '#b73c28' && sk10.pants === '#2c5f92' && sk10.parts.some((p) => p.type === 'bellyOut'), 'Barriguinha equipa como fantasia completa (código x1.0.c.c10)');
 const c11 = itemById('c11');
-ok(c11 && c11.name === 'Devão do Cheers' && c11.price === 1000 && c11.slot === 'c' && !isFreeItem('c11') && c11.line && c11.costume.shirt.color === '#3f291c' && ['wavyHair', 'squareGlasses', 'pearl'].every((t) => c11.costume.parts.some((p) => p.type === t)), 'Devão do Cheers é a fantasia c11, 1000 Docoins, cabelo, óculos e pérola');
-ok(priceOfLook('x1.0.c.c11', []) === 1000, 'Devão do Cheers custa 1000 mesmo com a mochila vazia');
+ok(c11 && c11.name === 'Docão Bigzão' && c11.price === 1000 && c11.slot === 'c' && !isFreeItem('c11') && c11.line && c11.costume.shirt.color === '#3f291c' && ['wavyHair', 'squareGlasses', 'pearl'].every((t) => c11.costume.parts.some((p) => p.type === t)), 'Docão Bigzão é a fantasia c11, 1000 Docoins, cabelo, óculos e pérola');
+ok(priceOfLook('x1.0.c.c11', []) === 1000, 'Docão Bigzão custa 1000 mesmo com a mochila vazia');
 const sk11 = lookToSkin('x1.0.c.c11');
-ok(sk11 && sk11.name === 'Devão do Cheers' && sk11.custom === true && sk11.shirt.color === '#3f291c' && sk11.pants === '#243044' && sk11.shirt.details.some((d) => d.type === 'polo') && sk11.parts.length === 3, 'código x1.0.c.c11 vira a fantasia completa');
-ok(parseLook('x1.0.c.c11.h1') === null && encodeLook({ shirt: 0, pants: 12, items: { c: 'c11' } }) === 'x1.0.c.c11', 'Devão do Cheers não mistura com outras partes');
+ok(sk11 && sk11.name === 'Docão Bigzão' && sk11.custom === true && sk11.shirt.color === '#3f291c' && sk11.pants === '#243044' && sk11.shirt.details.some((d) => d.type === 'polo') && sk11.parts.length === 3, 'código x1.0.c.c11 vira a fantasia completa');
+ok(parseLook('x1.0.c.c11.h1') === null && encodeLook({ shirt: 0, pants: 12, items: { c: 'c11' } }) === 'x1.0.c.c11', 'Docão Bigzão não mistura com outras partes');
 ok(ITEMS.filter((i) => i.slot === 'h').length === 17, '17 itens de cabeça (7 antigos + 10 novos)');
 ok(danceItems().length === 8 && danceItems().every((i) => PAID_DANCES.includes(i.dance)), '8 danças pagas ligadas a ids de shared/emote.js');
 ok(FREE_DANCES.join() === 'moonwalk,mewing,sixseven' && DANCE_IDS.length === 11, 'as 3 danças grátis continuam as mesmas');
