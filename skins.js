@@ -36,12 +36,13 @@
 //   shirt.details também aceita: 'bones' {color, glow} · 'tunicWrap' {color, inner} · 'stillsuit' {rib, tube, panel}
 //                       · 'star' {color, outline, x, y, size, small: [[θ, y, size]...]} · 'zigzag' {color, y} · 'diagStripes' {color} · 'hoodie' {color, zip} · 'polo' {color, button}
 //   peças das skins novas: boiHorns {color, band} · ribbonSkirt {colors, band} · messyHair {color} · squareGlasses {color}
-//                sleeveStripes {color} · shortsStripes {color} · quiffHair {color, side} · beard {color} (bigode + barba por fazer)
+//                sleeveStripes {color} · shortsStripes {color} · quiffHair {color, side} · beard {color, stubble, soul} (bigode 3D; barba por fazer no rosto, salvo stubble:false; soul = mosquinha)
 //                hoodStrings {color} · lanyard {color, logo} · longPants {color} · shoes também aceita {sole}
 //                faixa {colors:[verde, amarelo, azul], color}  faixa presidencial no peito (verde em cima, brasão no centro)
 //                bellyOut {roll, rollDark}  camisa arregaçada com a barriga de fora (Docão Barriguinha)
 //                wavyHair {color, highlight}  cabelo médio ondulado (Docão Bigzão)
 //                pearl {color, pearl}  cordão fino prateado com pérola redonda
+//                beachRacket {face, rim, accent, handle}  raquete de beach tennis nas costas (DocOny)
 //   face:  { paint: 'skull' }   pintura leve no rosto (bochechas/focinho continuam)
 //   eyes:  { iris: '#hex', ring: '#hex' }  tom da íris e anel escuro em volta (opcionais)
 //   float: true                 flutua de leve (bob) e solta um rastro fraquinho no jogo
@@ -116,7 +117,7 @@ export const SKINS = [
   },
   {
     id: 'cabeludo',
-    name: 'Cabeludo',
+    name: 'JanorDoc',
     shirt: { color: '#1a1a1d', trim: '#1a1a1d', logo: { text: 'OINK', color: '#e8e8e8', outline: '#c0121e', size: 0.2 } },
     pants: '#2e3a55',
     parts: [{ type: 'longHair', color: '#3b2414', headband: '#c0121e' }],

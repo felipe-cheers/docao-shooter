@@ -487,11 +487,16 @@ Object.assign(PARTS, {
     }
     return onHead(g);
   },
-  beard(o, rig) { // bigode ralo embaixo do focinho (a barba por fazer é pintada no rosto)
+  beard(o, rig) { // bigode ralo embaixo do focinho (a barba por fazer é pintada no rosto, salvo o.stubble === false)
     const g = new THREE.Group(); const m = toonWarm(o.color || '#3a2618', 0.05);
     for (const s of [-1, 1]) {
       const p = headPoint(s * 0.2, 1.32, 0.035); const c = M(new THREE.CapsuleGeometry(0.024, 0.12, 4, 8), m, g, 0.003);
       c.position.copy(p).add(new V3(0, 0, 0.065)); c.rotation.set(0, 0, s * 1.25); c.scale.z = 0.5;
+    }
+    if (o.soul) { // mosquinha sob a boca; só quando a skin pede (os outros bigodes não ganham)
+      const p = headPoint(0, 1.16, 0.02);
+      const patch = M(new THREE.CapsuleGeometry(0.014, 0.03, 3, 6), m, g, 0.003);
+      patch.position.copy(p).add(new V3(0, -0.012, 0.02)); patch.scale.set(0.7, 1, 0.4);
     }
     return onHead(g);
   },
@@ -688,5 +693,45 @@ Object.assign(PARTS, {
     const shine = M(new THREE.SphereGeometry(0.016, 8, 6), basic('#ffffff'), pend, 0); shine.position.set(0.014, 0.018, 0.04);
     const bail = M(new THREE.TorusGeometry(0.018, 0.006, 6, 10), silver, pend, 0); bail.position.y = 0.062;
     return g;
+  },
+  // ---------- DocOny: raquete de beach tennis nas costas (cintura fica pros itens de cinto) ----------
+  beachRacket(o) {
+    const root = new THREE.Group();
+    const g = new THREE.Group();
+    const red = toon(o.face || '#e10600'), black = toon(o.rim || '#141416'), green = toon(o.accent || '#2fce4a');
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -0.2);
+    shape.bezierCurveTo(0.24, -0.14, 0.32, 0.06, 0.3, 0.22);
+    shape.bezierCurveTo(0.26, 0.44, 0.1, 0.52, 0, 0.52);
+    shape.bezierCurveTo(-0.1, 0.52, -0.26, 0.44, -0.3, 0.22);
+    shape.bezierCurveTo(-0.32, 0.06, -0.24, -0.14, 0, -0.2);
+    const face = M(new THREE.ExtrudeGeometry(shape, { depth: 0.045, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 1, curveSegments: 8 }), red, g, 0.008);
+    face.position.z = -0.022;
+    let rimPts = shape.getPoints(24).map((p) => new V3(p.x, p.y, 0));
+    if (rimPts.length > 2 && rimPts[0].distanceTo(rimPts[rimPts.length - 1]) < 1e-3) rimPts = rimPts.slice(0, -1);
+    M(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rimPts, true), 64, 0.022, 7, true), black, g, 0.004);
+    const holeM = basic(o.holes || '#f4f1ea');
+    for (const [x, y] of [[0, 0.28], [-0.1, 0.16], [0.1, 0.16], [-0.16, 0.02], [0, 0.02], [0.16, 0.02], [-0.1, -0.1], [0.1, -0.1]]) {
+      const h = M(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 8), holeM, g, 0);
+      h.rotation.x = Math.PI / 2; h.position.set(x, y, 0.028);
+    }
+    const chevL = M(new THREE.BoxGeometry(0.2, 0.032, 0.016), green, g, 0.003); chevL.position.set(-0.06, 0.1, 0.04); chevL.rotation.z = 0.65;
+    const chevR = M(new THREE.BoxGeometry(0.2, 0.032, 0.016), green, g, 0.003); chevR.position.set(0.06, 0.1, 0.04); chevR.rotation.z = -0.65;
+    const tip = M(new THREE.BoxGeometry(0.1, 0.028, 0.016), green, g, 0.003); tip.position.set(0.16, 0.4, 0.02); tip.rotation.z = 0.45;
+    M(new THREE.CylinderGeometry(0.04, 0.028, 0.09, 10), black, g, 0.004).position.y = -0.26;
+    M(new THREE.CylinderGeometry(0.024, 0.026, 0.28, 10), toon(o.handle || '#1c1e22'), g, 0.004).position.y = -0.44;
+    M(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 10), toon('#2a2c30'), g, 0).position.y = -0.46;
+    const butt = M(new THREE.SphereGeometry(0.03, 10, 8), black, g, 0.003); butt.scale.y = 0.65; butt.position.y = -0.58;
+    // ombro esquerdo (−x), atrás do tronco: a face sobe ao lado da cabeça, o cabo desce nas costas
+    g.position.set(-0.34, 1.18, -0.42); g.rotation.set(0.18, 0.45, -0.55); root.add(g);
+    const zb = (y) => -(torsoR(y) * 0.85 + 0.05);
+    const strap = new THREE.CatmullRomCurve3([
+      new V3(-0.28, 0.72, zb(0.72) - 0.06),
+      new V3(-0.46, 0.98, zb(0.98)),
+      new V3(-0.5, 1.12, -0.06),
+      new V3(-0.28, 0.98, torsoR(0.98) * 0.55),
+    ]);
+    M(new THREE.TubeGeometry(strap, 16, 0.016, 6, false), toon('#1a1c20'), root, 0.003);
+    return root;
   },
 });

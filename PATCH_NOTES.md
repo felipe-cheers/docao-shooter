@@ -4,6 +4,12 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## v1.29 — DocYuri, DocOny e o Time Tech 💙🎾🐷 (27/10/2026)
+💙 **DOCYURI CHEGOU DE BIGODE.** Fantasia nova no Brechó da Porca Véia, **de graça** com o resto do Time Tech: cabelo castanho bagunçado, bigode fino embaixo do focinho — sem barba no queixo, que o Yuri não pediu —, moletom azul com zíper e o **C!** no peito, calça escura e sapato preto de sola clara. Id `c13`. O desenho é do **Yuri do Nascimento Grigoletti** — o porco só emprestou o focinho. Clica no cartão pra ver; não tem COMPRAR, é padrão.
+🎾 **DOCONY CHEGOU DE RAQUETE.** No mesmo balcão, também **de graça**: camiseta neon de manga curta, shorts cinza de atleta (curto, sem calça), cabelo castanho bagunçado, bigode fino com mosquinha, sapato escuro e a **raquete de beach tennis nas costas** — face vermelha, aro preto, detalhe verde, alça no ombro. Id `c14`. O desenho é do **Ony** — o porco só emprestou o focinho, a raquete ele não devolve.
+🧑‍💻 **TIME TECH.** Seção nova no topo da loja, os sete juntos e **todos de graça** (`price: 0`, `free: true`): **Matheus**, **Felipe**, **Hiro** (DocHiro, `c12`), **Paulo** (Docão Bigzão, o id continua `c11`), **Ony** (DocOny, `c14`), **Yuri** (DocYuri, `c13`) e **JanorDoc** (o cabeludo de cabelo comprido; na lista de skins o nome também virou JanorDoc, o id `cabeludo` fica). A Barriguinha continua a 1000.
+💸 **E o bolso do Matheus?** O catálogo é o mesmo arquivo do Worker (`shared/closet.js`). Sem migration, sem Durable Object novo. A raquete não cobra quadra.
+
 ## v1.28 — DocHiro no Brechó 🎧🐷 (27/10/2026)
 🎧 **DOCHIRO CHEGOU DE FONE.** Fantasia nova no Brechó da Porca Véia, a **1000 Docoins** (o mesmo da Barriguinha e do Bigzão): gorro azul-claro, fone preto por cima, moletom marinho com o **C!** no bolso, calça escura, tênis claro e barba rala no queixo. Id `c12`. O desenho é do **Guilherme Hiroshi** — o porco só emprestou o focinho. Clica no cartão pra ver antes de comprar; o COMPRAR continua pedindo confirmação.
 💸 **E o bolso do Matheus?** O catálogo é o mesmo arquivo do Worker (`shared/closet.js`). Sem migration, sem Durable Object novo. O fone não cobra mensalidade.

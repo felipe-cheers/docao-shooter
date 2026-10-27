@@ -1804,6 +1804,9 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 .closet-right{flex:1;min-width:0;max-height:62vh;overflow:auto;padding-right:4px}
 .closet-slot{margin:8px 0}
 .closet-slot h4,.closet-sec h4{margin:0 0 4px;font:900 11px var(--font);letter-spacing:1px;text-transform:uppercase;color:var(--ink)}
+.closet-sec.team{margin:0 0 14px;padding:8px 8px 10px;border:2px solid #1d4e89;border-radius:6px;background:#e8f3ff80}
+.closet-sec.team h4{margin-bottom:8px;color:#163e73;text-transform:none;letter-spacing:0;font-size:15px}
+.closet-card .closet-aka{color:#163e73;font-weight:900;letter-spacing:.3px}
 .closet-chips{display:flex;flex-wrap:wrap;gap:5px}
 .closet-chips button,.closet-sw{margin:0;width:auto;padding:5px 9px;font:800 12px var(--font);color:var(--ink);background:#e6d3a8;border:2px solid var(--ink);border-radius:3px;box-shadow:none;cursor:pointer}
 .closet-chips button.on{background:var(--ink);color:#efdfbb}
