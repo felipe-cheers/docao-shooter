@@ -71,6 +71,7 @@ import { POWER_UPS, normHand, clampLoadout, botPool, powerOn, savedToLimits, lim
 try { document.fonts?.load('700 32px Fredoka'); } catch {}
 import { CLASS_COUNT, clampClassIndex, clampKit, classLoad, compare, familyOf, normalizeClasses, pieceBlurb, pieceInfo, piecesOf, resolveWeapon, slotsOf, statBars } from './shared/attachments.js';
 import { fillBench, fillChips, fillSheet } from './classes-ui.js';
+import { createArsenal } from './arsenal-ui.js';
 
 const V3 = THREE.Vector3;
 const $ = (id) => document.getElementById(id);
@@ -4701,6 +4702,7 @@ function openMenuView(view, trigger) {
 menuViewButtons.forEach((button) => button.onclick = () => openMenuView(button.dataset.menuView, button));
 $('menuBack').onclick = () => openMenuView('match');
 $('menu').addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && $('menu').dataset.view === 'arsenal' && arsenalUi?.back()) { event.preventDefault(); event.stopPropagation(); return; }
   if (event.key === 'Escape' && benchIsOpen()) { event.preventDefault(); event.stopPropagation(); closeBench(); return; }
   if (event.key === 'Escape' && (crateJourney.phase !== 'closed' || ($('menu').dataset.view && $('menu').dataset.view !== 'match'))) {
     event.preventDefault(); openMenuView('match');
@@ -4941,6 +4943,7 @@ function renderWardrobePreview() {
 }
 let selectedSkin = getSkin(localStorage.getItem('docao.skin') || DEFAULT_SKIN).id, preview = null;
 // Cinco classes no navegador. A última usada é a que nasce. docao.primary continua espelhando a classe armada.
+let arsenalUi = null;
 let classes = [], classIndex = 0, spawnedClass = 0, benchOn = false, benchWeapon = 0, benchSlot = 'optic', benchLook = '', arsenalFocus = -1;
 const DEATH_HINT = '1–5 escolhe a classe. Clique no arsenal pra gravar qualquer arma nela. U volta pra última · Espaço nasce. O tracinho branco é a arma de fábrica.';
 const LIVE_HINT = '1–5 escolhe a classe. O arsenal troca a arma agora e o pente não enche sozinho. U volta pra última. O tracinho branco é a arma de fábrica.';
@@ -5177,6 +5180,28 @@ function buildSkinPicker() {
   $('skinPrev').onclick = () => step(-1); $('skinNext').onclick = () => step(1);
 }
 const weaponThumbs = [];
+arsenalUi = createArsenal($('arsenalApp'), {
+  thumbs: weaponThumbs,
+  snapshot: () => ({ classes, index: classIndex }),
+  pool, model: i => fp.guns[i], arm: armClass,
+  saber: i => isSaber(i) ? { colors: SABER_COLORS, selected: saberColor } : null,
+  colorSaber: hex => {
+    if (!SABER_COLORS.some(c => c.hex === hex)) return;
+    saberColor = hex;
+    try { localStorage.setItem('docao.saber', hex); } catch (e) { /* sem storage */ }
+    paintSabers();
+  },
+  rename: name => tuneClass(classIndex, { name: name.trim() || `Classe ${classIndex + 1}` }),
+  equip: (slot, i, kit) => {
+    const c = classes[classIndex], key = WEAPONS[i].key;
+    c.kits[key] = clampKit(i, kit);
+    (slot === 'primary' ? setPrimary : slot === 'secondary' ? setSecondary : setMelee)(i);
+  },
+  close: () => openMenuView('match'),
+  shoot: () => { $('modeShoot').click(); openMenuView('match'); },
+  truco: () => { $('modeTruco').click(); openMenuView('match'); },
+});
+arsenalUi.render();
 buildSkinPicker(); setPreview(selectedSkin); buildPrimaryPickers(); buildSaberColors();
 function paintWeaponThumbs() {
   document.querySelectorAll('.wthumb').forEach((el) => {
@@ -6185,6 +6210,7 @@ function paintArms() {
   }
 }
 function paintClassSurfaces() {
+  if (arsenalUi) arsenalUi.render();
   paintPair('deathList', 'classGun', DEATH_HINT);
   paintPair('pauseGuns', 'pauseGun', '1–5 escolhe a classe. O arsenal grava a arma nela e vale na próxima vida.');
   paintPair('bLoadList', 'bLoadGun', LIVE_HINT);
