@@ -109,6 +109,11 @@ export const WEAPONS = [
     shield: true, noAds: true, move: SHIELD.move, inspect: 'shield',
     desc: `Escudo · vida ${SHIELD.hp} · bloqueio frontal · golpe ${SHIELD.bash.dmg} · anda ${Math.round((1 - SHIELD.move) * 100)}% mais devagar` },
 ];
+// Exclusiva da Corrida Armada: ID próprio, fora do arsenal e das classes.
+export const GOLD_KNIFE = WEAPONS.length;
+WEAPONS.push({ ...WEAPONS[7], key: 'faca-dourada', name: 'Faca Dourada', short: 'Faca Dourada', chip: 'Ouro', noAds: true, desc: 'Corrida Armada · uma eliminação válida vence a partida' });
+export const isKnife = (i) => i === 7 || i === GOLD_KNIFE;
+
 // Penetração e collateral (regra em shared/penetration.js). pen = metros de parede fina por bala (caixote conta 45%);
 // pierce = corpos extras que a bala atravessa; pierceMul = dano que sobra a cada corpo. Sem entrada = não atravessa nada.
 const PEN_STATS = { rifle: [0.35], lmg: [0.4], commando: [0.3], famas: [0.35], p90: [0.25], uzi: [0.2], pistol: [0.2], sniper: [0.9, 2, 0.75], canhao: [1.6, 3, 0.85], carabina: [0.6, 1, 0.6], minigun: [0.4], capataz: [0.22], capataz2: [0.22] };

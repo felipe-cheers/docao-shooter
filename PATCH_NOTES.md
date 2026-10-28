@@ -4,6 +4,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ---
 
+## Próxima versão — Corrida Armada
+- Dois times, progresso individual e sequência fixa de armas. Duas eliminações por etapa; a faca padrão rouba uma etapa e a faca dourada decide a vitória.
+- Na etapa final fica apenas a faca dourada, sem faca padrão no slot 3 ou no atalho V.
+- Renascimento liberado em 3 segundos, mantendo a etapa e os abates acumulados.
+- Sem tela de classes na morte ou na pausa: ficam só o relógio e o botão para renascer.
+- Online: publicar o Worker antes do site (novo modo e eventos de progresso).
+
 ## v1.29 — DocYuri, DocOny e o Time Tech 💙🎾🐷 (27/10/2026)
 💙 **DOCYURI CHEGOU DE BIGODE.** Fantasia nova no Brechó da Porca Véia, **de graça** com o resto do Time Tech: cabelo castanho bagunçado, bigode fino embaixo do focinho — sem barba no queixo, que o Yuri não pediu —, moletom azul com zíper e o **C!** no peito, calça escura e sapato preto de sola clara. Id `c13`. O desenho é do **Yuri do Nascimento Grigoletti** — o porco só emprestou o focinho. Clica no cartão pra ver; não tem COMPRAR, é padrão.
 🎾 **DOCONY CHEGOU DE RAQUETE.** No mesmo balcão, também **de graça**: camiseta neon de manga curta, shorts cinza de atleta (curto, sem calça), cabelo castanho bagunçado, bigode fino com mosquinha, sapato escuro e a **raquete de beach tennis nas costas** — face vermelha, aro preto, detalhe verde, alça no ombro. Id `c14`. O desenho é do **Ony** — o porco só emprestou o focinho, a raquete ele não devolve.

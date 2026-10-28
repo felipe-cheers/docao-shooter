@@ -569,6 +569,7 @@ export function makeDocao(skinOrId, opts = {}) {
     const rvL = worldRev(-1); rvL.position.set(0, -0.52, 0.05); rvL.rotation.set(-Math.PI / 2, -0.28, -0.12); arms[1].add(rvL);
     rv2.userData.extra = rvR; rv2.userData.twin = rvL; guns.push(rv2); // 24 = Dois Capatazes
     const tp = makeWorldShield(); tp.name = 'tampa'; tp.position.set(0, 0.98, 0.62); g.add(tp); guns.push(tp); // 25 = Tampa do Tacho
+    const goldKnife = makeKnife(1.7, 0.006, true); goldKnife.position.copy(kn.position); goldKnife.rotation.copy(kn.rotation); goldKnife.visible = false; arms[0].add(goldKnife); guns.push(goldKnife); // 26 = Faca Dourada
     backLid = makeWorldShield(); backLid.name = 'tampa-costas'; backLid.position.set(0, 1.15, -0.32); backLid.rotation.y = Math.PI; backLid.visible = false; g.add(backLid);
     for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd, rv, rv2, rvR, rvL, tp]) o.visible = false;
   }
@@ -754,7 +755,7 @@ export function makeRocket(scale = 1) {
 // ---------- Faca de churrasqueiro: lâmina de aço (chef), cabo de madeira com 3 rebites e logo C! vermelho ----------
 // Origem = centro da empunhadura; lâmina aponta pra -z, fio pra -y, espessura em x. Usada em 1ª e 3ª pessoa.
 let knifeLogoTex = null;
-export function makeKnife(scale = 1, th = 0.004) {
+export function makeKnife(scale = 1, th = 0.004, golden = false) {
   if (!knifeLogoTex) knifeLogoTex = canvasTex(128, 64, (x, W, H) => {
     x.fillStyle = '#f5e6d0'; x.beginPath(); x.roundRect(4, 4, W - 8, H - 8, 16); x.fill();
     drawLogo(x, W / 2, H / 2, H * 0.62, '#e63946');
@@ -767,9 +768,9 @@ export function makeKnife(scale = 1, th = 0.004) {
   s.quadraticCurveTo(0.25, -0.042, 0.13, -0.05); s.lineTo(0, -0.05); s.closePath();
   const bg = new THREE.ExtrudeGeometry(s, { depth: 0.007, bevelEnabled: true, bevelThickness: 0.0025, bevelSize: 0.002, bevelSegments: 1, curveSegments: 10 });
   bg.translate(0, 0, -0.0035); bg.rotateY(Math.PI / 2); // comprimento → -z, espessura → x
-  const blade = m(bg, toonWarm('#cfd6de', 0.1, {}, '#eef6ff')); blade.position.set(0, 0.018, -0.085);
+  const blade = m(bg, toonWarm(golden ? '#ffc52e' : '#cfd6de', 0.1, {}, golden ? '#fff3a6' : '#eef6ff')); blade.position.set(0, 0.018, -0.085);
   const edge = new THREE.Mesh(new THREE.BoxGeometry(0.0115, 0.006, 0.2), basic('#ffffff')); edge.position.set(0, -0.027, -0.2); g.add(edge); // fio brilhante
-  m(new THREE.BoxGeometry(0.022, 0.07, 0.022), toon('#9aa3ad')).position.set(0, 0.0, -0.075); // reforço (bolster)
+  m(new THREE.BoxGeometry(0.022, 0.07, 0.022), toon(golden ? '#d49918' : '#9aa3ad')).position.set(0, 0.0, -0.075); // reforço (bolster)
   // cabo de madeira + rebites + logo
   const wood = toonWarm('#8b5a2b', 0.2, {}, '#c8813e');
   const h = m(new THREE.BoxGeometry(0.03, 0.05, 0.15), wood); h.position.set(0, -0.004, 0.005);
