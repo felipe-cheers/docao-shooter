@@ -159,6 +159,19 @@ function headTexture(tone, beard = null, paint = null, angry = false) { // angry
     x.restore();
     mouthPath(); x.lineWidth = 7; x.strokeStyle = PALETTE.outline; x.lineJoin = 'round'; x.stroke();
     }
+    if (paint === 'spider') { // máscara vermelha com teia na cabeça toda, menos a frente do focinho/boca; orelhas (malha à parte) continuam de porco
+      const yCut = P(0, 1.40)[1], xL = P(-0.95, 1.2)[0], xR = P(0.95, 1.2)[0];
+      x.fillStyle = '#d8261c';
+      x.fillRect(0, 0, W, yCut); // topo
+      x.fillRect(0, yCut, xL, H - yCut); // lado esquerdo + costas (emenda)
+      x.fillRect(xR, yCut, W - xR, H - yCut); // lado direito + costas
+      x.save();
+      x.beginPath(); x.rect(0, 0, W, yCut); x.rect(0, yCut, xL, H - yCut); x.rect(xR, yCut, W - xR, H - yCut); x.clip();
+      x.strokeStyle = '#111114'; x.lineWidth = 5; x.lineCap = 'round'; x.lineJoin = 'round';
+      for (let i = 0; i < 16; i++) { const th = -Math.PI + i * TAU / 16; x.beginPath(); x.moveTo(...P(th, HEAD.y1)); x.lineTo(...P(th, HEAD.y0)); x.stroke(); }
+      for (const y of [1.98, 1.86, 1.74, 1.62, 1.50, 1.36, 1.22]) { x.beginPath(); x.moveTo(...P(-Math.PI, y)); x.lineTo(...P(Math.PI, y)); x.stroke(); }
+      x.restore();
+    }
     if (paint === 'skull') { // pintura de caveira leve: máscara branca ao redor dos olhos + detalhes verdes (bochechas e focinho continuam)
       for (const s of [-1, 1]) {
         const [cx, cy] = P(s * 0.33, 1.71); const rx = 0.2 * pxH(1.71), ry = 0.21 * pxV;
@@ -582,13 +595,23 @@ export function makeDocao(skinOrId, opts = {}) {
     const ryd = mesh(new THREE.TorusGeometry(0.04, 0.008, 6, 12), new THREE.MeshBasicMaterial({ color: 0x7dff6a }), ry, 0); ryd.position.set(0, 0.01, 0.3);
     mesh(new THREE.BoxGeometry(0.04, 0.1, 0.04), toon('#141a16'), ry, 0.004).position.set(0, -0.08, -0.04);
     ry.visible = false; guns.push(ry); // 27 = Ray Gun
+    const sk = new THREE.Group(); sk.name = 'saco'; sk.position.copy(r.position); sk.position.y -= 0.04; g.add(sk);
+    // saco vermelho com corda dourada (mesmo desenho do Papai Noel, em menor escala na mão)
+    const sackM = toon('#8a2a1a'), cordM = toon('#d4a82a');
+    const sackPts = [[0.01, -0.22], [0.16, -0.2], [0.22, -0.08], [0.2, 0.05], [0.15, 0.16], [0.08, 0.24], [0.06, 0.27]].map(([r, y]) => new THREE.Vector2(r, y));
+    mesh(new THREE.LatheGeometry(sackPts, 16), sackM, sk, 0.008);
+    mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.07, 10), sackM, sk, 0.005).position.y = 0.3;
+    const tie = mesh(new THREE.TorusGeometry(0.062, 0.014, 6, 12), cordM, sk, 0.003); tie.rotation.x = Math.PI / 2; tie.position.y = 0.33;
+    const box = mesh(new THREE.BoxGeometry(0.1, 0.08, 0.1), toon('#2b8fd8'), sk, 0.004); box.position.set(-0.03, 0.4, 0.02); box.rotation.set(0.15, 0.3, 0.1);
+    mesh(new THREE.BoxGeometry(0.11, 0.02, 0.11), toon('#f2c94c'), sk, 0).position.copy(box.position).add(new THREE.Vector3(0, 0.015, 0));
+    sk.rotation.x = 0.35; sk.visible = false; guns.push(sk); // 28 = Saco de Presentes
     backLid = makeWorldShield(); backLid.name = 'tampa-costas'; backLid.position.set(0, 1.15, -0.32); backLid.rotation.y = Math.PI; backLid.visible = false; g.add(backLid);
-    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd, rv, rv2, rvR, rvL, tp]) o.visible = false;
+    for (const o of [sg, sn, bz, ps, cn, cb, kn, hold, uz, p9, nl, sm, xb, bw, fm, dk, d2r, d2l, mh, es, mg, lm, cd, rv, rv2, rvR, rvL, tp, sk]) o.visible = false;
   }
   setPose({ arms }, pose);
 
   // peças da skin
-  const rig = { group: g, head, eyes, torso, legs, arms, fists, tail, tuft, ears, skin, skinM };
+  const rig = { group: g, head, eyes, brows, torso, legs, arms, fists, tail, tuft, ears, skin, skinM };
   for (const part of skin.parts || []) {
     const b = PARTS[part.type]; if (!b) { console.warn('Peça de skin desconhecida:', part.type); continue; }
     const obj = b(part, rig); if (!obj) continue;
@@ -626,7 +649,7 @@ function rainbowGloveTex() {
 export function gloveMat(color = '#ffffff', opt = {}) {
   if (opt && opt.rainbow) return toonWarm('#ffffff', 0.1, { map: rainbowGloveTex() }, '#ffffff');
   if (opt && opt.gold) return toonWarm(opt.color || color || '#f3d78a', 0.32, {}, '#fff1a8');
-  return toonWarm(color, 0.18, {}, '#c8d8ff');
+  return toonWarm(color, 0.18, {}, (opt && opt.warm) || '#c8d8ff');
 }
 export function gloveSparkles(mesh, glove, r = 0.158) {
   if (!mesh || !glove) return;
@@ -674,6 +697,7 @@ export function setPose(model, pose) {
     else if (pose === 'revolver') { if (i === 0) a.rotation.set(-1.25, 0.28, -0.2); else a.rotation.set(-0.35, -0.15, 0.25); } // direita no cabo, esquerda solta
     else if (pose === 'saber') { if (i === 0) a.rotation.set(-1.15, 0.42, -0.08); else a.rotation.set(-1.05, -0.55, 0.28); } // as duas mãos juntas no cabo
     else if (pose === 'shield') { if (i === 0) a.rotation.set(-0.9, 0.35, -0.2); else a.rotation.set(-1.45, -0.25, 0.15); } // esquerda segura a tampa na frente
+    else if (pose === 'throw') { if (i === 0) a.rotation.set(-0.4, 0.85, -0.55); else a.rotation.set(-0.15, -0.1, 0.18); } // direita armada atrás da cabeça, granada no casco
     else if (pose === 'wave') a.rotation.set(s > 0 ? 0 : 0.1, 0, s > 0 ? 2.5 : -0.25);
     else a.rotation.set(0.05, 0, s * 0.22); // idle
   });
@@ -687,6 +711,7 @@ export function makeFPArms(skinOrId, pose = 'rifle') {
   const sleeves = shirt.sleeves || 'short', long = sleeves !== 'short', puffy = sleeves === 'puffy';
   const glove = (skin.parts || []).find((p) => p.type === 'glove'); let limbIdx = 0;
   const wraps = (skin.parts || []).find((p) => p.type === 'armWraps'), bones = (skin.parts || []).find((p) => p.type === 'boneLimbs'); const sStripes = (skin.parts || []).find((p) => p.type === 'sleeveStripes');
+  const webs = (skin.parts || []).find((p) => p.type === 'webLimbs'), fur = (skin.parts || []).find((p) => p.type === 'furTrim');
   const g = new THREE.Group();
   function limb(a, b, r) {
     const limbG = new THREE.Group(); g.add(limbG);
@@ -705,6 +730,8 @@ export function makeFPArms(skinOrId, pose = 'rifle') {
       const shaft = addL(new THREE.CapsuleGeometry(r * 0.28, p0.distanceTo(p1), 4, 8), bm, 0.004); shaft.position.copy(p0).add(p1).multiplyScalar(0.5); shaft.quaternion.copy(q);
       for (const pp of [p0, p1]) for (const k of [-1, 1]) { const kn = addL(new THREE.SphereGeometry(r * 0.38, 10, 8), bm, 0.004); kn.position.copy(pp).addScaledVector(new V3().crossVectors(dir, up).normalize(), k * r * 0.3); }
     }
+    if (webs) for (const f of [0.2, 0.45, 0.7]) { const wr = addL(new THREE.TorusGeometry(r * sr * 1.02, r * 0.08, 6, 20), basic(webs.color || '#111114'), 0); wr.position.copy(a).addScaledVector(dir, len * f * sk); wr.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
+    if (fur) { const ff = addL(new THREE.TorusGeometry(r * sr * 1.05, r * 0.42, 8, 16), toonWarm(fur.color || '#f4f4f4', 0.2), 0.005); ff.position.copy(a).addScaledVector(dir, len * sk); ff.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2)); }
     const hand = limbIdx++ === 0 ? 'right' : 'left';
     const gl = glove && (glove.hand === 'both' || (glove.hand || 'right') === hand); const handM = gl ? gloveMat(glove.color, glove) : skinM;
     const fist = addL(new THREE.SphereGeometry(r * 1.45, 18, 14), handM); fist.position.copy(b).addScaledVector(dir, r * 0.6); fist.scale.set(1, 0.9, 1.1);

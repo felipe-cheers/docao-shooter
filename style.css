@@ -429,6 +429,17 @@ body:has(#pause:not(.hidden)) #streakBar { display: none !important; }
 #bTimer.prep{color:#ffd27a}
 #bRound,#bSide{font-size:12px;font-weight:bold}
 #bCarrier{font-size:14px;font-weight:bold;color:#ffd27a;margin-top:2px}
+#cBuy{position:fixed;top:72px;right:16px;width:min(360px,92vw);max-height:calc(100vh - 96px);overflow:auto;z-index:8;pointer-events:auto;background:#2a1410;color:#fff6e4;border:3px solid #ffd27a;border-radius:14px;padding:10px 12px;box-shadow:0 8px 0 #1a0c08}
+#cBuy header{display:flex;gap:8px;align-items:center;justify-content:space-between}
+#cBuyCash{font-family:var(--font);font-size:22px;color:#ffd27a}
+#cBuyClock{font-size:13px;font-weight:bold}
+#cBuy button,#cBuyClose{font:inherit;cursor:pointer}
+#cBuyClose{background:#ffd27a;color:#2a1410;border:0;border-radius:8px;padding:4px 8px;font-weight:bold}
+#cBuyNote{margin:6px 0;font-size:13px}
+#cBuyArmor{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+#cBuyArmor button,#cBuyList button{background:#4a2418;color:#fff6e4;border:2px solid #ffd27a;border-radius:8px;padding:6px 8px;text-align:left}
+#cBuyList{display:grid;gap:6px}
+#cBuyList button small{display:block;color:#ffd27a}
 #bProg{position:fixed;top:58%;left:50%;transform:translateX(-50%);width:320px;height:22px;background:rgba(0,0,0,.55);border:2px solid #2a1410;border-radius:11px;overflow:hidden;pointer-events:none}
 #bProgFill{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffd27a}
 #bProg.defuse #bProgFill{background:#4da6ff}
@@ -738,6 +749,11 @@ body.bombpick #score,body.bombpick #nades,body.bombpick #tac,body.bombpick #slot
 #menu .match-options label:nth-child(4) .field-caption{transform:rotate(1.2deg)}
 #menu .match-options label:nth-child(5) .field-caption{transform:rotate(-1deg)}
 #menu .match-options{flex-wrap:wrap}
+body.comp-menu .mappick,body.comp-menu .match-options,body.comp-menu #botDiffNote,body.comp-menu #survNote,body.comp-menu #menuTrain,body.comp-menu #menuTeam,body.comp-menu #loadoutDock{display:none!important}
+#compPanel{margin:8px 0 4px}
+#compPanel label{display:block;max-width:220px}
+#paneCreate.comp-setup > label:not(#roomSideLabel),#paneCreate.comp-setup > .row,#paneCreate.comp-setup > .room-limits{display:none!important}
+#hostCtl.comp-setup .row > label:not(#lobbySideLabel),#hostCtl.comp-setup .room-limits{display:none!important}
 #menu #botDiffLabel{flex:1.35 1 168px}
 .diffnote{margin:0 0 8px;font-size:13px;line-height:1.35;font-weight:700}
 #menu .diffnote{color:#593b24;white-space:normal;overflow:visible}
@@ -1435,6 +1451,7 @@ body.invout #deathpick,body.invout #stamp,body.invout #centermsg{display:none!im
 #hud #tac b{color:var(--cream);font-weight:800}
 #hud .gitem{display:inline-flex;align-items:center;gap:3px}
 #hud .gitem.out{opacity:.35}
+#hud .gitem.on-sel, #hud #nades.on-sel .nlabel{box-shadow:inset 0 -3px 0 #d23b32}
 #hud .tico{display:block;flex:none}
 #hud .tico circle,#hud .tico path{fill:currentColor}
 #hud .tico.smoke{width:22px;height:16px;color:var(--cream)}
@@ -1805,6 +1822,15 @@ body.deadgray #game{filter:grayscale(.68) brightness(.72) contrast(1.06);transit
 .ticket-btn:hover{filter:brightness(1.08)}.ticket-btn:disabled{opacity:.6;cursor:wait}
 .ticket-btn.alt{background:var(--ink);border-color:#162c25;box-shadow:0 4px #0d1b16}
 .ticket-btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink);box-shadow:none;font-size:14px;padding:8px}
+#promoModal{z-index:40;background:rgba(10,20,40,.55)}
+.promo-panel{width:min(420px,92vw);text-align:center}
+.promo-kicker{margin:0 0 4px;font:900 11px/1 var(--font);letter-spacing:1.4px;text-transform:uppercase;color:#5b4a2c}
+.promo-panel h2{margin-bottom:8px}
+.promo-coins{margin:6px 0 12px;font:900 40px/1 var(--font);color:var(--red,#a52e26)}
+.promo-coins b{font:inherit}
+.promo-coins small{display:block;margin-top:4px;font:900 13px/1 var(--font);letter-spacing:1px;text-transform:uppercase;color:var(--ink,#203e35)}
+.promo-panel #promoBody{margin:0 0 4px;font:700 16px/1.4 var(--font);color:var(--ink,#203e35);text-align:center}
+.promo-panel #promoBody b{font-weight:900;color:var(--red,#a52e26)}
 .acct-help,.acct-note{margin:8px 0 0;font:700 12px/1.35 var(--font);color:#5b4a2c}
 .acct-err{min-height:18px;margin-top:6px;font:900 13px var(--font);color:var(--red)}
 .acct-hello{margin:6px 0 10px;text-align:center;font:900 22px var(--font)}
